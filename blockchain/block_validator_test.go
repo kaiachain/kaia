@@ -239,13 +239,21 @@ func TestValidateHeader(t *testing.T) {
 	}
 }
 
-func TestVerifySealsChecksAuthorMatchesProposer(t *testing.T) {
+// TestVerifySealsPermissionlessRejectsNonCommitteeAuthor checks that an author outside the
+// round's committee is rejected even when every committed seal is valid.
+func TestVerifySealsPermissionlessRejectsNonCommitteeAuthor(t *testing.T) {
 	var (
-		author        = common.HexToAddress("0x0001")
-		otherProposer = common.HexToAddress("0x0002")
-		blockNum      = uint64(7)
-		header        = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
-		sealer        = faker.NewFakerWithFixedSealer(author)
+		author    = common.HexToAddress("0x0001")
+		b         = common.HexToAddress("0x0002")
+		c         = common.HexToAddress("0x0003")
+		blockNum  = uint64(7)
+		header    = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		committee = []common.Address{b, c}
+		sealer    = &verifySealsTestSealer{
+			Sealer:     faker.NewFaker(),
+			author:     author,
+			committers: []common.Address{b, c},
+		}
 	)
 
 	ctrl := gomock.NewController(t)
@@ -253,7 +261,7 @@ func TestVerifySealsChecksAuthorMatchesProposer(t *testing.T) {
 
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(otherProposer, nil)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
 
 	validator := &BlockValidator{
 		config:  params.TestKaiaConfig("permissionless"),
@@ -265,7 +273,7 @@ func TestVerifySealsChecksAuthorMatchesProposer(t *testing.T) {
 	assert.ErrorIs(t, validator.verifySeals(header), consensus.ErrUnauthorized)
 }
 
-func TestVerifySealsSkipsProposerAuthorCheckBeforePermissionless(t *testing.T) {
+func TestVerifySealsBeforePermissionlessUsesQualifiedSet(t *testing.T) {
 	var (
 		author   = common.HexToAddress("0x0001")
 		blockNum = uint64(7)
@@ -294,7 +302,7 @@ func TestVerifySealsSkipsProposerAuthorCheckBeforePermissionless(t *testing.T) {
 	assert.NoError(t, validator.verifySeals(header))
 }
 
-func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
+func TestVerifySealsPermissionlessAcceptsCommitteeAuthor(t *testing.T) {
 	var (
 		author   = common.HexToAddress("0x0001")
 		blockNum = uint64(7)
@@ -307,7 +315,6 @@ func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
 
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
 	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author}, nil)
 
 	validator := &BlockValidator{
@@ -346,7 +353,6 @@ func TestVerifySealsPermissionlessUsesSealerQuorum(t *testing.T) {
 
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
 	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
 
 	validator := &BlockValidator{
@@ -386,7 +392,6 @@ func TestVerifySealsPermissionlessRejectsBelowQuorum(t *testing.T) {
 
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
 	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
 
 	validator := &BlockValidator{
@@ -424,7 +429,6 @@ func TestVerifySealsPermissionlessRejectsNonCommitteeCommitter(t *testing.T) {
 
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
 	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
 
 	validator := &BlockValidator{
@@ -488,7 +492,6 @@ func TestVerifySealsPermissionlessRejectsMutatedRound(t *testing.T) {
 
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, gomock.Any()).Return(addrs[0], nil).AnyTimes()
 	mValset.EXPECT().GetCommittee(blockNum, gomock.Any()).Return(addrs, nil).AnyTimes()
 
 	validator := &BlockValidator{config: config, sealer: sealer, mGov: mGov, mValset: mValset}
@@ -497,6 +500,59 @@ func TestVerifySealsPermissionlessRejectsMutatedRound(t *testing.T) {
 
 	sealer.WriteRound(header, round+1)
 	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+}
+
+// TestVerifySealsPermissionlessAcceptsHashLockedAuthor covers the block a round change
+// produces: the locked proposal is re-proposed in a later round, so the header carries the
+// final round with the original author's seal. Such a block is valid, and deciding it must
+// not depend on who was scheduled to propose the final round.
+func TestVerifySealsPermissionlessAcceptsHashLockedAuthor(t *testing.T) {
+	const round = int64(3)
+	var (
+		blockNum = uint64(7)
+		keys     = make([]*ecdsa.PrivateKey, 4) // Quorum(4, 4) == 3, so 4 valid seals pass
+		addrs    = make([]common.Address, 4)
+	)
+	for i := range keys {
+		key, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		keys[i], addrs[i] = key, crypto.PubkeyToAddress(key.PublicKey)
+	}
+
+	sealer := &roundBoundSealer{istanbul.NewSealerImpl(keys[0])} // keys[0] sealed an earlier round
+
+	header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+	require.NoError(t, sealer.WriteValidators(header, addrs))
+	sealer.WriteRound(header, round)
+	authorSeal, err := sealer.MakeAuthorSeal(header)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteAuthorSeal(header, authorSeal))
+
+	seals := make([][]byte, len(keys))
+	for i, key := range keys {
+		preimage := istanbul.PrepareCommittedSealWithRound(sealer.HeaderHash(header), byte(round))
+		seals[i], err = crypto.Sign(crypto.Keccak256(preimage), key)
+		require.NoError(t, err)
+	}
+	require.NoError(t, sealer.WriteCommittedSeals(header, seals))
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(round)).Return(addrs, nil)
+	// The final round is another validator's turn, and the block must be valid regardless.
+	mValset.EXPECT().GetProposer(blockNum, uint64(round)).Return(addrs[1], nil).AnyTimes()
+
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	require.NoError(t, validator.verifySeals(header))
 }
 
 func TestVerifyBlockBody(t *testing.T) {

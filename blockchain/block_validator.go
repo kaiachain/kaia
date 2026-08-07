@@ -262,16 +262,6 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		if err != nil {
 			return err
 		}
-		proposer, err := v.mValset.GetProposer(blockNum, uint64(round))
-		if err != nil {
-			return err
-		}
-		// author == proposer implies the author is the committee-selected proposer,
-		// so a separate qualified-membership check is redundant here.
-		if author != proposer {
-			return consensus.ErrUnauthorized
-		}
-
 		// Count committed seals only from the round's committee, matching the set the
 		// live consensus commits against (handleCommit rejects non-committee senders),
 		// rather than the broader qualified/council set.
@@ -280,6 +270,9 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 			return err
 		}
 		committeeSet := valset.NewAddressSet(committee)
+		if !committeeSet.Contains(author) {
+			return consensus.ErrUnauthorized
+		}
 		validSeal, err := countValidCommittedSeals(committers, committeeSet)
 		if err != nil {
 			return err
