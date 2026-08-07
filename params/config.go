@@ -449,7 +449,7 @@ func (c *ChainConfig) Copy() *ChainConfig {
 
 // BlobConfig returns the blob config associated with the provided fork.
 func (c *ChainConfig) BlobConfig(head *big.Int) *BlobConfig {
-	if c.IsOsakaForkEnabled(head) {
+	if c.IsOsakaForkEnabled(head) && c.BlobScheduleConfig != nil {
 		return c.BlobScheduleConfig.Osaka
 	}
 	return nil
@@ -648,6 +648,19 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		if cur.block != nil {
 			lastFork = cur
 		}
+	}
+
+	// Check that the fork enabling blobs explicitly defines a valid blob schedule.
+	var osakaBlobConfig *BlobConfig
+	if c.BlobScheduleConfig != nil {
+		osakaBlobConfig = c.BlobScheduleConfig.Osaka
+	}
+	if osakaBlobConfig != nil {
+		if err := osakaBlobConfig.validate(); err != nil {
+			return fmt.Errorf("invalid chain configuration in blobSchedule for fork %q: %v", "osaka", err)
+		}
+	} else if c.OsakaCompatibleBlock != nil {
+		return fmt.Errorf("invalid chain configuration: missing entry for fork %q in blobSchedule", "osaka")
 	}
 	return nil
 }
