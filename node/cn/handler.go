@@ -720,6 +720,9 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 	//}
 	//addr := crypto.PubkeyToAddress(*pubKey)
 	if msg.Code == consensus.ConsensusMsgCode {
+		if p.ConnType() != common.CONSENSUSNODE {
+			return errResp(ErrInvalidMsgCode, "consensus message from a non-CN peer: conntype %d", p.ConnType())
+		}
 		if pm.handler == nil {
 			return nil
 		}
