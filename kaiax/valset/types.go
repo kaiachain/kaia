@@ -264,12 +264,6 @@ func (v NodeMap) Committee() NodeMap {
 	return v.FilterByState(ValActive).ExcludeSuspended()
 }
 
-// HeaderGovVoters returns nodes eligible for governance header votes.
-// {ValActive} excluding suspended nodes.
-func (v NodeMap) HeaderGovVoters() NodeMap {
-	return v.FilterByState(ValActive).ExcludeSuspended()
-}
-
 // CNPeers returns nodes that should maintain CN-CN P2P connections.
 // Includes CandReady — P2P must be established before CandTesting promotion.
 func (v NodeMap) CNPeers() NodeMap {

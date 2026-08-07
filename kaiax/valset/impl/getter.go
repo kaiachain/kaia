@@ -153,14 +153,6 @@ func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
 	return cnPeers, nil
 }
 
-// GetHeaderGovVoters returns validators eligible for header governance votes. Pre-fork: council.
-func (v *ValsetModule) GetHeaderGovVoters(num uint64) ([]common.Address, error) {
-	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getHeaderGovVoters(num)
-	}
-	return v.GetCouncil(num)
-}
-
 // GetNodesByState filters NodeMap by state. Empty states means "all".
 // Returns an explicit fork-disabled error pre-fork.
 func (v *ValsetModule) GetNodesByState(num uint64, states []valset.NodeState) (map[common.Address]*valset.Node, error) {
