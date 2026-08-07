@@ -87,9 +87,17 @@ func (u *cnPeerUpdater) sync(num uint64) {
 	}
 	addrs, err := u.reader.GetCNPeers(num)
 	if err != nil {
-		logger.Warn("syncCNPeers: disabling CN peer filter after initial GetCNPeers failed", "num", num, "err", err)
-		u.setCNPeersIfChanged(nil)
-		return
+		addrs = nil
+	}
+	if addrs == nil {
+		// The read produced no allowlist. Pushing nil would turn CN filtering off
+		// entirely, so keep the last one instead.
+		isLastPushNonNil := u.lastHash != nil && *u.lastHash != hashCNPeerInput(nil)
+		if isLastPushNonNil {
+			logger.Warn("syncCNPeers: keeping the last CN peer allowlist", "num", num, "err", err)
+			return
+		}
+		logger.Warn("syncCNPeers: leaving the CN peer filter disabled", "num", num, "err", err)
 	}
 	u.setCNPeersIfChanged(addrs)
 }

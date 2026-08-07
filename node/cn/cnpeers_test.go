@@ -174,18 +174,28 @@ func TestCNPeerUpdaterFailureDisablesBeforeFirstPush(t *testing.T) {
 	assert.Nil(t, cn.sink.calls[0])
 }
 
-func TestCNPeerUpdaterFailureDisablesFilteringAfterPreviousPush(t *testing.T) {
-	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(
-		cnPeerReadResult{addrs: cnTestAddrs(1)},
-		cnPeerReadResult{err: errors.New("temporary read failure")},
-	))
+func TestCNPeerUpdaterFailureKeepsLastAllowlist(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		failedRead cnPeerReadResult
+	}{
+		{"read failure", cnPeerReadResult{err: errors.New("temporary read failure")}},
+		// GetCNPeers reports a failed read as a nil list, not as an error.
+		{"no addresses", cnPeerReadResult{addrs: nil}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(
+				cnPeerReadResult{addrs: cnTestAddrs(1)},
+				tc.failedRead,
+			))
 
-	cn.updater.sync(11)
-	cn.updater.sync(12)
+			cn.updater.sync(11)
+			cn.updater.sync(12)
 
-	require.Len(t, cn.sink.calls, 2)
-	assert.Equal(t, cnTestAddrs(1), cn.sink.calls[0])
-	assert.Nil(t, cn.sink.calls[1])
+			require.Len(t, cn.sink.calls, 1)
+			assert.Equal(t, cnTestAddrs(1), cn.sink.calls[0])
+		})
+	}
 }
 
 func cnTestAddrs(n ...int) []common.Address {
