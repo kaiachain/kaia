@@ -62,6 +62,10 @@ const (
 	softResponseLimit = 2 * 1024 * 1024 // Target maximum size of returned blocks, headers or node data.
 	estHeaderRlpSize  = 500             // Approximate size of an RLP encoded block header
 
+	// maxPropagatedTDBits bounds the total blockscore a propagated block may claim.
+	// The peer keeps the value after the message is handled, so it must be bounded.
+	maxPropagatedTDBits = 100
+
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
@@ -1509,6 +1513,9 @@ func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	var request newBlockData
 	if err := msg.Decode(&request); err != nil {
 		return errResp(ErrDecode, "%v: %v", msg, err)
+	}
+	if request.TD.BitLen() > maxPropagatedTDBits {
+		return errResp(ErrDecode, "too large total blockscore: bitlen %d", request.TD.BitLen())
 	}
 	request.Block.ReceivedAt = msg.ReceivedAt
 	request.Block.ReceivedFrom = p

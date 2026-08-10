@@ -240,6 +240,19 @@ func TestHandleNewBlockMsg_LargeLocalPeerBlockScore(t *testing.T) {
 	assert.NoError(t, handleNewBlockMsg(pm, mockPeer, msg))
 }
 
+// TestHandleNewBlockMsg_RejectsOversizedTD checks that an absurd total blockscore is
+// refused before the peer retains it.
+func TestHandleNewBlockMsg_RejectsOversizedTD(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	td := new(big.Int).Lsh(big.NewInt(1), maxPropagatedTDBits+1)
+	msg := generateMsg(t, NewBlockMsg, newBlockData{Block: newBlock(blockNum1), TD: td})
+
+	err := handleNewBlockMsg(&ProtocolManager{}, NewMockPeer(mockCtrl), msg)
+	assert.ErrorContains(t, err, "total blockscore")
+}
+
 func TestHandleNewBlockMsg_SmallLocalPeerBlockScore_NoSynchronise(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
