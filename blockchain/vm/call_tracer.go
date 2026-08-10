@@ -251,7 +251,8 @@ func (t *CallTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccL
 	if err != nil || !t.config.WithLog || t.interrupt.Load() {
 		return
 	}
-	if t.config.OnlyTopCall && depth > 0 {
+	// depth counts active frames, so top frame == 1 (geth's OnEnter depth is a 0-based index).
+	if t.config.OnlyTopCall && depth > 1 {
 		return
 	}
 	if op < LOG0 || op > LOG4 || len(t.callstack) == 0 {
