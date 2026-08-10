@@ -51,6 +51,20 @@ func (mr *MockProtocolManagerFetcherMockRecorder) Enqueue(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enqueue", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).Enqueue), arg0, arg1)
 }
 
+// EnqueueTrusted mocks base method.
+func (m *MockProtocolManagerFetcher) EnqueueTrusted(arg0 string, arg1 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnqueueTrusted", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnqueueTrusted indicates an expected call of EnqueueTrusted.
+func (mr *MockProtocolManagerFetcherMockRecorder) EnqueueTrusted(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnqueueTrusted", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).EnqueueTrusted), arg0, arg1)
+}
+
 // FilterBodies mocks base method.
 func (m *MockProtocolManagerFetcher) FilterBodies(arg0 string, arg1 [][]*types.Transaction, arg2 time.Time) [][]*types.Transaction {
 	m.ctrl.T.Helper()
@@ -77,6 +91,18 @@ func (m *MockProtocolManagerFetcher) FilterHeaders(arg0 string, arg1 []*types.He
 func (mr *MockProtocolManagerFetcherMockRecorder) FilterHeaders(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterHeaders", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).FilterHeaders), arg0, arg1, arg2)
+}
+
+// ForgetPeer mocks base method.
+func (m *MockProtocolManagerFetcher) ForgetPeer(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ForgetPeer", arg0)
+}
+
+// ForgetPeer indicates an expected call of ForgetPeer.
+func (mr *MockProtocolManagerFetcherMockRecorder) ForgetPeer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForgetPeer", reflect.TypeOf((*MockProtocolManagerFetcher)(nil).ForgetPeer), arg0)
 }
 
 // Notify mocks base method.

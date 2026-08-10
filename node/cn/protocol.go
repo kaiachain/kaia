@@ -181,6 +181,8 @@ type ProtocolManagerDownloader interface {
 //go:generate mockgen -destination=./mocks/fetcher_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerFetcher
 type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
+	EnqueueTrusted(peer string, block *types.Block) error
+	ForgetPeer(peer string)
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction
 	FilterHeaders(peer string, headers []*types.Header, time time.Time) []*types.Header
 	Notify(peer string, hash common.Hash, number uint64, time time.Time, headerFetcher fetcher.HeaderRequesterFn, bodyFetcher fetcher.BodyRequesterFn) error

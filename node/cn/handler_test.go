@@ -230,6 +230,10 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		mockDownloader.EXPECT().UnregisterPeer(peerID).Times(1)
 		pm.downloader = mockDownloader
 
+		mockFetcher := mocks.NewMockProtocolManagerFetcher(mockCtrl)
+		mockFetcher.EXPECT().ForgetPeer(peerID).Times(1)
+		pm.fetcher = mockFetcher
+
 		// Return
 		mockPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
 
@@ -255,6 +259,10 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		mockDownloader := mocks.NewMockProtocolManagerDownloader(mockCtrl)
 		mockDownloader.EXPECT().UnregisterPeer(peerID).Times(1)
 		pm.downloader = mockDownloader
+
+		mockFetcher := mocks.NewMockProtocolManagerFetcher(mockCtrl)
+		mockFetcher.EXPECT().ForgetPeer(peerID).Times(1)
+		pm.fetcher = mockFetcher
 
 		// Return
 		mockPeer.EXPECT().ExistSnapExtension().Return(false).Times(1)
@@ -966,7 +974,8 @@ func TestEnqueue(t *testing.T) {
 	block := newBlock(blockNum1)
 	id := nodeids[0].String()
 
-	fetcherMock.EXPECT().Enqueue(id, block).Times(1)
+	// The consensus engine is the only caller, so its blocks bypass the byte budget.
+	fetcherMock.EXPECT().EnqueueTrusted(id, block).Times(1)
 	pm.Enqueue(id, block)
 }
 

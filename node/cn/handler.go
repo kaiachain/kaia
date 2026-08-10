@@ -404,7 +404,8 @@ func (pm *ProtocolManager) removePeer(id string) {
 		pm.downloader.GetSnapSyncer().Unregister(id)
 	}
 
-	// Unregister the peer from the downloader and peer set
+	// Unregister the peer from the fetcher, the downloader and the peer set
+	pm.fetcher.ForgetPeer(id)
 	pm.downloader.UnregisterPeer(id)
 	if err := pm.peers.Unregister(id); err != nil {
 		logger.Error("Peer removal failed", "peer", id, "err", err)
@@ -1914,8 +1915,10 @@ func (pm *ProtocolManager) NodeInfo() *NodeInfo {
 
 // Below functions are used in Istanbul BFT consensus.
 // Enqueue wraps fetcher's Enqueue function to insert the given block.
+// Enqueue schedules a block the consensus engine committed. Its only caller is the
+// engine, so the block bypasses the fetcher's peer-facing byte budget.
 func (pm *ProtocolManager) Enqueue(id string, block *types.Block) {
-	pm.fetcher.Enqueue(id, block)
+	pm.fetcher.EnqueueTrusted(id, block)
 }
 
 func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common.Address]consensus.Peer {

@@ -32,7 +32,9 @@ func NewFakeFetcher() *FakeFetcher {
 	return &FakeFetcher{}
 }
 
-func (*FakeFetcher) Enqueue(peer string, block *types.Block) error { return nil }
+func (*FakeFetcher) Enqueue(peer string, block *types.Block) error        { return nil }
+func (*FakeFetcher) EnqueueTrusted(peer string, block *types.Block) error { return nil }
+func (*FakeFetcher) ForgetPeer(peer string)                               {}
 func (*FakeFetcher) FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction {
 	return nil
 }

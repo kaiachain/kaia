@@ -51,6 +51,10 @@ const (
 var (
 	errTerminated = errors.New("terminated")
 	logger        = log.NewModuleLogger(log.DatasyncFetcher)
+
+	// queuedBytesLimit caps the encoded size of the blocks held in the import queue,
+	// matching the downloader's blockCacheMemory. blockLimit alone bounds the count.
+	queuedBytesLimit uint64 = 64 * 1024 * 1024
 )
 
 // blockRetrievalFn is a callback type for retrieving a block from the local chain.
@@ -111,8 +115,9 @@ type bodyFilterTask struct {
 
 // inject represents a schedules import operation.
 type inject struct {
-	origin string
-	block  *types.Block
+	origin  string
+	block   *types.Block
+	trusted bool // locally produced by consensus; exempt from the queue byte budget
 }
 
 // Fetcher is responsible for accumulating block announcements from various peers
@@ -126,8 +131,9 @@ type Fetcher struct {
 	headerFilter chan chan *headerFilterTask
 	bodyFilter   chan chan *bodyFilterTask
 
-	done chan common.Hash
-	quit chan struct{}
+	done       chan common.Hash
+	forgetPeer chan string
+	quit       chan struct{}
 
 	// Announce states
 	announces  map[string]int              // Per peer announce counts to prevent memory exhaustion
@@ -137,9 +143,10 @@ type Fetcher struct {
 	completing map[common.Hash]*announce   // Blocks with headers, currently body-completing
 
 	// Block cache
-	queue  *prque.Prque            // Queue containing the import operations (block number sorted)
-	queues map[string]int          // Per peer block counts to prevent memory exhaustion
-	queued map[common.Hash]*inject // Set of already queued blocks (to dedupe imports)
+	queue       *prque.Prque            // Queue containing the import operations (block number sorted)
+	queues      map[string]int          // Per peer block counts to prevent memory exhaustion
+	queued      map[common.Hash]*inject // Set of already queued blocks (to dedupe imports)
+	queuedBytes uint64                  // Encoded size of the queued blocks
 
 	// Callbacks
 	getBlock           blockRetrievalFn       // Retrieves a block from the local chain
@@ -169,6 +176,7 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 		headerFilter:       make(chan chan *headerFilterTask),
 		bodyFilter:         make(chan chan *bodyFilterTask),
 		done:               make(chan common.Hash, numInsertTasks),
+		forgetPeer:         make(chan string),
 		quit:               make(chan struct{}),
 		announces:          make(map[string]int),
 		announced:          make(map[common.Hash][]*announce),
@@ -228,16 +236,29 @@ func (f *Fetcher) Notify(peer string, hash common.Hash, number uint64, time time
 
 // Enqueue tries to fill gaps the fetcher's future import queue.
 func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
-	op := &inject{
-		origin: peer,
-		block:  block,
-	}
+	return f.enqueueOp(&inject{origin: peer, block: block})
+}
 
+// EnqueueTrusted schedules a block this node produced or committed itself, which is
+// exempt from the queue byte budget so a peer cannot crowd out the consensus import path.
+func (f *Fetcher) EnqueueTrusted(peer string, block *types.Block) error {
+	return f.enqueueOp(&inject{origin: peer, block: block, trusted: true})
+}
+
+func (f *Fetcher) enqueueOp(op *inject) error {
 	select {
 	case f.inject <- op:
 		return nil
 	case <-f.quit:
 		return errTerminated
+	}
+}
+
+// ForgetPeer releases the blocks a disconnected peer left in the import queue.
+func (f *Fetcher) ForgetPeer(peer string) {
+	select {
+	case f.forgetPeer <- peer:
+	case <-f.quit:
 	}
 }
 
@@ -315,6 +336,9 @@ func (f *Fetcher) loop() {
 		height := f.chainHeight()
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
+			if op.block == nil { // released when its source peer disconnected
+				continue
+			}
 			if f.queueChangeHook != nil {
 				f.queueChangeHook(op.block.Hash(), false)
 			}
@@ -391,7 +415,20 @@ func (f *Fetcher) loop() {
 		case op := <-f.inject:
 			// A direct block insertion was requested, try and fill any pending gaps
 			propBroadcastInMeter.Mark(1)
-			f.enqueue(op.origin, op.block)
+			f.enqueue(op.origin, op.block, op.trusted)
+
+		case peer := <-f.forgetPeer:
+			// The peer is gone; release what it queued instead of holding it until
+			// the chain reaches those heights.
+			for hash, op := range f.queued {
+				if op.origin == peer {
+					f.forgetBlock(hash)
+					op.block = nil // the queue entry itself is dropped when popped
+					if f.queueChangeHook != nil {
+						f.queueChangeHook(hash, false)
+					}
+				}
+			}
 
 		case hash := <-f.done:
 			// A pending import finished, remove all traces of the notification
@@ -539,7 +576,7 @@ func (f *Fetcher) loop() {
 			// Schedule the header-only blocks for import
 			for _, block := range complete {
 				if announce := f.completing[block.Hash()]; announce != nil {
-					f.enqueue(announce.origin, block)
+					f.enqueue(announce.origin, block, false)
 				}
 			}
 
@@ -604,7 +641,7 @@ func (f *Fetcher) loop() {
 			// Schedule the retrieved blocks for ordered import
 			for _, block := range blocks {
 				if announce := f.completing[block.Hash()]; announce != nil {
-					f.enqueue(announce.origin, block)
+					f.enqueue(announce.origin, block, false)
 				}
 			}
 		}
@@ -645,7 +682,7 @@ func (f *Fetcher) rescheduleComplete(complete *time.Timer) {
 
 // enqueue schedules a new future import operation, if the block to be imported
 // has not yet been seen.
-func (f *Fetcher) enqueue(peer string, block *types.Block) {
+func (f *Fetcher) enqueue(peer string, block *types.Block, trusted bool) {
 	hash := block.Hash()
 
 	// Ensure the peer isn't DOSing us
@@ -663,14 +700,25 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		f.forgetHash(hash)
 		return
 	}
+	// Bound the memory the queue holds. Blocks this node committed itself are exempt:
+	// they are the consensus import path and must not be crowded out by a peer.
+	size := uint64(block.Size())
+	if !trusted && f.queuedBytes+size > queuedBytesLimit {
+		logger.Debug("Discarded propagated block, exceeded byte allowance", "peer", peer, "number", block.Number(), "hash", hash, "limit", queuedBytesLimit)
+		propBroadcastDOSMeter.Mark(1)
+		f.forgetHash(hash)
+		return
+	}
 	// Schedule the block for future importing
 	if _, ok := f.queued[hash]; !ok {
 		op := &inject{
-			origin: peer,
-			block:  block,
+			origin:  peer,
+			block:   block,
+			trusted: trusted,
 		}
 		f.queues[peer] = count
 		f.queued[hash] = op
+		f.queuedBytes += size
 		f.queue.Push(op, -int64(block.NumberU64()))
 		if f.queueChangeHook != nil {
 			f.queueChangeHook(op.block.Hash(), true)
@@ -793,6 +841,7 @@ func (f *Fetcher) forgetBlock(hash common.Hash) {
 		if f.queues[insert.origin] == 0 {
 			delete(f.queues, insert.origin)
 		}
+		f.queuedBytes -= uint64(insert.block.Size())
 		delete(f.queued, hash)
 	}
 }
