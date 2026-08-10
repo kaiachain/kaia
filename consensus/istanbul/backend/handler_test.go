@@ -36,6 +36,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	_, backend := newBlockChain(t, 1)
 	defer backend.Stop()
 	eventSub := backend.istanbulEventMux.Subscribe(istanbul.MessageEvent{})
+	defer eventSub.Unsubscribe()
 
 	addr := common.StringToAddress("test addr")
 	data := &bft.ConsensusMsg{
@@ -52,12 +53,30 @@ func TestBackend_HandleMsg(t *testing.T) {
 			Size:    uint32(size),
 			Payload: payload,
 		}
-		isHandled, err := backend.HandleMsg(addr, msg)
-		assert.Nil(t, err)
-		assert.True(t, isHandled)
+		type result struct {
+			handled bool
+			err     error
+		}
+		resultCh := make(chan result, 1)
+		go func() {
+			handled, err := backend.HandleMsg(addr, msg)
+			resultCh <- result{handled, err}
+		}()
 
-		if err != nil {
-			t.Fatalf("handle message failed: %v", err)
+		evTimer := time.NewTimer(3 * time.Second)
+		defer evTimer.Stop()
+
+		select {
+		case event := <-eventSub.Chan():
+			switch ev := event.Data.(type) {
+			case istanbul.MessageEvent:
+				assert.Equal(t, data.Payload, ev.Payload)
+				assert.Equal(t, data.PrevHash, ev.Hash)
+			default:
+				t.Fatal("unexpected message type")
+			}
+		case <-evTimer.C:
+			t.Fatal("failed to subscribe istanbul message event")
 		}
 
 		recentMsg, ok := backend.recentMessages.Get(addr)
@@ -74,20 +93,12 @@ func TestBackend_HandleMsg(t *testing.T) {
 		assert.True(t, ok)
 		assert.True(t, value.(bool))
 
-		evTimer := time.NewTimer(3 * time.Second)
-		defer evTimer.Stop()
-
 		select {
-		case event := <-eventSub.Chan():
-			switch ev := event.Data.(type) {
-			case istanbul.MessageEvent:
-				assert.Equal(t, data.Payload, ev.Payload)
-				assert.Equal(t, data.PrevHash, ev.Hash)
-			default:
-				t.Fatal("unexpected message type")
-			}
-		case <-evTimer.C:
-			t.Fatal("failed to subscribe istanbul message event")
+		case result := <-resultCh:
+			assert.NoError(t, result.err)
+			assert.True(t, result.handled)
+		case <-time.After(3 * time.Second):
+			t.Fatal("HandleMsg did not return after event delivery")
 		}
 	}
 
@@ -127,6 +138,69 @@ func TestBackend_HandleMsg(t *testing.T) {
 		isHandled, err := backend.HandleMsg(addr, msg)
 		assert.Equal(t, istanbul.ErrStoppedEngine, err)
 		assert.True(t, isHandled)
+	}
+}
+
+func TestBackend_HandleMsgAppliesBackpressureOutsideCoreMu(t *testing.T) {
+	backend := newTestBackend()
+	backend.coreStarted.Store(true)
+	eventSub := backend.istanbulEventMux.Subscribe(istanbul.MessageEvent{})
+	defer eventSub.Unsubscribe()
+
+	data := &bft.ConsensusMsg{Payload: []byte("backpressure test")}
+	size, payload, err := rlp.EncodeToReader(data)
+	assert.NoError(t, err)
+	hash := istanbul.RLPHash(data.Payload)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := backend.HandleMsg(common.StringToAddress("peer"), p2p.Msg{
+			Code:    consensus.ConsensusMsgCode,
+			Size:    uint32(size),
+			Payload: payload,
+		})
+		done <- err
+	}()
+
+	deadline := time.After(time.Second)
+	for {
+		backend.coreMu.Lock()
+		_, known := backend.knownMessages.Get(hash)
+		backend.coreMu.Unlock()
+		if known {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("HandleMsg did not prepare the consensus event")
+		case <-time.After(time.Millisecond):
+		}
+	}
+
+	select {
+	case err := <-done:
+		t.Fatalf("HandleMsg returned before the event was received: %v", err)
+	default:
+	}
+
+	locked := make(chan struct{})
+	go func() {
+		backend.coreMu.Lock()
+		backend.coreMu.Unlock()
+		close(locked)
+	}()
+	select {
+	case <-locked:
+	case <-time.After(time.Second):
+		t.Fatal("HandleMsg held coreMu while waiting for event delivery")
+	}
+
+	eventSub.Unsubscribe()
+	select {
+	case err := <-done:
+		assert.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("HandleMsg did not unblock after event subscription closed")
 	}
 }
 
