@@ -949,12 +949,35 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 	return p.SendBlockHeaders(headers)
 }
 
+// decodeResponseList decodes a response list one element at a time, refusing a list
+// longer than limit. Decoding the whole list at once lets a peer turn a message-sized
+// packet into an arbitrarily larger object graph, and we never request more than limit.
+func decodeResponseList[T any](msg p2p.Msg, limit int) ([]T, error) {
+	stream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := stream.List(); err != nil {
+		return nil, errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	var items []T
+	for {
+		var item T
+		if err := stream.Decode(&item); err == rlp.EOL {
+			return items, nil
+		} else if err != nil {
+			return nil, errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		if len(items) >= limit {
+			return nil, errResp(ErrTooManyItems, "msg %v: limit %d", msg, limit)
+		}
+		items = append(items, item)
+	}
+}
+
 // handleBlockHeadersMsg handles block header response message.
 func handleBlockHeadersMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of headers arrived to one of our previous requests
-	var headers []*types.Header
-	if err := msg.Decode(&headers); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	headers, err := decodeResponseList[*types.Header](msg, downloader.MaxHeaderFetch)
+	if err != nil {
+		return err
 	}
 	if err := pm.downloader.DeliverHeaders(p.GetID(), headers); err != nil {
 		logger.Debug("Failed to deliver headers", "err", err)
@@ -1009,9 +1032,9 @@ func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 // handleGetBlockBodiesMsg handles block body response message.
 func handleBlockBodiesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of block bodies arrived to one of our previous requests
-	var request blockBodiesData
-	if err := msg.Decode(&request); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	request, err := decodeResponseList[*blockBody](msg, downloader.MaxBlockFetch)
+	if err != nil {
+		return err
 	}
 	// Deliver them all to the downloader for queuing
 	transactions := make([][]*types.Transaction, len(request))
@@ -1020,8 +1043,7 @@ func handleBlockBodiesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		transactions[i] = body.Transactions
 	}
 
-	err := pm.downloader.DeliverBodies(p.GetID(), transactions)
-	if err != nil {
+	if err := pm.downloader.DeliverBodies(p.GetID(), transactions); err != nil {
 		logger.Debug("Failed to deliver bodies", "err", err)
 	}
 
@@ -1069,9 +1091,9 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 // handleNodeDataMsg handles node data response message.
 func handleNodeDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of node state data arrived to one of our previous requests
-	var data [][]byte
-	if err := msg.Decode(&data); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	data, err := decodeResponseList[[]byte](msg, downloader.MaxStateFetch)
+	if err != nil {
+		return err
 	}
 	// Deliver all to the downloader
 	if err := pm.downloader.DeliverNodeData(p.GetID(), data); err != nil {
@@ -1124,9 +1146,9 @@ func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 // handleReceiptsMsg handles receipt response message.
 func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of receipts arrived to one of our previous requests
-	var receipts [][]*types.Receipt
-	if err := msg.Decode(&receipts); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	receipts, err := decodeResponseList[[]*types.Receipt](msg, downloader.MaxReceiptFetch)
+	if err != nil {
+		return err
 	}
 	// Deliver all to the downloader
 	if err := pm.downloader.DeliverReceipts(p.GetID(), receipts); err != nil {
@@ -1202,9 +1224,9 @@ func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 
 	// A batch of stakingInfos arrived to one of our previous requests
-	var stakingInfos []*staking.P2PStakingInfo
-	if err := msg.Decode(&stakingInfos); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	stakingInfos, err := decodeResponseList[*staking.P2PStakingInfo](msg, downloader.MaxStakingInfoFetch)
+	if err != nil {
+		return err
 	}
 	// Deliver all to the downloader
 	if err := pm.downloader.DeliverStakingInfos(p.GetID(), stakingInfos); err != nil {
@@ -1483,9 +1505,9 @@ func handleBlockBodiesFetchRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) 
 // handleBlockBodiesFetchResponseMsg handles block bodies fetch response message.
 func handleBlockBodiesFetchResponseMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of block bodies arrived to one of our previous requests
-	var request blockBodiesData
-	if err := msg.Decode(&request); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	request, err := decodeResponseList[*blockBody](msg, downloader.MaxBlockFetch)
+	if err != nil {
+		return err
 	}
 	// Deliver them all to the downloader for queuing
 	transactions := make([][]*types.Transaction, len(request))

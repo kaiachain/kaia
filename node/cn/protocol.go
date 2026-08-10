@@ -128,6 +128,7 @@ const (
 	ErrUnexpectedTxType
 	ErrFailedToGetStateDB
 	ErrUnsupportedEnginePolicy
+	ErrTooManyItems
 )
 
 func (e errCode) String() string {
@@ -149,6 +150,7 @@ var errorToString = map[int]string{
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 	ErrUnsupportedEnginePolicy: "Unsupported engine or policy",
+	ErrTooManyItems:            "Too many items",
 }
 
 // ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.

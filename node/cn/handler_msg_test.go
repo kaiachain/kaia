@@ -1167,3 +1167,95 @@ func generateTestSidecar(hash common.Hash) *types.BlobTxSidecar {
 		Proofs:      []kzg4844.Proof{proof},
 	}
 }
+
+// TestHandleResponseMsg_ListLimit checks each response handler against the number of
+// items we may request: that many is delivered, one more is refused.
+func TestHandleResponseMsg_ListLimit(t *testing.T) {
+	headers := func(n int) interface{} {
+		out := make([]*types.Header, n)
+		for i := range out {
+			out[i] = &types.Header{}
+		}
+		return out
+	}
+	bodies := func(n int) interface{} {
+		out := make(blockBodiesData, n)
+		for i := range out {
+			out[i] = &blockBody{}
+		}
+		return out
+	}
+	stakingInfos := func(n int) interface{} {
+		out := make([]*staking.P2PStakingInfo, n)
+		for i := range out {
+			out[i] = &staking.P2PStakingInfo{}
+		}
+		return out
+	}
+	nodeData := func(n int) interface{} { return make([][]byte, n) }
+	receipts := func(n int) interface{} { return make([][]*types.Receipt, n) }
+
+	testcases := []struct {
+		name    string
+		code    uint64
+		limit   int
+		payload func(n int) interface{}
+		deliver func(*mocks2.MockProtocolManagerDownloader, *mocks2.MockProtocolManagerFetcher)
+	}{
+		{"BlockHeadersMsg", BlockHeadersMsg, downloader.MaxHeaderFetch, headers, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverHeaders(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"BlockBodiesMsg", BlockBodiesMsg, downloader.MaxBlockFetch, bodies, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverBodies(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"BlockBodiesFetchResponseMsg", BlockBodiesFetchResponseMsg, downloader.MaxBlockFetch, bodies, func(_ *mocks2.MockProtocolManagerDownloader, f *mocks2.MockProtocolManagerFetcher) {
+			f.EXPECT().FilterBodies(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"NodeDataMsg", NodeDataMsg, downloader.MaxStateFetch, nodeData, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverNodeData(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"ReceiptsMsg", ReceiptsMsg, downloader.MaxReceiptFetch, receipts, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverReceipts(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"StakingInfoMsg", StakingInfoMsg, downloader.MaxStakingInfoFetch, stakingInfos, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverStakingInfos(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+	}
+	for _, tc := range testcases {
+		newPM := func(mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *mocks2.MockProtocolManagerDownloader, *mocks2.MockProtocolManagerFetcher) {
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().GetVersion().Return(kaia68).AnyTimes()
+			mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+			chainConfig := params.TestChainConfig.Copy()
+			chainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+			chainConfig.Istanbul.ProposerPolicy = uint64(istanbul.WeightedRandom)
+
+			mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
+			mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
+			return &ProtocolManager{downloader: mockDownloader, fetcher: mockFetcher, chainconfig: chainConfig}, mockPeer, mockDownloader, mockFetcher
+		}
+
+		t.Run(tc.name+"/at limit", func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm, mockPeer, mockDownloader, mockFetcher := newPM(mockCtrl)
+			tc.deliver(mockDownloader, mockFetcher)
+
+			msg := generateMsg(t, tc.code, tc.payload(tc.limit))
+			assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
+		})
+
+		// The delivery mocks carry no expectations here, so reaching them fails the test.
+		t.Run(tc.name+"/over limit", func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm, mockPeer, _, _ := newPM(mockCtrl)
+
+			msg := generateMsg(t, tc.code, tc.payload(tc.limit+1))
+			assert.ErrorContains(t, pm.handleMsg(mockPeer, addrs[0], msg), "Too many items")
+		})
+	}
+}
