@@ -339,12 +339,15 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 			needs[n.NType]--
 		}
 	}
+
+	numConnectedAll, numStatic := ds.connectedAll.len(), ds.static.len()
+	numOutbound, numDialing := ds.connectedOutbound.len(), ds.dialing.len()
 	ds.mu.RUnlock()
 
 	// 4. Dynamic nodes — skip when already at total peer capacity.
 	// Even if we want more outbound peers (needs > 0), the total capacity might be reached (maxPeers) due to inbound peers.
 	// Static dials (added above) bypass this check, mirroring the Server's capacity check.
-	if ds.maxPeers == 0 || ds.connectedAll.len() < ds.maxPeers {
+	if ds.maxPeers == 0 || numConnectedAll < ds.maxPeers {
 		for targetType, need := range needs {
 			dynamicNodes, refresh := ds.getDynamicCandidates(targetType, need)
 			candidates = append(candidates, dynamicNodes...)
@@ -353,8 +356,8 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 	}
 
 	if len(candidates) > 0 {
-		logger.Debug("Dialing candidates", "needs", needs, "static", ds.static.len(),
-			"connectedOutbound", ds.connectedOutbound.len(), "dialing", ds.dialing.len(), "candidates", len(candidates))
+		logger.Debug("Dialing candidates", "needs", needs, "static", numStatic,
+			"connectedOutbound", numOutbound, "dialing", numDialing, "candidates", len(candidates))
 	}
 	return candidates, needRefresh
 }
