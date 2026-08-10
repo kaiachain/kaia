@@ -229,10 +229,9 @@ func TestCommit(t *testing.T) {
 	}
 }
 
-// buildOversizedBlock returns a sealed block whose RLP-encoded size exceeds
-// params.MaxBlockSize, built on top of the chain's current head. Verify does not
-// execute transactions, so the injected tx only needs to inflate the encoded size.
-func buildOversizedBlock(t *testing.T, chain *blockchain.BlockChain, engine *backend) *types.Block {
+// buildBlockWithTx returns a sealed block carrying the given tx, built on top of the
+// chain's current head.
+func buildBlockWithTx(t *testing.T, chain *blockchain.BlockChain, engine *backend, txdata *types.TxInternalDataLegacy) *types.Block {
 	t.Helper()
 	parent := chain.CurrentBlock()
 	header := makeHeader(parent, chain.Config())
@@ -248,27 +247,32 @@ func buildOversizedBlock(t *testing.T, chain *blockchain.BlockChain, engine *bac
 		t.Fatal(err)
 	}
 
-	recipient := common.Address{}
-	tx := types.NewTx(&types.TxInternalDataLegacy{
-		AccountNonce: 0,
-		Price:        big.NewInt(1),
-		GasLimit:     1,
-		Recipient:    &recipient,
-		Amount:       big.NewInt(0),
-		Payload:      make([]byte, params.MaxBlockSize), // pushes the whole block past the cap
-	})
 	key, err := crypto.GenerateKey()
 	if err != nil {
 		t.Fatal(err)
 	}
-	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chain.Config().ChainID), key)
+	signedTx, err := types.SignTx(types.NewTx(txdata), types.LatestSignerForChainID(chain.Config().ChainID), key)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// NewBlock recomputes the header TxHash from the supplied tx, so Verify's tx-root
+	// check still passes.
+	return sealBlock(engine, types.NewBlock(emptyBlock.Header(), []*types.Transaction{signedTx}, nil))
+}
 
-	// NewBlock recomputes the header TxHash from the supplied txs, so Verify's
-	// tx-root check still passes and the test isolates the size cap.
-	block := sealBlock(engine, types.NewBlock(emptyBlock.Header(), []*types.Transaction{signedTx}, nil))
+// buildOversizedBlock returns a sealed block whose RLP-encoded size exceeds
+// params.MaxBlockSize. Verify does not execute transactions, so the injected tx only
+// needs to inflate the encoded size.
+func buildOversizedBlock(t *testing.T, chain *blockchain.BlockChain, engine *backend) *types.Block {
+	t.Helper()
+	recipient := common.Address{}
+	block := buildBlockWithTx(t, chain, engine, &types.TxInternalDataLegacy{
+		Price:     big.NewInt(1),
+		GasLimit:  1,
+		Recipient: &recipient,
+		Amount:    big.NewInt(0),
+		Payload:   make([]byte, params.MaxBlockSize), // pushes the whole block past the cap
+	})
 	if block.Size() <= params.MaxBlockSize {
 		t.Fatalf("test setup: block is not oversized (size=%d, cap=%d)", uint64(block.Size()), params.MaxBlockSize)
 	}
@@ -307,5 +311,62 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 		oversized := buildOversizedBlock(t, chain, engine)
 		_, err := engine.Verify(oversized)
 		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
+	})
+}
+
+// TestBackend_VerifyEnforcesBodyRules checks that backend.Verify applies the body rules
+// ValidateBody enforces on import, running both paths on the same block.
+func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
+	t.Run("gasPrice", func(t *testing.T) {
+		const baseFeeGkei = 30
+		chain, engine := newBlockChain(t, 1,
+			LondonCompatibleBlock(big.NewInt(0)),
+			EthTxTypeCompatibleBlock(big.NewInt(0)),
+			magmaCompatibleBlock(big.NewInt(0)),
+			lowerBoundBaseFee(baseFeeGkei*params.Gkei),
+			upperBoundBaseFee(baseFeeGkei*params.Gkei),
+		)
+		defer chain.Stop()
+		defer engine.Stop()
+
+		recipient := common.Address{}
+		build := func(gasPrice uint64) *types.Block {
+			return buildBlockWithTx(t, chain, engine, &types.TxInternalDataLegacy{
+				Price:     new(big.Int).SetUint64(gasPrice),
+				GasLimit:  21000,
+				Recipient: &recipient,
+				Amount:    big.NewInt(0),
+			})
+		}
+
+		priced := build(baseFeeGkei * params.Gkei)
+		_, err := engine.Verify(priced)
+		assert.NoError(t, err)
+		assert.NoError(t, chain.Validator().ValidateBody(priced))
+
+		underpriced := build(baseFeeGkei*params.Gkei - 1)
+		_, err = engine.Verify(underpriced)
+		assert.ErrorContains(t, err, "invalid GasPrice")
+		assert.ErrorContains(t, chain.Validator().ValidateBody(underpriced), "invalid GasPrice")
+	})
+
+	// ValidateHeader cannot catch this: it never sees the body.
+	t.Run("blobGasUsed", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		normal := makeBlockWithSeal(chain, engine, chain.CurrentBlock())
+		_, err := engine.Verify(normal)
+		assert.NoError(t, err)
+
+		header := normal.Header()
+		claimed := uint64(params.BlobTxBlobGasPerBlob)
+		header.BlobGasUsed = &claimed
+		lying := sealBlock(engine, types.NewBlock(header, nil, nil))
+
+		_, err = engine.Verify(lying)
+		assert.ErrorContains(t, err, "blob gas used mismatch")
+		assert.ErrorContains(t, chain.Validator().ValidateBody(lying), "blob gas used mismatch")
 	})
 }

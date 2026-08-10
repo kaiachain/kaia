@@ -24,6 +24,8 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -374,12 +376,27 @@ func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 		return 0, blockchain.ErrBlacklistedHash
 	}
 
+	// The checks below mirror BlockValidator.ValidateBody, so a bad proposal is rejected
+	// here instead of being PREPARE/COMMIT-ed and then refused on the import path.
+
+	// check EIP-7934 RLP-encoded block size cap
+	if sb.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return 0, blockchain.ErrBlockOversized
+	}
+
 	// check block body
+	header := block.Header()
 	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
-	if txnHash != block.Header().TxHash {
+	if txnHash != header.TxHash {
 		return 0, istanbul.ErrMismatchTxhashes
 	}
+	baseFee := header.BaseFee
+	var blobs int
 	for _, tx := range block.Transactions() {
+		if baseFee != nil && baseFee.Cmp(tx.GasPrice()) > 0 {
+			return 0, fmt.Errorf("invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
+		}
+		blobs += len(tx.BlobHashes())
 		if tx.Type() == types.TxTypeEthereumBlob {
 			sidecar := tx.BlobTxSidecar()
 			if sidecar == nil {
@@ -392,12 +409,12 @@ func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 			}
 		}
 	}
-
-	// check EIP-7934 RLP-encoded block size cap, mirroring BlockValidator.ValidateBody
-	// so an oversized proposal is rejected here instead of being PREPARE/COMMIT-ed and
-	// then refused on the import path.
-	if sb.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
-		return 0, blockchain.ErrBlockOversized
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want {
+			return 0, fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
+		}
+	} else if blobs > 0 {
+		return 0, errors.New("data blobs present in block body")
 	}
 
 	// verify the header of proposed block
