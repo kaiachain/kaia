@@ -26,9 +26,11 @@ import (
 	"sort"
 	"strings"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/bindings/kip113"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 )
 
@@ -38,12 +40,31 @@ type BlsPublicKeyInfo struct {
 	VerifyErr error // Nil if valid. Must check before use.
 }
 
+// Has to hold AddressBookV2's whole node set at once, or every read evicts what the
+// next one needs. maxNodeCount is configurable, so this is a ceiling, not a bound.
+const blsPopCacheSize = 1024
+
+// Memoizes verifyBlsPublicKeyInfo, whose inputs stay put while the AddressBookV2
+// storage root moves, so an unrelated write does not re-verify the whole set.
+var blsPopCache, _ = lru.NewARC(blsPopCacheSize)
+
 func newBlsPublicKeyInfo(publicKey []byte, pop []byte) BlsPublicKeyInfo {
 	return BlsPublicKeyInfo{
 		PublicKey: publicKey,
 		Pop:       pop,
-		VerifyErr: verifyBlsPublicKeyInfo(publicKey, pop),
+		VerifyErr: verifyBlsPublicKeyInfoCached(publicKey, pop),
 	}
+}
+
+func verifyBlsPublicKeyInfoCached(publicKey []byte, pop []byte) error {
+	cacheKey := string(crypto.Keccak256(publicKey, pop))
+	if cached, ok := blsPopCache.Get(cacheKey); ok {
+		err, _ := cached.(error) // a nil error is stored as a nil interface
+		return err
+	}
+	err := verifyBlsPublicKeyInfo(publicKey, pop)
+	blsPopCache.Add(cacheKey, err)
+	return err
 }
 
 func verifyBlsPublicKeyInfo(publicKey []byte, pop []byte) error {
