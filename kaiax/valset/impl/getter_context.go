@@ -202,18 +202,22 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 
 func selectRoundRobinProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
 	prevIdx := max(qualified.IndexOf(prevProposer), 0)
-	return qualified.At((prevIdx + int(round) + 1) % qualified.Len())
+	// Unsigned modular arithmetic keeps the index in range for any round.
+	n := uint64(qualified.Len())
+	return qualified.At(int((uint64(prevIdx) + 1 + round%n) % n))
 }
 
 func selectStickyProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
 	prevIdx := max(qualified.IndexOf(prevProposer), 0)
-	return qualified.At((prevIdx + int(round)) % qualified.Len())
+	n := uint64(qualified.Len())
+	return qualified.At(int((uint64(prevIdx) + round%n) % n))
 }
 
 // listSourceNum is the block number at which the list is generated. The caller must ensure that `len(list) > 0` and `listSourceNum <= num - 1`
 func selectWeightedRandomProposer(list []common.Address, listSourceNum, num uint64, round uint64) common.Address {
+	// Unsigned modulo, matching selectRandaoProposer.
 	idx := num + round - listSourceNum - 1
-	return list[int(idx)%len(list)]
+	return list[idx%uint64(len(list))]
 }
 
 func selectRandaoProposer(committee []common.Address, round uint64) common.Address {
