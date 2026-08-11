@@ -55,6 +55,9 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 		return nil, errNoHeader
 	}
 
+	// The previous block's author, which under a hash lock is not the proposer of the round that
+	// committed it. RoundRobin and Sticky index off this, so redefining it would change the
+	// proposer of already-committed blocks and break resync of an existing chain.
 	prevProposer := qualified.At(0)
 	if num-1 > 0 {
 		prevProposer, err = v.Chain.Sealer().Author(prevHeader)
