@@ -134,6 +134,22 @@ func Test_Table_SetCNPeers_dropsOutsiders(t *testing.T) {
 	assert.Equal(t, 3, tab.storages[NodeTypeCN].len(), "nil allowlist restores the unfiltered behavior")
 }
 
+// An update replaces the previous allowlist rather than adding to it, so a member that
+// leaves goes with it.
+func Test_Table_SetCNPeers_dropsFormerMembers(t *testing.T) {
+	tab := newTestTable2(t, nil)
+	leaving, leavingAddr := newTestNodeWithAddr(t, NodeTypeCN)
+	staying, stayingAddr := newTestNodeWithAddr(t, NodeTypeCN)
+
+	tab.SetCNPeers([]common.Address{leavingAddr, stayingAddr})
+	tab.addNode(leaving)
+	tab.addNode(staying)
+	require.Equal(t, 2, tab.storages[NodeTypeCN].len())
+
+	tab.SetCNPeers([]common.Address{stayingAddr})
+	assert.ElementsMatch(t, []*Node{staying}, tab.storages[NodeTypeCN].all())
+}
+
 func Test_Table_deleteNode_typed(t *testing.T) {
 	tab := newTestTable2(t, nil)
 

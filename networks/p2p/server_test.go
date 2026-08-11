@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/networks/p2p/rlpx"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 func init() {
@@ -524,16 +525,32 @@ func TestServerCNPeersAdmission(t *testing.T) {
 	}
 }
 
-// Only CNs enforce the CN allowlist. EN/PN must keep serving any peer, so their
-// SetCNPeers is a no-op and admitByCNPeers admits CNs outside any allowlist.
+// fakeDiscovery records the CN allowlist pushed down to discovery.
+type fakeDiscovery struct {
+	cnPeerAddrs []common.Address
+}
+
+func (d *fakeDiscovery) Close()                                              {}
+func (d *fakeDiscovery) Refresh()                                            {}
+func (d *fakeDiscovery) RandomNodes([]*discover.Node, discover.NodeType) int { return 0 }
+func (d *fakeDiscovery) APIs() []rpc.API                                     { return nil }
+func (d *fakeDiscovery) SetCNPeers(addrs []common.Address)                   { d.cnPeerAddrs = addrs }
+
+// Only CNs enforce the CN allowlist on admission: SetCNPeers leaves cnPeerAddrs nil on
+// EN/PN and admitByCNPeers admits CNs outside any allowlist. The discovery filter is
+// installed everywhere, so the allowlist still reaches the table.
 func TestServerENBypassesCNPeerFilter(t *testing.T) {
 	allowed := crypto.PubkeyToAddress(newkey().PublicKey)
 
 	for _, nodeType := range []common.ConnType{common.ENDPOINTNODE, common.PROXYNODE} {
-		srv := &BaseServer{Config: Config{ConnectionType: nodeType}}
-		srv.SetCNPeers([]common.Address{allowed}) // no-op on EN/PN
+		ntab := &fakeDiscovery{}
+		srv := &BaseServer{Config: Config{ConnectionType: nodeType}, ntab: ntab}
+		srv.SetCNPeers([]common.Address{allowed})
 		if srv.cnPeerAddrs != nil {
 			t.Fatalf("%v must not populate cnPeerAddrs", nodeType)
+		}
+		if len(ntab.cnPeerAddrs) != 1 || ntab.cnPeerAddrs[0] != allowed {
+			t.Fatalf("%v must forward the allowlist to discovery, got %v", nodeType, ntab.cnPeerAddrs)
 		}
 		outsider := &conn{conntype: common.CONSENSUSNODE, id: randomID(), flags: inboundConn}
 		if err := srv.admitByCNPeers(outsider); err != nil {
