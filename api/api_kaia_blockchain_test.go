@@ -93,13 +93,17 @@ func TestGetConsensusInfo_UsesOriginalOutputFields(t *testing.T) {
 	require.NoError(t, sealer.WriteValidators(header, validators))
 	sealer.WriteRound(header, 1)
 
+	// The block was sealed at round 1 by `committer`, so Proposer comes from that seal while
+	// OriginProposer still comes from the round-0 schedule.
 	committerSealer := istanbul.NewSealerImpl(committerKey)
+	authorSeal, err := committerSealer.MakeAuthorSeal(header)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteAuthorSeal(header, authorSeal))
 	committedSeal, err := committerSealer.MakeCommittedSeal(header)
 	require.NoError(t, err)
 	require.NoError(t, sealer.WriteCommittedSeals(header, [][]byte{committedSeal}))
 
 	valsetModule := mock_valset.NewMockValsetModule(ctrl)
-	valsetModule.EXPECT().GetProposer(uint64(1), uint64(1)).Return(committer, nil)
 	valsetModule.EXPECT().GetCommittee(uint64(1), uint64(1)).Return(validators, nil)
 	valsetModule.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer, nil)
 

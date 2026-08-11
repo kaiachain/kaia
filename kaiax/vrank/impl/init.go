@@ -54,7 +54,7 @@ var (
 type InitOpts struct {
 	Valset      valset.ValsetModule
 	Randao      vrank.BlsPubkeyGetter
-	RoundReader vrank.RoundReader
+	Sealer      vrank.Sealer
 	NodeKey     *ecdsa.PrivateKey
 	BlsKey      bls.SecretKey
 	ChainConfig *params.ChainConfig
@@ -118,7 +118,7 @@ func (v *VRankModule) scoreCheckpointInterval() uint64 {
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.Randao == nil || opts.RoundReader == nil || opts.NodeKey == nil || opts.BlsKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
+	if opts == nil || opts.Valset == nil || opts.Randao == nil || opts.Sealer == nil || opts.NodeKey == nil || opts.BlsKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts

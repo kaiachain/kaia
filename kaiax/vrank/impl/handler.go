@@ -54,9 +54,10 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.Vie
 	}
 }
 
-// selectReportTarget returns the most recent block this node produced before number in the same
-// epoch. Rounds it proposed but another validator committed are skipped (committed-header proposer
-// check). ok=false when none exists (first proposal, or a restart cleared the collector).
+// selectReportTarget returns the most recent block this node solicited for before number in the
+// same epoch, and the round that committed it. Rounds it proposed that did not commit are skipped,
+// so a hash-locked block belongs to the round that committed it rather than to its author.
+// ok=false when none exists (first proposal, or a restart cleared the collector).
 func (v *VRankModule) selectReportTarget(number uint64) (targetNum, round uint64, ok bool) {
 	cands := v.collector.PendingEvaluations(calcEpochStart(number, v.vrankEpoch()))
 	slices.Sort(cands)
@@ -83,7 +84,7 @@ func (v *VRankModule) proposerOf(number uint64) (common.Address, uint64, error) 
 	if header == nil {
 		return common.Address{}, 0, vrank.ErrHeaderNotFound
 	}
-	roundByte, err := v.RoundReader.Round(header)
+	roundByte, err := v.Sealer.Round(header)
 	if err != nil {
 		return common.Address{}, 0, err
 	}
