@@ -99,7 +99,25 @@ var (
 	errUnknownProcessingError  = errors.New("unknown error during the msg processing")
 	errUnsupportedEnginePolicy = errors.New("unsupported engine or policy")
 	errKZGVerificationError    = errors.New("KZG verification error")
+	errBloblessBlobTx          = errors.New("blobless blob transaction")
 )
+
+// blobSidecarKey identifies what ValidateWithBlobHashes consumes. Commitments are left
+// out because each hash is the sha256 of one, so the hashes already pin them.
+func blobSidecarKey(hashes []common.Hash, sc *types.BlobTxSidecar) common.Hash {
+	parts := make([][]byte, 0, len(hashes)+1+len(sc.Blobs)+len(sc.Proofs))
+	for i := range hashes {
+		parts = append(parts, hashes[i][:])
+	}
+	parts = append(parts, []byte{sc.Version})
+	for i := range sc.Blobs {
+		parts = append(parts, sc.Blobs[i][:])
+	}
+	for i := range sc.Proofs {
+		parts = append(parts, sc.Proofs[i][:])
+	}
+	return crypto.Keccak256Hash(parts...)
+}
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
@@ -117,8 +135,7 @@ type ProtocolManager struct {
 	chainconfig *params.ChainConfig
 	maxPeers    int
 
-	// verifiedBlobTxs holds blob tx hashes whose sidecar already passed KZG
-	// verification. The tx pool verifies the sidecar again before admitting it.
+	// verifiedBlobTxs holds blobSidecarKey values that already passed KZG verification.
 	verifiedBlobTxs *knownHashSet
 
 	downloader ProtocolManagerDownloader
@@ -1569,16 +1586,23 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// KZG verification is computationally expensive, so this acts as a
 		// defensive measure against potential DoS attacks.
 		if tx.Type() == types.TxTypeEthereumBlob {
+			// Without blob hashes the verification below passes vacuously.
+			if len(tx.BlobHashes()) == 0 {
+				return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errBloblessBlobTx)
+			}
 			sidecar := tx.BlobTxSidecar()
-			if sidecar != nil && !pm.verifiedBlobTxs.Contains(tx.Hash()) {
-				// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
-				// KZG verification is computationally expensive, so this acts as a
-				// defensive measure against potential DoS attacks.
-				if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-					logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
-					return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+			if sidecar != nil {
+				key := blobSidecarKey(tx.BlobHashes(), sidecar)
+				if !pm.verifiedBlobTxs.Contains(key) {
+					// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
+					// KZG verification is computationally expensive, so this acts as a
+					// defensive measure against potential DoS attacks.
+					if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+						logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
+						return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+					}
+					pm.verifiedBlobTxs.Add(key)
 				}
-				pm.verifiedBlobTxs.Add(tx.Hash())
 			}
 		}
 		p.AddToKnownTxs(tx.Hash())
