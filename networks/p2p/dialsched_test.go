@@ -557,6 +557,33 @@ func TestDialSched_Dial_DialFailure(t *testing.T) {
 	assert.False(t, ds.connectedOutbound.contains(staticNode.ID), "static node should not be counted as connected")
 }
 
+// A dial rejected because the peer already reached us inbound must not be counted against it.
+func TestDialSched_Dial_FailureAfterPeerConnected(t *testing.T) {
+	var (
+		staticNode = testNode(302, "10.0.1.32", discover.NodeTypeCN)
+		md         = &mockDialer{dialErr: make(map[discover.NodeID]error)}
+		mb         = &mockSetupBackend{
+			setupErr: map[discover.NodeID]error{
+				staticNode.ID: DiscAlreadyConnected,
+			},
+		}
+		ds = NewDialSched(DialConfig{
+			staticNodes: []*discover.Node{staticNode},
+		}, nil, mb)
+	)
+	ds.dialer = md
+	mb.dialsched = ds
+
+	// The peer reached us inbound while our outbound attempt was still in flight.
+	ds.OnPeerConnected(staticNode.ID, staticNode.NType, true)
+
+	ds.dialOnce(staticNode, staticDialedConn)
+
+	require.Len(t, mb.calls, 1)
+	assert.True(t, ds.connectedAll.contains(staticNode.ID), "the live inbound connection must survive the failure")
+	assert.Zero(t, ds.connFails[staticNode.ID], "a redundant dial is not a connection failure")
+}
+
 // Special feature: Retries dial after upgrading from single-channel to multi-channel.
 func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 	var (
