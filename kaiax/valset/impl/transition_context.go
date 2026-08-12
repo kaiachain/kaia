@@ -179,6 +179,8 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 	var (
 		newValidators        = m.Copy()
 		activeValCompetitors []sortableValidator
+		// Captured before the loop mutates states.
+		prevActive = newValidators.FilterByState(valset.ValActive).Addresses()
 	)
 
 	// T3a/T3b: compete for top-N or demote to ValInactive.
@@ -234,6 +236,16 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 			}
 			potentialActiveVal.State = valset.ValInactive // T3b
 		}
+	}
+	// An empty active set halts the chain, so nobody is demoted when the epoch leaves none.
+	if newValidators.CountByState(valset.ValActive) == 0 {
+		for _, addr := range prevActive {
+			val := newValidators[addr]
+			val.State = valset.ValActive
+			val.IdleTimeout = time.Time{}
+			val.PausedTimeout = time.Time{}
+		}
+		logger.Warn("epoch transition would leave no active validator, retaining the previous set", "count", len(prevActive))
 	}
 	return newValidators
 }

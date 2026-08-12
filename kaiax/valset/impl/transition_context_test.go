@@ -175,7 +175,7 @@ func TestApplyEpochTransition_StateTransitions(t *testing.T) {
 		{"ValReady + stake above → ValActive", ValReady, aboveMinStake, ValActive, false},
 		{"ValActive + stake above → ValActive (preserved)", ValActive, aboveMinStake, ValActive, false},
 		{"ValPaused + stake above → ValPaused (preserved)", ValPaused, aboveMinStake, ValPaused, false},
-		{"T3b: ValActive + stake below → ValInactive", ValActive, belowMinStake, ValInactive, true},
+		{"ValActive + stake below → ValActive (last active retained)", ValActive, belowMinStake, ValActive, false},
 		{"T3b: ValReady + stake below → ValInactive", ValReady, belowMinStake, ValInactive, false},
 		{"T3b: ValPaused + stake below → ValInactive", ValPaused, belowMinStake, ValInactive, true},
 	}
@@ -249,6 +249,37 @@ func TestApplyEpochTransition_TieBreakingByAddress(t *testing.T) {
 	assert.Equal(t, ValActive, out[addr3].State)
 	assert.Equal(t, ValActive, out[addr2].State)
 	assert.Equal(t, ValInactive, out[addr1].State)
+}
+
+// An empty active set has no in-band recovery, so an epoch that would demote every
+// active validator retains the previous set instead.
+func TestApplyEpochTransition_RetainsLastActiveSet(t *testing.T) {
+	m := NodeMap{
+		addr1: {State: ValActive, StakingAmount: belowMinStake},
+		addr2: {State: ValActive, StakingAmount: belowMinStake},
+		addr3: {State: ValReady, StakingAmount: belowMinStake},
+	}
+	ctx := epochCtx(t, nil, testMaxValCount)
+	out := ctx.applyEpochTransition(m)
+
+	assert.Equal(t, ValActive, out[addr1].State)
+	assert.Equal(t, ValActive, out[addr2].State)
+	assert.True(t, out[addr1].IdleTimeout.IsZero(), "a retained validator carries no idle deadline")
+	assert.Equal(t, ValInactive, out[addr3].State, "only the previously active set is retained")
+}
+
+// A top-N slot filled by a ValPaused competitor yields no active validator, so the
+// retention must key on the resulting ValActive count, not on an empty competitor pool.
+func TestApplyEpochTransition_RetainsWhenOnlyPausedCompetes(t *testing.T) {
+	m := NodeMap{
+		addr1: {State: ValActive, StakingAmount: belowMinStake},
+		addr2: {State: ValPaused, StakingAmount: aboveMinStake},
+	}
+	ctx := epochCtx(t, nil, testMaxValCount)
+	out := ctx.applyEpochTransition(m)
+
+	assert.Equal(t, ValPaused, out[addr2].State, "a paused competitor stays paused")
+	assert.Equal(t, ValActive, out[addr1].State)
 }
 
 func TestApplyEpochTransition_DefensiveCopy(t *testing.T) {
@@ -830,6 +861,22 @@ func TestApplyAllTransitions(t *testing.T) {
 			assert.Equal(t, tc.expectedEpochVACount, result.epochVACountForWrite)
 		})
 	}
+}
+
+// The violation and timeout passes run after the epoch one, so a set retained by the
+// epoch pass has to survive them.
+func TestApplyAllTransitions_RetainedActiveSetSurvives(t *testing.T) {
+	m := NodeMap{
+		addr1: {State: ValActive, StakingAmount: belowMinStake},
+		addr2: {State: ValActive, StakingAmount: belowMinStake},
+	}
+	ctx := epochCtx(t, nil, testMaxValCount)
+	ctx.IsEpoch = true
+
+	result := ctx.ApplyAllTransitions(m)
+
+	assert.Equal(t, uint64(2), result.Nodes.CountByState(ValActive))
+	assert.Equal(t, uint64(2), result.epochVACountForWrite)
 }
 
 //#endregion
