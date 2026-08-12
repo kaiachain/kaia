@@ -65,7 +65,7 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 	}
 	// Failures score against the reporter's own byzantine-filterable column regardless of content,
 	// so only the failed list is checked (CandTesting is epoch-stable within the epoch).
-	candidates, err := v.Valset.GetCandTesting(number - 1)
+	candidates, err := v.Valset.GetCandTesting(number)
 	if err != nil {
 		return err
 	}
