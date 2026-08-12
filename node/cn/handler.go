@@ -23,6 +23,7 @@
 package cn
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -102,16 +103,24 @@ var (
 	errBloblessBlobTx          = errors.New("blobless blob transaction")
 )
 
-// blobSidecarKey identifies what ValidateWithBlobHashes consumes. Commitments are left
-// out because each hash is the sha256 of one, so the hashes already pin them.
+// blobSidecarKey identifies what ValidateWithBlobHashes consumes. The counts are prefixed
+// because every element is fixed-size, so an unprefixed concatenation is ambiguous.
 func blobSidecarKey(hashes []common.Hash, sc *types.BlobTxSidecar) common.Hash {
-	parts := make([][]byte, 0, len(hashes)+1+len(sc.Blobs)+len(sc.Proofs))
+	counts := binary.BigEndian.AppendUint32(nil, uint32(len(hashes)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Blobs)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Commitments)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Proofs)))
+
+	parts := make([][]byte, 0, 2+len(hashes)+len(sc.Blobs)+len(sc.Commitments)+len(sc.Proofs))
+	parts = append(parts, counts, []byte{sc.Version})
 	for i := range hashes {
 		parts = append(parts, hashes[i][:])
 	}
-	parts = append(parts, []byte{sc.Version})
 	for i := range sc.Blobs {
 		parts = append(parts, sc.Blobs[i][:])
+	}
+	for i := range sc.Commitments {
+		parts = append(parts, sc.Commitments[i][:])
 	}
 	for i := range sc.Proofs {
 		parts = append(parts, sc.Proofs[i][:])

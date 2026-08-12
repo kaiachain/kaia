@@ -375,11 +375,12 @@ func TestHandleTxMsg_BlobSidecarVerifiedOnce(t *testing.T) {
 	assert.Equal(t, 1, pm.verifiedBlobTxs.Len(), "the replay was verified again")
 
 	// A sidecar swapped under an already verified transaction hash must not reuse the
-	// entry, whichever half of the proof relation was altered.
+	// entry, whichever input of the verification was altered.
 	for name, tamper := range map[string]func(*types.BlobTxSidecar){
-		"blob":    func(sc *types.BlobTxSidecar) { sc.Blobs[0][0] ^= 0xFF },
-		"proof":   func(sc *types.BlobTxSidecar) { sc.Proofs[0][0] ^= 0xFF },
-		"version": func(sc *types.BlobTxSidecar) { sc.Version = 0 },
+		"blob":       func(sc *types.BlobTxSidecar) { sc.Blobs[0][0] ^= 0xFF },
+		"proof":      func(sc *types.BlobTxSidecar) { sc.Proofs[0][0] ^= 0xFF },
+		"version":    func(sc *types.BlobTxSidecar) { sc.Version = 0 },
+		"commitment": func(sc *types.BlobTxSidecar) { sc.Commitments[0][0] ^= 0xFF },
 	} {
 		t.Run(name, func(t *testing.T) {
 			pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
