@@ -47,6 +47,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// defaultBNPingRateLimit is the default per-source-IP discovery ping rate, in
+// pings/sec, enforced by a bootstrap node. KIP-311 requires BNs to rate limit
+// discovery pings, so the limiter is on by default.
+const defaultBNPingRateLimit = 5
+
 func init() {
 	cli.FlagStringer = FlagString
 }
@@ -1307,9 +1312,14 @@ var (
 		EnvVars: []string{"KLAYTN_BNADDR", "KAIA_BNADDR"},
 	}
 	BNPingRateLimitFlag = &cli.IntFlag{
-		Name:     "bn.ping-ratelimit",
+		Name: "bn.ping-ratelimit",
+		// KIP-311 requires a BN to rate limit discovery pings from unknown NodeIds,
+		// so this defaults to a positive value. A node pings a bootnode at roughly
+		// 1/s and several nodes can share one public IP via NAT, so the default
+		// leaves headroom for a small NAT'd cluster while still cutting a
+		// single-source flood by orders of magnitude.
 		Usage:    "Per-source-IP discovery ping rate limit in pings/sec on a bootstrap node. 0 disables it; LAN/loopback sources are always exempt",
-		Value:    0,
+		Value:    defaultBNPingRateLimit,
 		EnvVars:  []string{"KLAYTN_BN_PING_RATELIMIT", "KAIA_BN_PING_RATELIMIT"},
 		Category: "MISC",
 	}

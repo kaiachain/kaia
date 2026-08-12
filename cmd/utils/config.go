@@ -374,22 +374,26 @@ func convertNodeType(nodetype string) common.ConnType {
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	var urls []string
 	switch {
+	// An explicitly empty value is honored as "no bootnodes" rather than falling
+	// back to the network defaults, so a test or private deployment can start a
+	// node with no seed. Note this also applies to an empty
+	// KLAYTN_BOOTNODES/KAIA_BOOTNODES, which cli reports as set.
 	case ctx.IsSet(BootnodesFlag.Name):
 		logger.Info("Customized bootnodes are set")
 		urls = strings.Split(ctx.String(BootnodesFlag.Name), ",")
 	case ctx.Bool(MainnetFlag.Name):
 		logger.Info("Mainnet bootnodes are set")
-		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+		urls = params.MainnetBootnodes
 	case ctx.Bool(KairosFlag.Name):
 		logger.Info("Kairos bootnodes are set")
 		// set pre-configured bootnodes when 'kairos' option was enabled
-		urls = params.KairosBootnodes[cfg.ConnectionType].Addrs
+		urls = params.KairosBootnodes
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.IsSet(NetworkIdFlag.Name):
 		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
 			logger.Info("Mainnet bootnodes are set")
-			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+			urls = params.MainnetBootnodes
 		}
 	}
 
@@ -406,6 +410,13 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		logger.Info("Bootnode - Add Seed", "Node", node)
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
+	}
+
+	// Discovery cannot bootstrap without a seed, so make the condition explicit
+	// instead of leaving it to be inferred from the absence of "Add Seed" lines.
+	if len(cfg.BootstrapNodes) == 0 && !ctx.Bool(NoDiscoverFlag.Name) {
+		logger.Warn("No bootstrap nodes configured; this node may fail to discover peers",
+			"requestedURLs", len(urls))
 	}
 }
 

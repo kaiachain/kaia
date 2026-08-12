@@ -21,7 +21,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -38,8 +37,8 @@ func TestDiscovery_MainnetBootnodes(t *testing.T) {
 	}
 	log.EnableLogForTest(log.LvlCrit, log.LvlDebug)
 
-	// Load mainnet bootnodes for EN users
-	urls := params.MainnetBootnodes[common.ENDPOINTNODE].Addrs
+	// Load mainnet bootnodes. KIP-311 BNs are shared by all node types.
+	urls := params.MainnetBootnodes
 	oldLookupIPFunc := lookupIPFunc
 	lookupIPFunc = net.LookupIP
 	defer func() {
