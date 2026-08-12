@@ -320,17 +320,17 @@ func (ds *DialSched) dialLoop() {
 // PN/EN dialing is delayed only if static nodes and CN candidates fill maxConcurrentDials first.
 // But in reality, there are much less static nodes, and even so they will be filtered out by shouldDial() in later iterations quite soon.
 func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh bool) {
-	ds.mu.RLock()
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
-	// 1. Determine the demand
+	// 1. Determine how many dynamic outbound peers are still needed per node type.
 	needs := make(map[discover.NodeType]int)
 	for targetType := range ds.connTarget {
-		// Note that the needs can be negative because we often over-dial the dynamic nodes in case of failures.
 		needs[targetType] = ds.connTarget[targetType] - ds.connectedOutbound.count(targetType) - ds.dialing.count(targetType)
 	}
 
-	// 2. Add all static nodes, even if they are already connected or in the dialing list. Those will be filtered out later.
-	// Since static nodes are exempt from the connTargets nor peer limits, all static nodes are going to be dialed even if needs[] is zero.
+	// 2. Snapshot static candidates. Static nodes bypass dynamic connTargets and
+	// peer capacity; duplicates or already-connected nodes are filtered later by shouldDial().
 	candidates = ds.static.all()
 
 	// 3. Subtract the static nodes about to be dialed. They fill the same outbound budget as the dynamic ones.
@@ -339,17 +339,50 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 			needs[n.NType]--
 		}
 	}
-	ds.mu.RUnlock()
 
-	// 4. Dynamic nodes — skip when already at total peer capacity.
-	// Even if we want more outbound peers (needs > 0), the total capacity might be reached (maxPeers) due to inbound peers.
-	// Static dials (added above) bypass this check, mirroring the Server's capacity check.
-	if ds.maxPeers == 0 || ds.connectedAll.len() < ds.maxPeers {
-		for targetType, need := range needs {
-			dynamicNodes, refresh := ds.getDynamicCandidates(targetType, need)
-			candidates = append(candidates, dynamicNodes...)
-			needRefresh = needRefresh || refresh
+	// 4. Stop before dynamic candidates when the total peer capacity is full or discovery is unavailable.
+	// Static candidates collected above are still returned, mirroring the Server's peer-limit bypass for static peers.
+	if (ds.maxPeers != 0 && ds.connectedAll.len() >= ds.maxPeers) || ds.tab == nil {
+		return candidates, needRefresh
+	}
+
+	// 5. Pull dynamic candidates from the per-type queues, refilling from discovery when needed.
+	// CN-to-CN dynamic dialing is additionally constrained by the configured CN peer allowlist.
+	for targetType, need := range needs {
+		if need <= 0 {
+			continue
 		}
+
+		// Refill empty queues from discovery if this type's queue cannot satisfy demand.
+		if len(ds.candidateQueue[targetType]) < need {
+			for refillType := range ds.connTarget {
+				if len(ds.candidateQueue[refillType]) == 0 {
+					buf := make([]*discover.Node, candidateQueueSize)
+					n := ds.tab.RandomNodes(buf, refillType)
+					ds.candidateQueue[refillType] = buf[:n]
+				}
+			}
+		}
+
+		// Discard disallowed CNs so they do not keep occupying the queue.
+		q := ds.candidateQueue[targetType]
+		if ds.selfType == discover.NodeTypeCN && targetType == discover.NodeTypeCN && ds.cnPeerAddrs != nil {
+			q = slices.DeleteFunc(q, func(n *discover.Node) bool {
+				addr, err := addressFromNodeID(n.ID)
+				if err != nil {
+					return true
+				}
+				_, ok := ds.cnPeerAddrs[addr]
+				return !ok
+			})
+		}
+
+		// Pop up to need candidates from the filtered queue.
+		end := min(need, len(q))
+		candidates = append(candidates, q[:end]...)
+		ds.candidateQueue[targetType] = q[end:]
+		// Ask discovery refresh to run if the queue is still short after refill.
+		needRefresh = needRefresh || end < need
 	}
 
 	if len(candidates) > 0 {
@@ -357,29 +390,6 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 			"connectedOutbound", ds.connectedOutbound.len(), "dialing", ds.dialing.len(), "candidates", len(candidates))
 	}
 	return candidates, needRefresh
-}
-
-func (ds *DialSched) getDynamicCandidates(targetType discover.NodeType, need int) (nodes []*discover.Node, needRefresh bool) {
-	if ds.tab == nil || need <= 0 {
-		return nil, false
-	}
-	// Try to refill from the table if the queue can't satisfy the demand.
-	// The table may already have nodes (e.g. from local nodeDB) without needing a refresh
-	if len(ds.candidateQueue[targetType]) < need {
-		ds.refillCandidates()
-	}
-
-	// Disallowed CNs are discarded so they do not keep occupying the dynamic candidate queue.
-	q := ds.candidateQueue[targetType]
-	q = slices.DeleteFunc(q, func(n *discover.Node) bool {
-		return !ds.dynamicCandidateAllowed(targetType, n)
-	})
-
-	// Pop up to `need` candidates from the filtered queue.
-	end := min(need, len(q))
-	nodes, ds.candidateQueue[targetType] = q[:end], q[end:]
-	// If the queue is short even after a refill, signal the dial loop to run a discovery refresh.
-	return nodes, len(nodes) < need
 }
 
 // #region dial task
@@ -469,38 +479,6 @@ func (ds *DialSched) refreshOnce(refreshResCh chan struct{}) {
 		ds.tab.Refresh()
 		ds.signalResult(refreshResCh)
 	}()
-}
-
-// refillCandidates refills empty per-type candidate queues from the discovery table.
-// Called by dialLoop after a refresh completes, so the table has fresh nodes.
-// Accessed only by the dialLoop goroutine; no mutex required.
-func (ds *DialSched) refillCandidates() {
-	for targetType := range ds.connTarget {
-		if len(ds.candidateQueue[targetType]) == 0 {
-			buf := make([]*discover.Node, candidateQueueSize)
-			n := ds.tab.RandomNodes(buf, targetType)
-			ds.candidateQueue[targetType] = buf[:n]
-		}
-	}
-}
-
-func (ds *DialSched) dynamicCandidateAllowed(targetType discover.NodeType, n *discover.Node) bool {
-	if ds.selfType != discover.NodeTypeCN || targetType != discover.NodeTypeCN {
-		return true
-	}
-
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-	if ds.cnPeerAddrs == nil {
-		return true
-	}
-
-	addr, err := addressFromNodeID(n.ID)
-	if err != nil {
-		return false
-	}
-	_, ok := ds.cnPeerAddrs[addr]
-	return ok
 }
 
 // #region internal variable accessors
