@@ -332,9 +332,16 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 	// 2. Add all static nodes, even if they are already connected or in the dialing list. Those will be filtered out later.
 	// Since static nodes are exempt from the connTargets nor peer limits, all static nodes are going to be dialed even if needs[] is zero.
 	candidates = ds.static.all()
+
+	// 3. Subtract the static nodes about to be dialed. They fill the same outbound budget as the dynamic ones.
+	for _, n := range candidates {
+		if _, ok := needs[n.NType]; ok && ds.dialEligible(n) {
+			needs[n.NType]--
+		}
+	}
 	ds.mu.RUnlock()
 
-	// 3. Dynamic nodes — skip when already at total peer capacity.
+	// 4. Dynamic nodes — skip when already at total peer capacity.
 	// Even if we want more outbound peers (needs > 0), the total capacity might be reached (maxPeers) due to inbound peers.
 	// Static dials (added above) bypass this check, mirroring the Server's capacity check.
 	if ds.maxPeers == 0 || ds.connectedAll.len() < ds.maxPeers {
@@ -546,7 +553,11 @@ func (ds *DialSched) markRefreshStart() {
 func (ds *DialSched) shouldDial(n *discover.Node) bool {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
+	return ds.dialEligible(n)
+}
 
+// dialEligible is shouldDial without the locking. Callers must hold ds.mu.
+func (ds *DialSched) dialEligible(n *discover.Node) bool {
 	if ds.closed.Load() {
 		return false
 	}
