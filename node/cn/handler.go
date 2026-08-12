@@ -23,6 +23,7 @@
 package cn
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -87,6 +88,9 @@ const (
 
 	// ExtraNonSnapPeers is the number of non-snap peers allowed to connect more than snap peers.
 	ExtraNonSnapPeers = 5
+
+	// maxVerifiedBlobTxs bounds verifiedBlobTxs.
+	maxVerifiedBlobTxs = 1024
 )
 
 var (
@@ -96,7 +100,33 @@ var (
 	errUnknownProcessingError  = errors.New("unknown error during the msg processing")
 	errUnsupportedEnginePolicy = errors.New("unsupported engine or policy")
 	errKZGVerificationError    = errors.New("KZG verification error")
+	errBloblessBlobTx          = errors.New("blobless blob transaction")
 )
+
+// blobSidecarKey identifies what ValidateWithBlobHashes consumes. The counts are prefixed
+// because every element is fixed-size, so an unprefixed concatenation is ambiguous.
+func blobSidecarKey(hashes []common.Hash, sc *types.BlobTxSidecar) common.Hash {
+	counts := binary.BigEndian.AppendUint32(nil, uint32(len(hashes)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Blobs)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Commitments)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Proofs)))
+
+	parts := make([][]byte, 0, 2+len(hashes)+len(sc.Blobs)+len(sc.Commitments)+len(sc.Proofs))
+	parts = append(parts, counts, []byte{sc.Version})
+	for i := range hashes {
+		parts = append(parts, hashes[i][:])
+	}
+	for i := range sc.Blobs {
+		parts = append(parts, sc.Blobs[i][:])
+	}
+	for i := range sc.Commitments {
+		parts = append(parts, sc.Commitments[i][:])
+	}
+	for i := range sc.Proofs {
+		parts = append(parts, sc.Proofs[i][:])
+	}
+	return crypto.Keccak256Hash(parts...)
+}
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
@@ -113,6 +143,9 @@ type ProtocolManager struct {
 	blockchain  work.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
+
+	// verifiedBlobTxs holds blobSidecarKey values that already passed KZG verification.
+	verifiedBlobTxs *knownHashSet
 
 	downloader ProtocolManagerDownloader
 	fetcher    ProtocolManagerFetcher
@@ -181,6 +214,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		handler:           handler,
 		nodetype:          nodetype,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
+		verifiedBlobTxs:   newKnownHashSet(maxVerifiedBlobTxs),
 		blobSidecarReqManager: &sidecarReqManager{
 			list:     make(map[common.Hash]*sidecarReq),
 			cooldown: 10 * time.Second,
@@ -1559,14 +1593,22 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// KZG verification is computationally expensive, so this acts as a
 		// defensive measure against potential DoS attacks.
 		if tx.Type() == types.TxTypeEthereumBlob {
+			// Without blob hashes the verification below passes vacuously.
+			if len(tx.BlobHashes()) == 0 {
+				return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errBloblessBlobTx)
+			}
 			sidecar := tx.BlobTxSidecar()
 			if sidecar != nil {
-				// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
-				// KZG verification is computationally expensive, so this acts as a
-				// defensive measure against potential DoS attacks.
-				if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-					logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
-					return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+				key := blobSidecarKey(tx.BlobHashes(), sidecar)
+				if !pm.verifiedBlobTxs.Contains(key) {
+					// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
+					// KZG verification is computationally expensive, so this acts as a
+					// defensive measure against potential DoS attacks.
+					if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+						logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
+						return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+					}
+					pm.verifiedBlobTxs.Add(key)
 				}
 			}
 		}

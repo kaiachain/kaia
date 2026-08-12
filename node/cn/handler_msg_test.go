@@ -334,33 +334,45 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 }
 
-func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	pm := &ProtocolManager{}
+// prepareBlobTxMsg returns a protocol manager, a peer and a signed blob transaction
+// with a valid v1 sidecar. Callers corrupt the sidecar via blobTx.BlobTxSidecar().
+func prepareBlobTxMsg(t *testing.T, mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *types.Transaction) {
+	pm := &ProtocolManager{verifiedBlobTxs: newKnownHashSet(maxVerifiedBlobTxs)}
 	pm.acceptTxs.Store(1)
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).AnyTimes()
 	pm.txpool = mockTxPool
 
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 	mockPeer.EXPECT().GetID().Return("test-peer").AnyTimes()
+	mockPeer.EXPECT().AddToKnownTxs(gomock.Any()).AnyTimes()
 
-	// Generate a blob transaction with invalid KZG proof
-	var (
-		addr          = crypto.PubkeyToAddress(keys[0].PublicKey)
-		signer        = types.MakeSigner(params.TestChainConfig, common.Big0)
-		blob          = kzg4844.Blob{}
-		commitment, _ = kzg4844.BlobToCommitment(&blob)
-		proofs, _     = kzg4844.ComputeCellProofs(&blob)
-		blobhash      = common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
-	)
-	// corrupt a byte in the commitment
-	commitment[0] = commitment[0] ^ 0xFF
-	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:      uint64(0),
-		types.TxValueKeyTo:         addr,
+	sidecar, hashes := newBlobSidecar(t)
+	return pm, mockPeer, newBlobTx(t, 0, hashes, sidecar)
+}
+
+// newBlobSidecar returns a valid v1 sidecar and the blob hashes it commits to.
+func newBlobSidecar(t *testing.T) (*types.BlobTxSidecar, []common.Hash) {
+	blob := kzg4844.Blob{}
+	commitment, err := kzg4844.BlobToCommitment(&blob)
+	require.NoError(t, err)
+	proofs, err := kzg4844.ComputeCellProofs(&blob)
+	require.NoError(t, err)
+	return &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{blob},
+		Commitments: []kzg4844.Commitment{commitment},
+		Proofs:      proofs,
+	}, []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))}
+}
+
+// newBlobTx signs a blob transaction carrying the given hashes and sidecar. The nonce is
+// a parameter so a caller can replay one sidecar under a different transaction hash.
+func newBlobTx(t *testing.T, nonce uint64, hashes []common.Hash, sidecar *types.BlobTxSidecar) *types.Transaction {
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      nonce,
+		types.TxValueKeyTo:         crypto.PubkeyToAddress(keys[0].PublicKey),
 		types.TxValueKeyAmount:     big.NewInt(0),
 		types.TxValueKeyGasLimit:   uint64(10000000),
 		types.TxValueKeyGasFeeCap:  big.NewInt(25),
@@ -368,25 +380,80 @@ func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
 		types.TxValueKeyData:       []byte{},
 		types.TxValueKeyAccessList: types.AccessList{},
 		types.TxValueKeyBlobFeeCap: big.NewInt(25),
-		types.TxValueKeyBlobHashes: []common.Hash{blobhash},
-		types.TxValueKeySidecar: &types.BlobTxSidecar{
-			Version:     types.BlobSidecarVersion1,
-			Blobs:       []kzg4844.Blob{blob},
-			Commitments: []kzg4844.Commitment{commitment},
-			Proofs:      proofs,
-		},
-		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+		types.TxValueKeyBlobHashes: hashes,
+		types.TxValueKeySidecar:    sidecar,
+		types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
 	})
 	require.NoError(t, err)
-	require.NoError(t, blobTx.Sign(signer, keys[0]))
+	require.NoError(t, tx.Sign(types.MakeSigner(params.TestChainConfig, common.Big0), keys[0]))
+	return tx
+}
 
-	txs := types.Transactions{blobTx}
-	msg := generateMsg(t, TxMsg, txs)
+func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+	blobTx.BlobTxSidecar().Commitments[0][0] ^= 0xFF
 
 	// Should return error and disconnect peer
-	err = handleTxMsg(pm, mockPeer, msg)
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errKZGVerificationError.Error())
+}
+
+func TestHandleTxMsg_BlobSidecarVerifiedOnce(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+	require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx})))
+	require.Equal(t, 1, pm.verifiedBlobTxs.Len())
+
+	// The same sidecar under a different transaction hash must reuse the entry, or a
+	// sender replays one sidecar for free by bumping the nonce.
+	replay := newBlobTx(t, 1, blobTx.BlobHashes(), blobTx.BlobTxSidecar())
+	require.NotEqual(t, blobTx.Hash(), replay.Hash())
+	require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{replay})))
+	assert.Equal(t, 1, pm.verifiedBlobTxs.Len(), "the replay was verified again")
+
+	// A sidecar swapped under an already verified transaction hash must not reuse the
+	// entry, whichever input of the verification was altered.
+	for name, tamper := range map[string]func(*types.BlobTxSidecar){
+		"blob":       func(sc *types.BlobTxSidecar) { sc.Blobs[0][0] ^= 0xFF },
+		"proof":      func(sc *types.BlobTxSidecar) { sc.Proofs[0][0] ^= 0xFF },
+		"version":    func(sc *types.BlobTxSidecar) { sc.Version = 0 },
+		"commitment": func(sc *types.BlobTxSidecar) { sc.Commitments[0][0] ^= 0xFF },
+	} {
+		t.Run(name, func(t *testing.T) {
+			pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+			require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx})))
+
+			tamper(blobTx.BlobTxSidecar())
+			err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx}))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), errKZGVerificationError.Error())
+		})
+	}
+}
+
+func TestHandleTxMsg_BloblessBlobTx(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, _ := prepareBlobTxMsg(t, mockCtrl)
+
+	// Every check in ValidateWithBlobHashes compares against the declared hashes, so
+	// it passes vacuously when there are none. The pool rejects such a transaction
+	// unconditionally, so the handler must not forward it.
+	sidecar, _ := newBlobSidecar(t)
+	sidecar.Blobs, sidecar.Commitments, sidecar.Proofs = nil, nil, nil
+	blobless := newBlobTx(t, 0, nil, sidecar)
+	require.NoError(t, sidecar.ValidateWithBlobHashes(nil), "expected the vacuous pass this guards")
+
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobless}))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errBloblessBlobTx.Error())
 }
 
 func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks.MockBlockChain, *ProtocolManager) {
