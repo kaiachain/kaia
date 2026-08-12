@@ -213,6 +213,34 @@ func TestAllocPermissionless_SingleValidator(t *testing.T) {
 	verifyPermissionlessAlloc(t, config, alloc)
 }
 
+// A genesis with non-ValActive initial states must record the post-override active count
+// in epochVACount, not the count ABv2.initialize() saw.
+func TestAllocPermissionless_InitialStateOverrideUpdatesEpochVACount(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config := makeTestPermissionlessConfig(9)
+	config.NodeInfos[8].State = valset.CandReady.ToUint8()
+
+	alloc, err := AllocPermissionless(config)
+	require.NoError(t, err)
+
+	backend := backends.NewSimulatedBackend(blockchain.GenesisAlloc(alloc))
+	caller, err := addressbookv2contract.NewAddressBookV2Caller(AddressBookAddr, backend)
+	require.NoError(t, err)
+
+	active, err := caller.GetStateCount(&bind.CallOpts{}, valset.ValActive.ToUint8())
+	require.NoError(t, err)
+	require.Equal(t, uint64(8), active.Uint64(), "one of nine nodes starts as CandReady")
+
+	epochVACount, err := caller.GetEpochVACount(&bind.CallOpts{})
+	require.NoError(t, err)
+	assert.Equal(t, active.Uint64(), epochVACount.Uint64(), "epochVACount must match the active count")
+
+	// (8/3+1)/2 = 1; the pre-override count 9 would allow 2.
+	limits, err := caller.GetSlotLimits(&bind.CallOpts{})
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), limits.MaxSlotAvailable.Uint64())
+}
+
 func TestAllocPermissionlessPrerequisites(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	config := makeTestPermissionlessConfig(4)
