@@ -21,9 +21,13 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -196,6 +200,33 @@ func TestCNPeerUpdaterFailureKeepsLastAllowlist(t *testing.T) {
 			assert.Equal(t, cnTestAddrs(1), cn.sink.calls[0])
 		})
 	}
+}
+
+// ChainHeadEvents are posted outside the chain lock, so one can arrive after a newer
+// one. The loop must read the canonical head rather than the block in the event.
+func TestCNPeerSyncLoopReadsCanonicalHead(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	head := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(100)})
+	chain := mocks.NewMockBlockChain(ctrl)
+	chain.EXPECT().CurrentBlock().Return(head).AnyTimes()
+
+	cn := newCNPeerUpdaterTest(t)
+	s := &CN{blockchain: chain, cnPeerUpdater: cn.updater}
+
+	var feed event.Feed
+	ch := make(chan blockchain.ChainHeadEvent) // unbuffered, so Send returns once the loop has taken it
+	sub := feed.Subscribe(ch)
+	s.cnPeerSyncWg.Add(1)
+	go s.cnPeerSyncLoop(ch, sub)
+
+	// A stale event for a block far below the canonical head.
+	feed.Send(blockchain.ChainHeadEvent{Block: types.NewBlockWithHeader(&types.Header{Number: big.NewInt(50)})})
+	sub.Unsubscribe()
+	s.cnPeerSyncWg.Wait() // the loop finished the event before exiting
+
+	assert.Equal(t, []uint64{101}, cn.reader.calls, "must look up the head's next block, not the event's")
 }
 
 func cnTestAddrs(n ...int) []common.Address {
