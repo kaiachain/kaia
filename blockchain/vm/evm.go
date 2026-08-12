@@ -82,18 +82,6 @@ func run(evm *EVM, contract *Contract, input []byte) ([]byte, error) {
 			//	startTime = time.Now()
 			//}
 			///////////////////////////////////////////////////////
-			if evm.chainRules.IsPermissionless {
-				// A precompile's cost scales with its input, so a single call can exceed
-				// the whole per-tx budget. Charge and check before running, as the opcode
-				// loop does, so an over-budget call costs no CPU.
-				_, computationCost := p.GetRequiredGasAndComputationCost(input)
-				evm.opcodeComputationCostSum += computationCost
-				if evm.opcodeComputationCostSum > evm.Config.ComputationCostLimit {
-					return nil, ErrOpcodeComputationCostLimitReached
-				}
-				ret, _, err := RunPrecompiledContract(p, input, contract, evm)
-				return ret, err
-			}
 			ret, computationCost, err := RunPrecompiledContract(p, input, contract, evm) // TODO-Klaytn-Issue615
 			///////////////////////////////////////////////////////
 			// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
