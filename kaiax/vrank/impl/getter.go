@@ -40,9 +40,6 @@ func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
 	}
-	if len(header.VRank) == 0 {
-		return []common.Address{}, nil
-	}
 	return vrank.DecodeReport(header.VRank)
 }
 

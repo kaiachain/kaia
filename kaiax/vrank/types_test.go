@@ -50,10 +50,10 @@ func TestEncodeDecodeReport(t *testing.T) {
 			enc, err := EncodeReport(tc.report)
 			assert.NoError(t, err)
 			if len(tc.report) == 0 {
-				assert.Nil(t, enc)
-				return
+				assert.Nil(t, enc, "an empty report is encoded as absent bytes")
+			} else {
+				assert.NotEmpty(t, enc)
 			}
-			assert.NotEmpty(t, enc)
 			gotReport, err := DecodeReport(enc)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.report, gotReport)
