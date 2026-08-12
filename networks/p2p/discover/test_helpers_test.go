@@ -88,6 +88,16 @@ func newTestNode(t *testing.T, nType NodeType) *Node {
 	return NewNode(PubkeyID(&key.PublicKey), net.IP{127, 0, 0, 1}, 30303, 30303, nil, nType)
 }
 
+// newTestNodeWithAddr also returns the address derived from the node's NodeID,
+// which is the key CNPeers membership is looked up by.
+func newTestNodeWithAddr(t *testing.T, nType NodeType) (*Node, common.Address) {
+	t.Helper()
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	n := NewNode(PubkeyID(&key.PublicKey), net.IP{127, 0, 0, 1}, 30303, 30303, nil, nType)
+	return n, crypto.PubkeyToAddress(key.PublicKey)
+}
+
 // newTestTable2 constructs a Table2 backed by an in-memory node database and
 // a no-op UDP transport. tab.Close is registered as a test cleanup, so callers
 // do not have to call it explicitly (though doing so a second time is safe).

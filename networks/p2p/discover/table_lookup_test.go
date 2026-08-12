@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -173,6 +174,32 @@ func Test_Table_lookup_withNursery(t *testing.T) {
 
 	tab.lookup(NodeID{}, NodeTypeEN, false, 10)
 	assert.Greater(t, atomic.LoadInt32(&findCalled), int32(0), "nursery BN should trigger at least one findnode call")
+}
+
+// With the allowlist on, a cold-start CN lookup is seeded by the configured
+// bootnode and keeps only the CNPeers member out of the response.
+func Test_Table_lookup_CNPeers_coldStart(t *testing.T) {
+	member, memberAddr := newTestNodeWithAddr(t, NodeTypeCN)
+	outsider, _ := newTestNodeWithAddr(t, NodeTypeCN)
+	bootnode := newTestBootnode(t, net.IP{127, 0, 0, 1})
+
+	var asked []NodeID
+	udp := newMockTransport()
+	udp.findnodeFn = func(toid NodeID, _ *net.UDPAddr, _ NodeID, _ NodeType, _ int) ([]*Node, error) {
+		asked = append(asked, toid)
+		return []*Node{member, outsider}, nil
+	}
+
+	tab := newTestTable2(t, udp)
+	tab.nursery = []*Node{bootnode}
+	tab.SetCNPeers([]common.Address{memberAddr})
+	tab.addNode(bootnode)
+	require.Equal(t, 1, tab.storages[NodeTypeCN].len())
+
+	tab.lookup(tab.selfID, NodeTypeCN, false, 100)
+
+	require.Equal(t, []NodeID{bootnode.ID}, asked, "the bootnode must seed the CN lookup")
+	assert.ElementsMatch(t, []*Node{bootnode, member}, tab.storages[NodeTypeCN].all())
 }
 
 func Test_Table_lookup_returnsSeedResults(t *testing.T) {

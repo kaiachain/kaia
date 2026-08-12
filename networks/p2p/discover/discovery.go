@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"net"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/networks/p2p/netutil"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
@@ -33,6 +34,9 @@ type Discovery2 interface {
 
 	// Serve discovered nodes. Used by p2p.DialSched.
 	RandomNodes(buf []*Node, nType NodeType) int
+
+	// SetCNPeers replaces the allowlist admitting entries into the CN storage.
+	SetCNPeers(addrs []common.Address)
 
 	// APIs returns the RPC APIs for the discovery service.
 	APIs() []rpc.API
@@ -110,4 +114,8 @@ func (d *discovery2) Refresh() {
 
 func (d *discovery2) RandomNodes(buf []*Node, nType NodeType) int {
 	return d.tab.RandomNodes(buf, nType)
+}
+
+func (d *discovery2) SetCNPeers(addrs []common.Address) {
+	d.tab.SetCNPeers(addrs)
 }
