@@ -557,6 +557,23 @@ func TestDialSched_Dial_DialFailure(t *testing.T) {
 	assert.False(t, ds.connectedOutbound.contains(staticNode.ID), "static node should not be counted as connected")
 }
 
+func TestDialSched_DialFailureDoesNotRemoveConnectedPeer(t *testing.T) {
+	staticNode := testNode(302, "10.0.1.32", discover.NodeTypePN)
+	ds := NewDialSched(DialConfig{
+		staticNodes: []*discover.Node{staticNode},
+	}, nil, nil)
+
+	ds.markPeerConnected(staticNode.ID, staticNode.NType, true)
+	for range dialMaxRetries + 2 {
+		ds.markDialFailure(staticNode.ID)
+	}
+
+	assert.True(t, ds.connectedAll.contains(staticNode.ID), "dial failure must not remove live peer bookkeeping")
+	assert.False(t, ds.connectedOutbound.contains(staticNode.ID), "inbound peer should stay inbound-only")
+	assert.True(t, ds.static.contains(staticNode.ID), "live static peer must not be removed by concurrent dial failures")
+	assert.Zero(t, ds.connFails[staticNode.ID], "live peer should not accumulate static dial failures")
+}
+
 // Special feature: Retries dial after upgrading from single-channel to multi-channel.
 func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 	var (

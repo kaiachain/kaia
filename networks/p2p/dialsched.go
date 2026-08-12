@@ -619,9 +619,9 @@ func (ds *DialSched) markDialFailure(id discover.NodeID) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	ds.connectedAll.remove(id)
-	ds.connectedOutbound.remove(id)
-
+	if ds.connectedAll.contains(id) {
+		return
+	}
 	if n := ds.static.get(id); n != nil {
 		ds.connFails[id]++
 		if ds.connFails[id] > dialMaxRetries {
