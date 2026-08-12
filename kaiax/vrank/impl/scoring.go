@@ -132,12 +132,27 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.C
 }
 
 func (v *VRankModule) newCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
-	candidates, err := v.Valset.GetCandTesting(blockNum)
+	candidates, err := v.epochCandidates(blockNum)
 	if err != nil {
 		return nil, err
 	}
 
 	return vrank.NewCPMatrix(candidates), nil
+}
+
+// epochCandidates returns the epoch's CandTesting, from the epoch-start header that carries it
+// when the state GetCandTesting needs is not on this node.
+func (v *VRankModule) epochCandidates(blockNum uint64) ([]common.Address, error) {
+	candidates, err := v.Valset.GetCandTesting(blockNum)
+	if err == nil {
+		return candidates, nil
+	}
+	header := v.Chain.GetHeaderByNumber(calcEpochStart(blockNum, v.vrankEpoch()))
+	if header == nil {
+		return nil, err
+	}
+	logger.Warn("CandTesting unavailable from state, reading the epoch-start header", "num", blockNum, "err", err)
+	return vrank.DecodeReport(header.VRank)
 }
 
 // applyBlocksForPFS accumulates the pfReport for blocks in [start, end].

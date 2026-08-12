@@ -775,6 +775,32 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		assert.True(t, hasC3, "C3 should appear in CFS map")
 	})
 
+	t.Run("epoch-start header supplies candidates when state is unavailable", func(t *testing.T) {
+		epochStart := params.DefaultVRankEpoch
+		P1, P2 := numToAddr(10), numToAddr(11)
+		C1, C2 := numToAddr(20), numToAddr(21)
+
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := newCN(t, withValset(valset), withRandao(randao), withGenesis()).VRankModule
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				epochStart:     makeHeaderWithVRank(epochStart, 0, []common.Address{C1, C2}), // CandTesting
+				epochStart + 1: makeHeaderWithVRank(epochStart+1, 0, []common.Address{C1}),   // P2 reports C1
+			},
+		}
+		valset.EXPECT().GetCandTesting(epochStart).Return(nil, assert.AnError)
+		valset.EXPECT().GetProposer(epochStart, uint64(0)).Return(P1, nil)
+		valset.EXPECT().GetProposer(epochStart+1, uint64(0)).Return(P2, nil)
+
+		cfs, err := computeCFS(v, epochStart, epochStart+1)
+		require.NoError(t, err)
+		assert.Equal(t, uint64(1), cfs[C1], "C1 was reported once")
+		_, hasC2 := cfs[C2]
+		assert.True(t, hasC2, "C2 comes from the header list, so it must be scored too")
+	})
+
 	t.Run("KIP227_Example2", func(t *testing.T) {
 		// Reproduces KIP-227 Example 2 through the chain-reading path.
 		// Raw per-candidate/per-reporter totals are materialized as per-block cfReports.
