@@ -246,9 +246,9 @@ func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 	}
 }
 
-// SetupConn runs the handshakes and attempts to add the connection
-// as a peer. It returns when the connection has been added as a peer
-// or the handshakes have failed.
+// SetupConn runs the handshakes and attempts to add the connection as a peer.
+// For a multichannel peer, nil can also mean that this channel was accepted and
+// is waiting in CandidateConns for the remaining channels.
 func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: PortOrderUndefined}
 
@@ -275,6 +275,40 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		srv.logger.Trace("close connection", "id", c.id, "err", err)
 	}
 	return err
+}
+
+func (srv *MultiChannelServer) CleanConn(id discover.NodeID) cleanConnStats {
+	srv.lock.Lock()
+	connSet := srv.CandidateConns[id]
+	var connsToClose []*conn
+	stats := cleanConnStats{expectedChannels: len(srv.ListenAddrs)}
+	if connSet != nil {
+		stats.expectedChannels = len(connSet)
+		remaining := false
+		for portOrder, c := range connSet {
+			if c == nil {
+				continue
+			}
+			if c.Inbound() {
+				stats.remainingInboundChannels++
+				remaining = true
+				continue
+			}
+			connsToClose = append(connsToClose, c)
+			connSet[portOrder] = nil
+		}
+		if !remaining {
+			delete(srv.CandidateConns, id)
+			delete(srv.candidateSince, id)
+		}
+	}
+	srv.lock.Unlock()
+
+	stats.closedOutboundChannels = len(connsToClose)
+	for _, c := range connsToClose {
+		c.close(errIncompleteMultiChannelDial)
+	}
+	return stats
 }
 
 // Overrides BaseServer.setupConn() to preserve multichannel port-order handling
