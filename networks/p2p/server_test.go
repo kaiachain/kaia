@@ -451,6 +451,55 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 }
 
+// A CN keeps one of its cross-type slots for an EN it dials itself, so inbound
+// EN/PN peers alone cannot make dialTargets[CN][EN] unsatisfiable.
+func TestServerCrossTypeDialReserve(t *testing.T) {
+	newPeer := func(connType common.ConnType, flags connFlag) *Peer {
+		return &Peer{rws: []*conn{{conntype: connType, flags: flags}}}
+	}
+	peersOf := func(ps ...*Peer) map[discover.NodeID]*Peer {
+		peers := make(map[discover.NodeID]*Peer, len(ps))
+		for _, p := range ps {
+			peers[randomID()] = p
+		}
+		return peers
+	}
+
+	// defaultCNReservedSlots = 3 and dialTargets[CN][EN] = 1, so a CN takes at
+	// most two inbound EN-equivalent peers.
+	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE, MaxPhysicalConnections: 10}}
+	inboundEN := &conn{conntype: common.ENDPOINTNODE, flags: inboundConn}
+	dialedEN := &conn{conntype: common.ENDPOINTNODE, flags: dynDialedConn}
+
+	oneInbound := peersOf(newPeer(common.ENDPOINTNODE, inboundConn))
+	if cnSrv.exceedsPeerTarget(oneInbound, inboundEN) {
+		t.Fatal("a second inbound EN should be accepted")
+	}
+
+	twoInbound := peersOf(
+		newPeer(common.ENDPOINTNODE, inboundConn),
+		newPeer(common.PROXYNODE, inboundConn),
+	)
+	if !cnSrv.exceedsPeerTarget(twoInbound, inboundEN) {
+		t.Fatal("a third inbound EN-equivalent should not take the slot reserved for a dialed peer")
+	}
+	if cnSrv.exceedsPeerTarget(twoInbound, dialedEN) {
+		t.Fatal("the dialed EN should still be admitted into the reserved slot")
+	}
+	if cnSrv.exceedsPeerTarget(twoInbound, &conn{conntype: common.ENDPOINTNODE, flags: inboundConn | trustedConn}) {
+		t.Fatal("trusted peers should stay exempt from the inbound sub-cap")
+	}
+
+	// The sub-cap counts inbound peers only, so the bucket can still fill to the cap.
+	withDialed := peersOf(
+		newPeer(common.ENDPOINTNODE, dynDialedConn),
+		newPeer(common.ENDPOINTNODE, inboundConn),
+	)
+	if cnSrv.exceedsPeerTarget(withDialed, inboundEN) {
+		t.Fatal("an inbound EN should fill the last slot once a dialed EN holds the reservation")
+	}
+}
+
 // CN/EN servers reject untrusted non-CN/EN peers (which would escape the
 // per-type cap); trusted/static and non-CN/EN servers accept any type.
 func TestAdmissiblePeerType(t *testing.T) {

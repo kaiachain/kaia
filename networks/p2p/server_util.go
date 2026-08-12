@@ -74,6 +74,12 @@ func peerTargetFor(selfType, peerType common.ConnType, maxPhys, reservedCrossTyp
 	return reservedCrossTypeSlots, true // cross-type CN<->EN
 }
 
+// crossTypeDialReserve is the part of the cross-type cap held for dialed peers,
+// clamped so at least one inbound slot remains.
+func crossTypeDialReserve(selfType, peerType common.ConnType, target int) int {
+	return min(dialTargets[ConvertNodeType(selfType)][ConvertNodeType(peerType)], target-1)
+}
+
 // MaxPhysicalConnectionsLowerBound is the minimum valid MaxPhysicalConnections for
 // cfg's node type: below it the own-mesh cap (maxconnections minus the reservation)
 // would be 0, leaving no room to mesh with its own type.

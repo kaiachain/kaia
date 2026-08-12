@@ -326,7 +326,20 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 	peersByType := slices.DeleteFunc(slices.Collect(maps.Values(peers)), func(p *Peer) bool {
 		return EffectiveConnType(p.ConnType()) != peerType
 	})
-	return len(peersByType) >= target
+	if len(peersByType) >= target {
+		return true
+	}
+	// Inbound peers don't count toward dialTargets, so reserve one slot for a dialed peer.
+	if c.Inbound() && selfType == common.CONSENSUSNODE && selfType != peerType {
+		inbound := 0
+		for _, p := range peersByType {
+			if p.Inbound() {
+				inbound++
+			}
+		}
+		return inbound >= target-crossTypeDialReserve(selfType, peerType, target)
+	}
+	return false
 }
 
 // admissiblePeerType reports whether the server accepts a peer of this type.
