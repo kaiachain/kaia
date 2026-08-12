@@ -229,7 +229,7 @@ type BlockChain interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	GetBlockByHash(hash common.Hash) *types.Block
 	GetBlockByNumber(number uint64) *types.Block
-	GetBlockHashesFromHash(hash common.Hash, max uint64) []common.Hash
+	GetAncestor(hash common.Hash, number, ancestor uint64, maxNonCanonical *uint64) (common.Hash, uint64)
 
 	CurrentHeader() *types.Header
 	HasHeader(hash common.Hash, number uint64) bool

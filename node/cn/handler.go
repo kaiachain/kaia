@@ -866,9 +866,10 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 
 	// Gather headers until the fetch or network limits is reached
 	var (
-		bytes   common.StorageSize
-		headers []*types.Header
-		unknown bool
+		bytes           common.StorageSize
+		headers         []*types.Header
+		unknown         bool
+		maxNonCanonical = uint64(100)
 	)
 	for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
 		// Retrieve the next header satisfying the query
@@ -881,7 +882,6 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		if origin == nil {
 			break
 		}
-		number := origin.Number.Uint64()
 		headers = append(headers, origin)
 		bytes += estHeaderRlpSize
 
@@ -898,15 +898,8 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 				p.GetP2PPeer().Log().Warn("GetBlockHeaders skip underflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
 				unknown = true
 			} else {
-				for i := 0; i < int(query.Skip)+1; i++ {
-					if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
-						query.Origin.Hash = header.ParentHash
-						number--
-					} else {
-						unknown = true
-						break
-					}
-				}
+				query.Origin.Hash, _ = pm.blockchain.GetAncestor(query.Origin.Hash, current, query.Skip+1, &maxNonCanonical)
+				unknown = query.Origin.Hash == common.Hash{}
 			}
 		case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
 			// Hash based traversal towards the leaf block
@@ -920,8 +913,10 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 				unknown = true
 			} else {
 				if header := pm.blockchain.GetHeaderByNumber(next); header != nil {
-					if pm.blockchain.GetBlockHashesFromHash(header.Hash(), query.Skip+1)[query.Skip] == query.Origin.Hash {
-						query.Origin.Hash = header.Hash()
+					nextHash := header.Hash()
+					expOldHash, _ := pm.blockchain.GetAncestor(nextHash, next, query.Skip+1, &maxNonCanonical)
+					if expOldHash == query.Origin.Hash {
+						query.Origin.Hash = nextHash
 					} else {
 						unknown = true
 					}

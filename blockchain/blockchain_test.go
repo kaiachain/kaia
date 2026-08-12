@@ -238,6 +238,59 @@ func TestLastBlock(t *testing.T) {
 	}
 }
 
+func TestGetAncestor(t *testing.T) {
+	_, blockchain, err := newCanonical(faker.NewFaker(), 128, false)
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	head := blockchain.CurrentHeader()
+	number := head.Number.Uint64()
+
+	// A canonical block resolves its ancestor by number, so the walk budget is
+	// left untouched no matter how far back the ancestor is.
+	for _, ancestor := range []uint64{1, 2, 64, number} {
+		budget := uint64(100)
+		hash, num := blockchain.GetAncestor(head.Hash(), number, ancestor, &budget)
+		assert.Equal(t, number-ancestor, num)
+		assert.Equal(t, blockchain.GetHeaderByNumber(number-ancestor).Hash(), hash)
+		assert.Equal(t, uint64(100), budget, "ancestor=%d spent the walk budget", ancestor)
+	}
+
+	// An ancestor below genesis is rejected without walking.
+	budget := uint64(100)
+	hash, _ := blockchain.GetAncestor(head.Hash(), number, number+1, &budget)
+	assert.Equal(t, common.Hash{}, hash)
+	assert.Equal(t, uint64(100), budget)
+
+	// A non-canonical origin falls back to walking parents, bounded by the budget.
+	budget = uint64(100)
+	hash, _ = blockchain.GetAncestor(common.HexToHash("0xdead"), number, 64, &budget)
+	assert.Equal(t, common.Hash{}, hash)
+	assert.Equal(t, uint64(99), budget)
+}
+
+// A branch that is really in the database keeps the walk going, so the budget is what
+// ends it. The branch has to outlast the budget, or the walk reaches the canonical
+// chain and resolves by number instead.
+func TestGetAncestorWalkBudget(t *testing.T) {
+	db, blockchain, err := newCanonical(faker.NewFaker(), 128, false)
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	branch := MakeHeaderChain(blockchain.GetHeaderByNumber(10), 20, faker.NewFaker(), db, forkSeed)
+	_, err = blockchain.InsertHeaderChain(branch, 1)
+	require.NoError(t, err)
+
+	head := branch[len(branch)-1]
+	number := head.Number.Uint64()
+	require.NotEqual(t, head.Hash(), blockchain.GetHeaderByNumber(number).Hash(), "the branch became canonical")
+
+	budget := uint64(10)
+	hash, _ := blockchain.GetAncestor(head.Hash(), number, 25, &budget)
+	assert.Equal(t, common.Hash{}, hash)
+	assert.Equal(t, uint64(0), budget, "the walk stopped on a missing header, not on the budget")
+}
+
 // Tests that given a starting canonical chain of a given size, it can be extended
 // with various length chains.
 func TestExtendCanonicalHeaders(t *testing.T) { testExtendCanonical(t, false) }
