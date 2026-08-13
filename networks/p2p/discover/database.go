@@ -29,6 +29,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -69,6 +70,11 @@ var (
 	nodeDBDiscoverPong      = nodeDBDiscoverRoot + ":lastpong"
 	nodeDBDiscoverFindFails = nodeDBDiscoverRoot + ":findfail"
 )
+
+// nodeDBVersion is the on-disk schema version; bumping it flushes stale
+// databases on upgrade. Starts at 5 because legacy builds stored the wire
+// Version (4) here. v5: lastping/lastpong/findfail are keyed per-IP.
+const nodeDBVersion = 5
 
 // newNodeDB creates a new node database for storing and retrieving infos about
 // known peers in the network. If no path is given, an in-memory, temporary
@@ -143,6 +149,17 @@ func makeKey(id NodeID, field string) []byte {
 		return []byte(field)
 	}
 	return append(nodeDBItemPrefix, append(id[:], field...)...)
+}
+
+// makeItemKey generates the leveldb key for a per-IP item (lastping, lastpong,
+// findfail), binding the entry to both the node id and the IP it concerns. The
+// node record itself (nodeDBDiscoverRoot) is keyed by id only, via makeKey.
+func makeItemKey(id NodeID, ip net.IP, field string) []byte {
+	key := append([]byte(nil), nodeDBItemPrefix...)
+	key = append(key, id[:]...)
+	key = append(key, field...)
+	key = append(key, ip.To16()...)
+	return key
 }
 
 // splitKey tries to split a database key into a node id and a field part.
@@ -263,10 +280,14 @@ func (db *nodeDB) expireNodes() error {
 		if field != nodeDBDiscoverRoot {
 			continue
 		}
-		// Skip the node if not expired yet (and not self)
+		// Skip the node if not expired yet (and not self). The bond time is
+		// keyed per-IP, so decode the record to learn the node's IP.
 		if !bytes.Equal(id[:], db.self[:]) {
-			if seen := db.bondTime(id); seen.After(threshold) {
-				continue
+			var n Node
+			if err := rlp.DecodeBytes(it.Value(), &n); err == nil {
+				if seen := db.bondTime(id, n.IP); seen.After(threshold) {
+					continue
+				}
 			}
 		}
 		// Otherwise delete all associated information
@@ -275,40 +296,48 @@ func (db *nodeDB) expireNodes() error {
 	return nil
 }
 
-// lastPing retrieves the time of the last ping packet send to a remote node,
-// requesting binding.
-func (db *nodeDB) lastPing(id NodeID) time.Time {
-	return time.Unix(db.fetchInt64(makeKey(id, nodeDBDiscoverPing)), 0)
+// lastPing retrieves the time of the last ping packet sent to a remote node at
+// the given IP, requesting binding.
+func (db *nodeDB) lastPing(id NodeID, ip net.IP) time.Time {
+	return time.Unix(db.fetchInt64(makeItemKey(id, ip, nodeDBDiscoverPing)), 0)
 }
 
-// updateLastPing updates the last time we tried contacting a remote node.
-func (db *nodeDB) updateLastPing(id NodeID, instance time.Time) error {
-	return db.storeInt64(makeKey(id, nodeDBDiscoverPing), instance.Unix())
+// updateLastPing updates the last time we tried contacting a remote node at ip.
+func (db *nodeDB) updateLastPing(id NodeID, ip net.IP, instance time.Time) error {
+	return db.storeInt64(makeItemKey(id, ip, nodeDBDiscoverPing), instance.Unix())
 }
 
-// bondTime retrieves the time of the last successful pong from remote node.
-func (db *nodeDB) bondTime(id NodeID) time.Time {
-	return time.Unix(db.fetchInt64(makeKey(id, nodeDBDiscoverPong)), 0)
+// bondTime retrieves the time of the last successful pong from a remote node at
+// the given IP. The endpoint proof is bound to (id, ip): a pong received at one
+// IP does not bond the node at a different (e.g. spoofed) IP.
+func (db *nodeDB) bondTime(id NodeID, ip net.IP) time.Time {
+	if ip == nil {
+		return time.Time{}
+	}
+	return time.Unix(db.fetchInt64(makeItemKey(id, ip, nodeDBDiscoverPong)), 0)
 }
 
-// hasBond reports whether the given node is considered bonded.
-func (db *nodeDB) hasBond(id NodeID) bool {
-	return time.Since(db.bondTime(id)) < nodeDBNodeExpiration
+// hasBond reports whether the given node is considered bonded at the given IP.
+func (db *nodeDB) hasBond(id NodeID, ip net.IP) bool {
+	return time.Since(db.bondTime(id, ip)) < nodeDBNodeExpiration
 }
 
-// updateBondTime updates the last pong time of a node.
-func (db *nodeDB) updateBondTime(id NodeID, instance time.Time) error {
-	return db.storeInt64(makeKey(id, nodeDBDiscoverPong), instance.Unix())
+// updateBondTime updates the last pong time of a node at the given IP.
+func (db *nodeDB) updateBondTime(id NodeID, ip net.IP, instance time.Time) error {
+	if ip == nil {
+		return nil
+	}
+	return db.storeInt64(makeItemKey(id, ip, nodeDBDiscoverPong), instance.Unix())
 }
 
-// findFails retrieves the number of findnode failures since bonding.
-func (db *nodeDB) findFails(id NodeID) int {
-	return int(db.fetchInt64(makeKey(id, nodeDBDiscoverFindFails)))
+// findFails retrieves the number of findnode failures since bonding for (id, ip).
+func (db *nodeDB) findFails(id NodeID, ip net.IP) int {
+	return int(db.fetchInt64(makeItemKey(id, ip, nodeDBDiscoverFindFails)))
 }
 
-// updateFindFails updates the number of findnode failures since bonding.
-func (db *nodeDB) updateFindFails(id NodeID, fails int) error {
-	return db.storeInt64(makeKey(id, nodeDBDiscoverFindFails), int64(fails))
+// updateFindFails updates the number of findnode failures since bonding for (id, ip).
+func (db *nodeDB) updateFindFails(id NodeID, ip net.IP, fails int) error {
+	return db.storeInt64(makeItemKey(id, ip, nodeDBDiscoverFindFails), int64(fails))
 }
 
 // querySeeds retrieves random nodes to be used as potential seed nodes
@@ -340,7 +369,7 @@ seek:
 		if n.ID == db.self {
 			continue seek
 		}
-		if now.Sub(db.bondTime(n.ID)) > maxAge {
+		if now.Sub(db.bondTime(n.ID, n.IP)) > maxAge {
 			continue seek
 		}
 		for i := range nodes {

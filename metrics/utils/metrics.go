@@ -92,7 +92,7 @@ func CollectProcessMetrics(refresh time.Duration) {
 	// Create the various data collectors
 	memstats := make([]*runtime.MemStats, 2)
 	diskstats := make([]*DiskStats, 2)
-	for i := 0; i < len(memstats); i++ {
+	for i := range memstats {
 		memstats[i] = new(runtime.MemStats)
 		diskstats[i] = new(DiskStats)
 	}

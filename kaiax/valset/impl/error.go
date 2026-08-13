@@ -29,6 +29,8 @@ var (
 	errNoBlock                = errors.New("no block found")
 	errNoLowestScannedNum     = errors.New("no lowest scanned validator vote num")
 	errNoVoteBlockNums        = errors.New("no validator vote block nums")
+	errMismatchedValidators   = errors.New("header extra validators do not match qualified validators")
+	errPermissionlessDisabled = errors.New("permissionless fork is not enabled")
 
 	// rpc related errors
 	errPendingNotAllowed       = errors.New("pending is not allowed")
@@ -46,4 +48,8 @@ var (
 
 func ErrNoIstanbulSnapshot(num uint64) error {
 	return fmt.Errorf("no istanbul snapshot at block %d", num)
+}
+
+func errParentHeaderNotFound(num uint64) error {
+	return fmt.Errorf("parent header not found for block %d", num)
 }

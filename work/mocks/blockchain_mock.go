@@ -18,6 +18,8 @@ import (
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
 	kaiax "github.com/kaiachain/kaia/kaiax"
+	gov "github.com/kaiachain/kaia/kaiax/gov"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	params "github.com/kaiachain/kaia/params"
 	rlp "github.com/kaiachain/kaia/rlp"
 	snapshot "github.com/kaiachain/kaia/snapshot"
@@ -199,20 +201,6 @@ func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
 }
 
-// Engine mocks base method.
-func (m *MockBlockChain) Engine() consensus.Engine {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Engine")
-	ret0, _ := ret[0].(consensus.Engine)
-	return ret0
-}
-
-// Engine indicates an expected call of Engine.
-func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
-}
-
 // Export mocks base method.
 func (m *MockBlockChain) Export(arg0 io.Writer) error {
 	m.ctrl.T.Helper()
@@ -269,6 +257,21 @@ func (mr *MockBlockChainMockRecorder) Genesis() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockBlockChain)(nil).Genesis))
 }
 
+// GetAncestor mocks base method.
+func (m *MockBlockChain) GetAncestor(arg0 common.Hash, arg1, arg2 uint64, arg3 *uint64) (common.Hash, uint64) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAncestor", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(common.Hash)
+	ret1, _ := ret[1].(uint64)
+	return ret0, ret1
+}
+
+// GetAncestor indicates an expected call of GetAncestor.
+func (mr *MockBlockChainMockRecorder) GetAncestor(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAncestor", reflect.TypeOf((*MockBlockChain)(nil).GetAncestor), arg0, arg1, arg2, arg3)
+}
+
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()
@@ -309,20 +312,6 @@ func (m *MockBlockChain) GetBlockByNumber(arg0 uint64) *types.Block {
 func (mr *MockBlockChainMockRecorder) GetBlockByNumber(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockByNumber", reflect.TypeOf((*MockBlockChain)(nil).GetBlockByNumber), arg0)
-}
-
-// GetBlockHashesFromHash mocks base method.
-func (m *MockBlockChain) GetBlockHashesFromHash(arg0 common.Hash, arg1 uint64) []common.Hash {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlockHashesFromHash", arg0, arg1)
-	ret0, _ := ret[0].([]common.Hash)
-	return ret0
-}
-
-// GetBlockHashesFromHash indicates an expected call of GetBlockHashesFromHash.
-func (mr *MockBlockChainMockRecorder) GetBlockHashesFromHash(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHashesFromHash", reflect.TypeOf((*MockBlockChain)(nil).GetBlockHashesFromHash), arg0, arg1)
 }
 
 // GetBlockReceiptsInCache mocks base method.
@@ -663,6 +652,20 @@ func (mr *MockBlockChainMockRecorder) PostChainEvents(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostChainEvents", reflect.TypeOf((*MockBlockChain)(nil).PostChainEvents), arg0, arg1)
 }
 
+// PrepareHeader mocks base method.
+func (m *MockBlockChain) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockBlockChainMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockBlockChain)(nil).PrepareHeader), arg0)
+}
+
 // PrepareStateMigration mocks base method.
 func (m *MockBlockChain) PrepareStateMigration() error {
 	m.ctrl.T.Helper()
@@ -706,36 +709,16 @@ func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
 }
 
-// RegisterExecutionModule mocks base method.
-func (m *MockBlockChain) RegisterExecutionModule(arg0 ...kaiax.ExecutionModule) {
+// RegisterKaiaxModules mocks base method.
+func (m *MockBlockChain) RegisterKaiaxModules(arg0 gov.GovModule, arg1 valset.ValsetModule, arg2 []kaiax.ExecutionModule, arg3 []kaiax.RewindableModule, arg4 []kaiax.HeaderModule, arg5 []kaiax.BlockStateModule) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "RegisterExecutionModule", varargs...)
+	m.ctrl.Call(m, "RegisterKaiaxModules", arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
-// RegisterExecutionModule indicates an expected call of RegisterExecutionModule.
-func (mr *MockBlockChainMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *gomock.Call {
+// RegisterKaiaxModules indicates an expected call of RegisterKaiaxModules.
+func (mr *MockBlockChainMockRecorder) RegisterKaiaxModules(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterExecutionModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterExecutionModule), arg0...)
-}
-
-// RegisterRewindableModule mocks base method.
-func (m *MockBlockChain) RegisterRewindableModule(arg0 ...kaiax.RewindableModule) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "RegisterRewindableModule", varargs...)
-}
-
-// RegisterRewindableModule indicates an expected call of RegisterRewindableModule.
-func (mr *MockBlockChainMockRecorder) RegisterRewindableModule(arg0 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterRewindableModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterRewindableModule), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterKaiaxModules", reflect.TypeOf((*MockBlockChain)(nil).RegisterKaiaxModules), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // ResetWithGenesisBlock mocks base method.
@@ -776,6 +759,20 @@ func (m *MockBlockChain) SaveTrieNodeCacheToDisk() error {
 func (mr *MockBlockChainMockRecorder) SaveTrieNodeCacheToDisk() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTrieNodeCacheToDisk", reflect.TypeOf((*MockBlockChain)(nil).SaveTrieNodeCacheToDisk))
+}
+
+// Sealer mocks base method.
+func (m *MockBlockChain) Sealer() consensus.Sealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(consensus.Sealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBlockChainMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBlockChain)(nil).Sealer))
 }
 
 // SetHead mocks base method.
@@ -1079,6 +1076,20 @@ func (m *MockBlockChain) TrieNode(arg0 common.Hash) ([]byte, error) {
 func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrieNode", reflect.TypeOf((*MockBlockChain)(nil).TrieNode), arg0)
+}
+
+// ValidateHeader mocks base method.
+func (m *MockBlockChain) ValidateHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateHeader indicates an expected call of ValidateHeader.
+func (mr *MockBlockChainMockRecorder) ValidateHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateHeader), arg0)
 }
 
 // Validator mocks base method.

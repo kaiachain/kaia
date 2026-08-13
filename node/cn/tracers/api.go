@@ -24,6 +24,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -94,7 +95,7 @@ type Backend interface {
 	RPCGasCap() *big.Int
 	ChainConfig() *params.ChainConfig
 	ChainDB() database.DBManager
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 	// StateAtBlock returns the state corresponding to the stateroot of the block.
 	// N.B: For executing transactions on block N, the required stateRoot is block N-1,
 	// so this method should be called with the parent.
@@ -160,8 +161,12 @@ func (context *chainContext) CurrentBlock() *types.Block {
 	return block
 }
 
-func (context *chainContext) Engine() consensus.Engine {
-	return context.backend.Engine()
+func (context *chainContext) Sealer() consensus.Sealer {
+	return context.backend.Sealer()
+}
+
+func (context *chainContext) ValidateHeader(header *types.Header) error {
+	return nil
 }
 
 func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
@@ -220,7 +225,7 @@ func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
-func newChainContext(ctx context.Context, backend Backend) consensus.ChainReader {
+func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
 	return &chainContext{backend: backend, ctx: ctx}
 }
 
@@ -252,10 +257,18 @@ func (api *CommonAPI) blockByNumberAndHash(ctx context.Context, number rpc.Block
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
-	Tracer        *string
-	Timeout       *string
-	LoggerTimeout *string
-	Reexec        *uint64
+	Tracer         *string                   `json:"tracer,omitempty"`
+	TracerConfig   json.RawMessage           `json:"tracerConfig,omitempty"`
+	Timeout        *string                   `json:"timeout,omitempty"`
+	LoggerTimeout  *string                   `json:"loggerTimeout,omitempty"`
+	Reexec         *uint64                   `json:"reexec,omitempty"`
+	StateOverrides *kaiaapi.EthStateOverride `json:"stateOverrides,omitempty"`
+}
+
+type traceSyntheticBalance struct {
+	addr     common.Address
+	amount   *big.Int
+	gasPrice *big.Int
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -387,7 +400,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		localctx = context.Background()
 		reler    = new(releaser)
 	)
-	for th := 0; th < threads; th++ {
+	for range threads {
 		pend.Go(func() {
 
 			// Fetch and execute the block trace tasks
@@ -698,7 +711,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	)
 
 	threads := min(runtime.NumCPU(), len(txs))
-	for th := 0; th < threads; th++ {
+	for range threads {
 		pend.Go(func() {
 
 			// Fetch and execute the next transaction trace tasks
@@ -943,6 +956,12 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 	defer release()
 
+	if config != nil && config.StateOverrides != nil {
+		if err := config.StateOverrides.Apply(statedb); err != nil {
+			return nil, err
+		}
+	}
+
 	// Execute the trace
 	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
@@ -962,18 +981,20 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), basefee))
+	traceCallGasPrice := msg.EffectiveGasPrice(block.Header(), api.backend.ChainConfig())
+	traceCallTopUp := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), traceCallGasPrice)
+	statedb.AddBalance(msg.ValidatedSender(), traceCallTopUp)
 
 	txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
-	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
+	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config, traceSyntheticBalance{addr: msg.ValidatedSender(), amount: traceCallTopUp, gasPrice: traceCallGasPrice})
 }
 
 // traceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
-func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig, syntheticBalance ...traceSyntheticBalance) (interface{}, error) {
 	// Assemble the structured logger or the JavaScript tracer
 	var (
 		tracer vm.Tracer
@@ -990,11 +1011,23 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		}
 
 		if *config.Tracer == "fastCallTracer" || *config.Tracer == "callTracer" {
-			tracer = vm.NewCallTracer()
+			if tracer, err = vm.NewCallTracerWithConfig(config.TracerConfig); err != nil {
+				return nil, err
+			}
+		} else if *config.Tracer == "prestateTracer" {
+			if tracer, err = vm.NewPrestateTracer(config.TracerConfig); err != nil {
+				return nil, err
+			}
 		} else {
 			// Construct the JavaScript tracer to execute with
 			if tracer, err = New(*config.Tracer, new(Context), api.unsafeTrace); err != nil {
 				return nil, err
+			}
+		}
+		if len(syntheticBalance) > 0 {
+			if prestateTracer, ok := tracer.(*vm.PrestateTracer); ok {
+				synthetic := syntheticBalance[0]
+				prestateTracer.SetSyntheticBalance(synthetic.addr, synthetic.amount, synthetic.gasPrice)
 			}
 		}
 		// Handle timeouts and RPC cancellations
@@ -1008,6 +1041,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 				case *vm.InternalTxTracer:
 					t.Stop(errors.New("execution timeout"))
 				case *vm.CallTracer:
+					t.Stop(errors.New("execution timeout"))
+				case *vm.PrestateTracer:
 					t.Stop(errors.New("execution timeout"))
 				default:
 					logger.Warn("unknown tracer type", "type", reflect.TypeOf(t).String())
@@ -1054,6 +1089,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 	case *vm.InternalTxTracer:
 		return tracer.GetResult()
 	case *vm.CallTracer:
+		return tracer.GetResult()
+	case *vm.PrestateTracer:
 		return tracer.GetResult()
 
 	default:

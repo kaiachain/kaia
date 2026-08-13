@@ -20,13 +20,21 @@ package api
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
+	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testInitForKaiaApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, *KaiaBlockChainAPI) {
@@ -61,4 +69,48 @@ func TestKaiaAPI_EstimateGas(t *testing.T) {
 		}
 		return api.EstimateGas(context.Background(), args, nil, overrides)
 	})
+}
+
+func TestGetConsensusInfo_UsesOriginalOutputFields(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	proposerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	committerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
+	proposer := crypto.PubkeyToAddress(proposerKey.PublicKey)
+	committer := crypto.PubkeyToAddress(committerKey.PublicKey)
+	validators := []common.Address{proposer, committer}
+
+	sealer := istanbul.NewSealerImpl(proposerKey)
+	header := &types.Header{
+		Number:     big.NewInt(1),
+		BlockScore: big.NewInt(1),
+		Time:       big.NewInt(1),
+	}
+	require.NoError(t, sealer.WriteValidators(header, validators))
+	sealer.WriteRound(header, 1)
+
+	committerSealer := istanbul.NewSealerImpl(committerKey)
+	committedSeal, err := committerSealer.MakeCommittedSeal(header)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteCommittedSeals(header, [][]byte{committedSeal}))
+
+	valsetModule := mock_valset.NewMockValsetModule(ctrl)
+	valsetModule.EXPECT().GetProposer(uint64(1), uint64(1)).Return(committer, nil)
+	valsetModule.EXPECT().GetCommittee(uint64(1), uint64(1)).Return(validators, nil)
+	valsetModule.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer, nil)
+
+	info, err := GetConsensusInfo(types.NewBlockWithHeader(header), valsetModule, sealer)
+	require.NoError(t, err)
+
+	assert.Equal(t, sealer.SigHash(header), info.SigHash)
+	assert.Equal(t, committer, info.Proposer)
+	require.NotNil(t, info.OriginProposer)
+	assert.Equal(t, proposer, *info.OriginProposer)
+	assert.Equal(t, byte(1), info.Round)
+	assert.ElementsMatch(t, validators, info.Committee)
+	assert.ElementsMatch(t, []common.Address{committer}, info.Committers)
 }

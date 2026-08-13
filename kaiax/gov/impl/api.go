@@ -51,7 +51,7 @@ func NewKaiaAPI(g *GovModule) *KaiaAPI {
 	return &KaiaAPI{g}
 }
 
-func (api *KaiaAPI) GetChainConfig(num *rpc.BlockNumber) *params.ChainConfig {
+func (api *KaiaAPI) GetChainConfig(num *rpc.BlockNumber) (*params.ChainConfig, error) {
 	return getChainConfig(api.g, num)
 }
 
@@ -79,12 +79,21 @@ func patchDeprecatedParams(gp gov.ParamSet, rule params.Rules) gov.ParamSet {
 	return gp
 }
 
-func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
-	var blocknum uint64
+func apiBlockNumber(g *GovModule, num *rpc.BlockNumber) (uint64, error) {
+	head := g.Chain.CurrentBlock().NumberU64()
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = g.Chain.CurrentBlock().NumberU64()
-	} else {
-		blocknum = num.Uint64()
+		return head, nil
+	}
+	if num.Int64() < 0 || num.Uint64() > head {
+		return 0, gov.ErrUnknownBlock
+	}
+	return num.Uint64(), nil
+}
+
+func getChainConfig(g *GovModule, num *rpc.BlockNumber) (*params.ChainConfig, error) {
+	blocknum, err := apiBlockNumber(g, num)
+	if err != nil {
+		return nil, err
 	}
 
 	ret := g.Chain.Config().Copy()
@@ -122,15 +131,13 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 			BaseFeeDenominator:        pset.BaseFeeDenominator,
 		},
 	}
-	return ret
+	return ret, nil
 }
 
 func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = g.Chain.CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
+	blockNumber, err := apiBlockNumber(g, num)
+	if err != nil {
+		return nil, err
 	}
 
 	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))

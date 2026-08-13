@@ -89,13 +89,13 @@ func TestNodeDBInt64(t *testing.T) {
 	defer db.close()
 
 	tests := nodeDBInt64Tests
-	for i := 0; i < len(tests); i++ {
+	for i := range tests {
 		// Insert the next value
 		if err := db.storeInt64(tests[i].key, tests[i].value); err != nil {
 			t.Errorf("test %d: failed to store value: %v", i, err)
 		}
 		// Check all existing and non existing values
-		for j := 0; j < len(tests); j++ {
+		for j := range tests {
 			num := db.fetchInt64(tests[j].key)
 			switch {
 			case j <= i && num != tests[j].value:
@@ -123,33 +123,33 @@ func TestNodeDBFetchStore(t *testing.T) {
 	defer db.close()
 
 	// Check fetch/store operations on a node ping object
-	if stored := db.lastPing(node.ID); stored.Unix() != 0 {
+	if stored := db.lastPing(node.ID, node.IP); stored.Unix() != 0 {
 		t.Errorf("ping: non-existing object: %v", stored)
 	}
-	if err := db.updateLastPing(node.ID, inst); err != nil {
+	if err := db.updateLastPing(node.ID, node.IP, inst); err != nil {
 		t.Errorf("ping: failed to update: %v", err)
 	}
-	if stored := db.lastPing(node.ID); stored.Unix() != inst.Unix() {
+	if stored := db.lastPing(node.ID, node.IP); stored.Unix() != inst.Unix() {
 		t.Errorf("ping: value mismatch: have %v, want %v", stored, inst)
 	}
 	// Check fetch/store operations on a node pong object
-	if stored := db.bondTime(node.ID); stored.Unix() != 0 {
+	if stored := db.bondTime(node.ID, node.IP); stored.Unix() != 0 {
 		t.Errorf("pong: non-existing object: %v", stored)
 	}
-	if err := db.updateBondTime(node.ID, inst); err != nil {
+	if err := db.updateBondTime(node.ID, node.IP, inst); err != nil {
 		t.Errorf("pong: failed to update: %v", err)
 	}
-	if stored := db.bondTime(node.ID); stored.Unix() != inst.Unix() {
+	if stored := db.bondTime(node.ID, node.IP); stored.Unix() != inst.Unix() {
 		t.Errorf("pong: value mismatch: have %v, want %v", stored, inst)
 	}
 	// Check fetch/store operations on a node findnode-failure object
-	if stored := db.findFails(node.ID); stored != 0 {
+	if stored := db.findFails(node.ID, node.IP); stored != 0 {
 		t.Errorf("find-node fails: non-existing object: %v", stored)
 	}
-	if err := db.updateFindFails(node.ID, num); err != nil {
+	if err := db.updateFindFails(node.ID, node.IP, num); err != nil {
 		t.Errorf("find-node fails: failed to update: %v", err)
 	}
-	if stored := db.findFails(node.ID); stored != num {
+	if stored := db.findFails(node.ID, node.IP); stored != num {
 		t.Errorf("find-node fails: value mismatch: have %v, want %v", stored, num)
 	}
 	// Check fetch/store operations on an actual node object
@@ -163,6 +163,32 @@ func TestNodeDBFetchStore(t *testing.T) {
 		t.Errorf("node: not found")
 	} else if !reflect.DeepEqual(stored, node) {
 		t.Errorf("node: data mismatch: have %v, want %v", stored, node)
+	}
+}
+
+// TestNodeDBBondIPBinding verifies a bond is keyed by (NodeID, IP): a pong at
+// one IP must not count as a bond at another, and lookup is stable across the
+// 4-byte and 16-byte forms of the same IPv4 address.
+func TestNodeDBBondIPBinding(t *testing.T) {
+	id := MustHexID("0x1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439")
+	ip1 := net.IP{192, 168, 0, 1}
+	ip2 := net.IP{203, 0, 113, 9}
+
+	db, _ := newNodeDB("", Version, NodeID{})
+	defer db.close()
+
+	if err := db.updateBondTime(id, ip1, time.Now()); err != nil {
+		t.Fatalf("failed to record bond at ip1: %v", err)
+	}
+	if !db.hasBond(id, ip1) {
+		t.Fatal("node should be bonded at the IP that produced the pong")
+	}
+	if db.hasBond(id, ip2) {
+		t.Fatal("node must NOT be bonded at a different IP (IP-binding broken)")
+	}
+	// 4-byte and 16-byte forms of the same IPv4 must resolve to the same bond.
+	if !db.hasBond(id, ip1.To16()) {
+		t.Fatal("bond lookup must be stable across 4-byte and 16-byte IPv4 forms")
 	}
 }
 
@@ -242,7 +268,7 @@ func TestNodeDBSeedQuery(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateBondTime(seed.node.ID, seed.pong); err != nil {
+		if err := db.updateBondTime(seed.node.ID, seed.node.IP, seed.pong); err != nil {
 			t.Fatalf("node %d: failed to insert bondTime: %v", i, err)
 		}
 	}
@@ -354,7 +380,7 @@ func TestNodeDBExpiration(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateBondTime(seed.node.ID, seed.pong); err != nil {
+		if err := db.updateBondTime(seed.node.ID, seed.node.IP, seed.pong); err != nil {
 			t.Fatalf("node %d: failed to update bondTime: %v", i, err)
 		}
 	}
@@ -387,7 +413,7 @@ func TestNodeDBSelfExpiration(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateBondTime(seed.node.ID, seed.pong); err != nil {
+		if err := db.updateBondTime(seed.node.ID, seed.node.IP, seed.pong); err != nil {
 			t.Fatalf("node %d: failed to update bondTime: %v", i, err)
 		}
 	}

@@ -57,7 +57,7 @@ type testBackend struct {
 	chainConfig     *params.ChainConfig
 	pendingBlock    *types.Block
 	pendingReceipts types.Receipts
-	engine          consensus.Engine
+	sealer          consensus.Sealer
 }
 
 /*
@@ -195,8 +195,8 @@ func (b *testBackend) ChainConfig() *params.ChainConfig {
 	return b.chainConfig
 }
 
-func (b *testBackend) Engine() consensus.Engine {
-	return b.engine
+func (b *testBackend) Sealer() consensus.Sealer {
+	return b.sealer
 }
 
 // TestBlockSubscription tests if a block subscription returns block hashes for posted chain events.
@@ -415,14 +415,14 @@ func TestInvalidGetLogsRequest(t *testing.T) {
 		logsFeed         = new(event.Feed)
 		chainFeed        = new(event.Feed)
 		engine           = faker.NewFaker()
-		backend          = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil, engine}
+		backend          = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil, engine.Sealer()}
 		api              = NewKaiaFilterAPI(backend)
 		blockHash        = blocks[0].Hash()
 		unknownBlockHash = common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
 	)
 
 	// Insert the blocks into the chain so filter can look them up
-	blockchain, err := blockchain.NewBlockChain(db, nil, params.TestChainConfig, backend.Engine(), vm.Config{})
+	blockchain, err := blockchain.NewBlockChain(db, nil, params.TestChainConfig, engine, vm.Config{})
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
@@ -611,7 +611,7 @@ func TestPendingTxFilterDeadlock(t *testing.T) {
 
 	// Create a bunch of filters
 	fids := make([]rpc.ID, 20)
-	for i := 0; i < len(fids); i++ {
+	for i := range fids {
 		fid := api.NewPendingTransactionFilter()
 		fids[i] = fid
 		// Wait for at least one tx to arrive in filter

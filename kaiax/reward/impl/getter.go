@@ -24,23 +24,24 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/params"
 )
 
 // Below outlines the relationship between the getters and their helper functions.
 //
 // GetRewardSummary
 // - loadBlockData
-// - - getTotalFee = F
+// - - getExecFee = F
 // - getRewardSummary = MR + DF + NDF
 //
 // GetBlockReward
 // - loadBlockData
-// - - getTotalFee = F
+// - - getExecFee = F
 // - getDeferredReward = MR + DF
 // - specWithNonDeferredFee = MR + DF + NDF
 //
 // GetDeferredReward
-// - getTotalFee = F
+// - getExecFee = F
 // - getDeferredReward = MR + DF
 // - - getDeferredRewardSimple   for istanbul.policy != 2
 // - - getDeferredRewardFull     for istanbul.policy == 2
@@ -51,11 +52,11 @@ import (
 // - - - - specWithProposerAndFunds
 
 func (r *RewardModule) GetRewardSummary(num uint64) (*reward.RewardSummary, error) {
-	config, _, totalFee, err := r.loadBlockData(num)
+	config, header, execFee, err := r.loadBlockData(num)
 	if err != nil {
 		return nil, err
 	}
-	return getRewardSummary(config, totalFee), nil
+	return getRewardSummary(config, execFee, getBlobFee(header)), nil
 }
 
 func (r *RewardModule) loadBlockData(num uint64) (*reward.RewardConfig, *types.Header, *big.Int, error) {
@@ -74,77 +75,93 @@ func (r *RewardModule) loadBlockData(num uint64) (*reward.RewardConfig, *types.H
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	totalFee, err := getTotalFee(config, header, txs, receipts)
+	execFee, err := getExecFee(config, header, txs, receipts)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return config, header, totalFee, nil
+	return config, header, execFee, nil
 }
 
-func getRewardSummary(config *reward.RewardConfig, totalFee *big.Int) *reward.RewardSummary {
+func getRewardSummary(config *reward.RewardConfig, execFee, blobFee *big.Int) *reward.RewardSummary {
 	minted := new(big.Int).Set(config.MintingAmount)
 
 	burntFee := big.NewInt(0)
 	if config.IsSimple { // simplified getDeferredRewardSimple
 		if config.Rules.IsMagma {
-			burntFee = getBurnAmountMagma(totalFee)
+			burntFee = getBurnAmountMagma(execFee)
 		}
 	} else { // simplified getDeferredRewardFull
 		if config.Rules.IsKore {
-			burntFee = getBurnAmountKore(config, totalFee)
+			burntFee = getBurnAmountKore(config, execFee)
 		} else if config.Rules.IsMagma {
-			burntFee = getBurnAmountMagma(totalFee)
+			burntFee = getBurnAmountMagma(execFee)
 		}
 	}
 
+	// Blob fees (KIP-279) are 100% burned during state transition per EIP-4844 spec,
+	// in both deferred and non-deferred modes.
+	// They are tracked separately because they must not enter the reward-split calculation.
 	summary := reward.NewRewardSummary()
 	summary.Minted = minted
-	summary.TotalFee = totalFee
-	summary.BurntFee = burntFee
+	summary.TotalFee = new(big.Int).Add(execFee, blobFee)
+	summary.BurntFee = new(big.Int).Add(burntFee, blobFee)
 	return summary
 }
 
+// getBlobFee returns the total blob fee burned in the block (blobGasUsed * blobBaseFee).
+// Returns zero if the block has no blob transactions.
+func getBlobFee(header *types.Header) *big.Int {
+	if header.BlobGasUsed == nil || *header.BlobGasUsed == 0 {
+		return big.NewInt(0)
+	}
+	blobBaseFee := params.CalcBlobFee(header.BaseFee)
+	if blobBaseFee == nil {
+		return big.NewInt(0)
+	}
+	return new(big.Int).Mul(new(big.Int).SetUint64(*header.BlobGasUsed), blobBaseFee)
+}
+
 func (r *RewardModule) GetBlockReward(num uint64) (*reward.RewardSpec, error) {
-	config, header, totalFee, err := r.loadBlockData(num)
+	config, header, execFee, err := r.loadBlockData(num)
 	if err != nil {
 		return nil, err
 	}
 
-	spec, err := r.getDeferredReward(config, header, totalFee)
+	spec, err := r.getDeferredReward(config, header, execFee)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.specWithNonDeferredFee(spec, config, header, totalFee)
+	return r.specWithNonDeferredFee(spec, config, header, execFee)
 }
 
 // specWithNonDeferredFee adds non-deferred fees to the reward spec.
-func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *reward.RewardConfig, header *types.Header, totalFee *big.Int) (*reward.RewardSpec, error) {
+func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *reward.RewardConfig, header *types.Header, execFee *big.Int) (*reward.RewardSpec, error) {
 	if config.DeferredTxFee {
 		return spec, nil // nothing to do under deferred mode
 	}
 
 	newSpec := spec.Copy()
 
+	blobFee := getBlobFee(header)
 	if config.Rules.IsMagma {
-		burntFee := getBurnAmountMagma(totalFee)
-		distributedFee := new(big.Int).Sub(totalFee, burntFee)
-
-		newSpec.TotalFee.Add(newSpec.TotalFee, totalFee)
-		newSpec.BurntFee.Add(newSpec.BurntFee, burntFee)
+		burntFee := getBurnAmountMagma(execFee)
+		distributedFee := new(big.Int).Sub(execFee, burntFee)
+		newSpec.TotalFee.Add(newSpec.TotalFee, new(big.Int).Add(execFee, blobFee))
+		newSpec.BurntFee.Add(newSpec.BurntFee, new(big.Int).Add(burntFee, blobFee))
 		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
 		// Since Magma, non-deferred fees are assigned to header.Rewardbase.
 		newSpec.IncRecipient(config.Rewardbase, distributedFee)
 	} else {
-		distributedFee := new(big.Int).Set(totalFee)
+		distributedFee := new(big.Int).Set(execFee)
 
-		newSpec.TotalFee.Add(newSpec.TotalFee, totalFee)
+		newSpec.TotalFee.Add(newSpec.TotalFee, new(big.Int).Add(execFee, blobFee))
 		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
-		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from Engine().Author(header).
-		coinbase, err := r.Chain.Engine().Author(header)
+		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from the block author.
+		coinbase, err := r.Chain.Sealer().Author(header)
 		if err != nil {
 			return nil, err
 		}
@@ -160,51 +177,52 @@ func (r *RewardModule) GetDeferredReward(header *types.Header, txs []*types.Tran
 	if err != nil {
 		return nil, err
 	}
-	totalFee, err := getTotalFee(config, header, txs, receipts)
+	execFee, err := getExecFee(config, header, txs, receipts)
 	if err != nil {
 		return nil, err
 	}
 
-	return r.getDeferredReward(config, header, totalFee)
+	return r.getDeferredReward(config, header, execFee)
 }
 
-func (r *RewardModule) getDeferredReward(config *reward.RewardConfig, header *types.Header, totalFee *big.Int) (*reward.RewardSpec, error) {
+func (r *RewardModule) getDeferredReward(config *reward.RewardConfig, header *types.Header, execFee *big.Int) (*reward.RewardSpec, error) {
+	blobFee := getBlobFee(header)
 	if config.IsSimple {
-		return getDeferredRewardSimple(config, totalFee)
+		return getDeferredRewardSimple(config, execFee, blobFee)
 	} else {
 		si, err := r.StakingModule.GetStakingInfo(header.Number.Uint64())
 		if err != nil {
 			return nil, err
 		}
-		return getDeferredRewardFull(config, totalFee, si)
+		return getDeferredRewardFull(config, execFee, blobFee, si)
 	}
 }
 
-// getTotalFee calculates the total transaction fees in the block.
-func getTotalFee(config *reward.RewardConfig, header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) (*big.Int, error) {
+// getExecFee calculates the total execution gas fees in the block (excludes blob fees).
+func getExecFee(config *reward.RewardConfig, header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) (*big.Int, error) {
 	if config.Rules.IsKaia {
 		// sum { tx[i].gasUsed * tx[i].effectiveGasPrice }
 		// = block.gasUsed * block.baseFeePerGas + sum { tx[i].gasUsed * tx[i].effectiveGasTip }
 		if len(txs) != len(receipts) {
 			return nil, reward.ErrTxReceiptsLenMismatch
 		}
-		totalFee := new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee)
+		execFee := new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), header.BaseFee)
 		for i, tx := range txs {
-			tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
-			totalFee = totalFee.Add(totalFee, tip)
+			tip := new(big.Int).Mul(new(big.Int).SetUint64(receipts[i].GasUsed), tx.EffectiveGasTip(header.BaseFee))
+			execFee = execFee.Add(execFee, tip)
 		}
-		return totalFee, nil
+		return execFee, nil
 	} else if config.Rules.IsMagma {
 		// Optimized to block.gasUsed * block.baseFeePerGas
-		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee), nil
+		return new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), header.BaseFee), nil
 	} else {
 		// Optimized to block.gasUsed * governance.unitprice
-		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), config.UnitPrice), nil
+		return new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), config.UnitPrice), nil
 	}
 }
 
 // getDeferredRewardSimple is for Simple policy.
-func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*reward.RewardSpec, error) {
+func getDeferredRewardSimple(config *reward.RewardConfig, execFee, blobFee *big.Int) (*reward.RewardSpec, error) {
 	spec := reward.NewRewardSpec()
 	minted := new(big.Int).Set(config.MintingAmount)
 
@@ -215,14 +233,16 @@ func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*r
 			// In non-deferred mode, no fees to distribute here at the end of block processing.
 			// Just distribute the minting reward to the proposer and stop.
 			proposer = new(big.Int).Set(minted)
-			totalFee = big.NewInt(0)
+			execFee = big.NewInt(0)
 		} else {
 			// But Simple policy had a bug where transaction fees were distributed to the proposer here at the end of block processing
 			// despite configured to non-deferred mode. To keep the backward compatibility, the buggy behavior retains until Magma.
-			proposer = new(big.Int).Add(minted, totalFee)
+			proposer = new(big.Int).Add(minted, execFee)
 		}
 		spec.Minted = new(big.Int).Set(minted)
-		spec.TotalFee = totalFee
+		// Both exec fees and blob fees are burned during state transition in non-deferred mode,
+		// not at finalization. TotalFee/BurntFee are completed by specWithNonDeferredFee (GetBlockReward only).
+		spec.TotalFee = execFee // Note that we've set it to 0 for non-deferred + Magma (see above).
 		spec.BurntFee = big.NewInt(0)
 		spec.Proposer = proposer
 		spec.IncRecipient(config.Rewardbase, proposer)
@@ -232,32 +252,34 @@ func getDeferredRewardSimple(config *reward.RewardConfig, totalFee *big.Int) (*r
 	// Deferred mode
 	burntFee := big.NewInt(0)
 	if config.Rules.IsMagma {
-		burntFee = getBurnAmountMagma(totalFee)
+		burntFee = getBurnAmountMagma(execFee)
 	}
-	proposer := new(big.Int).Add(minted, totalFee)
+	proposer := new(big.Int).Add(minted, execFee)
 	proposer.Sub(proposer, burntFee)
 
 	spec.Minted = minted
-	spec.TotalFee = totalFee
-	spec.BurntFee = burntFee
+	spec.TotalFee = new(big.Int).Add(execFee, blobFee)
+	spec.BurntFee = new(big.Int).Add(burntFee, blobFee)
 	spec.Proposer = proposer
 	spec.IncRecipient(config.Rewardbase, proposer)
 	return spec, nil
 }
 
 // getDeferredRewardFull is for non-Simple policy.
-func getDeferredRewardFull(config *reward.RewardConfig, totalFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
+func getDeferredRewardFull(config *reward.RewardConfig, execFee, blobFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	// Non-deferred and deferred modes share most of the logic
-	// except that in non-deferred mode the block fees are considered zero.
+	// except that in non-deferred mode all fees (exec and blob) are burned during state transition,
+	// not at finalization. TotalFee/BurntFee are completed by specWithNonDeferredFee (GetBlockReward only).
 	var burntFee *big.Int
 	if !config.DeferredTxFee {
-		totalFee = big.NewInt(0)
+		execFee = big.NewInt(0)
+		blobFee = big.NewInt(0)
 		burntFee = big.NewInt(0)
 	} else {
 		if config.Rules.IsKore {
-			burntFee = getBurnAmountKore(config, totalFee)
+			burntFee = getBurnAmountKore(config, execFee)
 		} else if config.Rules.IsMagma {
-			burntFee = getBurnAmountMagma(totalFee)
+			burntFee = getBurnAmountMagma(execFee)
 		} else {
 			burntFee = big.NewInt(0)
 		}
@@ -265,20 +287,21 @@ func getDeferredRewardFull(config *reward.RewardConfig, totalFee *big.Int, si *s
 
 	// Both non-deferred and deferred modes
 	if config.Rules.IsOsaka && config.UseFlexReward {
-		return getDeferredRewardFullFlex(config, totalFee, burntFee, si)
+		return getDeferredRewardFullFlex(config, execFee, burntFee, blobFee, si)
 	} else if config.Rules.IsKore {
-		return getDeferredRewardFullKore(config, totalFee, burntFee, si)
+		return getDeferredRewardFullKore(config, execFee, burntFee, blobFee, si)
 	} else {
-		return getDeferredRewardFullLegacy(config, totalFee, burntFee, si)
+		// Legacy is pre-Kore, which predates Osaka. blobFee is always zero here.
+		return getDeferredRewardFullLegacy(config, execFee, burntFee, si)
 	}
 }
 
 // getDeferredRewardFullFlex is for non-Simple policy, after Kore, and with UseFlexReward enabled.
-func getDeferredRewardFullFlex(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
+func getDeferredRewardFullFlex(config *reward.RewardConfig, execFee, burntFee, blobFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
 		spec             = reward.NewRewardSpec()
 		minted           = new(big.Int).Set(config.MintingAmount)
-		distributableFee = new(big.Int).Sub(totalFee, burntFee)
+		distributableFee = new(big.Int).Sub(execFee, burntFee)
 	)
 
 	// Distribute using RewardRatio (4-part) first. Unlike Legacy, fees are not distributed here
@@ -297,8 +320,8 @@ func getDeferredRewardFullFlex(config *reward.RewardConfig, totalFee, burntFee *
 	proposer.Add(proposer, distributableFee)
 
 	spec.Minted = minted
-	spec.TotalFee = totalFee
-	spec.BurntFee = burntFee
+	spec.TotalFee = new(big.Int).Add(execFee, blobFee)
+	spec.BurntFee = new(big.Int).Add(burntFee, blobFee)
 	spec.Stakers = stakers
 	for addr, amount := range stakersAlloc {
 		spec.IncRecipient(addr, amount)
@@ -309,11 +332,11 @@ func getDeferredRewardFullFlex(config *reward.RewardConfig, totalFee, burntFee *
 }
 
 // getDeferredRewardFullKore is for non-Simple policy and after Kore.
-func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
+func getDeferredRewardFullKore(config *reward.RewardConfig, execFee, burntFee, blobFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
 		spec             = reward.NewRewardSpec()
 		minted           = new(big.Int).Set(config.MintingAmount)
-		distributableFee = new(big.Int).Sub(totalFee, burntFee)
+		distributableFee = new(big.Int).Sub(execFee, burntFee)
 	)
 
 	// Distribute using RewardRatio first. Unlike Legacy, fees are not distributed here
@@ -334,8 +357,8 @@ func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *
 	proposer.Add(proposer, distributableFee)
 
 	spec.Minted = minted
-	spec.TotalFee = totalFee
-	spec.BurntFee = burntFee
+	spec.TotalFee = new(big.Int).Add(execFee, blobFee)
+	spec.BurntFee = new(big.Int).Add(burntFee, blobFee)
 	spec.Stakers = stakers
 	for addr, amount := range stakersAlloc {
 		spec.IncRecipient(addr, amount)
@@ -345,11 +368,11 @@ func getDeferredRewardFullKore(config *reward.RewardConfig, totalFee, burntFee *
 }
 
 // getDeferredRewardFullLegacy is for non-Simple policy and before Kore.
-func getDeferredRewardFullLegacy(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
+func getDeferredRewardFullLegacy(config *reward.RewardConfig, execFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	var (
 		spec             = reward.NewRewardSpec()
 		minted           = new(big.Int).Set(config.MintingAmount)
-		distributableFee = new(big.Int).Sub(totalFee, burntFee)
+		distributableFee = new(big.Int).Sub(execFee, burntFee)
 		totalReward      = new(big.Int).Add(minted, distributableFee)
 	)
 
@@ -359,7 +382,7 @@ func getDeferredRewardFullLegacy(config *reward.RewardConfig, totalFee, burntFee
 	kif.Add(kif, ratioRemainder)
 
 	spec.Minted = minted
-	spec.TotalFee = totalFee
+	spec.TotalFee = execFee
 	spec.BurntFee = burntFee
 	spec.Stakers = common.Big0 // No stakers reward before Kore
 	spec = specWithProposerAndFunds(spec, config, proposer, kif, kef, si)
@@ -367,15 +390,15 @@ func getDeferredRewardFullLegacy(config *reward.RewardConfig, totalFee, burntFee
 }
 
 // getBurnAmountMagma returns the amount of fees to be burnt by Magma.
-func getBurnAmountMagma(totalFee *big.Int) *big.Int {
-	return new(big.Int).Div(totalFee, big.NewInt(2))
+func getBurnAmountMagma(execFee *big.Int) *big.Int {
+	return new(big.Int).Div(execFee, big.NewInt(2))
 }
 
 // getBurnAmountKore returns the amount of fees to be burnt by Kore.
 // This includes Magma burnt amount (half of the total fee).
-func getBurnAmountKore(config *reward.RewardConfig, totalFee *big.Int) *big.Int {
-	firstHalf := new(big.Int).Div(totalFee, big.NewInt(2))
-	secondHalf := new(big.Int).Sub(totalFee, firstHalf)
+func getBurnAmountKore(config *reward.RewardConfig, execFee *big.Int) *big.Int {
+	firstHalf := new(big.Int).Div(execFee, big.NewInt(2))
+	secondHalf := new(big.Int).Sub(execFee, firstHalf)
 
 	validatorMintingReward, _, _ := config.RewardRatio.Split(config.MintingAmount)
 	proposerMintingReward, _ := config.Kip82Ratio.Split(validatorMintingReward)

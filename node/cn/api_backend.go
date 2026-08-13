@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
@@ -89,8 +90,9 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, ta
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
-	// Initialize staking info cache, and governance cache
-	cn.PurgeCache()
+	// Initialize staking info cache and governance cache.
+	// TODO: Re-enable consensus engine cache purge after SetHead once the cache
+	// invalidation correctly reflects the new head.
 	gpo.PurgeCache()
 	return nil
 }
@@ -107,7 +109,8 @@ func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
 		if block == nil {
-			return nil, fmt.Errorf("pending block is not prepared yet")
+			// Fallback to latest block (for PN/EN or when pending is not ready)
+			return b.cn.blockchain.CurrentBlock().Header(), nil
 		}
 		return block.Header(), nil
 	}
@@ -148,7 +151,8 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
 		if block == nil {
-			return nil, fmt.Errorf("pending block is not prepared yet")
+			// Fallback to latest block (for PN/EN or when pending is not ready)
+			return b.cn.blockchain.CurrentBlock(), nil
 		}
 		return block, nil
 	}
@@ -186,7 +190,10 @@ func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.B
 	if blockNr == rpc.PendingBlockNumber {
 		block, _, state := b.cn.miner.Pending()
 		if block == nil || state == nil {
-			return nil, nil, fmt.Errorf("pending block is not prepared yet")
+			// Fallback to latest block (for PN/EN or when pending is not ready)
+			header := b.cn.blockchain.CurrentBlock().Header()
+			stateDb, err := b.cn.BlockChain().StateAt(header.Root)
+			return stateDb, header, err
 		}
 		return state, block.Header(), nil
 	}
@@ -361,7 +368,7 @@ func (b *CNAPIBackend) BloomStatus() (uint64, uint64) {
 }
 
 func (b *CNAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
-	for i := 0; i < bloomFilterThreads; i++ {
+	for range bloomFilterThreads {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.cn.bloomRequests)
 	}
 }
@@ -394,6 +401,14 @@ func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
 }
 
+func (b *CNAPIBackend) Sealer() consensus.Sealer {
+	return b.cn.blockchain.Sealer()
+}
+
+func (b *CNAPIBackend) ValsetModule() valset.ValsetModule {
+	return b.cn.blockchain.Validator().ValsetModule()
+}
+
 func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (*state.StateDB, tracers.StateReleaseFunc, error) {
 	return b.cn.stateAtBlock(block, reexec, base, readOnly, preferDisk)
 }
@@ -402,7 +417,7 @@ func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Bloc
 	return b.cn.stateAtTransaction(block, txIndex, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }
 

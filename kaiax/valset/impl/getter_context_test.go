@@ -34,9 +34,10 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestGetCommittee tests various branches of getCommittee().
+// TestGetCommittee tests various branches of getCommitteePermissioned().
 // Individual selectors are tested as separate tests.
 func TestGetCommittee(t *testing.T) {
 	var (
@@ -107,16 +108,35 @@ func TestGetCommittee(t *testing.T) {
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(c.prevHeader).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
+	// calcBaseProposers derives the base list from the qualified set at updateNum+1, so the council DB,
+	// gov params and chain config must be available. Council@(updateNum+1) resolves to `qualified`.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
+	writeCouncil(v.ChainKv, 0, qualified)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerPolicy: uint64(istanbul.WeightedRandom),
+		MinimumStake:   big.NewInt(0),
+		GovernanceMode: "none",
+	}).AnyTimes()
+	chainConfig := &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}
+	mockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
+
 	for _, tc := range testcases {
 		c.pset.ProposerPolicy = uint64(tc.policy)
 		c.rules.IsKore = tc.isKore
 		c.rules.IsShanghai = tc.isRandao
 		c.rules.IsCancun = tc.isRandao
 		c.rules.IsRandao = tc.isRandao
+		// The uniform-vs-weighted choice is now pinned to the rule at updateNum+1, so toggle Kore on
+		// the chain config (not just c.rules) to match the test case.
+		if tc.isKore {
+			chainConfig.KoreCompatibleBlock = big.NewInt(0)
+		} else {
+			chainConfig.KoreCompatibleBlock = nil
+		}
 
 		v.proposerListCache.Purge()
 		v.removeVotesCache.Purge()
-		committee, err := v.getCommittee(c, 0)
+		committee, err := v.getCommitteePermissioned(c, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expected, committee, tc.desc)
 	}
@@ -140,6 +160,35 @@ func TestRandaoCommittee(t *testing.T) {
 	)
 	assert.Equal(t, numsToAddrs(8), selectRandaoCommittee(qualified, 1, mixHash))
 	assert.Equal(t, numsToAddrs(8, 3, 5, 1, 0, 9), selectRandaoCommittee(qualified, 6, mixHash))
+}
+
+func TestGetBlockContext_FutureBlockPostFork(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockGov := gov_mock.NewMockGovModule(ctrl)
+
+	mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(1)).Return(nil)
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{Number: big.NewInt(0)})
+	mockGov.EXPECT().GetParamSet(uint64(1)).Return(gov.ParamSet{
+		CommitteeSize:  4,
+		ProposerPolicy: uint64(istanbul.RoundRobin),
+	})
+
+	v := NewValsetModule()
+	v.Chain = mockChain
+	v.GovModule = mockGov
+	v.transitionResultCache.Add(uint64(1), &TransitionResult{
+		Nodes: NodeMap{
+			addr1: {State: ValActive},
+			addr2: {State: ValPaused},
+			addr3: {State: ValActive},
+		},
+	})
+
+	c, err := v.getBlockContext(1)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []common.Address{addr1, addr3}, c.qualified.List())
 }
 
 // TestGetProposer tests various branches of getProposer().
@@ -213,12 +262,31 @@ func TestGetProposer(t *testing.T) {
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(c.prevHeader).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
+	// calcBaseProposers derives the base list from the qualified set at updateNum+1, so the council DB,
+	// gov params and chain config must be available. Council@(updateNum+1) resolves to `qualified`.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
+	writeCouncil(v.ChainKv, 0, qualified)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerPolicy: uint64(istanbul.WeightedRandom),
+		MinimumStake:   big.NewInt(0),
+		GovernanceMode: "none",
+	}).AnyTimes()
+	chainConfig := &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}
+	mockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
+
 	for _, tc := range testcases {
 		c.pset.ProposerPolicy = uint64(tc.policy)
 		c.rules.IsKore = tc.isKore
 		c.rules.IsShanghai = tc.isRandao
 		c.rules.IsCancun = tc.isRandao
 		c.rules.IsRandao = tc.isRandao
+		// The uniform-vs-weighted choice is now pinned to the rule at updateNum+1, so toggle Kore on
+		// the chain config (not just c.rules) to match the test case.
+		if tc.isKore {
+			chainConfig.KoreCompatibleBlock = big.NewInt(0)
+		} else {
+			chainConfig.KoreCompatibleBlock = nil
+		}
 
 		v.proposerListCache.Purge()
 		v.removeVotesCache.Purge()

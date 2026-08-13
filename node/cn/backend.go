@@ -40,7 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
@@ -55,8 +55,11 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	"github.com/kaiachain/kaia/kaiax/vrank"
+	vrank_impl "github.com/kaiachain/kaia/kaiax/vrank/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -85,9 +88,7 @@ type LesServer interface {
 type Miner interface {
 	Start()
 	Stop()
-	Register(agent work.Agent)
 	Mining() bool
-	HashRate() (tot int64)
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
@@ -111,6 +112,12 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 	staking.StakingModuleHost
 	auction.AuctionModuleHost
+	vrank.VRankModuleHost
+}
+
+type chainAwareConsensusEngine interface {
+	SetChain(chain consensus.ChainReader)
+	SignalPeerRegistrable()
 }
 
 // CN implements the Kaia consensus node service.
@@ -149,7 +156,12 @@ type CN struct {
 
 	components []interface{}
 
-	govModule gov.GovModule
+	govModule    gov.GovModule
+	valsetModule valset.ValsetModule
+
+	cnPeerHeadSub event.Subscription
+	cnPeerSyncWg  sync.WaitGroup
+	cnPeerUpdater *cnPeerUpdater
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -209,12 +221,6 @@ func checkSyncMode(config *Config) error {
 	return nil
 }
 
-func setEngineType(chainConfig *params.ChainConfig) {
-	if chainConfig.Istanbul != nil {
-		types.EngineType = types.Engine_IBFT
-	}
-}
-
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
@@ -229,8 +235,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		return nil, genesisErr
 	}
 
-	setEngineType(chainConfig)
-
 	// load governance state
 	chainConfig.SetDefaults()
 	// latest values will be applied to chainConfig after NewMixedEngine call
@@ -240,6 +244,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		mGov     = gov_impl.NewGovModule()
 		mValset  = valset_impl.NewValsetModule()
 		mStaking = staking_impl.NewStakingModule()
+		mVRank   = vrank_impl.NewVRankModule()
 	)
 	cn := &CN{
 		config:            config,
@@ -247,7 +252,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, mGov, ctx.NodeType()),
+		engine:            engine.NewEngine(&engine.Opts{IstanbulConfig: &config.Istanbul, PrivateKey: ctx.NodeKey(), NodeType: ctx.NodeType()}),
 		networkId:         config.NetworkId,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
@@ -255,14 +260,13 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		closeBloomHandler: make(chan struct{}),
 		govModule:         mGov,
 		stakingModule:     mStaking,
+		valsetModule:      mValset,
 	}
 
-	// istanbul BFT. Derive and set node's address using nodekey
+	// Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
 		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
-
-	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		if err := blockchain.CheckBlockChainVersion(chainDB); err != nil {
@@ -270,6 +274,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 	var (
+		sealer      = engine.NewSealer(chainConfig, ctx.NodeKey())
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{
 			ArchiveMode:          config.NoPruning,
@@ -284,7 +289,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	)
 
-	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
+	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, sealer, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +317,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 
-	if err := cn.InitGovModule(mStaking, mGov, mValset); err != nil {
+	if err := cn.InitGovModule(mStaking, mGov, mValset, mVRank); err != nil {
 		return nil, err
 	}
 
@@ -354,7 +359,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
-	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
+	handler, ok := cn.engine.(consensus.Handler)
+	if !ok {
+		return nil, errUnsupportedEnginePolicy
+	}
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, handler, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
 
@@ -376,20 +385,22 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	// set worker
-	if config.WorkerDisable {
+	if ctx.NodeType() != common.CONSENSUSNODE || config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
+		// TODO-Kaiabft-Refactor: Remove this chain-only injection path once runtime
+		// (Start/Stop) and passive engine/handler dependencies are split.
 		// Istanbul backend can be accessed by APIs to call its methods even though the core of the
 		// consensus engine doesn't run.
-		istBackend, ok := cn.engine.(consensus.Istanbul)
+		istBackend, ok := cn.engine.(chainAwareConsensusEngine)
 		if ok {
 			istBackend.SetChain(cn.blockchain)
+			istBackend.SignalPeerRegistrable()
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.govModule)
 	}
 
-	// istanbul BFT
 	cn.miner.SetExtra(makeExtraData(config.ExtraData))
 
 	cn.APIBackend = &CNAPIBackend{cn, nil}
@@ -404,8 +415,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	if err := cn.SetupKaiaxModules(ctx, mValset); err != nil {
+	if err := cn.SetupKaiaxModules(ctx, mValset, mVRank); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
+		return nil, err
 	}
 
 	// Fill the staking info cache for the recent blocks.
@@ -465,11 +477,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 // setAcceptTxs sets AcceptTxs flag in 1CN case to receive tx propagation.
 func (s *CN) setAcceptTxs() error {
 	if s.chainConfig.Istanbul != nil {
-		istanbulExtra, err := types.ExtractIstanbulExtra(s.blockchain.Genesis().Header())
+		validators, err := s.blockchain.Sealer().Validators(s.blockchain.Genesis().Header())
 		if err != nil {
 			return err
 		} else {
-			if len(istanbulExtra.Validators) == 1 {
+			if len(validators) == 1 {
 				s.protocolManager.SetAcceptTxs()
 			}
 		}
@@ -490,7 +502,7 @@ func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
 }
 
-func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule,
+func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule, mVRank *vrank_impl.VRankModule,
 ) error {
 	// Initialize modules
 	return errors.Join(
@@ -511,15 +523,17 @@ func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.
 			Chain:         s.blockchain,
 			GovModule:     mGov,
 			StakingModule: mStaking,
+			VRankModule:   mVRank,
 		}),
 	)
 }
 
-func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule) error {
+func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule, mVRank *vrank_impl.VRankModule) error {
 	var (
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
+		mSystem  = system_impl.NewSystemModule()
 		mGasless = gasless_impl.NewGaslessModule()
 		mAuction = auction_impl.NewAuctionModule()
 	)
@@ -530,6 +544,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:         s.blockchain,
 			GovModule:     s.govModule,
 			StakingModule: s.stakingModule,
+			ValsetModule:  mValset,
+			NodeAddress:   s.nodeAddress,
+			Rewardbase:    s.rewardbase,
 		}),
 		mSupply.Init(&supply_impl.InitOpts{
 			ChainKv:      s.chainDB.GetMiscDB(),
@@ -538,9 +555,13 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			RewardModule: mReward,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Downloader:  s.protocolManager.Downloader(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			Downloader:   s.protocolManager.Downloader(),
+			BlsSecretKey: ctx.BlsNodeKey(),
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: s.blockchain,
 		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -557,17 +578,29 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Downloader:    s.protocolManager.Downloader(),
 			NodeKey:       ctx.NodeKey(),
 		}),
+		mVRank.Init(&vrank_impl.InitOpts{
+			Valset:      mValset,
+			Randao:      mRandao,
+			RoundReader: s.blockchain.Sealer(),
+			NodeKey:     ctx.NodeKey(),
+			BlsKey:      ctx.BlsNodeKey(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			ChainKv:     s.chainDB.GetMiscDB(),
+		}),
 	)
 	if err != nil {
 		return err
 	}
 
-	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
-	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mSystem, mVRank}
+	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao, mVRank}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
-	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao, mVRank}
+	mHeader := []kaiax.HeaderModule{mReward, s.govModule, mRandao, mValset, mVRank}
+	mBlockState := []kaiax.BlockStateModule{mReward, mSystem, mValset}
 
 	if !mGasless.IsDisabled() {
 		mExecution = append(mExecution, mGasless)
@@ -589,20 +622,24 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		}
 	}
 
+	// VRank exposes the governance_getCFS / governance_getPFS JSON-RPC APIs on all node types.
+	mJsonRpc = append(mJsonRpc, mVRank)
+
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mBase...)
 	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
-	s.blockchain.RegisterExecutionModule(mExecution...)
-	s.blockchain.RegisterRewindableModule(mRewindable...)
+	s.blockchain.RegisterKaiaxModules(s.govModule, mValset, mExecution, mRewindable, mHeader, mBlockState)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
-	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
-		engine.RegisterConsensusModule(mReward, s.govModule)
-	}
+	s.engine.RegisterKaiaxModules(s.govModule, mValset)
+	s.engine.RegisterVRankModule(mVRank)
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
+	// VRank p2p send/receive runs on consensus nodes only (candidates are CN-typed).
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		s.protocolManager.RegisterVRankModule(mVRank)
+	}
 
 	return nil
 }
@@ -645,23 +682,6 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 		UseFlatTrie: config.UseFlatTrie,
 	}
 	return ctx.OpenDatabase(dbc)
-}
-
-// CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
-	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
-	if chainConfig.Governance == nil {
-		chainConfig.Governance = params.GetDefaultGovernanceConfig()
-	}
-	return istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: &config.Istanbul,
-		Rewardbase:     config.Rewardbase,
-		PrivateKey:     ctx.NodeKey(),
-		BlsSecretKey:   ctx.BlsNodeKey(),
-		DB:             db,
-		GovModule:      govModule,
-		NodeType:       nodetype,
-	})
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.
@@ -901,6 +921,8 @@ func (s *CN) Start(srvr p2p.Server) error {
 	// Start the RPC service
 	s.p2pServer = srvr
 
+	s.startCNPeerSync(srvr)
+
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()
 	// Start the networking layer and the light server if requested
@@ -916,6 +938,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Kaia protocol.
 func (s *CN) Stop() error {
 	// Stop all the peer-related stuff first.
+	s.stopCNPeerSync()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()

@@ -76,6 +76,9 @@ type Header struct {
 	// ExcessBlobGas was added by EIP-4844 and is ignored in legacy headers.
 	ExcessBlobGas *uint64 `json:"excessBlobGas" rlp:"optional"`
 
+	// VRank was added by KIP-227 and is ignored in legacy headers.
+	VRank []byte `json:"vrank,omitempty" rlp:"optional"`
+
 	// New header fields must be added at tail for backward compatibility.
 }
 
@@ -97,18 +100,23 @@ type headerMarshaling struct {
 	MixHash       hexutil.Bytes
 	BlobGasUsed   *hexutil.Uint64
 	ExcessBlobGas *hexutil.Uint64
+	VRank         hexutil.Bytes
+}
+
+// HeaderHashFn is an optional override for Header.Hash. When set, it replaces
+// the default logic. Intended to be initialized by the consensus sealer.
+var HeaderHashFn func(h *Header) common.Hash // replaces Header.Hash
+
+// SetHeaderHashFn sets an optional override for Header.Hash.
+func SetHeaderHashFn(hashFn func(h *Header) common.Hash) {
+	HeaderHashFn = hashFn
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
-	// If the mix digest is equivalent to the predefined Istanbul digest, use Istanbul
-	// specific hash calculation.
-	if EngineType == Engine_IBFT {
-		// Seal is reserved in extra-data. To prove block is signed by the proposer.
-		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
-			return rlpHash(istanbulHeader)
-		}
+	if fn := HeaderHashFn; fn != nil {
+		return fn(h)
 	}
 	return rlpHash(h)
 }
@@ -135,17 +143,13 @@ func (h *Header) HashNoNonce() common.Hash {
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
 	constantSize := common.StorageSize(reflect.TypeFor[Header]().Size())
-	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote) + len(h.RandomReveal) + len(h.MixHash))
+	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote) + len(h.RandomReveal) + len(h.MixHash) + len(h.VRank))
 	bigIntSize := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {
 		return constantSize + byteSize + bigIntSize + common.StorageSize(h.BaseFee.BitLen()/8)
 	} else {
 		return constantSize + byteSize + bigIntSize
 	}
-}
-
-func (h *Header) Round() byte {
-	return byte(h.Extra[IstanbulExtraVanity-1])
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -291,6 +295,10 @@ func CopyHeader(h *Header) *Header {
 	if h.BlobGasUsed != nil {
 		cpy.BlobGasUsed = new(uint64)
 		*cpy.BlobGasUsed = *h.BlobGasUsed
+	}
+	if len(h.VRank) > 0 {
+		cpy.VRank = make([]byte, len(h.VRank))
+		copy(cpy.VRank, h.VRank)
 	}
 	return &cpy
 }

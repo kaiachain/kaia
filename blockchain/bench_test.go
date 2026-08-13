@@ -288,7 +288,7 @@ func BenchmarkChainWrite_full_100k_badgerDB(b *testing.B) {
 // into a database.
 func makeChainForBench(db database.DBManager, full bool, count uint64) {
 	var hash common.Hash
-	for n := uint64(0); n < count; n++ {
+	for n := range count {
 		num := new(big.Int).SetUint64(n)
 		header := &types.Header{
 			Number:      num,
@@ -346,7 +346,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 			b.Fatalf("error creating chain: %v", err)
 		}
 
-		for n := uint64(0); n < count; n++ {
+		for n := range count {
 			header := chain.GetHeaderByNumber(n)
 			if full {
 				hash := header.Hash()

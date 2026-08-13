@@ -261,7 +261,7 @@ func (c LRUShardConfig) newCache() (Cache, error) {
 	lruShard := &lruShardCache{shards: make([]*lru.Cache, numShards), shardIndexMask: numShards - 1}
 	shardsSize := cacheSize / numShards
 	var err error
-	for i := 0; i < numShards; i++ {
+	for i := range numShards {
 		lruShard.shards[i], err = lru.NewWithEvict(shardsSize, nil)
 		if err != nil {
 			return nil, err

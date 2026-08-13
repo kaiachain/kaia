@@ -49,10 +49,11 @@ type BidPool struct {
 	ChainConfig *params.ChainConfig
 	Chain       backends.BlockChainForCaller
 
-	auctionInfoMu     sync.RWMutex
-	auctioneer        common.Address
-	auctionEntryPoint common.Address
-	bidTxGasBuffer    uint64
+	auctionInfoMu            sync.RWMutex
+	auctioneer               common.Address
+	auctionEntryPoint        common.Address
+	auctionEntryPointVersion string
+	bidTxGasBuffer           uint64
 
 	bidMu        sync.RWMutex
 	bidMap       map[common.Hash]*auction.Bid              // (bidHash) -> Bid
@@ -188,11 +189,11 @@ func (bp *BidPool) clearBidPool() {
 }
 
 // updateAuctionInfo updates the auction info if the auctioneer or auction entry point address is changed.
-func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address, bidTxGasBuffer uint64) {
+func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address, auctionEntryPointVersion string, bidTxGasBuffer uint64) {
 	bp.auctionInfoMu.Lock()
 	defer bp.auctionInfoMu.Unlock()
 
-	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint && bp.bidTxGasBuffer == bidTxGasBuffer {
+	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint && bp.auctionEntryPointVersion == auctionEntryPointVersion && bp.bidTxGasBuffer == bidTxGasBuffer {
 		return
 	}
 
@@ -201,9 +202,10 @@ func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoin
 
 	bp.auctioneer = auctioneer
 	bp.auctionEntryPoint = auctionEntryPoint
+	bp.auctionEntryPointVersion = auctionEntryPointVersion
 	bp.bidTxGasBuffer = bidTxGasBuffer
 
-	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint, "bidTxGasBuffer", bidTxGasBuffer)
+	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint, "auctionEntryPointVersion", auctionEntryPointVersion, "bidTxGasBuffer", bidTxGasBuffer)
 }
 
 // getTargetTxHashMap returns the target tx hash map for the given block number.
@@ -223,6 +225,12 @@ func (bp *BidPool) GetAuctionEntryPoint() common.Address {
 	defer bp.auctionInfoMu.RUnlock()
 
 	return bp.auctionEntryPoint
+}
+
+func (bp *BidPool) GetAuctionEntryPointVersion() string {
+	bp.auctionInfoMu.RLock()
+	defer bp.auctionInfoMu.RUnlock()
+	return bp.auctionEntryPointVersion
 }
 
 func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
@@ -271,15 +279,18 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 		sender       = bid.Sender
 	)
 
+	// Re-check bidWinnerMap here — two concurrent bids can pass validateBid together.
+	if _, ok := bp.bidMap[bid.Hash()]; ok {
+		return auction.ErrBidAlreadyExists
+	}
+	if bp.senderHasDifferentWinner(bid) {
+		return auction.ErrBidSenderExists
+	}
+
 	// If same block number, same target tx hash exists, replace it if it's better
 	if existingBid, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
 		// FCFS if the bid is the same.
 		if existingBid.Bid.Cmp(bid.Bid) >= 0 {
-			// Since we allow the parallel bid validation, the previous duplicate bid check at #validateBid might be skipped.
-			// So we need to check the bid map again to return the correct error.
-			if _, ok := bp.bidMap[bid.Hash()]; ok {
-				return auction.ErrBidAlreadyExists
-			}
 			return auction.ErrLowBid
 		}
 
@@ -317,9 +328,18 @@ func (bp *BidPool) initializeBidMap(num uint64) {
 	}
 }
 
+// senderHasDifferentWinner reports whether a different bid from the same sender
+// already exists in the winner list for this block. Caller must hold bidMu.
+func (bp *BidPool) senderHasDifferentWinner(bid *auction.Bid) bool {
+	hash, ok := bp.bidWinnerMap[bid.BlockNumber][bid.Sender]
+	if !ok {
+		return false
+	}
+	return !bid.Equals(bp.bidMap[hash])
+}
+
 func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	blockNumber := bid.BlockNumber
-	sender := bid.Sender
 
 	bp.bidMu.RLock()
 
@@ -330,11 +350,9 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	// 1. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
-	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !bid.Equals(bp.bidMap[hash]) {
-			bp.bidMu.RUnlock()
-			return auction.ErrBidSenderExists
-		}
+	if bp.senderHasDifferentWinner(bid) {
+		bp.bidMu.RUnlock()
+		return auction.ErrBidSenderExists
 	}
 	bp.bidMu.RUnlock()
 
@@ -384,7 +402,7 @@ func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	}
 
 	// Verify the EIP712 signature.
-	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint); err != nil {
+	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint, bp.auctionEntryPointVersion); err != nil {
 		return err
 	}
 
@@ -461,7 +479,7 @@ func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
 	buffer := bp.bidTxGasBuffer
 	bp.auctionInfoMu.RUnlock()
 
-	data, err := system.EncodeAuctionCallData(bid)
+	data, err := system.EncodeAuctionCallData(bid, bp.auctionEntryPointVersion)
 	if err != nil {
 		return 0, err
 	}

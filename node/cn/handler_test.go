@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
@@ -36,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
@@ -104,13 +104,12 @@ func init() {
 	hash1 = tx1.Hash()
 }
 
-func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *workmocks.MockBlockChain, *workmocks.MockTxPool) {
+func newMocks(t *testing.T) (*gomock.Controller, *workmocks.MockBlockChain, *workmocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
-	mockEngine := consensusmocks.NewMockEngine(mockCtrl)
 	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	mockTxPool := workmocks.NewMockTxPool(mockCtrl)
 
-	return mockCtrl, mockEngine, mockBlockChain, mockTxPool
+	return mockCtrl, mockBlockChain, mockTxPool
 }
 
 func newBlock(blockNum int) *types.Block {
@@ -138,21 +137,31 @@ func newReceipt(gasUsed int) *types.Receipt {
 	return rct
 }
 
+type testConsensusHandler struct{}
+
+func (h *testConsensusHandler) NewChainHead() error { return nil }
+func (h *testConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) {
+	return false, nil
+}
+func (h *testConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
+
 func TestNewProtocolManager(t *testing.T) {
-	// 1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
+	// NewProtocolManager uses ConsensusProtocol directly (not handler-provided).
+	// Verifies successful initialization with all Istanbul versions passing the
+	// FastSync version filter (>= kaia63).
 	{
-		mockCtrl, mockEngine, mockBlockChain, mockTxPool := newMocks(t)
+		mockCtrl, mockBlockChain, mockTxPool := newMocks(t)
 		defer mockCtrl.Finish()
 
 		block := newBlock(blockNum1)
 		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
-		mockEngine.EXPECT().Protocol().Return(consensus.Protocol{}).Times(1)
 
-		pm, err := NewProtocolManager(nil, downloader.FastSync, 0, nil, mockTxPool,
-			mockEngine, mockBlockChain, nil, 1, -1, &Config{})
+		pm, err := NewProtocolManager(params.TestChainConfig, downloader.FastSync, 0, nil, mockTxPool,
+			&testConsensusHandler{}, mockBlockChain, nil, 1, common.CONSENSUSNODE,
+			&Config{DownloaderDisable: true, FetcherDisable: true})
 
-		assert.Nil(t, pm)
-		assert.Equal(t, errIncompatibleConfig, err)
+		assert.NotNil(t, pm)
+		assert.NoError(t, err)
 	}
 }
 
@@ -721,29 +730,6 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 	}
 }
 
-func TestUseTxResend(t *testing.T) {
-	testSet := [...]struct {
-		pm     *ProtocolManager
-		result bool
-	}{
-		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: true}, false},
-
-		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: false}, false},
-		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: false}, true},
-	}
-
-	for _, tc := range testSet {
-		assert.Equal(t, tc.result, tc.pm.useTxResend())
-	}
-}
-
 func TestNodeInfo(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1006,7 +992,7 @@ func TestProtocolManager_SetWsEndPoint(t *testing.T) {
 func TestBroadcastTxsSortedByPriceAndTime(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 10)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := types.LatestSignerForChainID(big.NewInt(1))
@@ -1078,7 +1064,7 @@ func TestBroadcastTxsSortedByPriceAndTime(t *testing.T) {
 func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 10)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := types.LatestSignerForChainID(big.NewInt(1))
@@ -1147,12 +1133,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 }
 
 func contains(addrs []common.Address, item common.Address) bool {
-	for _, a := range addrs {
-		if a == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(addrs, item)
 }
 
 func createAndRegisterPeers(mockCtrl *gomock.Controller, peers *peerSet) (*MockPeer, *MockPeer, *MockPeer) {
@@ -1184,7 +1165,7 @@ func newTestBackendWithGenerator(blocks int, generator func(int, *blockchain.Blo
 		// Create a database pre-initialize with a genesis block
 		db     = database.NewMemoryDBManager()
 		config = params.TestChainConfig
-		engine = faker.NewFaker()
+		sealer = faker.NewFaker()
 	)
 
 	gspec := &blockchain.Genesis{
@@ -1200,9 +1181,9 @@ func newTestBackendWithGenerator(blocks int, generator func(int, *blockchain.Blo
 		SnapshotCacheSize:   512,
 		ArchiveMode:         true, // Archive mode
 	}
-	chain, _ := blockchain.NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
+	chain, _ := blockchain.NewBlockChain(db, cacheConfig, config, sealer, vm.Config{})
 
-	bs, _ := blockchain.GenerateChain(config, genesis, engine, db, blocks, generator)
+	bs, _ := blockchain.GenerateChain(config, genesis, sealer, db, blocks, generator)
 	if _, err := chain.InsertChain(bs); err != nil {
 		panic(err)
 	}
@@ -1226,7 +1207,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		unknown[i] = byte(i)
 	}
 	getHashes := func(from, limit uint64) (hashes []common.Hash) {
-		for i := uint64(0); i < limit; i++ {
+		for i := range limit {
 			hashes = append(hashes, backend.GetBlockByNumber(from-1-i).Hash())
 		}
 		return hashes
@@ -1392,7 +1373,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		},
 	}
 
-	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, backend.Engine(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
+	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, faker.NewFaker(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1576,6 +1557,28 @@ func TestSidecarReqManager_Update(t *testing.T) {
 	m.update(txHash, "test-peer-final")
 	req = m.get(txHash)
 	assert.Nil(t, req, "Request should be deleted when try >= maxTry")
+}
+
+// TestSidecarReqManager_UpdateNilEntry tests that update does not panic when the entry
+// has been concurrently deleted before update() acquires the lock.
+func TestSidecarReqManager_UpdateNilEntry(t *testing.T) {
+	m := newTestSidecarReqManager(10*time.Second, 5)
+	txHash := tx1.Hash()
+
+	// update on a never-added (nil) entry must not panic
+	assert.NotPanics(t, func() {
+		m.update(txHash, "peer-1")
+	}, "update on missing entry should be a no-op, not a panic")
+
+	// add, delete, then update — simulates the race: response arrives before update()
+	m.add(txHash, newTestBlobSidecarsRequestData(txHash, 100, 0))
+	m.delete(txHash)
+	assert.NotPanics(t, func() {
+		m.update(txHash, "peer-1")
+	}, "update after concurrent delete should be a no-op, not a panic")
+
+	// entry must remain absent
+	assert.Nil(t, m.get(txHash), "entry should remain deleted after no-op update")
 }
 
 // TestSidecarReqManager_Delete tests the delete method

@@ -23,6 +23,7 @@
 package cn
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/snap"
@@ -69,6 +71,9 @@ const (
 	// The number is referenced from the size of bid pool.
 	bidChanSize = 2048
 
+	// vrankChanSize is the size of channel listening to VRankBroadcastEvent.
+	vrankChanSize = 2048
+
 	concurrentPerPeer  = 3
 	channelSizePerPeer = 20
 
@@ -83,6 +88,9 @@ const (
 
 	// ExtraNonSnapPeers is the number of non-snap peers allowed to connect more than snap peers.
 	ExtraNonSnapPeers = 5
+
+	// maxVerifiedBlobTxs bounds verifiedBlobTxs.
+	maxVerifiedBlobTxs = 1024
 )
 
 var (
@@ -92,7 +100,33 @@ var (
 	errUnknownProcessingError  = errors.New("unknown error during the msg processing")
 	errUnsupportedEnginePolicy = errors.New("unsupported engine or policy")
 	errKZGVerificationError    = errors.New("KZG verification error")
+	errBloblessBlobTx          = errors.New("blobless blob transaction")
 )
+
+// blobSidecarKey identifies what ValidateWithBlobHashes consumes. The counts are prefixed
+// because every element is fixed-size, so an unprefixed concatenation is ambiguous.
+func blobSidecarKey(hashes []common.Hash, sc *types.BlobTxSidecar) common.Hash {
+	counts := binary.BigEndian.AppendUint32(nil, uint32(len(hashes)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Blobs)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Commitments)))
+	counts = binary.BigEndian.AppendUint32(counts, uint32(len(sc.Proofs)))
+
+	parts := make([][]byte, 0, 2+len(hashes)+len(sc.Blobs)+len(sc.Commitments)+len(sc.Proofs))
+	parts = append(parts, counts, []byte{sc.Version})
+	for i := range hashes {
+		parts = append(parts, hashes[i][:])
+	}
+	for i := range sc.Blobs {
+		parts = append(parts, sc.Blobs[i][:])
+	}
+	for i := range sc.Commitments {
+		parts = append(parts, sc.Commitments[i][:])
+	}
+	for i := range sc.Proofs {
+		parts = append(parts, sc.Proofs[i][:])
+	}
+	return crypto.Keccak256Hash(parts...)
+}
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
@@ -101,14 +135,17 @@ func errResp(code errCode, format string, v ...interface{}) error {
 type ProtocolManager struct {
 	networkId uint64
 
-	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
-	snapSync  uint32 // Flag whether fast sync should operate on top of the snap protocol
-	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
+	fastSync  uint32        // Flag whether fast sync is enabled (gets disabled if we already have blocks)
+	snapSync  uint32        // Flag whether fast sync should operate on top of the snap protocol
+	acceptTxs atomic.Uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      work.TxPool
 	blockchain  work.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
+
+	// verifiedBlobTxs holds blobSidecarKey values that already passed KZG verification.
+	verifiedBlobTxs *knownHashSet
 
 	downloader ProtocolManagerDownloader
 	fetcher    ProtocolManagerFetcher
@@ -122,6 +159,8 @@ type ProtocolManager struct {
 	minedBlockSub *event.TypeMuxSubscription
 	bidCh         chan *auction.Bid
 	bidSub        event.Subscription
+	vrankCh       chan *vrank.VRankBroadcastEvent
+	vrankSub      event.Subscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan Peer
@@ -134,8 +173,8 @@ type ProtocolManager struct {
 	// and processing
 	wg     sync.WaitGroup
 	peerWg sync.WaitGroup
-	// istanbul BFT
-	engine consensus.Engine
+
+	handler consensus.Handler
 
 	wsendpoint string
 
@@ -147,6 +186,7 @@ type ProtocolManager struct {
 
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
+	vrankModule   vrank.VRankModule
 
 	missingBlobSidecarCh  <-chan *kaia_blockchain.MissingBlobSidecar
 	blobSidecarReqManager *sidecarReqManager
@@ -155,7 +195,7 @@ type ProtocolManager struct {
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
 // with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
-	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
+	txpool work.TxPool, handler consensus.Handler, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
 	nodetype common.ConnType, cnconfig *Config,
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
@@ -171,9 +211,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		txsyncCh:          make(chan *txsync),
 		quitSync:          make(chan struct{}),
 		quitResendCh:      make(chan struct{}),
-		engine:            engine,
+		handler:           handler,
 		nodetype:          nodetype,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
+		verifiedBlobTxs:   newKnownHashSet(maxVerifiedBlobTxs),
 		blobSidecarReqManager: &sidecarReqManager{
 			list:     make(map[common.Hash]*sidecarReq),
 			cooldown: 10 * time.Second,
@@ -181,10 +222,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		},
 	}
 
-	// istanbul BFT
-	if handler, ok := engine.(consensus.Handler); ok {
-		handler.SetBroadcaster(manager, manager.nodetype)
-	}
+	handler.SetBroadcaster(manager)
 
 	// Figure out whether to allow fast sync or not
 	if (mode == downloader.FastSync || mode == downloader.SnapSync) && blockchain.CurrentBlock().NumberU64() > 0 {
@@ -199,8 +237,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(0)
 		manager.snapSync = uint32(1)
 	}
-	// istanbul BFT
-	protocol := engine.Protocol()
+	protocol := ConsensusProtocol
+	logger.Info("Initialising Kaia protocol", "versions", protocol.Versions, "network", networkId)
 	// Initiate a sub-protocol for every implemented version we can handle
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
@@ -338,7 +376,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fetcher = fetcher.NewFakeFetcher()
 	} else {
 		validator := func(header *types.Header) error {
-			return engine.VerifyHeader(blockchain, header, true)
+			return blockchain.Validator().ValidateHeader(header)
 		}
 		heighter := func() uint64 {
 			return blockchain.CurrentBlock().NumberU64()
@@ -349,19 +387,18 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				logger.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
 				return 0, nil
 			}
-			atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
+			manager.acceptTxs.Store(1) // Mark initial sync done on any fetcher import
 			return manager.blockchain.InsertChain(blocks)
 		}
 		manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
 	}
 
-	if manager.useTxResend() {
+	if manager.nodetype != common.CONSENSUSNODE {
 		go manager.txResendLoop(cnconfig.TxResendInterval, cnconfig.TxResendCount)
 	}
 	return manager, nil
 }
 
-// istanbul BFT
 func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator) {
 	pm.peers.RegisterValidator(connType, validator)
 }
@@ -376,6 +413,14 @@ func (pm *ProtocolManager) RegisterAuctionModule(auctionModule auction.AuctionMo
 
 func (pm *ProtocolManager) IsAuctionModuleDisabled() bool {
 	return pm.auctionModule == nil
+}
+
+func (pm *ProtocolManager) RegisterVRankModule(m vrank.VRankModule) {
+	pm.vrankModule = m
+}
+
+func (pm *ProtocolManager) IsVRankModuleDisabled() bool {
+	return pm.vrankModule == nil
 }
 
 func (pm *ProtocolManager) getWSEndPoint() string {
@@ -428,6 +473,13 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 		go pm.bidBroadcastLoop()
 	}
 
+	if !pm.IsVRankModuleDisabled() {
+		// broadcast VRank preprepare/candidate messages
+		pm.vrankCh = make(chan *vrank.VRankBroadcastEvent, vrankChanSize)
+		pm.vrankSub = pm.vrankModule.SubscribeVRank(pm.vrankCh)
+		go pm.vrankBroadcastLoop()
+	}
+
 	// sync missing blob sidecars
 	pm.missingBlobSidecarCh = pm.txpool.SubscribeMissingBlobSidecars()
 	go pm.blobSidecarSyncLoop()
@@ -445,12 +497,15 @@ func (pm *ProtocolManager) Stop() {
 	if !pm.IsAuctionModuleDisabled() {
 		pm.bidSub.Unsubscribe() // quits bidBroadcastLoop
 	}
+	if !pm.IsVRankModuleDisabled() {
+		pm.vrankSub.Unsubscribe() // quits vrankBroadcastLoop
+	}
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
 	pm.noMorePeers <- struct{}{}
 
-	if pm.useTxResend() {
+	if pm.nodetype != common.CONSENSUSNODE {
 		// Quit resend loop
 		pm.quitResendCh <- struct{}{}
 	}
@@ -665,9 +720,9 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 // processConsensusMsg processes the consensus message.
 func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
-		if handler, ok := pm.engine.(consensus.Handler); ok {
-			_, err := handler.HandleMsg(addr, msg)
-			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+		if pm.handler != nil {
+			_, err := pm.handler.HandleMsg(addr, msg)
+			// if msg is consensus msg, handled is true and err is nil if handle msg is successful.
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
 				errCh <- err
@@ -693,15 +748,19 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 	//}
 	//defer msg.Discard()
 
-	// istanbul BFT
-	if handler, ok := pm.engine.(consensus.Handler); ok {
-		//pubKey, err := p.ID().Pubkey()
-		//if err != nil {
-		//	return err
-		//}
-		//addr := crypto.PubkeyToAddress(*pubKey)
-		handled, err := handler.HandleMsg(addr, msg)
-		// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+	//pubKey, err := p.ID().Pubkey()
+	//if err != nil {
+	//	return err
+	//}
+	//addr := crypto.PubkeyToAddress(*pubKey)
+	if msg.Code == consensus.ConsensusMsgCode {
+		if p.ConnType() != common.CONSENSUSNODE {
+			return errResp(ErrInvalidMsgCode, "consensus message from a non-CN peer: conntype %d", p.ConnType())
+		}
+		if pm.handler == nil {
+			return nil
+		}
+		handled, err := pm.handler.HandleMsg(addr, msg)
 		if handled {
 			return err
 		}
@@ -779,6 +838,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 			return err
 		}
 
+	case p.GetVersion() >= kaia68 && msg.Code == VRankPreprepareMsg:
+		if err := handleVRankPreprepareMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= kaia68 && msg.Code == VRankCandidateMsg:
+		if err := handleVRankCandidateMsg(pm, p, msg); err != nil {
+			return err
+		}
+
 	case msg.Code == NewBlockHashesMsg:
 		if err := handleNewBlockHashesMsg(pm, p, msg); err != nil {
 			return err
@@ -831,9 +900,10 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 
 	// Gather headers until the fetch or network limits is reached
 	var (
-		bytes   common.StorageSize
-		headers []*types.Header
-		unknown bool
+		bytes           common.StorageSize
+		headers         []*types.Header
+		unknown         bool
+		maxNonCanonical = uint64(100)
 	)
 	for !unknown && len(headers) < int(query.Amount) && bytes < softResponseLimit && len(headers) < downloader.MaxHeaderFetch {
 		// Retrieve the next header satisfying the query
@@ -846,7 +916,6 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		if origin == nil {
 			break
 		}
-		number := origin.Number.Uint64()
 		headers = append(headers, origin)
 		bytes += estHeaderRlpSize
 
@@ -863,15 +932,8 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 				p.GetP2PPeer().Log().Warn("GetBlockHeaders skip underflow attack", "current", current, "skip", query.Skip, "next", next, "attacker", infos)
 				unknown = true
 			} else {
-				for i := 0; i < int(query.Skip)+1; i++ {
-					if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
-						query.Origin.Hash = header.ParentHash
-						number--
-					} else {
-						unknown = true
-						break
-					}
-				}
+				query.Origin.Hash, _ = pm.blockchain.GetAncestor(query.Origin.Hash, current, query.Skip+1, &maxNonCanonical)
+				unknown = query.Origin.Hash == common.Hash{}
 			}
 		case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
 			// Hash based traversal towards the leaf block
@@ -885,8 +947,10 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 				unknown = true
 			} else {
 				if header := pm.blockchain.GetHeaderByNumber(next); header != nil {
-					if pm.blockchain.GetBlockHashesFromHash(header.Hash(), query.Skip+1)[query.Skip] == query.Origin.Hash {
-						query.Origin.Hash = header.Hash()
+					nextHash := header.Hash()
+					expOldHash, _ := pm.blockchain.GetAncestor(nextHash, next, query.Skip+1, &maxNonCanonical)
+					if expOldHash == query.Origin.Hash {
+						query.Origin.Hash = nextHash
 					} else {
 						unknown = true
 					}
@@ -941,17 +1005,20 @@ func handleBlockBodiesRequest(pm *ProtocolManager, p Peer, msg p2p.Msg) ([]rlp.R
 	}
 	// Gather blocks until the fetch or network limits is reached
 	var (
-		hash   common.Hash
-		bytes  int
-		bodies []rlp.RawValue
+		hash    common.Hash
+		bytes   int
+		bodies  []rlp.RawValue
+		lookups int
 	)
-	for bytes < softResponseLimit && len(bodies) < downloader.MaxBlockFetch {
+	for bytes < softResponseLimit && len(bodies) < downloader.MaxBlockFetch &&
+		lookups < 2*downloader.MaxBlockFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return nil, errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		lookups++
 		// Retrieve the requested block body, stopping if enough was found
 		if data := pm.blockchain.GetBodyRLP(hash); len(data) != 0 {
 			bodies = append(bodies, data)
@@ -1002,17 +1069,20 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 	// Gather state data until the fetch or network limits is reached
 	var (
-		hash  common.Hash
-		bytes int
-		data  [][]byte
+		hash    common.Hash
+		bytes   int
+		data    [][]byte
+		lookups int
 	)
-	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
+	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch &&
+		lookups < 2*downloader.MaxStateFetch {
 		// Retrieve the hash of the next state entry
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		lookups++
 		// Retrieve the requested state entry, stopping if enough was found
 		// TODO-Kaia-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
 		entry, err := pm.blockchain.TrieNode(hash)
@@ -1054,14 +1124,17 @@ func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		hash     common.Hash
 		bytes    int
 		receipts []rlp.RawValue
+		lookups  int
 	)
-	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
+	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch &&
+		lookups < 2*downloader.MaxReceiptFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		lookups++
 		// Retrieve the requested block's receipts, skipping if unknown to us
 		results := pm.blockchain.GetReceiptsByBlockHash(hash)
 		if results == nil {
@@ -1110,8 +1183,10 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		hash         common.Hash
 		bytes        int
 		stakingInfos []rlp.RawValue
+		lookups      int
 	)
-	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch {
+	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch &&
+		lookups < 2*downloader.MaxStakingInfoFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
@@ -1119,6 +1194,7 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		lookups++
 		// Retrieve the requested block's staking information, skipping if unknown to us
 		header := pm.blockchain.GetHeaderByHash(hash)
 		if header == nil {
@@ -1144,7 +1220,6 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		if encoded, err := rlp.EncodeToBytes(result); err != nil {
 			logger.Error("Failed to encode staking info", "err", err)
 		} else {
-			fmt.Println("encoding", result, "len", len(encoded))
 			stakingInfos = append(stakingInfos, encoded)
 			bytes += len(encoded)
 		}
@@ -1186,6 +1261,51 @@ func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	return nil
 }
 
+// handleVRankPreprepareMsg handles a VRankPreprepare message.
+func handleVRankPreprepareMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.IsVRankModuleDisabled() {
+		return nil
+	}
+
+	var data *vrank.VRankPreprepare
+	if err := msg.Decode(&data); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	if data == nil || data.Block == nil || data.View == nil || data.View.Sequence == nil || data.View.Round == nil {
+		return errResp(ErrDecode, "msg %v: malformed VRankPreprepare", msg)
+	}
+
+	if err := pm.vrankModule.HandleVRankPreprepare(data); err != nil {
+		logger.Debug("Failed to handle VRankPreprepare", "err", err)
+	}
+
+	return nil
+}
+
+// handleVRankCandidateMsg handles a VRankCandidate message.
+func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.IsVRankModuleDisabled() {
+		return nil
+	}
+
+	var data *vrank.VRankCandidate
+	if err := msg.Decode(&data); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	if data == nil {
+		return errResp(ErrDecode, "msg %v: malformed VRankCandidate", msg)
+	}
+
+	if err := pm.vrankModule.HandleVRankCandidate(data); err != nil {
+		if errors.Is(err, vrank.ErrRoundOutOfRange) || errors.Is(err, vrank.ErrInvalidCandidateSig) || errors.Is(err, vrank.ErrInvalidCandidateBlsSig) {
+			return err
+		}
+		logger.Debug("Failed to handle VRankCandidate", "err", err)
+	}
+
+	return nil
+}
+
 func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Decode the retrieval message
 	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
@@ -1197,8 +1317,10 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		data     blobSidecarsRequestData
 		bytes    int
 		sidecars []rlp.RawValue
+		lookups  int
 	)
-	for bytes < softResponseLimit && len(sidecars) < downloader.MaxBlobSidecarsFetch {
+	for bytes < softResponseLimit && len(sidecars) < downloader.MaxBlobSidecarsFetch &&
+		lookups < 2*downloader.MaxBlobSidecarsFetch {
 		// Retrieve data
 		if err := msgStream.Decode(&data); err == rlp.EOL {
 			break
@@ -1206,6 +1328,7 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		lookups++
 		// Retrieve a requested tx's blob sidecar, skipping if unknown to us
 		result, err := pm.txpool.GetBlobSidecarFromStorage(big.NewInt(int64(data.BlockNum)), int(data.TxIndex))
 		if result == nil {
@@ -1259,8 +1382,11 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			continue
 		}
 
-		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.TxHash, sidecar.Sidecar); err != nil {
-			logger.Warn("Saved blob sidecar", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "txHash", sidecar.TxHash)
+		// The peer-supplied sidecar.BlockNum/TxIndex are intentionally ignored:
+		// SaveBlobSidecar derives the canonical storage location from the
+		// transaction itself.
+		if err := pm.txpool.SaveBlobSidecar(sidecar.TxHash, sidecar.Sidecar); err != nil {
+			logger.Warn("Failed to save blob sidecar", "txHash", sidecar.TxHash, "err", err)
 			continue
 		}
 
@@ -1446,7 +1572,7 @@ func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 // handleTxMsg handles transaction-propagating message.
 func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
-	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+	if pm.acceptTxs.Load() == 0 {
 		return nil
 	}
 	// Transactions can be processed, parse all of them and deliver to the pool
@@ -1467,14 +1593,22 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// KZG verification is computationally expensive, so this acts as a
 		// defensive measure against potential DoS attacks.
 		if tx.Type() == types.TxTypeEthereumBlob {
+			// Without blob hashes the verification below passes vacuously.
+			if len(tx.BlobHashes()) == 0 {
+				return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errBloblessBlobTx)
+			}
 			sidecar := tx.BlobTxSidecar()
 			if sidecar != nil {
-				// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
-				// KZG verification is computationally expensive, so this acts as a
-				// defensive measure against potential DoS attacks.
-				if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-					logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
-					return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+				key := blobSidecarKey(tx.BlobHashes(), sidecar)
+				if !pm.verifiedBlobTxs.Contains(key) {
+					// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
+					// KZG verification is computationally expensive, so this acts as a
+					// defensive measure against potential DoS attacks.
+					if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+						logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
+						return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+					}
+					pm.verifiedBlobTxs.Add(key)
 				}
 			}
 		}
@@ -1682,7 +1816,7 @@ func samplingPeers(peers []Peer, pickSize int) []Peer {
 
 	picker := rand.New(rand.NewSource(time.Now().Unix()))
 	peerCount := len(peers)
-	for i := 0; i < peerCount; i++ {
+	for i := range peerCount {
 		randIndex := picker.Intn(peerCount)
 		peers[i], peers[randIndex] = peers[randIndex], peers[i]
 	}
@@ -1710,6 +1844,47 @@ func (pm *ProtocolManager) bidBroadcastLoop() {
 		case <-pm.bidSub.Err():
 			return
 		}
+	}
+}
+
+func (pm *ProtocolManager) vrankBroadcastLoop() {
+	for {
+		select {
+		case ev := <-pm.vrankCh:
+			pm.BroadcastVRank(ev)
+		case <-pm.vrankSub.Err():
+			return
+		}
+	}
+}
+
+// BroadcastVRank propagates a VRank message to the target CN peers carried in the
+// event. The VRank module decides the recipients (ev.Targets); this only routes.
+func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
+	if pm.nodetype != common.CONSENSUSNODE || ev == nil {
+		return
+	}
+
+	targets := make(map[common.Address]bool, len(ev.Targets))
+	for _, target := range ev.Targets {
+		targets[target] = true
+	}
+
+	var asyncSend func(peer Peer)
+	switch msg := ev.Msg.(type) {
+	case *vrank.VRankPreprepare:
+		asyncSend = func(peer Peer) { peer.AsyncSendVRankPreprepare(msg) }
+	case *vrank.VRankCandidate:
+		asyncSend = func(peer Peer) { peer.AsyncSendVRankCandidate(msg) }
+	default:
+		return
+	}
+
+	for addr, peer := range pm.peers.CNPeers() {
+		if !targets[addr] || peer.GetVersion() < kaia68 {
+			continue
+		}
+		asyncSend(peer)
 	}
 }
 
@@ -1752,13 +1927,6 @@ func (pm *ProtocolManager) txResend(pending types.Transactions) {
 		logger.Debug("Tx Resend", "count", len(pending))
 		pm.ReBroadcastTxs(pending)
 	}
-}
-
-func (pm *ProtocolManager) useTxResend() bool {
-	if pm.nodetype != common.CONSENSUSNODE && !pm.txResendUseLegacy {
-		return true
-	}
-	return false
 }
 
 // NodeInfo represents a short summary of the Kaia sub-protocol metadata
@@ -1869,7 +2037,7 @@ func (pm *ProtocolManager) ProtocolVersion() int {
 }
 
 func (pm *ProtocolManager) SetAcceptTxs() {
-	atomic.StoreUint32(&pm.acceptTxs, 1)
+	pm.acceptTxs.Store(1)
 }
 
 func (pm *ProtocolManager) NodeType() common.ConnType {
@@ -1905,6 +2073,9 @@ func (m *sidecarReqManager) get(txHash common.Hash) *sidecarReq {
 func (m *sidecarReqManager) update(txHash common.Hash, peer string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.list[txHash] == nil {
+		return // already deleted by a concurrent response
+	}
 	// no longer keep the request if the try count is too high
 	if m.list[txHash].try+1 >= m.maxTry {
 		delete(m.list, txHash)

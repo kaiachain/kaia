@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -254,12 +255,11 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumber(ctx context.Contex
 
 	if *number == rpc.PendingBlockNumber {
 		block, receipts, _ := s.b.Pending()
-		cInfo, err := s.b.Engine().GetConsensusInfo(block)
+		resp, err := s.makeRPCBlockOutputWithConsensusInfo(block, receipts)
 		if err != nil {
 			logger.Error("Getting consensus information failed", "blockHash", block.Hash(), "err", err)
 			return nil, errInternalError
 		}
-		resp := s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts)
 		s.nullifyPendingBlockFields(resp)
 		return resp, nil
 	}
@@ -279,18 +279,16 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumber(ctx context.Contex
 	}
 	blockHash := block.Hash()
 
-	cInfo, err := s.b.Engine().GetConsensusInfo(block)
-	if err != nil {
-		logger.Error("Getting consensus information failed", "blockHash", blockHash, "err", err)
-		return nil, errInternalError
-	}
-
 	receipts := s.b.GetBlockReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts = s.b.GetBlockReceipts(ctx, blockHash)
 	}
-
-	return s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts), nil
+	resp, err := s.makeRPCBlockOutputWithConsensusInfo(block, receipts)
+	if err != nil {
+		logger.Error("Getting consensus information failed", "blockHash", blockHash, "err", err)
+		return nil, errInternalError
+	}
+	return resp, nil
 }
 
 // nullifyPendingBlockFields sets specific fields to nil for pending blocks
@@ -357,18 +355,16 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByHash(ctx context.Context,
 		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
 	}
 
-	cInfo, err := s.b.Engine().GetConsensusInfo(block)
+	receipts := s.b.GetBlockReceiptsInCache(blockHash)
+	if receipts == nil {
+		receipts = s.b.GetBlockReceipts(ctx, blockHash)
+	}
+	resp, err := s.makeRPCBlockOutputWithConsensusInfo(block, receipts)
 	if err != nil {
 		logger.Error("Getting consensus information failed", "blockHash", blockHash, "err", err)
 		return nil, errInternalError
 	}
-
-	receipts := s.b.GetBlockReceipts(ctx, blockHash)
-	if receipts == nil {
-		receipts = s.b.GetBlockReceipts(ctx, blockHash)
-	}
-
-	return s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts), nil
+	return resp, nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number or hash.
@@ -767,6 +763,9 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 		fields["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
 		fields["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
 	}
+	if rules.IsPermissionless {
+		fields["vrank"] = hexutil.Bytes(head.VRank)
+	}
 
 	return fields, nil
 }
@@ -869,6 +868,9 @@ func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interfa
 	if rules.IsOsaka {
 		result["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
 		result["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
+	}
+	if rules.IsPermissionless {
+		result["vrank"] = hexutil.Bytes(head.VRank)
 	}
 
 	return result
@@ -975,23 +977,84 @@ func (s *KaiaBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput
 	}, nil
 }
 
-func (s *KaiaBlockChainAPI) makeRPCBlockOutputWithConsensusInfo(b *types.Block,
-	cInfo consensus.ConsensusInfo, transactions types.Transactions, receipts types.Receipts,
-) map[string]interface{} {
+type ConsensusInfo struct {
+	// Proposer signs [sigHash] to make seal; Validators signs [block.Hash + msgCommit] to make committedSeal
+	SigHash        common.Hash
+	Proposer       common.Address
+	OriginProposer *common.Address // the proposer of 0th round at the same block number
+	Committee      []common.Address
+	Committers     []common.Address
+	Round          byte
+}
+
+func GetConsensusInfo(block *types.Block, mValset valset.ValsetModule, sealer consensus.Sealer) (ConsensusInfo, error) {
+	if block == nil {
+		return ConsensusInfo{}, consensus.ErrUnknownBlock
+	}
+	if mValset == nil || sealer == nil {
+		return ConsensusInfo{}, errInternalError
+	}
+
+	// skip genesis
+	if block.NumberU64() == 0 {
+		return ConsensusInfo{}, nil
+	}
+	// get consensus information from sealer
+	round, err := sealer.Round(block.Header())
+	if err != nil {
+		return ConsensusInfo{}, err
+	}
+	committers, err := sealer.Committers(block.Header())
+	if err != nil {
+		return ConsensusInfo{}, err
+	}
+	sigHash := sealer.SigHash(block.Header())
+
+	// get proposer and committee information from valset module
+	currentProposer, err := mValset.GetProposer(block.NumberU64(), uint64(round))
+	if err != nil {
+		return ConsensusInfo{}, err
+	}
+	currentCommittee, err := mValset.GetCommittee(block.NumberU64(), uint64(round))
+	if err != nil {
+		return ConsensusInfo{}, err
+	}
+	originProposer := currentProposer
+	if round != 0 {
+		originProposer, err = mValset.GetProposer(block.NumberU64(), 0)
+		if err != nil {
+			return ConsensusInfo{}, err
+		}
+	}
+
+	return ConsensusInfo{
+		SigHash:        sigHash,
+		Proposer:       currentProposer,
+		OriginProposer: &originProposer,
+		Committee:      currentCommittee,
+		Committers:     committers,
+		Round:          round,
+	}, nil
+}
+
+func (s *KaiaBlockChainAPI) makeRPCBlockOutputWithConsensusInfo(b *types.Block, receipts types.Receipts) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	hash := head.Hash()
 
 	r, err := RpcOutputBlock(b, false, false, s.b.ChainConfig())
 	if err != nil {
-		logger.Error("failed to RpcOutputBlock", "err", err)
-		return nil
+		return nil, err
+	}
+
+	cInfo, err := GetConsensusInfo(b, s.b.ValsetModule(), s.b.Sealer())
+	if err != nil {
+		return nil, err
 	}
 
 	// make transactions
-	numTxs := len(transactions)
-	rpcTransactions := make([]map[string]interface{}, numTxs)
-	for i, tx := range transactions {
-		if len(receipts) == len(transactions) {
+	rpcTransactions := make([]map[string]interface{}, len(b.Transactions()))
+	for i, tx := range b.Transactions() {
+		if len(receipts) == len(b.Transactions()) {
 			rpcTransactions[i] = RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], s.b.ChainConfig())
 		} else {
 			// fill the transaction output if receipt is not found
@@ -1006,5 +1069,5 @@ func (s *KaiaBlockChainAPI) makeRPCBlockOutputWithConsensusInfo(b *types.Block,
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
-	return r
+	return r, nil
 }

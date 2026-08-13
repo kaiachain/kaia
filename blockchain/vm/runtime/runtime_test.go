@@ -151,7 +151,7 @@ func BenchmarkCall(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < 400; j++ {
+		for range 400 {
 			Execute(code, cpurchase, nil)
 			Execute(code, creceived, nil)
 			Execute(code, refund, nil)
@@ -238,8 +238,8 @@ func (d *dummyChain) CurrentBlock() *types.Block {
 	return nil
 }
 
-// Engine retrieves the chain's consensus engine.
-func (d *dummyChain) Engine() consensus.Engine {
+// Sealer retrieves the chain's consensus sealer.
+func (d *dummyChain) Sealer() consensus.Sealer {
 	return nil
 }
 

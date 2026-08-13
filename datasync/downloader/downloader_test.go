@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -53,9 +54,12 @@ import (
 
 // Reduce some of the parameters to make the tester faster.
 func init() {
-	MaxForkAncestry = uint64(10000)
-	blockCacheMaxItems = 1024
-	fsHeaderContCheck = 500 * time.Millisecond
+	MaxForkAncestry = uint64(512)
+	MaxHashFetch = 64
+	MaxHeaderFetch = 16
+	MaxBlockFetch = 16
+	blockCacheMaxItems = 80
+	fsHeaderContCheck = 200 * time.Millisecond
 }
 
 var (
@@ -163,7 +167,9 @@ func newTesterWithConfig(t *testing.T, config *params.ChainConfig) *downloadTest
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
 	tester.stateDb = localdb
-	tester.stateDb.WriteTrieNode(genesisBlock.Root().ExtendZero(), []byte{0x00})
+	if err := copyTrieNode(localdb, remotedb, genesisBlock.Root()); err != nil {
+		panic(fmt.Sprintf("failed to initialize genesis state root: %v", err))
+	}
 
 	mockCtrl := gomock.NewController(t)
 	mStaking := mock.NewMockStakingModule(mockCtrl)
@@ -182,6 +188,15 @@ func newTesterWithConfig(t *testing.T, config *params.ChainConfig) *downloadTest
 // newTester creates a new downloader test mocker.
 func newTester(t *testing.T) *downloadTester {
 	return newTesterWithConfig(t, params.TestChainConfig)
+}
+
+func copyTrieNode(dst, src database.DBManager, root common.Hash) error {
+	blob, err := src.ReadTrieNode(root.ExtendZero())
+	if err != nil {
+		return err
+	}
+	dst.WriteTrieNode(root.ExtendZero(), blob)
+	return nil
 }
 
 func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*staking.P2PStakingInfo, []byte) {
@@ -404,10 +419,22 @@ func (dl *downloadTester) CurrentFastBlock() *types.Block {
 
 // FastSyncCommitHead manually sets the head block to a given hash.
 func (dl *downloadTester) FastSyncCommitHead(hash common.Hash) error {
-	// For now only check that the state trie is correct
 	if block := dl.GetBlockByHash(hash); block != nil {
-		_, err := statedb.NewSecureTrie(block.Root(), statedb.NewDatabase(dl.stateDb), nil)
-		return err
+		// The download tester only models state sync at the root-node level.
+		// Full trie reconstruction is covered by statedb/state package tests.
+		blob, err := dl.stateDb.ReadTrieNode(block.Root().ExtendZero())
+		if err != nil {
+			return err
+		}
+		if len(blob) == 0 {
+			return fmt.Errorf("missing state root node: %x", block.Root())
+		}
+		if _, rest, err := rlp.SplitList(blob); err != nil {
+			return err
+		} else if len(rest) != 0 {
+			return fmt.Errorf("unexpected trailing bytes in state root node: %x", block.Root())
+		}
+		return nil
 	}
 	return fmt.Errorf("non existent block: %x", hash[:4])
 }
@@ -471,7 +498,9 @@ func (dl *downloadTester) InsertChain(blocks types.Blocks) (int, error) {
 			dl.ownHeaders[block.Hash()] = block.Header()
 		}
 		dl.ownBlocks[block.Hash()] = block
-		dl.stateDb.WriteTrieNode(block.Root().ExtendZero(), []byte{0x00})
+		if err := copyTrieNode(dl.stateDb, dl.peerDb, block.Root()); err != nil {
+			return i, fmt.Errorf("InsertChain: missing block state root %x: %w", block.Root(), err)
+		}
 		dl.ownChainTd[block.Hash()] = new(big.Int).Add(dl.ownChainTd[block.ParentHash()], block.BlockScore())
 	}
 	return len(blocks), nil
@@ -1183,7 +1212,7 @@ func testMultiSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	targetBlocks := targetPeers*blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
-	for i := 0; i < targetPeers; i++ {
+	for i := range targetPeers {
 		id := fmt.Sprintf("peer #%d", i)
 		tester.newPeer(id, protocol, hashes[i*blockCacheMaxItems:], headers, blocks, receipts, stakingInfos)
 	}
@@ -1895,7 +1924,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts, stakingInfos := master.makeChain(5, 0, master.genesis, nil, false)
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		tester := newTester(t)
 		tester.peerDb = master.peerDb
 
@@ -1992,7 +2021,7 @@ func TestCalcStakingBlockNumber(t *testing.T) {
 		{86400, 259201, 172800},
 	}
 
-	for i := 0; i < len(testCase); i++ {
+	for i := range testCase {
 		result := calcStakingBlockNumber(testCase[i].blockNu, testCase[i].interval)
 
 		if result != testCase[i].result {

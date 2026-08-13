@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -59,8 +60,9 @@ type Backend interface {
 	RPCEVMTimeout() time.Duration // global timeout for eth/kaia_call/estimateGas/estimateComputationCost
 	RPCGasCap() *big.Int          // global gas cap for eth/kaia_call/estimateGas/estimateComputationCost
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
-	Engine() consensus.Engine
-	FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
+	Sealer() consensus.Sealer
+	ValsetModule() valset.ValsetModule
+	FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, []float64, error)
 
 	// BlockChain API
 	SetHead(number uint64) error

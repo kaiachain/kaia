@@ -8,8 +8,11 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	vm "github.com/kaiachain/kaia/blockchain/vm"
 	common "github.com/kaiachain/kaia/common"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -48,6 +51,50 @@ func (m *MockValsetModule) APIs() []rpc.API {
 func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
+}
+
+// FinalizeState mocks base method.
+func (m *MockValsetModule) FinalizeState(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeState", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FinalizeState indicates an expected call of FinalizeState.
+func (mr *MockValsetModuleMockRecorder) FinalizeState(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockValsetModule)(nil).FinalizeState), arg0, arg1, arg2, arg3)
+}
+
+// GetCNPeers mocks base method.
+func (m *MockValsetModule) GetCNPeers(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCNPeers", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCNPeers indicates an expected call of GetCNPeers.
+func (mr *MockValsetModuleMockRecorder) GetCNPeers(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCNPeers", reflect.TypeOf((*MockValsetModule)(nil).GetCNPeers), arg0)
+}
+
+// GetCandTesting mocks base method.
+func (m *MockValsetModule) GetCandTesting(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCandTesting", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCandTesting indicates an expected call of GetCandTesting.
+func (mr *MockValsetModuleMockRecorder) GetCandTesting(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCandTesting", reflect.TypeOf((*MockValsetModule)(nil).GetCandTesting), arg0)
 }
 
 // GetCommittee mocks base method.
@@ -95,6 +142,21 @@ func (mr *MockValsetModuleMockRecorder) GetDemotedValidators(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDemotedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetDemotedValidators), arg0)
 }
 
+// GetNodesByState mocks base method.
+func (m *MockValsetModule) GetNodesByState(arg0 uint64, arg1 []valset.NodeState) (map[common.Address]*valset.Node, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodesByState", arg0, arg1)
+	ret0, _ := ret[0].(map[common.Address]*valset.Node)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodesByState indicates an expected call of GetNodesByState.
+func (mr *MockValsetModuleMockRecorder) GetNodesByState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodesByState", reflect.TypeOf((*MockValsetModule)(nil).GetNodesByState), arg0, arg1)
+}
+
 // GetProposer mocks base method.
 func (m *MockValsetModule) GetProposer(arg0, arg1 uint64) (common.Address, error) {
 	m.ctrl.T.Helper()
@@ -110,6 +172,47 @@ func (mr *MockValsetModuleMockRecorder) GetProposer(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposer", reflect.TypeOf((*MockValsetModule)(nil).GetProposer), arg0, arg1)
 }
 
+// GetQualifiedValidators mocks base method.
+func (m *MockValsetModule) GetQualifiedValidators(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetQualifiedValidators", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetQualifiedValidators indicates an expected call of GetQualifiedValidators.
+func (mr *MockValsetModuleMockRecorder) GetQualifiedValidators(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQualifiedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetQualifiedValidators), arg0)
+}
+
+// InitializeState mocks base method.
+func (m *MockValsetModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitializeState", arg0, arg1)
+}
+
+// InitializeState indicates an expected call of InitializeState.
+func (mr *MockValsetModuleMockRecorder) InitializeState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeState", reflect.TypeOf((*MockValsetModule)(nil).InitializeState), arg0, arg1)
+}
+
+// InstallABv2 mocks base method.
+func (m *MockValsetModule) InstallABv2(arg0 *vm.EVM, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallABv2", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallABv2 indicates an expected call of InstallABv2.
+func (mr *MockValsetModuleMockRecorder) InstallABv2(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallABv2", reflect.TypeOf((*MockValsetModule)(nil).InstallABv2), arg0, arg1, arg2)
+}
+
 // PostInsertBlock mocks base method.
 func (m *MockValsetModule) PostInsertBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
@@ -122,6 +225,20 @@ func (m *MockValsetModule) PostInsertBlock(arg0 *types.Block) error {
 func (mr *MockValsetModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockValsetModule)(nil).PostInsertBlock), arg0)
+}
+
+// PrepareHeader mocks base method.
+func (m *MockValsetModule) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockValsetModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockValsetModule)(nil).PrepareHeader), arg0)
 }
 
 // RewindDelete mocks base method.
@@ -172,4 +289,32 @@ func (m *MockValsetModule) Stop() {
 func (mr *MockValsetModuleMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockValsetModule)(nil).Stop))
+}
+
+// VerifyHeader mocks base method.
+func (m *MockValsetModule) VerifyHeader(arg0, arg1 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyHeader indicates an expected call of VerifyHeader.
+func (mr *MockValsetModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockValsetModule)(nil).VerifyHeader), arg0, arg1)
+}
+
+// WriteTransitionToABv2 mocks base method.
+func (m *MockValsetModule) WriteTransitionToABv2(arg0 *vm.EVM, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteTransitionToABv2", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteTransitionToABv2 indicates an expected call of WriteTransitionToABv2.
+func (mr *MockValsetModuleMockRecorder) WriteTransitionToABv2(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteTransitionToABv2", reflect.TypeOf((*MockValsetModule)(nil).WriteTransitionToABv2), arg0, arg1, arg2)
 }

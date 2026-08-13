@@ -46,7 +46,7 @@ func init() {
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, auction.AuctionVersionV2)
 		sig, _ := crypto.Sign(digest, key)
 		// Convert V from 0/1 to 27/28
 		sig[crypto.RecoveryIDOffset] += 27
@@ -106,6 +106,7 @@ func TestHandler_HandleBid(t *testing.T) {
 
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	module.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Test handling a valid bid
 	module.HandleBid(testPeerID, handlerTestBids[0])
@@ -171,6 +172,7 @@ func TestHandler_RateLimit(t *testing.T) {
 
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	module.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Commit a block to set current block number
 	backend.Commit()
@@ -178,14 +180,14 @@ func TestHandler_RateLimit(t *testing.T) {
 
 	// Create many test bids with different target transactions to avoid duplicate rejection
 	testBids := make([]*auction.Bid, 400)
-	for i := 0; i < 400; i++ {
+	for i := range 400 {
 		key, _ := crypto.GenerateKey()
 		bid := &auction.Bid{}
 
 		initBaseBid(bid, i, currentBlock+1)
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, auction.AuctionVersionV2)
 		sig, _ := crypto.Sign(digest, key)
 		sig[crypto.RecoveryIDOffset] += 27
 		bid.SearcherSig = sig
@@ -202,7 +204,7 @@ func TestHandler_RateLimit(t *testing.T) {
 
 	// Test rate limiting for peer1
 	// Send 350 bids rapidly (should be limited to 300 by rate limit)
-	for i := 0; i < 350; i++ {
+	for i := range 350 {
 		module.HandleBid(testPeerID1, testBids[i])
 	}
 
@@ -224,7 +226,7 @@ func TestHandler_RateLimit(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond) // Wait for rate limit to reset
 
 	// Send another batch from peer1
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		module.HandleBid(testPeerID1, testBids[i])
 	}
 
@@ -277,6 +279,7 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	module.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Create a channel to receive new bids
 	newBidCh := make(chan *auction.Bid, 10)
@@ -293,7 +296,7 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 	}()
 
 	// Verify we receive the bids in order
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		select {
 		case bid := <-newBidCh:
 			assert.Equal(t, handlerTestBids[i].Hash(), bid.Hash())

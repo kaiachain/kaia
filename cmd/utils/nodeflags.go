@@ -177,6 +177,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewPathFlag(DataDirFlag),
 	altsrc.NewPathFlag(ChainDataDirFlag),
 	altsrc.NewUint64Flag(OverrideOsaka),
+	altsrc.NewUint64Flag(OverridePermissionless),
 	altsrc.NewUint64Flag(StartBlockNumberFlag),
 	altsrc.NewPathFlag(KeyStoreDirFlag),
 	altsrc.NewBoolFlag(TxPoolNoLocalsFlag),
@@ -242,6 +243,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(SubListenPortFlag),
 	altsrc.NewBoolFlag(MultiChannelUseFlag),
 	altsrc.NewIntFlag(MaxConnectionsFlag),
+	altsrc.NewIntFlag(ReservedCrossTypeSlotsFlag),
 	altsrc.NewIntFlag(MaxRequestContentLengthFlag),
 	altsrc.NewIntFlag(MaxPendingPeersFlag),
 	altsrc.NewUint64Flag(TargetGasLimitFlag),
@@ -309,6 +311,8 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewStringFlag(GRPCListenAddrFlag),
 	altsrc.NewIntFlag(GRPCPortFlag),
 	altsrc.NewIntFlag(RPCConcurrencyLimit),
+	altsrc.NewIntFlag(RPCBatchRequestLimit),
+	altsrc.NewIntFlag(RPCBatchResponseMaxSize),
 	altsrc.NewStringFlag(WSApiFlag),
 	altsrc.NewStringFlag(WSAllowedOriginsFlag),
 	altsrc.NewIntFlag(WSMaxSubscriptionPerConn),
@@ -335,12 +339,13 @@ var BNFlags = []cli.Flag{
 	altsrc.NewStringFlag(NodeKeyHexFlag),
 	altsrc.NewBoolFlag(WriteAddressFlag),
 	altsrc.NewStringFlag(BNAddrFlag),
+	altsrc.NewIntFlag(BNPingRateLimitFlag),
+	altsrc.NewIntFlag(BNPingBurstFlag),
 	altsrc.NewStringFlag(NATFlag),
 	altsrc.NewStringFlag(NetrestrictFlag),
 	altsrc.NewBoolFlag(MetricsEnabledFlag),
 	altsrc.NewBoolFlag(PrometheusExporterFlag),
 	altsrc.NewIntFlag(PrometheusExporterPortFlag),
-	altsrc.NewStringFlag(AuthorizedNodesFlag),
 	altsrc.NewUint64Flag(NetworkIdFlag),
 }
 
@@ -351,7 +356,6 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
-	altsrc.NewUint64Flag(VRankLogFrequencyFlag),
 }
 
 var KPNFlags = []cli.Flag{

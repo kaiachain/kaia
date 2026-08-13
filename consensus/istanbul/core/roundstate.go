@@ -28,20 +28,21 @@ import (
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/rlp"
 )
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
 // lockedHash and preprepare are for round change when lock exists,
 // we need to keep a reference of preprepare in order to propose locked proposal when there is a lock and itself is the proposer
-func newRoundState(view *istanbul.View, valSet *istanbul.BlockValSet, lockedHash common.Hash, preprepare *istanbul.Preprepare, pendingRequest *istanbul.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
+func newRoundState(view *bft.View, qualified *valset.AddressSet, lockedHash common.Hash, preprepare *bft.Preprepare, pendingRequest *bft.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
 	return &roundState{
 		round:          view.Round,
 		sequence:       view.Sequence,
 		Preprepare:     preprepare,
-		Prepares:       newMessageSet(valSet),
-		Commits:        newMessageSet(valSet),
+		Prepares:       newMessageSet(qualified),
+		Commits:        newMessageSet(qualified),
 		lockedHash:     lockedHash,
 		mu:             new(sync.RWMutex),
 		pendingRequest: pendingRequest,
@@ -53,14 +54,22 @@ func newRoundState(view *istanbul.View, valSet *istanbul.BlockValSet, lockedHash
 type roundState struct {
 	round          *big.Int
 	sequence       *big.Int
-	Preprepare     *istanbul.Preprepare
+	Preprepare     *bft.Preprepare
 	Prepares       *messageSet
 	Commits        *messageSet
 	lockedHash     common.Hash
-	pendingRequest *istanbul.Request
+	pendingRequest *bft.Request
 
 	mu             *sync.RWMutex
 	hasBadProposal func(hash common.Hash) bool
+
+	// Ignore RLP ----------------------------------------------------------------------------
+	qualified            *valset.AddressSet
+	committee            *valset.AddressSet
+	proposer             common.Address
+	committeeSize        uint64
+	requiredMessageCount int
+	f                    int
 }
 
 func (s *roundState) GetPrepareOrCommitSize() int {
@@ -78,7 +87,7 @@ func (s *roundState) GetPrepareOrCommitSize() int {
 	return result
 }
 
-func (s *roundState) Subject() *istanbul.Subject {
+func (s *roundState) Subject() *bft.Subject {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -86,8 +95,8 @@ func (s *roundState) Subject() *istanbul.Subject {
 		return nil
 	}
 
-	return &istanbul.Subject{
-		View: &istanbul.View{
+	return &bft.Subject{
+		View: &bft.View{
 			Round:    new(big.Int).Set(s.round),
 			Sequence: new(big.Int).Set(s.sequence),
 		},
@@ -96,14 +105,14 @@ func (s *roundState) Subject() *istanbul.Subject {
 	}
 }
 
-func (s *roundState) SetPreprepare(preprepare *istanbul.Preprepare) {
+func (s *roundState) SetPreprepare(preprepare *bft.Preprepare) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.Preprepare = preprepare
 }
 
-func (s *roundState) Proposal() istanbul.Proposal {
+func (s *roundState) Proposal() bft.Proposal {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -182,11 +191,11 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	var ss struct {
 		Round          *big.Int
 		Sequence       *big.Int
-		Preprepare     *istanbul.Preprepare
+		Preprepare     *bft.Preprepare
 		Prepares       *messageSet
 		Commits        *messageSet
 		lockedHash     common.Hash
-		pendingRequest *istanbul.Request
+		pendingRequest *bft.Request
 	}
 
 	if err := stream.Decode(&ss); err != nil {

@@ -25,27 +25,32 @@ package core
 import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 // msgPriority is defined for calculating processing priority to speedup consensus
-// msgPreprepare > msgCommit > msgPrepare
+// bft.MsgPreprepare > bft.MsgCommit > bft.MsgPrepare
 var msgPriority = map[uint64]int{
-	msgPreprepare: 1,
-	msgCommit:     2,
-	msgPrepare:    3,
+	bft.MsgPreprepare: 1,
+	bft.MsgCommit:     2,
+	bft.MsgPrepare:    3,
 }
 
 // checkMessage checks the message state
-// return errInvalidMessage if the message is invalid
+// return bft.ErrInvalidMessage if the message is invalid
 // return errFutureMessage if the message view is larger than current view
 // return errOldMessage if the message view is smaller than current view
-func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
+func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
-	if msgCode == msgRoundChange {
+	if msgCode == bft.MsgRoundChange {
+		// Round-change buckets are keyed by uint64 round in roundChangeSet.
+		// Reject out-of-range round values early to avoid truncation collisions.
+		if !view.Round.IsUint64() {
+			return bft.ErrInvalidMessage
+		}
 		if view.Sequence.Cmp(c.currentView().Sequence) > 0 {
 			return errFutureMessage
 		} else if view.Cmp(c.currentView()) < 0 {
@@ -66,10 +71,10 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 		return errFutureMessage
 	}
 
-	// StateAcceptRequest only accepts msgPreprepare
+	// StateAcceptRequest only accepts bft.MsgPreprepare
 	// other messages are future messages
 	if c.state == StateAcceptRequest {
-		if msgCode > msgPreprepare {
+		if msgCode > bft.MsgPreprepare {
 			return errFutureMessage
 		}
 		return nil
@@ -80,7 +85,7 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 	return nil
 }
 
-func (c *core) storeBacklog(msg *message, src common.Address) {
+func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	if src == c.Address() {
@@ -98,15 +103,15 @@ func (c *core) storeBacklog(msg *message, src common.Address) {
 		backlog = prque.New()
 	}
 	switch msg.Code {
-	case msgPreprepare:
-		var p *istanbul.Preprepare
+	case bft.MsgPreprepare:
+		var p *bft.Preprepare
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
-		// for msgRoundChange, msgPrepare and msgCommit cases
+		// for bft.MsgRoundChange, bft.MsgPrepare and bft.MsgCommit cases
 	default:
-		var p *istanbul.Subject
+		var p *bft.Subject
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
@@ -132,20 +137,20 @@ func (c *core) processBacklog() {
 		//   2. The first message in queue is a future message
 		for !(backlog.Empty() || isFuture) {
 			m, prio := backlog.Pop()
-			msg := m.(*message)
-			var view *istanbul.View
+			msg := m.(*bft.Message)
+			var view *bft.View
 			var prevHash common.Hash
 			switch msg.Code {
-			case msgPreprepare:
-				var m *istanbul.Preprepare
+			case bft.MsgPreprepare:
+				var m *bft.Preprepare
 				err := msg.Decode(&m)
 				if err == nil {
 					view = m.View
 				}
 				prevHash = m.Proposal.ParentHash()
-				// for msgRoundChange, msgPrepare and msgCommit cases
+				// for bft.MsgRoundChange, bft.MsgPrepare and bft.MsgCommit cases
 			default:
-				var sub *istanbul.Subject
+				var sub *bft.Subject
 				err := msg.Decode(&sub)
 				if err == nil {
 					view = sub.View
@@ -179,9 +184,9 @@ func (c *core) processBacklog() {
 	}
 }
 
-func toPriority(msgCode uint64, view *istanbul.View) int64 {
-	if msgCode == msgRoundChange {
-		// For msgRoundChange, set the message priority based on its sequence
+func toPriority(msgCode uint64, view *bft.View) int64 {
+	if msgCode == bft.MsgRoundChange {
+		// For bft.MsgRoundChange, set the message priority based on its sequence
 		return -int64(view.Sequence.Uint64() * 1000)
 	}
 	// FIXME: round will be reset as 0 while new sequence

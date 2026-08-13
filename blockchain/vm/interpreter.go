@@ -25,7 +25,6 @@ package vm
 import (
 	"fmt"
 	"hash"
-	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -105,6 +104,8 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
+		case evm.chainRules.IsPermissionless:
+			jt = PermissionlessInstructionSet
 		case evm.chainRules.IsOsaka:
 			jt = OsakaInstructionSet
 		case evm.chainRules.IsPrague:
@@ -224,7 +225,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
 	// parent context.
-	for atomic.LoadInt32(&in.evm.abort) == 0 {
+	for in.evm.abort.Load() == 0 {
 		if in.evm.Config.EnableOpDebug {
 			opExecStart = time.Now()
 		}
@@ -312,7 +313,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 		pc++
 	}
 
-	abort := atomic.LoadInt32(&in.evm.abort)
+	abort := in.evm.abort.Load()
 	if (abort & CancelByTotalTimeLimit) != 0 {
 		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-Issue615
 	}
@@ -325,7 +326,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 
 func PrintOpCodeExecTime() {
 	logger.Info("Printing the execution time of the opcodes during this node operation")
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if opCnt[i] > 0 {
 			logger.Info("op "+OpCode(i).String(), "cnt", opCnt[i], "avg", opTime[i]/opCnt[i])
 		}

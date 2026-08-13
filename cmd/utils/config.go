@@ -43,7 +43,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/fdlimit"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
@@ -187,8 +186,21 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.IsSet(MaxConnectionsFlag.Name) {
 		cfg.MaxPhysicalConnections = ctx.Int(MaxConnectionsFlag.Name)
+	} else {
+		setDefaultMaxPhysicalConnections(cfg)
 	}
 	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
+
+	// Cross-type connection reservation (0 leaves the per-node-type default in effect).
+	cfg.ReservedCrossTypeSlots = ctx.Int(ReservedCrossTypeSlotsFlag.Name)
+	// maxconnections == 0 disables dynamic peering (only static/trusted connect), so
+	// there is nothing to reserve; enforce the floor only for a positive limit.
+	if cfg.MaxPhysicalConnections > 0 {
+		if minConns := p2p.MaxPhysicalConnectionsLowerBound(*cfg); cfg.MaxPhysicalConnections < minConns {
+			logger.Crit("maxconnections is too low to reserve CN<->EN slots",
+				"maxconnections", cfg.MaxPhysicalConnections, "required", minConns, "nodetype", cfg.ConnectionType)
+		}
+	}
 
 	if ctx.IsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.Int(MaxPendingPeersFlag.Name)
@@ -240,9 +252,25 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 func setDefaultDiscoverTypes(cfg *p2p.Config) {
 	if cfg.ConnectionType == common.CONSENSUSNODE {
 		cfg.DiscoverTypes.CN = true
-	} else { // PN or EN
-		cfg.DiscoverTypes.PN = true
 		cfg.DiscoverTypes.EN = true
+	} else {
+		cfg.DiscoverTypes.CN = true
+		cfg.DiscoverTypes.PN = true // required until all PNs are deprecated. TODO: remove PN
+		cfg.DiscoverTypes.EN = true
+	}
+}
+
+const (
+	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + defaultCNReservedSlots (full CN mesh + reserved EN slots)
+	defaultENMaxPhysicalConnections = node.DefaultMaxPhysicalConnections
+)
+
+func setDefaultMaxPhysicalConnections(cfg *p2p.Config) {
+	switch cfg.ConnectionType {
+	case common.CONSENSUSNODE:
+		cfg.MaxPhysicalConnections = defaultCNMaxPhysicalConnections
+	case common.ENDPOINTNODE, common.PROXYNODE:
+		cfg.MaxPhysicalConnections = defaultENMaxPhysicalConnections
 	}
 }
 
@@ -346,22 +374,26 @@ func convertNodeType(nodetype string) common.ConnType {
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	var urls []string
 	switch {
+	// An explicitly empty value is honored as "no bootnodes" rather than falling
+	// back to the network defaults, so a test or private deployment can start a
+	// node with no seed. Note this also applies to an empty
+	// KLAYTN_BOOTNODES/KAIA_BOOTNODES, which cli reports as set.
 	case ctx.IsSet(BootnodesFlag.Name):
 		logger.Info("Customized bootnodes are set")
 		urls = strings.Split(ctx.String(BootnodesFlag.Name), ",")
 	case ctx.Bool(MainnetFlag.Name):
 		logger.Info("Mainnet bootnodes are set")
-		urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+		urls = params.MainnetBootnodes
 	case ctx.Bool(KairosFlag.Name):
 		logger.Info("Kairos bootnodes are set")
 		// set pre-configured bootnodes when 'kairos' option was enabled
-		urls = params.KairosBootnodes[cfg.ConnectionType].Addrs
+		urls = params.KairosBootnodes
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.IsSet(NetworkIdFlag.Name):
 		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
 			logger.Info("Mainnet bootnodes are set")
-			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
+			urls = params.MainnetBootnodes
 		}
 	}
 
@@ -378,6 +410,13 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 		}
 		logger.Info("Bootnode - Add Seed", "Node", node)
 		cfg.BootstrapNodes = append(cfg.BootstrapNodes, node)
+	}
+
+	// Discovery cannot bootstrap without a seed, so make the condition explicit
+	// instead of leaving it to be inferred from the absence of "Add Seed" lines.
+	if len(cfg.BootstrapNodes) == 0 && !ctx.Bool(NoDiscoverFlag.Name) {
+		logger.Warn("No bootstrap nodes configured; this node may fail to discover peers",
+			"requestedURLs", len(urls))
 	}
 }
 
@@ -459,6 +498,14 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.IsSet(RPCConcurrencyLimit.Name) {
 		rpc.ConcurrencyLimit = ctx.Int(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
+	}
+	if ctx.IsSet(RPCBatchRequestLimit.Name) {
+		rpc.BatchRequestLimit = ctx.Int(RPCBatchRequestLimit.Name)
+		logger.Info("Set the batch request limit of RPC server", "limit", rpc.BatchRequestLimit)
+	}
+	if ctx.IsSet(RPCBatchResponseMaxSize.Name) {
+		rpc.BatchResponseMaxSize = ctx.Int(RPCBatchResponseMaxSize.Name)
+		logger.Info("Set the batch response size limit of RPC server", "limit", rpc.BatchResponseMaxSize)
 	}
 	if ctx.IsSet(RPCReadTimeout.Name) {
 		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.Int(RPCReadTimeout.Name)) * time.Second
@@ -601,6 +648,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.IsSet(OverrideOsaka.Name) {
 		v := ctx.Uint64(OverrideOsaka.Name)
 		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+	if ctx.IsSet(OverridePermissionless.Name) {
+		v := ctx.Uint64(OverridePermissionless.Name)
+		overrides.OverridePermissionless = new(big.Int).SetUint64(v)
 	}
 	cfg.Overrides = &overrides
 	cfg.StartBlockNumber = ctx.Uint64(StartBlockNumberFlag.Name)
@@ -775,10 +826,6 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
 	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
-
-	if ctx.IsSet(VRankLogFrequencyFlag.Name) {
-		core.VRankLogFrequency = ctx.Uint64(VRankLogFrequencyFlag.Name)
-	}
 
 	// Set kaiax module config
 	gasless.SetGaslessConfig(ctx, cfg.Gasless)

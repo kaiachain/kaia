@@ -354,6 +354,9 @@ func BigToAddress(b *big.Int) Address { return BytesToAddress(b.Bytes()) }
 func HexToAddress(s string) Address { return BytesToAddress(FromHex(s)) }
 
 // IsPrecompiledContractAddress returns true if the input address is in the range of precompiled contract addresses.
+// This is a fast range-check (0x0001–0x03FF) used for tx validation and evm.Call() guards.
+// It does NOT reflect the exact active set for a given fork or vmversion.
+// See blockchain/vm/precompiles.go for the full per-fork routing logic.
 // This function receive rules as an argument for eest test function.
 // https://github.com/kaiachain/kaia/pull/238/files#diff-fc3a0d4efca344c1d9a8581260642d9faf747b2c71cf74f8294c4296a1463623R129
 var IsPrecompiledContractAddress func(addr Address, rules interface{}) bool = func(addr Address, rules interface{}) bool {
@@ -386,7 +389,7 @@ func (a Address) Hex() string {
 	hash := sha.Sum(nil)
 
 	result := []byte(unchecksummed)
-	for i := 0; i < len(result); i++ {
+	for i := range result {
 		hashByte := hash[i/2]
 		if i%2 == 0 {
 			hashByte = hashByte >> 4
@@ -479,11 +482,9 @@ const (
 	UNKNOWNNODE // For error case
 )
 
+// Valid reports whether ct is a defined connection role.
 func (ct ConnType) Valid() bool {
-	if int(ct) > 255 {
-		return false
-	}
-	return true
+	return ct >= CONSENSUSNODE && ct < UNKNOWNNODE
 }
 
 func (ct ConnType) String() string {

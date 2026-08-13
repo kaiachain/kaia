@@ -6,6 +6,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -175,6 +176,58 @@ func TestUint64Canonicalizer(t *testing.T) {
 			if tc.expectedError == nil {
 				assert.Equal(t, tc.expected, result.(uint64))
 			}
+		})
+	}
+}
+
+// TestDeprecatedAt verifies that DeprecatedAt returns true for the statically
+// deprecated params and false for all other known params, across representative
+// rules snapshots (empty rules and one with several post-fork flags set).
+func TestDeprecatedAt(t *testing.T) {
+	rulesVariants := []struct {
+		desc  string
+		rules params.Rules
+	}{
+		{desc: "empty rules", rules: params.Rules{}},
+		{desc: "all-forks rules", rules: params.Rules{
+			IsIstanbul: true, IsLondon: true, IsEthTxType: true, IsMagma: true,
+			IsKore: true, IsShanghai: true, IsCancun: true, IsKaia: true,
+			IsRandao: true, IsPrague: true, IsOsaka: true,
+		}},
+		{desc: "permissionless rules", rules: params.Rules{IsPermissionless: true}},
+	}
+
+	for _, rv := range rulesVariants {
+		t.Run(rv.desc, func(t *testing.T) {
+			// Static deprecated: must return true regardless of fork.
+			for name := range AlwaysDeprecated {
+				assert.True(t, DeprecatedAt(name, rv.rules), "expected %s to be deprecated", name)
+			}
+
+			// Permissionless-deprecated: true only when IsPermissionless.
+			for name := range PermissionlessDeprecated {
+				assert.Equal(t, rv.rules.IsPermissionless, DeprecatedAt(name, rv.rules), "permissionless deprecated %s", name)
+			}
+
+			// Every other known param must return false.
+			for name := range Params {
+				if _, ok := AlwaysDeprecated[name]; ok {
+					continue
+				}
+				if _, ok := PermissionlessDeprecated[name]; ok {
+					continue
+				}
+				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated", name)
+			}
+			for name := range ValidatorParams {
+				if _, ok := PermissionlessDeprecated[name]; ok {
+					continue
+				}
+				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated (validator param)", name)
+			}
+
+			// Unknown param: falls through to the default (not deprecated).
+			assert.False(t, DeprecatedAt(ParamName("nonexistent.param"), rv.rules))
 		})
 	}
 }

@@ -88,6 +88,42 @@ async function deployBridgeConfiguredMintBurnFixture() {
 }
 
 describe("Bridge", function () {
+  describe("Contract Public Variables", function () {
+    it("ServiceChainToken public variables", async function () {
+      const { token, owner } = await loadFixture(deployBridgeFixture);
+
+      expect(await token.INITIAL_SUPPLY()).to.equal(ethers.utils.parseUnits("1000000000", 18));
+      expect(await token.allowance(owner.address, owner.address)).to.equal(0);
+      expect(await token.balanceOf(owner.address)).to.equal(ethers.utils.parseUnits("1000000000", 18));
+      expect(await token.DECIMALS()).to.equal(0x12);
+      expect(await token.NAME()).to.equal("ServiceChainToken");
+      expect(await token.SYMBOL()).to.equal("SCT");
+    });
+
+    it("ServiceChainNFT public variables", async function () {
+      const { bridge, nft, owner } = await loadFixture(deployBridgeFixture);
+      const baseTokenId = 7321;
+      const mintCount = 1;
+
+      await nft.connect(owner).mintWithTokenURI(owner.address, baseTokenId, "");
+
+      expect(await nft.balanceOf(owner.address)).to.equal(mintCount);
+      expect(await nft.bridge()).to.equal(bridge.address);
+      expect(await nft.getApproved(baseTokenId)).to.equal(AddressZero);
+      expect(await nft.isApprovedForAll(owner.address, owner.address)).to.equal(false);
+      expect(await nft.isOwner()).to.equal(true);
+      expect(await nft.name()).to.equal("ServiceChainNFT");
+      expect(await nft.owner()).to.equal(owner.address);
+      expect(await nft.ownerOf(baseTokenId)).to.equal(owner.address);
+      expect(await nft.supportsInterface("0x00000000")).to.equal(false);
+      expect(await nft.symbol()).to.equal("SCN");
+      expect(await nft.tokenByIndex(0)).to.equal(baseTokenId);
+      expect(await nft.tokenOfOwnerByIndex(owner.address, 0)).to.equal(baseTokenId);
+      expect(await nft.tokenURI(baseTokenId)).to.equal("");
+      expect(await nft.totalSupply()).to.equal(mintCount);
+    });
+  });
+
   describe("BridgeCounterpart", function () {
     it("set counterpart bridge", async function () {
       const { bridge, owner, cBridge, user1 } = await loadFixture(deployBridgeFixture);
@@ -173,6 +209,19 @@ describe("Bridge", function () {
       expect(bridge.connect(op1).setOperatorThreshold(VoteType.ValueTransfer, 1)).to.be.revertedWith("Ownable: caller is not the owner");
       expect(bridge.connect(owner).setOperatorThreshold(VoteType.ValueTransfer, 0)).to.be.revertedWith("zero threshold");
       expect(bridge.connect(owner).setOperatorThreshold(VoteType.ValueTransfer, 3)).to.be.revertedWith("bigger than num of operators");
+    });
+    it("max operator limit", async function () {
+      const { bridge, owner } = await loadFixture(deployBridgeFixture);
+      const signers = await ethers.getSigners();
+      const maxOperator = (await bridge.MAX_OPERATOR()).toNumber();
+
+      // owner is already an operator, register the remaining slots.
+      for (let i = 1; i < maxOperator; i++) {
+        await bridge.connect(owner).registerOperator(signers[i].address);
+      }
+      expect((await bridge.getOperatorList()).length).to.equal(maxOperator);
+
+      await expect(bridge.connect(owner).registerOperator(signers[maxOperator].address)).to.be.revertedWith("max operator limit");
     });
     it("vote configuration", async function () {
       const { bridge, owner, op1, op2, op3, user1 } = await loadFixture(deployBridgeFixture);
@@ -737,6 +786,39 @@ describe("Bridge", function () {
         );
 
       expect(await ethers.provider.getBalance(user2.address)).to.equal(parseEther("1.0"));
+    });
+    it("handle nonce window advances by at most 200", async function() {
+      const { bridge, owner, user1, user2 } = await loadFixture(deployBridgeFixture);
+      await bridge.connect(owner).chargeWithoutEvent({value: parseEther("1000.0")});
+
+      for (let nonce = 1; nonce <= 205; nonce++) {
+        const requestTxHash = ethers.utils.hexZeroPad(ethers.BigNumber.from(nonce).toHexString(), 32);
+        await bridge.connect(owner).handleKLAYTransfer(
+          requestTxHash,
+          user1.address,
+          user2.address,
+          parseEther("1.0"),
+          nonce,
+          blockNum + nonce,
+          "0x",
+        );
+      }
+
+      expect(await bridge.lowerHandleNonce()).to.equal(0);
+      expect(await bridge.upperHandleNonce()).to.equal(205);
+
+      const zeroTxHash = ethers.utils.hexZeroPad(ethers.BigNumber.from(999999).toHexString(), 32);
+      await bridge.connect(owner).handleKLAYTransfer(
+        zeroTxHash,
+        user1.address,
+        user2.address,
+        parseEther("1.0"),
+        0,
+        blockNum,
+        "0x",
+      );
+      expect(await bridge.lowerHandleNonce()).to.equal(201);
+      expect(await bridge.upperHandleNonce()).to.equal(205);
     });
     it("insufficient feeLimit", async function() {
       const fixture = await loadFixture(deployBridgeConfiguredFixture);

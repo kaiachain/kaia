@@ -72,7 +72,7 @@ func TestIteratorLargeData(t *testing.T) {
 	trie := newEmptyTrie()
 	vals := make(map[string]*kv)
 
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		value := &kv{common.LeftPadBytes([]byte{i}, 32), []byte{i}, false}
 		value2 := &kv{common.LeftPadBytes([]byte{10, i}, 32), []byte{i}, false}
 		trie.Update(value.k, value.v)
@@ -356,7 +356,7 @@ func testIteratorContinueAfterError(t *testing.T, memonly bool) {
 	} else {
 		diskKeys = diskdb.Keys()
 	}
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		// Create trie that will load all nodes from DB.
 		tr, _ := NewTrie(tr.Hash(), triedb, nil)
 

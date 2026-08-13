@@ -31,9 +31,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
+	govcontract "github.com/kaiachain/kaia/contracts/bindings/gov"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
@@ -89,9 +88,6 @@ func TestGovernance_GovModule(t *testing.T) {
 	// (b) contract engine enabled (via vote)
 
 	govModule := node.GovModule().(*gov_impl.GovModule)
-	chain.Engine().(consensus.Istanbul).RegisterConsensusModule(govModule)
-	chain.RegisterExecutionModule(govModule)
-	node.Miner().RegisterExecutionModule(govModule)
 
 	// Run tx sender thread
 	go func() {
@@ -99,7 +95,7 @@ func TestGovernance_GovModule(t *testing.T) {
 
 		// Give some time for txpool to recognize the contract, because otherwise
 		// the txpool may reject the setParam tx with 'not a program account'
-		time.Sleep(2 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 
 		deployGovParamTx_setParamIn(t, node, owner, chainId, contractAddr, paramName, paramBytes)
 
@@ -119,14 +115,14 @@ func TestGovernance_GovModule(t *testing.T) {
 	// 1. wait until header.Governance block + 5
 	for {
 		ev := <-chainEventCh
-		time.Sleep(100 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
+		time.Sleep(20 * time.Millisecond) // wait for tx sender thread to set deployBlock, etc.
 
 		num := ev.Block.Number().Uint64()
 		if govBytes := ev.Block.Header().Governance; len(govBytes) > 0 {
 			govBlock = num
 			// stopBlock is the epoch block, so we stop when receiving it
 			// otherwise, GetParamSet(stopBlock) may fail
-			stopBlock = govBlock + 5
+			stopBlock = govBlock + 3
 			stopBlock = stopBlock - (stopBlock % config.Istanbul.Epoch)
 			t.Logf("Governance at block=%2d, stopBlock=%2d, gov=%v", num, stopBlock, hexutil.Encode(govBytes))
 		}

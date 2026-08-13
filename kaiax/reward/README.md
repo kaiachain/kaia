@@ -32,23 +32,22 @@ The rules have changed over hardforks.
     - The `TransitionDb()` function shall pay the transaction fees to the Coinbase or Rewardbase as soon as the transaction is executed. Therefore the balance of the block proposer changes within the same block.
   - **Deferred fees (DF)**: The accounting method whereby transaction fees are recognized and processed once at the end of the block.
     - DF method is used when `reward.deferredtxfee` is set to `true`. Kaia Mainnet and Kairos testnet use this method.
-    - The `Finalize()` function shall pay the transaction fees to various recipients. The deferred fees are calculated along with the minting amount.
+    - The `FinalizeState()` function shall pay the transaction fees to various recipients. The deferred fees are calculated along with the minting amount.
 
 ### Recipients
 
 - **Validators (G)**: The block validators also known as the GC.
   - **Proposer (P)**: The validator who proposed the block. Receives rewards to its reward address.
   - **Stakers (S)**: The validators, including proposer, who staked enough tokens to be eligible for rewards. Receives rewards to its staking address.
-- **Fund1 (X; KIF, KFF, KGF, PoC)**: The first fund. Its address is specified in the AddressBook contract. Its name has been changed over hardforks. Current name is KIF (Kaia Infrastructure Fund).
-- **Fund2 (Y; KEF, KCF, KIR)**: The second fund. Its address is specified in the AddressBook contract. Current name is KEF (Kaia Ecosystem Fund).
-- **Fund3 (Z; KPF)**: The third fund. Its address is specified in the AddressBook contract. Current name is KPF (Kaia Protocol Fund).
+- **Fund1 (X; KIF, KFF, KGF, PoC)**: The first fund. Its address is specified in the AddressBook contract. Its name has been changed over hardforks. Current name is KIF (Kaia Infrastructure Fund). If the address is empty, this portion is reassigned to the block proposer.
+- **Fund2 (Y; KEF, KCF, KIR)**: The second fund. Its address is specified in the AddressBook contract. Current name is KEF (Kaia Ecosystem Fund). If the address is empty, this portion is reassigned to the block proposer.
+- **Fund3 (Z; KPF)**: The third fund. Its address is specified in the AddressBook contract. Current name is KPF (Kaia Protocol Fund). If the address is empty, this portion is reassigned to the block proposer.
 - **Burnt (B)**: The amount burnt. Tokens are implicitly burnt during reward distribution; the transaction fees are deducted from the transaction senders but less amount are added to the reward recipients.
 - **Reward ratio**: The reward distribution ratio among GC, Fund1, Fund2, and optionally Fund3 (g/x/y) or (g/x/y/z).
   - Determined by the `reward.ratio` parameter in three or four nonnegative integer percentiles sums up to 100. e.g. `34/54/12` or `40/25/25/10`.
   - If the ratio is in three parts (`g/x/y`), `z` is considered `0`.
   - The fourth part (`z`) is relevant only when `reward.useflexreward == true`.
   - If the fourth part (`z`) is nonzero with `reward.useflexreward == false`, the fourth portion is regarded as a remainder and added to the first fund for backward compatibility, making the ratio effectively three parts of (g/x+z/y). This is a fallback behavior when the parameters are inconsistently specified.
-arameters are inconsistently specified.
 - **KIP-82 ratio**: The reward distribution ratio between proposer and stakers (p/s).
   - Determined by the `reward.kip82` parameter in two nonnegative integer percentiles sums up to 100. e.g. `20/80`
 
@@ -68,7 +67,7 @@ arameters are inconsistently specified.
   - MR: M is distributed according to the reward ratio and KIP-82 ratio.
     - The rewards allocated to stakers is further distributed by their relative staking amounts. The staker rewards are proportional to their staking amounts exceeding the minimum staking amount. The minimum staking amount refers to the `reward.minstake` parameter which determines the staking requirement to be a validator.
     - If no validator has staked more than the minimum staking amount, all staking rewards are sent to the proposer.
-    - Any remainder from the division math is sent to the proposer, simplifying the calculation of total rewards.
+    - Remainders from the reward ratio and KIP-82 proposer/staker ratio divisions are sent to Fund1. The remainder from distributing staking rewards among validators is sent to the proposer.
   - NDF: Same as the previous rule.
   - DF: Proposer receives `max(0, F/2 - gpM)` and rest of the fees are burnt.
     - The proposer's minting reward is fixed to a product of minting amount (M), validator's reward ratio (g) and KIP-82 proposer ratio (p). This amount is considered the minimum operation cost of a validator.
@@ -81,7 +80,7 @@ arameters are inconsistently specified.
 - **Prague rule (KIP-226)**: The rule since the KIP-226 hardfork with `istanbul.policy == 2` and `reward.deferredtxfee = true`.
   - MR: The consensus liquidity is introduced. The validator's total staking amount is summed up with the KAIA staked in consensus liquidity.
     - If the validator has staked more than `reward.minstake` in staking-only (CNStaking) contract, the validator's total staking amount will be summed up with the consensus liquidity.
-    - In this case, the reward between staking-only and consensus liquidity will be distributed proportionally to their staking amounts.
+    - In this case, the reward between staking-only and consensus liquidity will be distributed proportionally to their staking amounts. The consensus liquidity portion is rounded down, and the remainder goes to the validator's AddressBook reward address.
     - Otherwise, validator will not be eligible for rewards.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
@@ -93,6 +92,7 @@ arameters are inconsistently specified.
     - The `reward.ratio` parameter can be either four parts (g/x/y/z) or three parts (g/x/y), in which case z is zero.
     - The fourth portion is granted to the Fund3 (KPF).
     - The rewards allocated to stakers are further distributed according to their relative staking amounts. The staker rewards are proportional to their staking amounts that exceeds `reward.stakingrewardthreshold`. However, their staking amounts must still be at least `reward.minimumstake` to be eligible.
+    - Remainders follow the same policy as above: reward-ratio and KIP-82 proposer/staker ratio remainders are sent to Fund1, staking allocation remainders are sent to the proposer, and consensus liquidity split remainders go to the validator's AddressBook reward address.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
 
@@ -113,7 +113,7 @@ arameters are inconsistently specified.
 ### RewardSpec
 
 `RewardSpec` is a reward distribution specification for a block. Describes each reward component and their recipients.
-- It can represent the deferred reward to be distributed at the end of the block (e.g. FinalizeBlock).
+- It can represent the deferred reward to be distributed at the end of the block (e.g. `FinalizeState`).
 - It can also represent the block reward including both non-deferred and deferred fees (e.g. kaia_getReward API).
 
 ### RewardResponse
@@ -140,9 +140,15 @@ This module does not have any background threads.
 
 ## Block processing
 
-### Consensus
+### Header
 
-#### FinalizeHeader
+#### PrepareHeader
+
+This module initializes `header.Rewardbase` with the node's configured reward base.
+
+### BlockState
+
+#### FinalizeState
 
 After all transactions are processed, calculate and accredit the block reward.
 
@@ -221,7 +227,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ## Getters
 
-- GetDeferredReward: GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created. Intended to be used in FinalizeHeader. Under non-deferred mode, transaction fees are ignored.
+- GetDeferredReward: GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created. Intended to be used in FinalizeState. Under non-deferred mode, transaction fees are ignored.
   ```
   GetDeferredReward(header, txs, receipts) -> RewardSpec
 

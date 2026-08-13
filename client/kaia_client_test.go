@@ -142,7 +142,7 @@ func (s *MockHttpServerTestSuite) initTestAccount() {
 
 func (s *MockHttpServerTestSuite) initBlocksAndTxs() {
 	s.blocks = make([]*types.Block, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		s.blocks[i] = types.NewBlockWithHeader(s.genMockHeader(i))
 	}
 

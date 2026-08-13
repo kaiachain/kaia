@@ -31,7 +31,6 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
@@ -47,6 +46,11 @@ import (
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/urfave/cli/v2"
 )
+
+// defaultBNPingRateLimit is the default per-source-IP discovery ping rate, in
+// pings/sec, enforced by a bootstrap node. KIP-311 requires BNs to rate limit
+// discovery pings, so the limiter is on by default.
+const defaultBNPingRateLimit = 5
 
 func init() {
 	cli.FlagStringer = FlagString
@@ -192,6 +196,11 @@ var (
 	OverrideOsaka = &cli.Uint64Flag{
 		Name:     "override.osaka",
 		Usage:    "Manually specify the Osaka fork block, overriding the bundled setting",
+		Category: "KAIA",
+	}
+	OverridePermissionless = &cli.Uint64Flag{
+		Name:     "override.permissionless",
+		Usage:    "Manually specify the permissionless hardfork block, overriding the bundled setting",
 		Category: "KAIA",
 	}
 	StartBlockNumberFlag = &cli.Uint64Flag{
@@ -884,6 +893,22 @@ var (
 		EnvVars:  []string{"KLAYTN_RPC_CONCURRENCYLIMIT", "KAIA_RPC_CONCURRENCYLIMIT"},
 		Category: "API AND CONSOLE",
 	}
+	RPCBatchRequestLimit = &cli.IntFlag{
+		Name:     "rpc.batch-request-limit",
+		Usage:    "Maximum number of items in a JSON-RPC batch request (0 disables the check)",
+		Value:    rpc.BatchRequestLimit,
+		Aliases:  []string{"http-rpc.batch-request-limit"},
+		EnvVars:  []string{"KLAYTN_RPC_BATCH_REQUEST_LIMIT", "KAIA_RPC_BATCH_REQUEST_LIMIT"},
+		Category: "API AND CONSOLE",
+	}
+	RPCBatchResponseMaxSize = &cli.IntFlag{
+		Name:     "rpc.batch-response-max-size",
+		Usage:    "Maximum total response bytes per JSON-RPC batch (0 disables the check)",
+		Value:    rpc.BatchResponseMaxSize,
+		Aliases:  []string{"http-rpc.batch-response-max-size"},
+		EnvVars:  []string{"KLAYTN_RPC_BATCH_RESPONSE_MAX_SIZE", "KAIA_RPC_BATCH_RESPONSE_MAX_SIZE"},
+		Category: "API AND CONSOLE",
+	}
 	RPCNonEthCompatibleFlag = &cli.BoolFlag{
 		Name:     "rpc.eth.noncompatible",
 		Usage:    "Disables the eth namespace API return formatting for compatibility",
@@ -1114,10 +1139,17 @@ var (
 	}
 	MaxConnectionsFlag = &cli.IntFlag{
 		Name:     "maxconnections",
-		Usage:    "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
+		Usage:    "Maximum number of peers, inbound and outbound combined. A multi-channel peer counts once regardless of how many sockets it uses. (network disabled if set to 0)",
 		Value:    node.DefaultMaxPhysicalConnections,
 		Aliases:  []string{"p2p.max-connections"},
 		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS", "KAIA_MAXCONNECTIONS"},
+		Category: "NETWORK",
+	}
+	ReservedCrossTypeSlotsFlag = &cli.IntFlag{
+		Name:     "reserved-cross-type-slots",
+		Usage:    "Number of connection slots reserved for the opposite CN/EN node type so same-type peers cannot starve CN<->EN connectivity (0 = use node-type default)",
+		Value:    0,
+		Aliases:  []string{"p2p.reserved-cross-type-slots"},
 		Category: "NETWORK",
 	}
 	MaxPendingPeersFlag = &cli.IntFlag{
@@ -1271,14 +1303,6 @@ var (
 		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_KAIROS"}, // TODO: remove baobab
 		Category: "NETWORK",
 	}
-	// Bootnode's settings
-	AuthorizedNodesFlag = &cli.StringFlag{
-		Name:    "authorized-nodes",
-		Usage:   "Comma separated kni URLs for authorized nodes list",
-		Value:   "",
-		Aliases: []string{"common.authorized-nodes"},
-		EnvVars: []string{"KLAYTN_AUTHORIZED_NODES", "KAIA_AUTHORIZED_NODES"},
-	}
 	// TODO-Kaia-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = &cli.StringFlag{
 		Name:    "bnaddr",
@@ -1286,6 +1310,25 @@ var (
 		Value:   ":32323",
 		Aliases: []string{"p2p.bn-addr"},
 		EnvVars: []string{"KLAYTN_BNADDR", "KAIA_BNADDR"},
+	}
+	BNPingRateLimitFlag = &cli.IntFlag{
+		Name: "bn.ping-ratelimit",
+		// KIP-311 requires a BN to rate limit discovery pings from unknown NodeIds,
+		// so this defaults to a positive value. A node pings a bootnode at roughly
+		// 1/s and several nodes can share one public IP via NAT, so the default
+		// leaves headroom for a small NAT'd cluster while still cutting a
+		// single-source flood by orders of magnitude.
+		Usage:    "Per-source-IP discovery ping rate limit in pings/sec on a bootstrap node. 0 disables it; LAN/loopback sources are always exempt",
+		Value:    defaultBNPingRateLimit,
+		EnvVars:  []string{"KLAYTN_BN_PING_RATELIMIT", "KAIA_BN_PING_RATELIMIT"},
+		Category: "MISC",
+	}
+	BNPingBurstFlag = &cli.IntFlag{
+		Name:     "bn.ping-burst",
+		Usage:    "Burst size for the discovery PING rate limiter: the token-bucket capacity, i.e. the maximum number of pings allowed immediately from a full bucket before throttling. (used only when bn.ping-ratelimit > 0)",
+		Value:    10,
+		EnvVars:  []string{"KLAYTN_BN_PING_BURST", "KAIA_BN_PING_BURST"},
+		Category: "MISC",
 	}
 	GenKeyFlag = &cli.StringFlag{
 		Name:     "genkey",
@@ -2045,14 +2088,6 @@ var (
 		Usage:    "Maximum transaction priority fee (or gasprice before Magma fork) to be recommended by gpo",
 		Value:    cn.GetDefaultConfig().GPO.MaxPrice.Int64(),
 		Category: "GAS PRICE ORACLE",
-	}
-
-	// VRank logging frequency
-	VRankLogFrequencyFlag = &cli.Uint64Flag{
-		Name:     "vrank.log-frequency",
-		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
-		Value:    core.DefaultVRankLogFrequency,
-		Category: "VRANK",
 	}
 
 	// TODO-Kaia-Bootnode: Add bootnode's metric options

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -151,6 +152,190 @@ func TestServerMethodWithCtx(t *testing.T) {
 	testServerMethodExecution(t, "echoWithCtx")
 }
 
+// withBatchLimits temporarily overrides the package-level batch limit vars and
+// restores them on test cleanup.
+func withBatchLimits(t *testing.T, requestLimit, responseMax int) {
+	t.Helper()
+	origReq, origResp := BatchRequestLimit, BatchResponseMaxSize
+	BatchRequestLimit = requestLimit
+	BatchResponseMaxSize = responseMax
+	t.Cleanup(func() {
+		BatchRequestLimit = origReq
+		BatchResponseMaxSize = origResp
+	})
+}
+
+// runBatchRequest sends a batch via ServeSingleRequest and decodes the response.
+// Returns nil if the server wrote nothing (e.g. notifications-only batch).
+func runBatchRequest(t *testing.T, server *Server, batch []map[string]interface{}) []*jsonrpcMessage {
+	t.Helper()
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+
+	go func() {
+		defer serverConn.Close()
+		server.ServeSingleRequest(context.Background(), NewCodec(serverConn))
+	}()
+
+	if err := json.NewEncoder(clientConn).Encode(batch); err != nil {
+		t.Fatalf("encode batch: %v", err)
+	}
+	clientConn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+	// Server writes either a single message (for over-limit empty/notification batches)
+	// or an array. Decode generically.
+	dec := json.NewDecoder(clientConn)
+	var raw json.RawMessage
+	if err := dec.Decode(&raw); err != nil {
+		return nil
+	}
+	if len(raw) == 0 {
+		return nil
+	}
+	if raw[0] == '[' {
+		var resps []*jsonrpcMessage
+		if err := json.Unmarshal(raw, &resps); err != nil {
+			t.Fatalf("decode response array: %v", err)
+		}
+		return resps
+	}
+	var single jsonrpcMessage
+	if err := json.Unmarshal(raw, &single); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return []*jsonrpcMessage{&single}
+}
+
+func TestServerBatchRequestLimit(t *testing.T) {
+	withBatchLimits(t, 3, 0)
+
+	server := newTestServer("test", new(Service))
+	defer server.Stop()
+
+	// 4 calls — exceeds the limit of 3.
+	batch := make([]map[string]interface{}, 4)
+	for i := range batch {
+		batch[i] = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      i + 100,
+			"method":  "test_echo",
+			"params":  []interface{}{"x", 1, &Args{S: "a"}},
+		}
+	}
+
+	resps := runBatchRequest(t, server, batch)
+	if len(resps) != 1 {
+		t.Fatalf("expected 1 error response, got %d", len(resps))
+	}
+	if resps[0].Error == nil {
+		t.Fatalf("expected error response, got: %+v", resps[0])
+	}
+	if resps[0].Error.Message != errMsgBatchTooLarge {
+		t.Errorf("error message = %q, want %q", resps[0].Error.Message, errMsgBatchTooLarge)
+	}
+	if string(resps[0].ID) != "100" {
+		t.Errorf("error response id = %s, want first call id 100", string(resps[0].ID))
+	}
+}
+
+func TestServerBatchRequestLimitNotificationsOnly(t *testing.T) {
+	withBatchLimits(t, 2, 0)
+
+	server := newTestServer("test", new(Service))
+	defer server.Stop()
+
+	// 3 notifications — exceeds the limit of 2. No id field.
+	batch := []map[string]interface{}{
+		{"jsonrpc": "2.0", "method": "test_noArgsRets"},
+		{"jsonrpc": "2.0", "method": "test_noArgsRets"},
+		{"jsonrpc": "2.0", "method": "test_noArgsRets"},
+	}
+
+	resps := runBatchRequest(t, server, batch)
+	if len(resps) != 1 {
+		t.Fatalf("expected 1 error response, got %d", len(resps))
+	}
+	if resps[0].Error == nil || resps[0].Error.Message != errMsgBatchTooLarge {
+		t.Fatalf("expected batchTooLarge error, got: %+v", resps[0])
+	}
+	// errorMessage uses the package-level `null` raw JSON for the id; that's the
+	// JSON-RPC null-id convention.
+	if string(resps[0].ID) != "null" {
+		t.Errorf("expected null id, got %q", string(resps[0].ID))
+	}
+}
+
+func TestServerBatchResponseMaxSize(t *testing.T) {
+	// Each test_echo response Result is ~80 bytes for the payload below.
+	// Cap at 200 bytes -> first 2 succeed, 3rd is what tips us over, remaining
+	// calls receive responseTooLarge.
+	withBatchLimits(t, 0, 200)
+
+	server := newTestServer("test", new(Service))
+	defer server.Stop()
+
+	const numCalls = 5
+	batch := make([]map[string]interface{}, numCalls)
+	for i := range batch {
+		batch[i] = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      i + 1,
+			"method":  "test_echo",
+			"params":  []interface{}{fmt.Sprintf("payload-%d", i), i, &Args{S: "abcde"}},
+		}
+	}
+
+	resps := runBatchRequest(t, server, batch)
+	if len(resps) != numCalls {
+		t.Fatalf("expected %d responses (mix of success + errors), got %d", numCalls, len(resps))
+	}
+
+	var sawSuccess, sawTooLarge bool
+	for _, r := range resps {
+		if r.Error == nil {
+			sawSuccess = true
+			continue
+		}
+		if r.Error.Code == errcodeResponseTooLarge {
+			sawTooLarge = true
+		}
+	}
+	if !sawSuccess {
+		t.Errorf("expected at least one successful response before the limit was hit")
+	}
+	if !sawTooLarge {
+		t.Errorf("expected at least one responseTooLarge error after the limit was hit")
+	}
+}
+
+func TestServerBatchLimitsDisabled(t *testing.T) {
+	withBatchLimits(t, 0, 0)
+
+	server := newTestServer("test", new(Service))
+	defer server.Stop()
+
+	const numCalls = 50
+	batch := make([]map[string]interface{}, numCalls)
+	for i := range batch {
+		batch[i] = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      i + 1,
+			"method":  "test_echo",
+			"params":  []interface{}{"x", i, &Args{S: "a"}},
+		}
+	}
+
+	resps := runBatchRequest(t, server, batch)
+	if len(resps) != numCalls {
+		t.Fatalf("expected %d responses, got %d", numCalls, len(resps))
+	}
+	for i, r := range resps {
+		if r.Error != nil {
+			t.Errorf("response %d had unexpected error: %+v", i, r.Error)
+		}
+	}
+}
+
 // This test checks that responses are delivered for very short-lived connections that
 // only carry a single request.
 func TestServerShortLivedConn(t *testing.T) {
@@ -169,7 +354,7 @@ func TestServerShortLivedConn(t *testing.T) {
 		wantResp = `{"jsonrpc":"2.0","id":1,"result":{"rpc":"1.0","service":"1.0"}}` + "\n"
 		deadline = time.Now().Add(10 * time.Second)
 	)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		conn, err := net.Dial("tcp", listener.Addr().String())
 		if err != nil {
 			t.Fatal("can't dial:", err)

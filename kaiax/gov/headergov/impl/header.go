@@ -1,0 +1,259 @@
+package impl
+
+import (
+	"maps"
+	"math/big"
+	"reflect"
+	"slices"
+	"strconv"
+
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+)
+
+func (h *headerGovModule) VerifyHeader(header *types.Header, _ *types.Header) error {
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
+	err := h.VerifyVote(header)
+	if err != nil {
+		logger.Error("VerifyVote error", "num", header.Number.Uint64(), "vote", header.Vote, "err", err)
+		return err
+	}
+
+	return h.VerifyGov(header)
+}
+
+func (h *headerGovModule) PrepareHeader(header *types.Header) error {
+	// if this node has a vote waiting to be casted, put Vote field.
+	if vote, ok := h.peekMyVote(); ok {
+		voteBytes, err := vote.ToVoteBytes()
+		if err != nil {
+			return err
+		}
+		header.Vote = voteBytes
+		logger.Debug("Prepare header with vote", "num", header.Number.Uint64(), "vote", hexutil.Encode(header.Vote))
+	}
+
+	// if epoch block & vote exists in the last epoch, put Governance field.
+	if header.Number.Uint64()%h.epoch == 0 {
+		gov := h.getExpectedGovernance(header.Number.Uint64())
+		if len(gov.Items()) > 0 {
+			govBytes, err := gov.ToGovBytes()
+			if err != nil {
+				return err
+			}
+			header.Governance = govBytes
+			logger.Debug("Prepare header with governance", "num", header.Number.Uint64(), "governance", hexutil.Encode(header.Governance))
+		}
+	}
+
+	return nil
+}
+
+// VerifyVote checks the following:
+// (1) voter must be in valset,
+// (2) integrity of the voter (the voter must be the block proposer),
+// (3) the vote value must be consistent compared to the latest ParamSet.
+func (h *headerGovModule) VerifyVote(header *types.Header) error {
+	if len(header.Vote) == 0 {
+		return nil
+	}
+
+	var (
+		vb       headergov.VoteBytes = header.Vote
+		blockNum                     = header.Number.Uint64()
+	)
+
+	vote, err := vb.ToVoteData()
+	if err != nil {
+		logger.Error("ToVoteData error", "num", blockNum, "vote", vb, "err", err)
+		return err
+	}
+
+	if gov.DeprecatedAt(vote.Name(), h.ChainConfig.Rules(header.Number)) {
+		logger.Error("Vote is deprecated", "num", blockNum, "name", vote.Name())
+		return ErrDeprecatedVote
+	}
+
+	council, err := h.ValSet.GetCouncil(blockNum)
+	if err != nil {
+		return err
+	}
+
+	// check if the voter is in council
+	if !slices.Contains(council, vote.Voter()) {
+		return ErrInvalidKeyValue
+	}
+
+	// check if Voter is the block proposer.
+	author, err := h.Chain.Sealer().Author(header)
+	if err != nil {
+		return err
+	}
+	if author != vote.Voter() {
+		return ErrInvalidVoter
+	}
+
+	// In single mode, only the governing node can write header.Vote after Permissionless.
+	params := h.GetParamSet(blockNum)
+	if h.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) &&
+		params.GovernanceMode == "single" &&
+		vote.Voter() != params.GoverningNode {
+		return ErrVotePermissionDenied
+	}
+
+	return h.checkConsistency(blockNum, vote)
+}
+
+// VerifyGov checks the following:
+// (1) governance must be empty in non-epoch block,
+// (2) if there are no votes in the previous epoch, governance must be empty,
+// (3) if any vote exists in the previous epoch, governance must not be empty,
+// (4) the json must not contain unknown fields,
+// (5) the parsed json must exactly match the map derived locally from the previous epoch's votes.
+func (h *headerGovModule) VerifyGov(header *types.Header) error {
+	// (1)
+	if header.Number.Uint64()%h.epoch != 0 {
+		if len(header.Governance) > 0 {
+			logger.Error("governance is not allowed in non-epoch block", "num", header.Number.Uint64())
+			return ErrGovInNonEpochBlock
+		} else {
+			return nil
+		}
+	}
+
+	// (2), (3)
+	expected := h.getExpectedGovernance(header.Number.Uint64())
+	if len(header.Governance) == 0 {
+		if len(expected.Items()) != 0 {
+			return ErrGovVerification
+		}
+
+		return nil
+	}
+
+	// (4)
+	var gb headergov.GovBytes = header.Governance
+	actual, err := gb.ToGovData()
+	if err != nil {
+		logger.Error("DeserializeHeaderGov error", "num", header.Number.Uint64(), "governance", gb, "err", err)
+		return err
+	}
+
+	// (5)
+	if !reflect.DeepEqual(expected, actual) {
+		logger.Error("Governance mismatch", "expected", expected, "actual", actual)
+		return ErrGovVerification
+	}
+
+	return nil
+}
+
+// checkConsistency checks if vote values are consistent with chain states such as other parameters and validator set.
+func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteData) error {
+	switch vote.Name() {
+	case gov.GovernanceGoverningNode:
+		params := h.GetParamSet(blockNum)
+
+		// compare with governing node only in single mode.
+		if params.GovernanceMode != "single" {
+			return nil
+		}
+
+		// we'll use blockNum-1 for the blocknumber of GetCouncil since blockNum cannot be available(eg. vote)
+		// it's definite that the valSet vote is not included in this block
+		// so the council(blockNum - 1) and council(blockNum) should be same
+		council, err := h.ValSet.GetCouncil(blockNum - 1)
+		if err != nil {
+			return err
+		}
+
+		if slices.Contains(council, params.GoverningNode) {
+			return nil
+		}
+		return ErrGovNodeNotInValSetList
+	case gov.Kip71LowerBoundBaseFee:
+		params := h.GetParamSet(blockNum)
+		if vote.Value().(uint64) > params.UpperBoundBaseFee {
+			return ErrLowerBoundBaseFee
+		} else {
+			return nil
+		}
+	case gov.Kip71UpperBoundBaseFee:
+		params := h.GetParamSet(blockNum)
+		if vote.Value().(uint64) < params.LowerBoundBaseFee {
+			return ErrUpperBoundBaseFee
+		} else {
+			return nil
+		}
+	case gov.AddValidator, gov.RemoveValidator:
+		params := h.GetParamSet(blockNum)
+
+		// compare with governing node only in single mode.
+		if params.GovernanceMode != "single" {
+			return nil
+		}
+		if slices.Contains(vote.Value().([]common.Address), params.GoverningNode) {
+			return ErrGovNodeInValSetVoteValue
+		}
+		return nil
+		// These votes are valid as long as it passes the format checks in NewVoteData(). No more checks here.
+	case gov.GovernanceDeriveShaImpl, gov.GovernanceGovParamContract, gov.GovernanceGovernanceMode, gov.GovernanceUnitPrice,
+		gov.IstanbulCommitteeSize, gov.IstanbulEpoch, gov.IstanbulPolicy,
+		gov.Kip71BaseFeeDenominator, gov.Kip71GasTarget, gov.Kip71MaxBlockGasUsedForBaseFee,
+		gov.RewardDeferredTxFee, gov.RewardKip82Ratio, gov.RewardMintingAmount, gov.RewardMinimumStake,
+		gov.RewardProposerUpdateInterval, gov.RewardRatio, gov.RewardStakingRewardThreshold,
+		gov.RewardStakingUpdateInterval, gov.RewardUseFlexReward, gov.RewardUseGiniCoeff:
+		return nil
+	default:
+		return ErrInvalidKeyValue
+	}
+}
+
+// The blockNum's epoch index must be greater than 0. That is, it must be blockNum >= epoch.
+func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovData {
+	prevEpochIdx := calcEpochIdx(blockNum, h.epoch) - 1
+	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
+	govs := make(gov.PartialParamSet)
+
+	sortedVoteBlocks := slices.Collect(maps.Keys(prevEpochVotes))
+	slices.Sort(sortedVoteBlocks)
+
+	for _, voteBlock := range sortedVoteBlocks {
+		vote := prevEpochVotes[voteBlock]
+		govs.Add(string(vote.Name()), vote.Value())
+	}
+
+	// assert(len(headergov.NewGovData(govs).Items()) == len(govs))
+	return headergov.NewGovData(govs)
+}
+
+func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.VoteData {
+	pBorder := ReadLowestVoteScannedEpochIdx(h.ChainKv)
+	if pBorder == nil {
+		panic("lowest vote scanned epoch index must exist")
+	}
+	border := *pBorder
+
+	if border <= epochIdx {
+		logger.Debug("Scanning votes fastpath")
+		votes := make(map[uint64]headergov.VoteData)
+
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		maps.Copy(votes, h.groupedVotes[epochIdx])
+		return votes
+	} else {
+		logger.Debug("Scanning votes slowpath")
+		// Deduplicate concurrent slow-path scans of the same epoch.
+		// The returned map is read-only for all callers, so sharing one instance is safe.
+		votes, _, _ := h.scanGroup.Do(strconv.FormatUint(epochIdx, 10), func() (interface{}, error) {
+			return h.scanAllVotesInEpoch(epochIdx), nil
+		})
+		return votes.(map[uint64]headergov.VoteData)
+	}
+}

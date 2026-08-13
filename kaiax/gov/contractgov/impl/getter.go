@@ -5,7 +5,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
-	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
+	govcontract "github.com/kaiachain/kaia/contracts/bindings/gov"
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 
@@ -81,6 +81,15 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 	}
 
 	ret := ParseContractCall(names, values)
+
+	rules := config.Rules(new(big.Int).SetUint64(blockNum))
+	for name := range ret {
+		if gov.DeprecatedAt(name, rules) {
+			logger.Warn("Ignoring deprecated parameter from contract governance", "name", name, "blockNum", blockNum)
+			delete(ret, name)
+		}
+	}
+
 	return ret, nil
 }
 
@@ -91,7 +100,7 @@ func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, err
 
 func ParseContractCall(names []string, values [][]byte) gov.PartialParamSet {
 	ret := make(gov.PartialParamSet)
-	for i := 0; i < len(names); i++ {
+	for i := range names {
 		ret.Add(names[i], values[i])
 	}
 

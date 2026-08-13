@@ -26,8 +26,8 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/common"
-	sctoken "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
-	scnft "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc721"
+	sctoken "github.com/kaiachain/kaia/contracts/bindings/testing/sc_erc20"
+	scnft "github.com/kaiachain/kaia/contracts/bindings/testing/sc_erc721"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,10 +42,10 @@ func TestTokenPublicVariables(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
-	})
+	}, recoveryFixtureOptions{withToken: true})
 	defer info.sim.Close()
 
 	initSupply, err := info.tokenLocalBridge.INITIALSUPPLY(nil)
@@ -89,10 +89,10 @@ func TestNFTPublicVariables(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
-	})
+	}, recoveryFixtureOptions{withNFT: true, mintNFT: true})
 	defer info.sim.Close()
 
 	_, tx, _, err := scnft.DeployServiceChainNFT(info.nodeAuth, info.sim, common.Address{0})

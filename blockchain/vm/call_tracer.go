@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"encoding/json"
 	"errors"
 	"math/big"
 	"sync/atomic"
@@ -29,6 +30,14 @@ import (
 )
 
 var _ Tracer = (*CallTracer)(nil)
+
+type CallLog struct {
+	Address  common.Address `json:"address"`
+	Topics   []common.Hash  `json:"topics"`
+	Data     hexutil.Bytes  `json:"data"`
+	Index    hexutil.Uint   `json:"index"`
+	Position hexutil.Uint   `json:"position"`
+}
 
 //go:generate gencodec -type CallFrame -field-override callFrameMarshaling -out gen_callframe_json.go
 type CallFrame struct {
@@ -43,6 +52,7 @@ type CallFrame struct {
 	RevertReason string          `json:"revertReason,omitempty"` // decoded revert message in geth style.
 	Reverted     *RevertedInfo   `json:"reverted,omitempty"`     // decoded revert message and reverted contract address in klaytn style.
 	Calls        []CallFrame     `json:"calls,omitempty"`        // child calls
+	Logs         []CallLog       `json:"logs,omitempty"`
 	Value        *big.Int        `json:"value,omitempty"`
 }
 
@@ -93,6 +103,11 @@ type callFrameMarshaling struct {
 	Output     hexutil.Bytes
 }
 
+type CallTracerConfig struct {
+	OnlyTopCall bool `json:"onlyTopCall"`
+	WithLog     bool `json:"withLog"`
+}
+
 // Populate output, error, and revert-related fields
 // 1. no error: {output}
 // 2. non-revert error: {to: nil if CREATE, error}
@@ -131,7 +146,9 @@ func (c *CallFrame) processOutput(output []byte, err error) {
 // Implements vm.Tracer interface
 type CallTracer struct {
 	callstack       []CallFrame
+	config          CallTracerConfig
 	gasLimit        uint64 // saved tx.gasLimit
+	logIndex        uint
 	interrupt       atomic.Bool
 	interruptReason error
 }
@@ -140,6 +157,18 @@ func NewCallTracer() *CallTracer {
 	return &CallTracer{
 		callstack: make([]CallFrame, 1), // empty top-level frame
 	}
+}
+
+func NewCallTracerWithConfig(cfg json.RawMessage) (*CallTracer, error) {
+	var config CallTracerConfig
+	if len(cfg) > 0 {
+		if err := json.Unmarshal(cfg, &config); err != nil {
+			return nil, err
+		}
+	}
+	tracer := NewCallTracer()
+	tracer.config = config
+	return tracer, nil
 }
 
 // Transaction start
@@ -172,11 +201,14 @@ func (t *CallTracer) CaptureStart(env *EVM, from common.Address, to common.Addre
 func (t *CallTracer) CaptureEnd(output []byte, gasUsed uint64, err error) {
 	// gasUsed will be filled by CaptureTxEnd; just process the output
 	t.callstack[0].processOutput(output, err)
+	if t.config.WithLog {
+		t.logIndex -= uint(clearFailedLogs(&t.callstack[0], false))
+	}
 }
 
 // Enter nested call frame
 func (t *CallTracer) CaptureEnter(typ OpCode, from common.Address, to common.Address, input []byte, gas uint64, value *big.Int) {
-	if t.interrupt.Load() {
+	if t.interrupt.Load() || t.config.OnlyTopCall {
 		return
 	}
 
@@ -203,6 +235,9 @@ func (t *CallTracer) CaptureExit(output []byte, gasUsed uint64, err error) {
 	call := t.callstack[size-1]
 	call.GasUsed = gasUsed
 	call.processOutput(output, err)
+	if t.config.WithLog {
+		t.logIndex -= uint(clearFailedLogs(&call, false))
+	}
 
 	// pop current frame
 	t.callstack = t.callstack[:size-1]
@@ -213,6 +248,34 @@ func (t *CallTracer) CaptureExit(output []byte, gasUsed uint64, err error) {
 
 // Each opcode
 func (t *CallTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error) {
+	if err != nil || !t.config.WithLog || t.interrupt.Load() {
+		return
+	}
+	if t.config.OnlyTopCall && depth > 0 {
+		return
+	}
+	if op < LOG0 || op > LOG4 || len(t.callstack) == 0 {
+		return
+	}
+	topics := int(op - LOG0)
+	stackData := scope.Stack.Data()
+	if len(stackData) < 2+topics {
+		return
+	}
+	mStart := stackData[len(stackData)-1].Uint64()
+	mSize := stackData[len(stackData)-2].Uint64()
+	log := CallLog{
+		Address:  scope.Contract.Address(),
+		Topics:   make([]common.Hash, topics),
+		Data:     scope.Memory.GetCopy(int64(mStart), int64(mSize)),
+		Index:    hexutil.Uint(t.logIndex),
+		Position: hexutil.Uint(len(t.callstack[len(t.callstack)-1].Calls)),
+	}
+	for i := 0; i < topics; i++ {
+		log.Topics[i] = stackData[len(stackData)-3-i].Bytes32()
+	}
+	t.callstack[len(t.callstack)-1].Logs = append(t.callstack[len(t.callstack)-1].Logs, log)
+	t.logIndex++
 }
 
 // Fault during opcode execution
@@ -224,13 +287,33 @@ func (t *CallTracer) GetResult() (CallFrame, error) {
 		return CallFrame{}, errors.New("incorrect number of top-level calls")
 	}
 
-	// Return with interrupt reason if any
-	return t.callstack[0], t.interruptReason
+	// Read interruptReason only after observing the flag, so Stop()'s write happens-before this read.
+	if t.interrupt.Load() {
+		return t.callstack[0], t.interruptReason
+	}
+	return t.callstack[0], nil
 }
 
 // Stop terminates execution of the tracer at the first opportune moment.
 // For CallTracer, it stops at CaptureEnter, which is the most repetitive operation.
 func (t *CallTracer) Stop(err error) {
-	t.interrupt.Store(true)
 	t.interruptReason = err
+	t.interrupt.Store(true)
+}
+
+func (f *CallFrame) failed() bool {
+	return f.Error != ""
+}
+
+func clearFailedLogs(frame *CallFrame, parentFailed bool) int {
+	failed := parentFailed || frame.failed()
+	cleared := 0
+	if failed && len(frame.Logs) > 0 {
+		cleared += len(frame.Logs)
+		frame.Logs = nil
+	}
+	for i := range frame.Calls {
+		cleared += clearFailedLogs(&frame.Calls[i], failed)
+	}
+	return cleared
 }

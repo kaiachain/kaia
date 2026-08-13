@@ -23,11 +23,14 @@ import (
 	"fmt"
 )
 
-var (
+const (
 	// For immediate clarity, using literal numbers instead of blst named constants
 	SecretKeyLength = 32
 	PublicKeyLength = 48
 	SignatureLength = 96
+)
+
+var (
 	// draft-irtf-cfrg-pairing-friendly-curves-11#4.2.1 BLS12_381
 	CurveOrderHex = "0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"
 	// draft-irtf-cfrg-bls-signature-05#4.2.3

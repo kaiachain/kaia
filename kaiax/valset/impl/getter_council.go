@@ -26,7 +26,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
+func (v *ValsetModule) getCouncilPermissioned(num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return v.getCouncilGenesis()
 	}
@@ -49,11 +49,11 @@ func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
 	if header == nil {
 		return nil, errNoHeader
 	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	validators, err := v.Chain.Sealer().Validators(header)
 	if err != nil {
 		return nil, err
 	}
-	return valset.NewAddressSet(istanbulExtra.Validators), nil
+	return valset.NewAddressSet(validators), nil
 }
 
 func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {
@@ -140,7 +140,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	// Try to get from cache first
 	cached, ok := v.councilCache.Get(targetNum - 1)
 	if ok {
-		council = cached.(*valset.AddressSet)
+		council = cached.(*valset.AddressSet).Copy()
 		if err := v.applyBlock(council, targetNum-1, write); err != nil {
 			return nil, 0, err
 		}

@@ -9,6 +9,8 @@ both a Go and a C compiler. You can install them using your favorite package man
 
     make all (or make {kcn, kpn, ken, kbn, kscn, kspn, ksen, kgen, homi, abigen})
 
+This repository uses Git submodules. The submodule (`contracts/kaia-system-contracts`) is only needed if you want to regenerate Go contract bindings via `go generate`. For normal builds, the pre-generated bindings are already included. To initialize the submodule, run `make submodules`.
+
 ## Executables
 
 After successful build, executable binaries are installed at `build/bin/`.

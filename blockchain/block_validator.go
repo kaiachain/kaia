@@ -25,11 +25,39 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
+)
+
+var (
+	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
+	// the previous block's timestamp plus the minimum block interval.
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
+
+	// ErrInvalidBlockScore is returned if the BlockScore of a block is not 1.
+	ErrInvalidBlockScore = errors.New("invalid blockscore")
+
+	// ErrInvalidBlockNumber is returned if a header's block number exceeds uint64 range.
+	ErrInvalidBlockNumber = errors.New("invalid block number: out of uint64 range")
+
+	// ErrInvalidBaseFee is returned if a block before Magma has a non-nil base fee.
+	ErrInvalidBaseFee = errors.New("invalid baseFee before fork")
+
+	// ErrUnexpectedExcessBlobGasBeforeOsaka is returned if excessBlobGas exists before Osaka.
+	ErrUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
+
+	// ErrUnexpectedBlobGasUsedBeforeOsaka is returned if blobGasUsed exists before Osaka.
+	ErrUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )
 
 // BlockValidator is responsible for validating block headers and
@@ -37,23 +65,284 @@ import (
 //
 // BlockValidator implements Validator.
 type BlockValidator struct {
-	config *params.ChainConfig // Chain configuration options
-	bc     *BlockChain         // Canonical block chain
+	config        *params.ChainConfig   // Chain configuration options
+	bc            *BlockChain           // Canonical block chain
+	hc            consensus.ChainReader // Header chain
+	headerModules []kaiax.HeaderModule  // Header modules
+
+	// bc has next fields, but hc doesn't. However, these fields are required for header validation
+	sealer  consensus.Sealer    // Seal parser/verifier
+	mGov    gov.GovModule       // Governance module
+	mValset valset.ValsetModule // Validator-set module
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
 func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *BlockValidator {
+	if blockchain == nil || blockchain.sealer == nil {
+		panic("blockchain and its sealer must be non-nil")
+	}
+
 	validator := &BlockValidator{
 		config: config,
 		bc:     blockchain,
+		hc:     blockchain,
+		sealer: blockchain.sealer,
 	}
 	return validator
+}
+
+func (v *BlockValidator) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mHeader ...kaiax.HeaderModule) {
+	v.mGov = mGov
+	v.mValset = mValset
+	v.headerModules = append(v.headerModules, mHeader...)
+}
+
+func (v *BlockValidator) ValsetModule() valset.ValsetModule {
+	return v.mValset
+}
+
+func (v *BlockValidator) ValidateHeader(header *types.Header) error {
+	return v.validateHeader(header, nil)
+}
+
+func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	abort := make(chan struct{})
+	results := make(chan error, len(headers))
+	go func() {
+		errored := false
+		for _, header := range headers {
+			var err error
+			if errored {
+				err = consensus.ErrUnknownAncestor
+			} else {
+				if header.Number == nil {
+					err = consensus.ErrUnknownBlock
+				} else if header.Number.Uint64() != 0 {
+					_, err = v.sealer.Author(header)
+					if err == nil {
+						cs, committersErr := v.sealer.Committers(header)
+						if committersErr != nil {
+							err = committersErr
+						} else if len(cs) == 0 {
+							err = istanbul.ErrEmptyCommittedSeals
+						}
+					}
+				}
+			}
+
+			if err != nil {
+				errored = true
+			}
+
+			select {
+			case <-abort:
+				return
+			case results <- err:
+			}
+		}
+	}()
+	return abort, results
+}
+
+func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Header) error {
+	// Don't waste time checking blocks from the future
+	if header.Time.Cmp(big.NewInt(time.Now().Add(time.Duration(params.DefaultBlockGenerationInterval)*time.Second).Unix())) > 0 {
+		return consensus.ErrFutureBlock
+	}
+
+	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
+	if header.BlockScore == nil || header.BlockScore.Cmp(params.DefaultBlockScore) != 0 {
+		return ErrInvalidBlockScore
+	}
+
+	// Reject out-of-uint64 numbers before Uint64() aliases them to a lower height.
+	if header.Number == nil || !header.Number.IsUint64() {
+		return ErrInvalidBlockNumber
+	}
+
+	// The genesis block is the always valid dead-end
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+
+	// Ensure that the block's timestamp isn't too close to it's parent
+	if parent == nil {
+		parent = v.hc.GetHeader(header.ParentHash, number-1)
+	}
+	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+		return consensus.ErrUnknownAncestor
+	}
+	if parent.Time.Uint64()+uint64(params.BlockGenerationInterval) > header.Time.Uint64() {
+		return ErrInvalidTimestamp
+	}
+
+	// Verify the existence / non-existence of osaka-specific header fields.
+	osaka := v.config.IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return ErrUnexpectedExcessBlobGasBeforeOsaka
+		case header.BlobGasUsed != nil:
+			return ErrUnexpectedBlobGasUsedBeforeOsaka
+		}
+	} else {
+		if header.Number.Uint64() != parent.Number.Uint64()+1 {
+			panic("bad header pair")
+		}
+		bcfg := v.config.LatestBlobConfig(header.Number)
+		if bcfg == nil {
+			panic("called before EIP-4844 is active")
+		}
+		if err := bcfg.VerifyEIP4844Header(parent.ExcessBlobGas, parent.BlobGasUsed, header.ExcessBlobGas, header.BlobGasUsed); err != nil {
+			return err
+		}
+	}
+
+	// Verify Magma basefee rule from governance paramset.
+	if v.config.IsMagmaForkEnabled(header.Number) {
+		// Skip governance-dependent validation when gov module is not registered.
+		if v.mGov != nil {
+			govParamSet := v.mGov.GetParamSet(header.Number.Uint64())
+			if err := govParamSet.ToKip71Config().VerifyMagmaHeader(header.BaseFee, parent.Number, parent.BaseFee, parent.GasUsed); err != nil {
+				return err
+			}
+		}
+	} else if header.BaseFee != nil {
+		return ErrInvalidBaseFee
+	}
+
+	// Verify the header with registered header modules.
+	for _, module := range v.headerModules {
+		if err := module.VerifyHeader(header, parent); err != nil {
+			return err
+		}
+	}
+
+	// Verify the header's seal and consensus-specific fields.
+	if err := v.verifySeals(header); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (v *BlockValidator) verifySeals(header *types.Header) error {
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
+	author, err := v.sealer.Author(header)
+	if err != nil {
+		return err
+	}
+
+	blockNum := header.Number.Uint64()
+
+	var rules params.Rules
+	if v.config != nil {
+		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
+	}
+
+	// Committers is fork-aware: post-permissionless it recovers with the round-bound preimage.
+	committers, err := v.sealer.Committers(header)
+	if err != nil {
+		return err
+	}
+	if len(committers) == 0 {
+		return istanbul.ErrEmptyCommittedSeals
+	}
+
+	// Skip module-dependent seal validation when gov/valset modules are not registered.
+	if v.mValset == nil || v.mGov == nil {
+		return nil
+	}
+
+	if rules.IsPermissionless {
+		round, err := v.sealer.Round(header)
+		if err != nil {
+			return err
+		}
+		proposer, err := v.mValset.GetProposer(blockNum, uint64(round))
+		if err != nil {
+			return err
+		}
+		// author == proposer implies the author is the committee-selected proposer,
+		// so a separate qualified-membership check is redundant here.
+		if author != proposer {
+			return consensus.ErrUnauthorized
+		}
+
+		// Count committed seals only from the round's committee, matching the set the
+		// live consensus commits against (handleCommit rejects non-committee senders),
+		// rather than the broader qualified/council set.
+		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
+		if err != nil {
+			return err
+		}
+		committeeSet := valset.NewAddressSet(committee)
+		validSeal, err := countValidCommittedSeals(committers, committeeSet)
+		if err != nil {
+			return err
+		}
+		// Require the quorum over the committee. Post-permissionless the committee
+		// equals the qualified set, so pass its size for both arguments.
+		if validSeal < v.sealer.Quorum(blockNum, len(committee), len(committee)) {
+			return istanbul.ErrInvalidCommittedSeals
+		}
+		return nil
+	}
+
+	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
+	if err != nil {
+		return err
+	}
+	qualifiedSet := valset.NewAddressSet(qualified)
+	if !qualifiedSet.Contains(author) {
+		return consensus.ErrUnauthorized
+	}
+
+	// Reached only pre-permissionless (post-fork returns above); count seals against the council.
+	council, err := v.mValset.GetCouncil(blockNum)
+	if err != nil {
+		return err
+	}
+	signerSet := valset.NewAddressSet(council).Copy()
+	validSeal, err := countValidCommittedSeals(committers, signerSet)
+	if err != nil {
+		return err
+	}
+
+	qualifiedLen := len(qualified)
+	committeeSize := qualifiedLen
+	if !gov.DeprecatedAt(gov.IstanbulCommitteeSize, rules) {
+		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
+	}
+	// Pre-permissionless uses the legacy 2f+1 quorum. sealer.Quorum now returns
+	// ceil(2N/3), so compute 2f+1 explicitly to preserve historical header validity.
+	if validSeal < 2*v.sealer.F(blockNum, qualifiedLen, committeeSize)+1 {
+		return istanbul.ErrInvalidCommittedSeals
+	}
+	return nil
+}
+
+func countValidCommittedSeals(committers []common.Address, signerSet *valset.AddressSet) (int, error) {
+	validSeal := 0
+	for _, addr := range committers {
+		if !signerSet.Remove(addr) {
+			return 0, istanbul.ErrInvalidCommittedSeals
+		}
+		validSeal++
+	}
+	return validSeal, nil
 }
 
 // ValidateBody verifies the block
 // header's transaction. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
+	if v.bc == nil {
+		return errors.New("block validator with header chain is not supported")
+	}
 	// check EIP 7934 RLP-encoded block size cap
 	if v.config.IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
 		return ErrBlockOversized

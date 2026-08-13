@@ -549,6 +549,46 @@ var (
 		Aliases: []string{"genesis.hardfork.osaka-compatible-blocknumber"},
 	}
 
+	permissionlessCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "permissionless-compatible-blocknumber",
+		Usage:   "permissionlessCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.permissionless-compatible-blocknumber"},
+	}
+
+	vrankEpochFlag = &cli.Uint64Flag{
+		Name:    "vrank-epoch",
+		Usage:   "VRank epoch block interval for permissionless mode (default: 86400)",
+		Value:   params.DefaultVRankEpoch,
+		Aliases: []string{"genesis.vrank-epoch"},
+	}
+
+	pfsThresholdFlag = &cli.Int64Flag{
+		Name:    "pfs-threshold",
+		Usage:   "PFS threshold for severe violation in permissionless mode (default: 2)",
+		Value:   defaultPfsThreshold,
+		Aliases: []string{"genesis.pfs-threshold"},
+	}
+
+	cfsThresholdFlag = &cli.Int64Flag{
+		Name:    "cfs-threshold",
+		Usage:   "CFS threshold for candidate testing in permissionless mode (default: 300)",
+		Value:   defaultCfsThreshold,
+		Aliases: []string{"genesis.cfs-threshold"},
+	}
+
+	permissionlessGenesisDeployerFlag = &cli.StringFlag{
+		Name:    "permissionless-genesis-deployer",
+		Usage:   "Genesis-only deployer address for permissionless system contract CREATE deployments",
+		Value:   defaultPermissionlessGenesisDeployer,
+		Aliases: []string{"genesis.permissionless-genesis-deployer"},
+	}
+
+	allocPermissionlessPrerequisitesFlag = &cli.BoolFlag{
+		Name:  "alloc-permissionless-prerequisites",
+		Usage: "Allocate permissionless prerequisite contracts and Registry records in genesis.json for a delayed hardfork",
+	}
+
 	kip113ProxyAddressFlag = &cli.StringFlag{
 		Name:    "kip113-proxy-contract-address",
 		Usage:   "kip113 proxy contract address",

@@ -31,13 +31,14 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -73,7 +74,7 @@ func init() {
 type testOverrides struct {
 	node0Key       *ecdsa.PrivateKey // Override node[0] key
 	node0BlsKey    bls.SecretKey     // Override node[0] bls key
-	blockPeriod    *uint64           // Override block period. If not set, 1 second is used.
+	blockPeriod    *uint64           // Override block generation interval. If not set, 1 second is used.
 	stakingAmounts []uint64          // Override staking amounts. If not set, 0 for all nodes.
 }
 
@@ -82,6 +83,7 @@ type testContext struct {
 	nodeKeys    []*ecdsa.PrivateKey // Generated node keys
 	nodeAddrs   []common.Address    // Generated node addrs
 	nodeBlsKeys []bls.SecretKey     // Generated node bls keys
+	oldInterval int64
 
 	chain  *blockchain.BlockChain
 	engine *backend
@@ -107,6 +109,8 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if overrides.stakingAmounts == nil {
 		overrides.stakingAmounts = make([]uint64, numNodes)
 	}
+	oldInterval := params.BlockGenerationInterval
+	params.BlockGenerationInterval = int64(*overrides.blockPeriod)
 
 	// Create node keys
 	var (
@@ -170,7 +174,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	// Create istanbul engine
 	istanbulConfig := &istanbul.Config{
 		Timeout:        10000,
-		BlockPeriod:    *overrides.blockPeriod,
 		ProposerPolicy: istanbul.ProposerPolicy(config.Istanbul.ProposerPolicy),
 		Epoch:          config.Istanbul.Epoch,
 		SubGroupSize:   config.Istanbul.SubGroupSize,
@@ -180,11 +183,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	mRandao := randao_impl.NewRandaoModule()
 	engine := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
-		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     nodeKeys[0],
-		BlsSecretKey:   nodeBlsKeys[0],
-		DB:             dbm,
-		GovModule:      mGov,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
 
@@ -196,13 +195,16 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		TriesInMemory:     blockchain.DefaultTriesInMemory,
 		SnapshotCacheSize: 0, // Disable state snapshot
 	}
-	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine, vm.Config{})
+	chainSealer := istanbul.NewSealerImpl(nodeKeys[0])
+	types.SetHeaderHashFn(chainSealer.HeaderHash)
+	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, chainSealer, vm.Config{})
 	if err != nil {
 		panic(err)
 	}
 
 	mStaking := staking_impl.NewStakingModule()
 	mValset := valset_impl.NewValsetModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	if err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -223,22 +225,35 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 			GovModule:     mGov,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: config,
-			Chain:       chain,
-			Downloader:  fakeDownloader,
+			ChainConfig:  config,
+			Chain:        chain,
+			Downloader:   fakeDownloader,
+			BlsSecretKey: nodeBlsKeys[0],
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: chain,
 		})); err != nil {
 		panic(err)
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
+	engine.RegisterKaiaxModules(mGov, mValset)
+	chain.RegisterKaiaxModules(
+		mGov,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mRandao},
+		[]kaiax.BlockStateModule{mSystem},
+	)
 	// Start the engine
-	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
+	if err = engine.Start(chain, nil); err != nil {
 		panic(err)
 	}
 
 	return &testContext{
-		config:    config,
-		nodeKeys:  nodeKeys,
-		nodeAddrs: nodeAddrs,
+		config:      config,
+		nodeKeys:    nodeKeys,
+		nodeAddrs:   nodeAddrs,
+		oldInterval: oldInterval,
 
 		chain:  chain,
 		engine: engine,
@@ -247,13 +262,14 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 // Make empty header
 func (ctx *testContext) MakeHeader(parent *types.Block) *types.Header {
+	interval := uint64(params.BlockGenerationInterval)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
 		GasUsed:    0,
 		Extra:      parent.Extra(),
-		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(ctx.engine.config.BlockPeriod)),
-		BlockScore: defaultBlockScore,
+		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(interval)),
+		BlockScore: params.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
 		// Assume BaseFee does not change
@@ -264,13 +280,13 @@ func (ctx *testContext) MakeHeader(parent *types.Block) *types.Header {
 
 // Block with no signature.
 func (ctx *testContext) MakeBlock(parent *types.Block) *types.Block {
-	chain, engine := ctx.chain, ctx.engine
+	chain := ctx.chain
 	header := ctx.MakeHeader(parent)
-	if err := engine.Prepare(chain, header); err != nil {
+	if err := chain.PrepareHeader(header); err != nil {
 		panic(err)
 	}
 	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil)
+	block, _ := chain.Processor().FinalizeState(header, state, nil, nil)
 	return block
 }
 
@@ -278,7 +294,7 @@ func (ctx *testContext) MakeBlock(parent *types.Block) *types.Block {
 func (ctx *testContext) MakeBlockWithSeal(parent *types.Block) *types.Block {
 	chain, engine := ctx.chain, ctx.engine
 	block := ctx.MakeBlock(parent)
-	result, err := engine.Seal(chain, block, make(chan struct{}))
+	result, err := engine.Seal(chain, block)
 	if err != nil {
 		panic(err)
 	}
@@ -297,9 +313,11 @@ func (ctx *testContext) MakeBlockWithCommittedSeals(parent *types.Block) *types.
 
 	// write validators committed seals to the block
 	header := block.Header()
-	committedSeals := ctx.MakeCommittedSeals(block.Hash())
-	err = writeCommittedSeals(header, committedSeals)
+	committedSeals, err := ctx.MakeCommittedSeals(header)
 	if err != nil {
+		panic(err)
+	}
+	if err = ctx.engine.sealer.WriteCommittedSeals(header, committedSeals); err != nil {
 		panic(err)
 	}
 	block = block.WithSeal(header)
@@ -307,24 +325,32 @@ func (ctx *testContext) MakeBlockWithCommittedSeals(parent *types.Block) *types.
 	return block
 }
 
-func (ctx *testContext) MakeCommittedSeals(hash common.Hash) [][]byte {
+func (ctx *testContext) MakeCommittedSeals(header *types.Header) ([][]byte, error) {
 	committedSeals := make([][]byte, len(ctx.nodeKeys))
-	hashData := crypto.Keccak256(core.PrepareCommittedSeal(hash))
 	for i, key := range ctx.nodeKeys {
-		sig, _ := crypto.Sign(hashData, key)
-		committedSeals[i] = make([]byte, types.IstanbulExtraSeal)
+		signer := istanbul.NewSealerImpl(key)
+		sig, err := signer.MakeCommittedSeal(header)
+		if err != nil {
+			return nil, err
+		}
+		committedSeals[i] = make([]byte, istanbul.IstanbulExtraSeal)
 		copy(committedSeals[i][:], sig)
 	}
-	return committedSeals
+	return committedSeals, nil
+}
+
+func prepareCommittedSealForTest(hash common.Hash) []byte {
+	return append(append([]byte{}, hash.Bytes()...), byte(2))
 }
 
 func (ctx *testContext) Cleanup() {
 	ctx.chain.Stop()
 	ctx.engine.Stop()
+	params.BlockGenerationInterval = ctx.oldInterval
 }
 
 func makeGenesisExtra(addrs []common.Address) []byte {
-	extra := &types.IstanbulExtra{
+	extra := &istanbul.IstanbulExtra{
 		Validators:    addrs,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
@@ -334,7 +360,7 @@ func makeGenesisExtra(addrs []common.Address) []byte {
 		panic(err)
 	}
 
-	vanity := make([]byte, types.IstanbulExtraVanity)
+	vanity := make([]byte, istanbul.IstanbulExtraVanity)
 	return append(vanity, encoded...)
 }
 

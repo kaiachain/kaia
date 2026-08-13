@@ -27,6 +27,9 @@ var (
 	errNotFromProposer = errors.New("message does not come from proposer")
 	// errNotFromCommittee is returned when received message is supposed to be from a committee.
 	errNotFromCommittee = errors.New("message does not come from a committee")
+	// errInvalidCommittedSeal is returned when a COMMIT's CommittedSeal is not the
+	// sender's signature over the proposal's committed-seal preimage.
+	errInvalidCommittedSeal = errors.New("invalid committed seal")
 	// errIgnored is returned when a message was ignored.
 	errIgnored = errors.New("message is ignored")
 	// errFutureMessage is returned when current view is earlier than the
@@ -35,10 +38,6 @@ var (
 	// errOldMessage is returned when the received message's view is earlier
 	// than current view.
 	errOldMessage = errors.New("old message")
-	// errInvalidMessage is returned when the message is malformed.
-	errInvalidMessage = errors.New("invalid message")
 	// errFailedDecodeMessageSet is returned when the message set is malformed.
 	errFailedDecodeMessageSet = errors.New("failed to decode message set")
-	// errInvalidSigner is returned when the message is signed by a validator different than message sender
-	errInvalidSigner = errors.New("message not signed by the sender")
 )

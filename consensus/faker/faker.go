@@ -27,6 +27,11 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
+	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 )
@@ -39,158 +44,183 @@ type Faker struct {
 	failBlock uint64        // Block number to fail at (0 = no failure)
 	failDelay time.Duration // Delay before returning in Seal
 	fullFake  bool          // Accept all blocks without validation
+	address   common.Address
+	eventMux  *event.TypeMux
 }
 
 // NewFaker creates a fake consensus engine that accepts all blocks.
 func NewFaker() *Faker {
-	return &Faker{}
+	return &Faker{address: params.AuthorAddressForTesting, eventMux: new(event.TypeMux)}
+}
+
+// NewFakerWithFixedSealer creates a fake consensus engine with a fixed proposer/sealer address.
+func NewFakerWithFixedSealer(address common.Address) *Faker {
+	return &Faker{address: address, eventMux: new(event.TypeMux)}
 }
 
 // NewFakeFailer creates a fake consensus engine that fails at a specific block.
 func NewFakeFailer(fail uint64) *Faker {
-	return &Faker{failBlock: fail}
+	return &Faker{failBlock: fail, address: params.AuthorAddressForTesting, eventMux: new(event.TypeMux)}
 }
 
 // NewFakeDelayer creates a fake consensus engine that delays block sealing.
 func NewFakeDelayer(delay time.Duration) *Faker {
-	return &Faker{failDelay: delay}
+	return &Faker{failDelay: delay, address: params.AuthorAddressForTesting, eventMux: new(event.TypeMux)}
 }
 
 // NewFullFaker creates a fake consensus engine that accepts all blocks without any validation.
 func NewFullFaker() *Faker {
-	return &Faker{fullFake: true}
+	return &Faker{fullFake: true, address: params.AuthorAddressForTesting, eventMux: new(event.TypeMux)}
 }
 
 // NewShared creates a shared fake consensus engine.
 func NewShared() *Faker {
-	return &Faker{}
+	return &Faker{address: params.AuthorAddressForTesting, eventMux: new(event.TypeMux)}
 }
 
 // Author returns a fixed address for testing.
 func (f *Faker) Author(header *types.Header) (common.Address, error) {
-	return params.AuthorAddressForTesting, nil
+	return f.address, nil
 }
 
-// CanVerifyHeadersConcurrently returns true for concurrent verification.
-func (f *Faker) CanVerifyHeadersConcurrently() bool {
-	return true
+func (f *Faker) MakeCommittedSeal(header *types.Header) ([]byte, error) {
+	return nil, f.verifyFailure(header)
 }
 
-// PreprocessHeaderVerification is not used for faker.
-func (f *Faker) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
-	panic("not implemented for faker")
+func (f *Faker) MakeAuthorSeal(header *types.Header) ([]byte, error) {
+	return nil, f.verifyFailure(header)
 }
 
-// GetConsensusInfo returns empty consensus info.
-func (f *Faker) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
-	return consensus.ConsensusInfo{}, nil
+func (f *Faker) Validators(header *types.Header) ([]common.Address, error) {
+	if err := f.verifyFailure(header); err != nil {
+		return nil, err
+	}
+	return []common.Address{f.address}, nil
 }
 
-// VerifyHeader checks whether a header conforms to the consensus rules.
-func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	// If we're running a full engine faking, accept any input as valid
+func (f *Faker) Round(header *types.Header) (byte, error) {
+	return 0, f.verifyFailure(header)
+}
+
+func (f *Faker) RawSeals(header *types.Header) ([]byte, [][]byte, error) {
+	return nil, nil, f.verifyFailure(header)
+}
+
+func (f *Faker) WriteRound(header *types.Header, round int64) {
+	if header == nil {
+		return
+	}
+	if len(header.Extra) >= 32 {
+		header.Extra[31] = byte(round)
+	}
+}
+
+// Start is a no-op for faker.
+func (f *Faker) Start(chain consensus.ChainReader, executor consensus.Executor) error {
+	return nil
+}
+
+// Stop is a no-op for faker.
+func (f *Faker) Stop() error {
+	return nil
+}
+
+// Sealer returns faker itself as a sealer implementation.
+func (f *Faker) Sealer() consensus.Sealer { return f }
+
+// RegisterKaiaxModules is a no-op for faker.
+func (f *Faker) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {}
+
+// RegisterVRankModule is a no-op for faker.
+func (f *Faker) RegisterVRankModule(mVRank vrank.VRankModule) {}
+
+func (f *Faker) SigHash(_ *types.Header) common.Hash {
+	return common.Hash{}
+}
+
+func (f *Faker) HeaderHash(_ *types.Header) common.Hash {
+	return common.Hash{}
+}
+
+// WriteValidators is a no-op for faker.
+func (f *Faker) WriteValidators(header *types.Header, _ []common.Address) error {
+	if header == nil {
+		return nil
+	}
+	return f.verifyFailure(header)
+}
+
+// WriteAuthorSeal is a no-op for faker.
+func (f *Faker) WriteAuthorSeal(header *types.Header, _ []byte) error {
+	return f.verifyFailure(header)
+}
+
+// WriteCommittedSeals is a no-op for faker.
+func (f *Faker) WriteCommittedSeals(header *types.Header, _ [][]byte) error {
+	return f.verifyFailure(header)
+}
+
+func (f *Faker) verifyFailure(header *types.Header) error {
 	if f.fullFake {
 		return nil
 	}
-
-	number := header.Number.Uint64()
-
-	// Check if we should fail this block
-	if f.failBlock != 0 && number == f.failBlock {
-		return consensus.ErrUnknownAncestor
+	if header == nil || header.Number == nil {
+		return consensus.ErrUnknownBlock
 	}
-
-	// Short circuit if the header is known
-	if chain.GetHeader(header.Hash(), number) != nil {
-		return nil
-	}
-
-	// For genesis block, skip parent check
-	if number == 0 {
-		return nil
-	}
-
-	// Check parent existence
-	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// All other headers are valid in fake mode
-	return nil
-}
-
-// VerifyHeaders verifies a batch of headers concurrently.
-func (f *Faker) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	abort, results := make(chan struct{}), make(chan error, len(headers))
-	// If we're running a full engine faking, accept all headers as valid
-	if f.fullFake || len(headers) == 0 {
-		go func() {
-			for i := 0; i < len(headers); i++ {
-				results <- nil
-			}
-		}()
-		return abort, results
-	}
-	go func() {
-		for i := range headers {
-			select {
-			case <-abort:
-				return
-			default:
-				err := f.verifyHeaderWorker(chain, headers, seals, i)
-				results <- err
-			}
-		}
-	}()
-	return abort, results
-}
-
-// verifyHeaderWorker is a helper for batch header verification.
-func (f *Faker) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
-	header := headers[index]
-	number := header.Number.Uint64()
-
-	// Check if we should fail this block
-	if f.failBlock != 0 && number == f.failBlock {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// Short circuit if the header is known
-	if chain.GetHeader(header.Hash(), number) != nil {
-		return nil
-	}
-
-	// For genesis block, skip parent check
-	if number == 0 {
-		return nil
-	}
-
-	// Find parent - either from previous header in batch or from chain
-	var parent *types.Header
-	if index == 0 {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	} else if headers[index-1].Hash() == header.ParentHash {
-		parent = headers[index-1]
-	} else {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	}
-
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// All other headers are valid in fake mode
-	return nil
-}
-
-// VerifySeal implements consensus.Engine, checking the seal validity.
-func (f *Faker) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
 	if f.failBlock != 0 && header.Number.Uint64() == f.failBlock {
-		return errors.New("seal verification failed")
+		return consensus.ErrUnknownAncestor
 	}
 	return nil
 }
+
+// Committers checks preprocess-time seal extraction for faker.
+func (f *Faker) Committers(header *types.Header) ([]common.Address, error) {
+	if err := f.verifyFailure(header); err != nil {
+		return nil, err
+	}
+	return []common.Address{f.address}, nil
+}
+
+func (f *Faker) CommittersWithRound(header *types.Header) ([]common.Address, error) {
+	return f.Committers(header)
+}
+
+func (f *Faker) Vanity(header *types.Header) ([]byte, error) {
+	if err := f.verifyFailure(header); err != nil {
+		return nil, err
+	}
+	vanity := make([]byte, 32)
+	copy(vanity, header.Extra)
+	return vanity, nil
+}
+
+// VerifySeals checks consensus-specific seals for faker.
+func (f *Faker) VerifySeals(header *types.Header) error {
+	return f.verifyFailure(header)
+}
+
+// F returns the number of tolerated Byzantine faults for faker.
+func (f *Faker) F(blockNum uint64, qualifiedlen, committeeSize int) int {
+	return 0
+}
+
+// Quorum returns the quorum threshold for faker.
+func (f *Faker) Quorum(blockNum uint64, qualifiedlen, committeeSize int) int {
+	return 0
+}
+
+// NewChainHead is a no-op for faker.
+func (f *Faker) NewChainHead() error {
+	return nil
+}
+
+// HandleMsg is a no-op for faker.
+func (f *Faker) HandleMsg(_ common.Address, _ p2p.Msg) (bool, error) {
+	return false, nil
+}
+
+// SetBroadcaster is a no-op for faker.
+func (f *Faker) SetBroadcaster(consensus.Broadcaster) {}
 
 // Prepare prepares the header for mining.
 func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error {
@@ -199,14 +229,8 @@ func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error
 		return errors.New("header number is nil")
 	}
 
-	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	header.BlockScore = f.CalcBlockScore(chain, header.Time.Uint64(), parent)
+	header.BlockScore = big.NewInt(1) // Simplified difficulty for testing
 	return nil
-}
-
-// Initialize runs any pre-transaction state modifications.
-func (f *Faker) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	// No initialization needed for faker
 }
 
 // Finalize processes the block without modifying state.
@@ -225,18 +249,14 @@ func (f *Faker) Finalize(chain consensus.ChainReader, header *types.Header, stat
 // accumulateRewards credits the coinbase of the given block with the mining reward.
 func (f *Faker) accumulateRewards(state *state.StateDB, header *types.Header) {
 	reward := ByzantiumBlockReward
-	state.AddBalance(params.AuthorAddressForTesting, reward)
+	state.AddBalance(f.address, reward)
 }
 
 // Seal generates a new sealing request for the given block.
-func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block) (*types.Block, error) {
 	// Add delay if configured
 	if f.failDelay > 0 {
-		select {
-		case <-time.After(f.failDelay):
-		case <-stop:
-			return nil, nil
-		}
+		time.Sleep(f.failDelay)
 	}
 
 	// Check if we should fail
@@ -247,22 +267,26 @@ func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 	return block, nil
 }
 
-// CalcBlockScore calculates the block score.
-func (f *Faker) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	return big.NewInt(1)
-}
-
 // APIs returns RPC APIs (none for faker).
 func (f *Faker) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
 }
 
-// Protocol returns the consensus protocol.
-func (f *Faker) Protocol() consensus.Protocol {
-	return consensus.KaiaProtocol
-}
-
 // PurgeCache is a no-op for faker.
 func (f *Faker) PurgeCache() {
 	// No cache to purge for faker
+}
+
+// SubmitTransactions is not implemented for faker - it uses push() flow instead.
+func (f *Faker) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux) (finalizeCh <-chan *consensus.ExecutionResult) {
+	// Return nil channel - faker uses the legacy push() flow
+	return nil
+}
+
+// fakerSequenceEvent is a dummy event for Faker's SubscribeNewSequence.
+type fakerSequenceEvent struct{}
+
+// SubscribeNewSequence returns a subscription that never receives events.
+func (f *Faker) SubscribeNewSequence() *event.TypeMuxSubscription {
+	return f.eventMux.Subscribe(fakerSequenceEvent{})
 }

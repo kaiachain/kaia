@@ -20,6 +20,9 @@ package gasprice
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -33,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
@@ -109,9 +113,54 @@ func (b *testBackend) teardown() {
 	b.chain.Stop()
 }
 
+// makeBlobTx creates a signed single-blob transaction for use in tests.
+func makeBlobTx(nonce uint64, key *ecdsa.PrivateKey, chainID *big.Int) *types.Transaction {
+	blob := kzg4844.Blob{}
+	commitment, err := kzg4844.BlobToCommitment(&blob)
+	if err != nil {
+		panic(fmt.Sprintf("blob commitment: %v", err))
+	}
+	cellProofs, err := kzg4844.ComputeCellProofs(&blob)
+	if err != nil {
+		panic(fmt.Sprintf("cell proofs: %v", err))
+	}
+	hasher := sha256.New()
+	blobHash := kzg4844.CalcBlobHashV1(hasher, &commitment)
+
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{blob},
+		Commitments: []kzg4844.Commitment{commitment},
+		Proofs:      cellProofs,
+	}
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      nonce,
+		types.TxValueKeyTo:         common.HexToAddress("0xAAAA"),
+		types.TxValueKeyAmount:     big.NewInt(0),
+		types.TxValueKeyData:       []byte{},
+		types.TxValueKeyGasLimit:   uint64(100000),
+		types.TxValueKeyGasFeeCap:  big.NewInt(100 * params.Gkei),
+		types.TxValueKeyGasTipCap:  big.NewInt(params.Gkei),
+		types.TxValueKeyBlobFeeCap: big.NewInt(1000 * params.Gkei),
+		types.TxValueKeyBlobHashes: []common.Hash{blobHash},
+		types.TxValueKeySidecar:    sidecar,
+		types.TxValueKeyAccessList: types.AccessList{},
+		types.TxValueKeyChainID:    chainID,
+	}
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+	if err != nil {
+		panic(fmt.Sprintf("new blob tx: %v", err))
+	}
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), key)
+	if err != nil {
+		panic(fmt.Sprintf("sign blob tx: %v", err))
+	}
+	return signedTx
+}
+
 // newTestBackend creates a test backend. OBS: don't forget to invoke tearDown
 // after use, otherwise the blockchain instance will mem-leak via goroutines.
-func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) (*testBackend, gov.GovModule) {
+func newTestBackend(t *testing.T, magmaBlock, kaiaBlock, osakaBlock *big.Int, pending bool) (*testBackend, gov.GovModule) {
 	var (
 		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
@@ -133,8 +182,26 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) 
 	config.ShanghaiCompatibleBlock = kaiaBlock
 	config.CancunCompatibleBlock = kaiaBlock
 	config.KaiaCompatibleBlock = kaiaBlock
+	config.OsakaCompatibleBlock = osakaBlock
+	config.BlobScheduleConfig = nil
+	if osakaBlock != nil {
+		config.BlobScheduleConfig = &params.BlobScheduleConfig{Osaka: params.DefaultOsakaBlobConfig}
+	}
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
+	// Construct testing chain before GenerateChain so AddTxWithChain can be used for blob txs.
+	chain, err := blockchain.NewBlockChain(db, nil, gspec.Config, faker.NewFaker(), vm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to create local chain, %v", err)
+	}
+	govModule := gov_impl.NewGovModule()
+	govModule.Init(&gov_impl.InitOpts{
+		ChainKv:     db.GetMiscDB(),
+		ChainConfig: gspec.Config,
+		Chain:       chain,
+		NodeAddress: addr,
+	})
+
 	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
 		toaddr := common.Address{}
 		// To test fee history, rewardbase should be different from the sender address
@@ -163,23 +230,13 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) 
 			}
 		}
 		tx, _ := types.SignTx(types.NewTx(txdata), signer, key)
-
 		b.AddTx(tx)
+		if config.IsOsakaForkEnabled(b.Number()) {
+			b.SetBlobGasUsed(params.BlobTxBlobGasPerBlob)
+			b.SetExcessBlobGas(0)
+			b.AddTxWithChain(chain, makeBlobTx(b.TxNonce(addr), key, gspec.Config.ChainID))
+		}
 	})
-	// Construct testing chain
-	chain, err := blockchain.NewBlockChain(db, nil, gspec.Config, faker.NewFaker(), vm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to create local chain, %v", err)
-	}
-	// govModule := mock_gov.NewMockGovModule(gomock.NewController(t))
-	govModule := gov_impl.NewGovModule()
-	govModule.Init(&gov_impl.InitOpts{
-		ChainKv:     db.GetMiscDB(),
-		ChainConfig: gspec.Config,
-		Chain:       chain,
-		NodeAddress: addr,
-	})
-
 	chain.InsertChain(blocks)
 
 	return &testBackend{chain: chain, pending: pending}, govModule
@@ -242,7 +299,7 @@ func TestGasPrice_SuggestPrice(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 	params := Config{}
-	testBackend, _ := newTestBackend(t, nil, nil, false)
+	testBackend, _ := newTestBackend(t, nil, nil, nil, false)
 	defer testBackend.teardown()
 	chainConfig := testBackend.ChainConfig()
 	mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))
@@ -309,7 +366,7 @@ func TestSuggestTipCap(t *testing.T) {
 		{big.NewInt(33), big.NewInt(33), big.NewInt(params.Gkei * int64(30)), true}, // Fork point in the future
 	}
 	for _, c := range cases {
-		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock, false)
+		testBackend, testGov := newTestBackend(t, c.magmaBlock, c.kaiaBlock, nil, false)
 		chainConfig := testBackend.ChainConfig()
 		if c.isBusy {
 			mockGov := mock_gov.NewMockGovModule(gomock.NewController(t))

@@ -23,16 +23,14 @@
 package consensus
 
 import (
-	"math/big"
-
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/randao"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -50,8 +48,8 @@ type ChainReader interface {
 	// CurrentBlock revrieves the current block from the local chain.
 	CurrentBlock() *types.Block
 
-	// Engine retrieves the header chain's consensus engine.
-	Engine() Engine
+	// ValidateHeader validates a header according to chain rules.
+	ValidateHeader(header *types.Header) error
 
 	// GetHeader retrieves a block header from the database by hash and number.
 	GetHeader(hash common.Hash, number uint64) *types.Header
@@ -65,6 +63,9 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
+	// HasBadBlock reports whether the given hash is on the bad-block blacklist.
+	HasBadBlock(hash common.Hash) bool
+
 	// State retrieves statedb
 	State() (*state.StateDB, error)
 
@@ -72,78 +73,83 @@ type ChainReader interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
+// ChainContext extends ChainReader with transaction execution capability.
+// This interface is used by components that need to execute transactions.
+type ChainContext interface {
+	ChainReader
+
+	// ApplyTransaction applies a transaction to the given state and returns the receipt.
+	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB,
+		header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error)
+}
+
+type ChainReaderWithSealer interface {
+	ChainReader
+	Sealer() Sealer
+}
+
+// Sealer handles seal-related logic independent from consensus networking/runtime.
+type Sealer interface {
+	// Read information from header.Extra.
+	Author(header *types.Header) (common.Address, error)
+	Committers(header *types.Header) ([]common.Address, error)
+	CommittersWithRound(header *types.Header) ([]common.Address, error)
+	Vanity(header *types.Header) ([]byte, error)
+	RawSeals(header *types.Header) ([]byte, [][]byte, error)
+	Round(header *types.Header) (byte, error)
+	Validators(header *types.Header) ([]common.Address, error)
+
+	// Write information to header.Extra.
+	WriteAuthorSeal(header *types.Header, seal []byte) error
+	WriteCommittedSeals(header *types.Header, committedSeals [][]byte) error
+	WriteRound(header *types.Header, round int64)
+	WriteValidators(header *types.Header, validators []common.Address) error
+
+	// Create seal bytes
+	MakeAuthorSeal(header *types.Header) ([]byte, error)
+	MakeCommittedSeal(header *types.Header) ([]byte, error)
+	HeaderHash(header *types.Header) common.Hash
+	SigHash(header *types.Header) common.Hash
+
+	// Verify seals and derive consensus metadata.
+	F(blockNum uint64, qualifiedlen, committeeSize int) int
+	Quorum(blockNum uint64, qualifiedlen, committeeSize int) int
+}
+
 // Engine is an algorithm agnostic consensus engine.
 //
 //go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
 type Engine interface {
-	// Author retrieves the Kaia address of the account that minted the given
-	// block.
-	Author(header *types.Header) (common.Address, error)
+	// RegisterKaiaxModules wires kaiax modules to the consensus engine.
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule)
 
-	// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
-	CanVerifyHeadersConcurrently() bool
+	// RegisterVRankModule wires the VRank module so the engine relays accepted
+	// PRE-PREPAREs into it. Engines without VRank support implement this as a no-op.
+	RegisterVRankModule(mVRank vrank.VRankModule)
 
-	// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
-	PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error)
+	// Start starts any consensus-specific background lifecycle.
+	// Engines without a background runtime should implement this as a no-op.
+	Start(chain ChainReader, executor Executor) error
 
-	// VerifyHeader checks whether a header conforms to the consensus rules of a
-	// given engine. Verifying the seal may be done optionally here, or explicitly
-	// via the VerifySeal method.
-	VerifyHeader(chain ChainReader, header *types.Header, seal bool) error
+	// Stop stops any consensus-specific background lifecycle.
+	// Engines without a background runtime should implement this as a no-op.
+	Stop() error
 
-	// VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
-	// concurrently. The method returns a quit channel to abort the operations and
-	// a results channel to retrieve the async verifications (the order is that of
-	// the input slice).
-	VerifyHeaders(chain ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)
-
-	// VerifySeal checks whether the crypto seal on a header is valid according to
-	// the consensus rules of the given engine.
-	VerifySeal(chain ChainReader, header *types.Header) error
-
-	// Prepare initializes the consensus fields of a block header according to the
-	// rules of a particular engine. The changes are executed inline.
-	Prepare(chain ChainReader, header *types.Header) error
-
-	// Initialize runs any pre-transaction state modifications (e.g., EIP-2539)
-	Initialize(chain ChainReader, header *types.Header, state *state.StateDB)
-
-	// Finalize runs any post-transaction state modifications (e.g. block rewards)
-	// and assembles the final block.
-	// Note: The block header and state database might be updated to reflect any
-	// consensus rules that happen at finalization (e.g. block rewards).
-	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		receipts []*types.Receipt) (*types.Block, error)
-
-	// Seal generates a new block for the given input block with the local miner's
-	// seal place on top.
-	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)
-
-	// CalcBlockScore is the blockscore adjustment algorithm. It returns the blockscore
-	// that a new block should have.
-	CalcBlockScore(chain ChainReader, time uint64, parent *types.Header) *big.Int
+	// SubmitTransactions submits transactions for execution and consensus.
+	// Returns finalizeCh which receives the execution result when block is finalized (for DB write and broadcast).
+	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux) (finalizeCh <-chan *ExecutionResult)
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
 
-	// Protocol returns the protocol for this consensus
-	Protocol() Protocol
-
-	// GetConsensusInfo returns consensus information regarding the given block number.
-	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
-
 	PurgeCache()
+
+	// SubscribeNewSequence subscribes to new sequence events.
+	// Returns nil for non-Istanbul engines.
+	SubscribeNewSequence() *event.TypeMuxSubscription
 }
 
-// PoW is a consensus engine based on proof-of-work.
-type PoW interface {
-	Engine
-
-	// Hashrate returns the current mining hashrate of a PoW consensus engine.
-	Hashrate() float64
-}
-
-// Handler should be implemented is the consensus needs to handle and send peer's message
+// Handler should be implemented if the consensus needs to handle peer messages.
 type Handler interface {
 	// NewChainHead handles a new head block comes
 	NewChainHead() error
@@ -152,37 +158,5 @@ type Handler interface {
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
 
 	// SetBroadcaster sets the broadcaster to send message to peers
-	SetBroadcaster(Broadcaster, common.ConnType)
-
-	// RegisterConsensusMsgCode registers the channel of consensus msg.
-	RegisterConsensusMsgCode(Peer)
-}
-
-// Istanbul is a consensus engine to avoid byzantine failure
-type Istanbul interface {
-	Engine
-
-	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
-
-	// Stop stops the engine
-	Stop() error
-
-	// SetChain sets chain of the Istanbul backend
-	SetChain(chain ChainReader)
-
-	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule)
-
-	kaiax.ConsensusModuleHost
-	staking.StakingModuleHost
-}
-
-type ConsensusInfo struct {
-	// Proposer signs [sigHash] to make seal; Validators signs [block.Hash + msgCommit] to make committedSeal
-	SigHash        common.Hash
-	Proposer       common.Address
-	OriginProposer *common.Address // the proposer of 0th round at the same block number
-	Committee      []common.Address
-	Committers     []common.Address
-	Round          byte
+	SetBroadcaster(Broadcaster)
 }

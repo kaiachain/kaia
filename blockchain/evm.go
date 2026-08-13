@@ -34,12 +34,14 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
 
 type ChainContext interface {
-	consensus.ChainReader
+	CurrentBlock() *types.Block
+	GetHeader(common.Hash, uint64) *types.Header
+	Config() *params.ChainConfig
+	Sealer() consensus.Sealer
 }
 
 // NewEVMBlockContext creates a new context for use in the EVM.
@@ -54,7 +56,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	)
 
 	if author == nil {
-		beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
+		beneficiary, _ = chain.Sealer().Author(header) // Ignore error, we're past header validation
 	} else {
 		beneficiary = *author
 	}
@@ -70,7 +72,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	if header.ExcessBlobGas != nil {
 		// Since CalcBlobFee returns nil for a nil baseFee,
 		// use baseFee instead of header.BaseFee to at least force blobBaseFee to zero in this context.
-		blobBaseFee = eip4844.CalcBlobFee(baseFee)
+		blobBaseFee = params.CalcBlobFee(baseFee)
 	} else { // Before Osaka hardfork, BLOBBASEFEE (4a) returns 0
 		blobBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}

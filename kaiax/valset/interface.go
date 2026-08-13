@@ -17,6 +17,9 @@
 package valset
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
@@ -27,9 +30,23 @@ type ValsetModule interface {
 	kaiax.JsonRpcModule
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
+	kaiax.BlockStateModule
+	kaiax.HeaderModule
 
 	GetCouncil(num uint64) ([]common.Address, error)
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
+	GetQualifiedValidators(num uint64) ([]common.Address, error)
 	GetDemotedValidators(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
+
+	// GetCandTesting returns nodes in the CandTesting state at block `num`.
+	GetCandTesting(num uint64) ([]common.Address, error)
+	GetCNPeers(num uint64) ([]common.Address, error)
+	// GetNodesByState returns nodes filtered by state at block `num`.
+	// It returns an error before the permissionless fork.
+	GetNodesByState(num uint64, states []NodeState) (map[common.Address]*Node, error)
+
+	// Permissionless additions (post-fork; pre-fork these are no-ops).
+	WriteTransitionToABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
+	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }
