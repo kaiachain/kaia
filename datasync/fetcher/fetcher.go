@@ -117,7 +117,7 @@ type bodyFilterTask struct {
 type inject struct {
 	origin  string
 	block   *types.Block
-	trusted bool // locally produced by consensus; exempt from the queue byte budget
+	trusted bool // locally produced by consensus; exempt from the byte budget and from ForgetPeer
 }
 
 // Fetcher is responsible for accumulating block announcements from various peers
@@ -421,7 +421,7 @@ func (f *Fetcher) loop() {
 			// The peer is gone; release what it queued instead of holding it until
 			// the chain reaches those heights.
 			for hash, op := range f.queued {
-				if op.origin == peer {
+				if op.origin == peer && !op.trusted {
 					f.forgetBlock(hash)
 					op.block = nil // the queue entry itself is dropped when popped
 					if f.queueChangeHook != nil {
@@ -710,21 +710,24 @@ func (f *Fetcher) enqueue(peer string, block *types.Block, trusted bool) {
 		return
 	}
 	// Schedule the block for future importing
-	if _, ok := f.queued[hash]; !ok {
-		op := &inject{
-			origin:  peer,
-			block:   block,
-			trusted: trusted,
-		}
-		f.queues[peer] = count
-		f.queued[hash] = op
-		f.queuedBytes += size
-		f.queue.Push(op, -int64(block.NumberU64()))
-		if f.queueChangeHook != nil {
-			f.queueChangeHook(op.block.Hash(), true)
-		}
-		logger.Debug("Queued propagated block", "peer", peer, "number", block.Number(), "hash", hash, "queued", f.queue.Size())
+	if queued, ok := f.queued[hash]; ok {
+		// Carry the commit mark over, so a peer that announced it first cannot take it away.
+		queued.trusted = queued.trusted || trusted
+		return
 	}
+	op := &inject{
+		origin:  peer,
+		block:   block,
+		trusted: trusted,
+	}
+	f.queues[peer] = count
+	f.queued[hash] = op
+	f.queuedBytes += size
+	f.queue.Push(op, -int64(block.NumberU64()))
+	if f.queueChangeHook != nil {
+		f.queueChangeHook(op.block.Hash(), true)
+	}
+	logger.Debug("Queued propagated block", "peer", peer, "number", block.Number(), "hash", hash, "queued", f.queue.Size())
 }
 
 type insertTask struct {

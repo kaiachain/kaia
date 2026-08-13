@@ -864,8 +864,8 @@ func TestQueuedBytesLimit(t *testing.T) {
 }
 
 // TestForgetPeerReleasesQueue checks that a disconnected peer's blocks are released
-// instead of held until the chain reaches their height, and that the byte budget they
-// held is returned.
+// instead of held until the chain reaches their height, that the byte budget they held
+// is returned, and that a block this node committed is not released with them.
 func TestForgetPeerReleasesQueue(t *testing.T) {
 	tester := newTester()
 
@@ -902,6 +902,14 @@ func TestForgetPeerReleasesQueue(t *testing.T) {
 
 	// The released budget is available again.
 	tester.fetcher.Enqueue("valid", queueable[4])
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 1 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 1)
+	}
+
+	// Committing the block a peer already queued keeps it across that peer's disconnect.
+	tester.fetcher.EnqueueTrusted("istanbul", queueable[4])
+	tester.fetcher.ForgetPeer("valid")
 	time.Sleep(100 * time.Millisecond)
 	if queued := atomic.LoadInt32(&enqueued); queued != 1 {
 		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 1)
