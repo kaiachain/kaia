@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/require"
@@ -49,65 +48,65 @@ func TestSanityCheckSignaturesLength(t *testing.T) {
 	require.False(t, SanityCheckSignatures(nil, TxTypeValueTransfer))
 	require.True(t, SanityCheckSignatures(validTestSignatures(1), TxTypeValueTransfer))
 	require.True(t, SanityCheckSignatures(validTestSignatures(maxSignatures), TxTypeValueTransfer))
-	require.False(t, SanityCheckSignatures(validTestSignatures(maxSignatures+1), TxTypeValueTransfer))
+	require.True(t, SanityCheckSignatures(validTestSignatures(maxSignatures+1), TxTypeValueTransfer))
 }
 
-func TestRecoverPubkeyRejectsTooManySignatures(t *testing.T) {
-	tooManySignatures := validTestSignatures(int(accountkey.MaxNumKeysForMultiSig) + 1)
-	vfuncCalled := false
+func TestTransactionSignatureListLength(t *testing.T) {
+	maxSignatures := int(accountkey.MaxNumKeysForMultiSig)
 
-	_, err := tooManySignatures.RecoverPubkey(common.Hash{}, true, func(v *big.Int) *big.Int {
-		vfuncCalled = true
-		return v
-	})
+	senderTx := NewTx(newTxInternalDataValueTransfer())
+	senderTx.SetSignature(validTestSignatures(maxSignatures))
+	require.NoError(t, senderTx.ValidateSignatureListLength())
+	senderTx.SetSignature(validTestSignatures(maxSignatures + 1))
+	require.ErrorIs(t, senderTx.ValidateSignatureListLength(), kerrors.ErrMaxKeysExceed)
 
-	require.ErrorIs(t, err, kerrors.ErrMaxKeysExceed)
-	require.False(t, vfuncCalled)
+	feePayerTxData := newTxInternalDataFeeDelegatedValueTransfer()
+	feePayerTxData.SetSignature(validTestSignatures(1))
+	feePayerTxData.SetFeePayerSignatures(validTestSignatures(maxSignatures))
+	feePayerTx := NewTx(feePayerTxData)
+	require.NoError(t, feePayerTx.ValidateSignatureListLength())
+	feePayerTxData.SetFeePayerSignatures(validTestSignatures(maxSignatures + 1))
+	require.ErrorIs(t, feePayerTx.ValidateSignatureListLength(), kerrors.ErrMaxKeysExceed)
 }
 
-func TestTransactionDecodeChecksFeePayerSignatureLength(t *testing.T) {
+func TestTransactionDecodeAllowsOversizedSignatureLists(t *testing.T) {
+	maxSignatures := int(accountkey.MaxNumKeysForMultiSig)
 	tests := []struct {
-		name    string
-		numSigs int
-		wantErr bool
+		name string
+		tx   *Transaction
 	}{
 		{
-			name:    "at limit",
-			numSigs: int(accountkey.MaxNumKeysForMultiSig),
+			name: "sender signatures",
+			tx: func() *Transaction {
+				txData := newTxInternalDataValueTransfer()
+				txData.SetSignature(validTestSignatures(maxSignatures + 1))
+				return NewTx(txData)
+			}(),
 		},
 		{
-			name:    "over limit",
-			numSigs: int(accountkey.MaxNumKeysForMultiSig) + 1,
-			wantErr: true,
+			name: "fee payer signatures",
+			tx: func() *Transaction {
+				txData := newTxInternalDataFeeDelegatedValueTransfer()
+				txData.SetSignature(validTestSignatures(1))
+				txData.SetFeePayerSignatures(validTestSignatures(maxSignatures + 1))
+				return NewTx(txData)
+			}(),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			txData := newTxInternalDataFeeDelegatedValueTransfer()
-			txData.SetSignature(validTestSignatures(1))
-			txData.SetFeePayerSignatures(validTestSignatures(test.numSigs))
-			tx := NewTx(txData)
-
-			rawRLP, err := rlp.EncodeToBytes(tx)
+			rawRLP, err := rlp.EncodeToBytes(test.tx)
 			require.NoError(t, err)
 			var decodedRLP Transaction
-			err = rlp.DecodeBytes(rawRLP, &decodedRLP)
-			if test.wantErr {
-				require.ErrorIs(t, err, ErrInvalidSig)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, rlp.DecodeBytes(rawRLP, &decodedRLP))
+			require.ErrorIs(t, decodedRLP.ValidateSignatureListLength(), kerrors.ErrMaxKeysExceed)
 
-			rawJSON, err := json.Marshal(tx)
+			rawJSON, err := json.Marshal(test.tx)
 			require.NoError(t, err)
 			var decodedJSON Transaction
-			err = json.Unmarshal(rawJSON, &decodedJSON)
-			if test.wantErr {
-				require.ErrorIs(t, err, ErrInvalidSig)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, json.Unmarshal(rawJSON, &decodedJSON))
+			require.ErrorIs(t, decodedJSON.ValidateSignatureListLength(), kerrors.ErrMaxKeysExceed)
 		})
 	}
 }

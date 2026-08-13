@@ -615,6 +615,9 @@ func (s *KaiaTransactionAPI) RecoverFromTransaction(ctx context.Context, encoded
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return common.Address{}, err
 	}
+	if err := tx.ValidateSignatureListLength(); err != nil {
+		return common.Address{}, err
+	}
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNumber)
 	if err != nil {

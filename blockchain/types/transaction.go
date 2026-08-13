@@ -236,22 +236,6 @@ func (tx *Transaction) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// sanityCheckTransactionSignatureLists validates the sender signatures and
-// bounds the fee-payer signature list. Fee-payer signature values are validated
-// later because fee-delegated transactions may be decoded before the fee payer
-// signs.
-func sanityCheckTransactionSignatureLists(tx TxInternalData) bool {
-	if !SanityCheckSignatures(tx.RawSignatureValues(), tx.Type()) {
-		return false
-	}
-
-	if feePayerTx, ok := tx.(TxInternalDataFeePayer); ok {
-		return hasValidSignatureListLength(feePayerTx.GetFeePayerRawSignatureValues())
-	}
-
-	return true
-}
-
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	serializer := newTxInternalDataSerializer()
@@ -259,7 +243,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	if !sanityCheckTransactionSignatureLists(serializer.tx) {
+	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
 		return ErrInvalidSig
 	}
 
@@ -296,7 +280,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, serializer); err != nil {
 		return err
 	}
-	if !sanityCheckTransactionSignatureLists(serializer.tx) {
+	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
 		return ErrInvalidSig
 	}
 
@@ -902,6 +886,21 @@ func (tx *Transaction) IsMarkedUnexecutable() bool {
 
 func (tx *Transaction) RawSignatureValues() TxSignatures {
 	return tx.data.RawSignatureValues()
+}
+
+// ValidateSignatureListLength checks the signature-list limit applied to
+// untrusted transaction ingress. It must not be used while decoding or
+// executing blocks because pre-Istanbul blocks may contain longer lists.
+func (tx *Transaction) ValidateSignatureListLength() error {
+	if uint64(len(tx.RawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	if feePayerTx, ok := tx.data.(TxInternalDataFeePayer); ok && uint64(len(feePayerTx.GetFeePayerRawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	return nil
 }
 
 func (tx *Transaction) String() string {

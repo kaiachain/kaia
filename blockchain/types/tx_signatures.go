@@ -38,13 +38,6 @@ var ErrShouldBeSingleSignature = errors.New("the number of signatures should be 
 // TODO-Kaia-Accounts: replace TxSignature with TxSignatures to all newly implemented tx types.
 type TxSignatures []*TxSignature
 
-// hasValidSignatureListLength reports whether the signature list can be
-// satisfied by a supported multisig account. Empty lists are allowed here so
-// callers can decide whether a signature is required in their context.
-func hasValidSignatureListLength(sigs TxSignatures) bool {
-	return uint64(len(sigs)) <= accountkey.MaxNumKeysForMultiSig
-}
-
 func NewTxSignatures() TxSignatures {
 	return TxSignatures{NewTxSignature()}
 }
@@ -139,10 +132,6 @@ func (t TxSignatures) RecoverAddress(txhash common.Hash, homestead bool, vfunc f
 }
 
 func (t TxSignatures) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	if !hasValidSignatureListLength(t) {
-		return nil, kerrors.ErrMaxKeysExceed
-	}
-
 	var err error
 
 	pubkeys := make([]*ecdsa.PublicKey, len(t))
@@ -188,7 +177,7 @@ func (t TxSignaturesJSON) ToTxSignatures() TxSignatures {
 // SanityCheckSignatures validates whether the signature values are valid.
 // It checks the signatures from the given TxSignatures.
 func SanityCheckSignatures(sigs TxSignatures, txType TxType) bool {
-	if len(sigs) == 0 || !hasValidSignatureListLength(sigs) {
+	if len(sigs) == 0 {
 		return false
 	}
 
