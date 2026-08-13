@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	cnstakingv4 "github.com/kaiachain/kaia/contracts/bindings/cnstakingv4"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -211,6 +212,34 @@ func TestAllocPermissionless_SingleValidator(t *testing.T) {
 	alloc, err := AllocPermissionless(config)
 	require.NoError(t, err)
 	verifyPermissionlessAlloc(t, config, alloc)
+}
+
+func TestAllocPermissionless_UsePD(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config := makeTestPermissionlessConfig(4)
+	config.UsePD = true
+
+	alloc, err := AllocPermissionless(config)
+	require.NoError(t, err)
+
+	// One PD proxy per validator on top of what the non-PD alloc holds.
+	assert.Len(t, alloc, 10+2*len(config.NodeIds))
+
+	backend := backends.NewSimulatedBackend(blockchain.GenesisAlloc(alloc))
+	for i, info := range config.NodeInfos {
+		caller, err := cnstakingv4.NewCnStakingV4Caller(info.StakingContract, backend)
+		require.NoError(t, err)
+		pd, err := caller.PublicDelegation(nil)
+		require.NoError(t, err)
+
+		assert.NotEqual(t, common.Address{}, pd, "node[%d] must be deployed with a PD", i)
+		assert.Equal(t, pd, info.RewardAddress, "node[%d] must pay its rewards to its own PD", i)
+		require.Contains(t, alloc, pd)
+		assert.NotEmpty(t, alloc[pd].Code)
+
+		want := new(big.Int).Add(config.StakeAmts[i], big.NewInt(initialLockup))
+		assert.Equal(t, want, alloc[info.StakingContract].Balance, "node[%d] stake plus the factory lockup", i)
+	}
 }
 
 func TestAllocPermissionlessPrerequisites(t *testing.T) {

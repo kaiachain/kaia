@@ -43,6 +43,10 @@ import (
 // DefaultEpochBlockInterval is the default number of blocks per epoch for ABv2.
 const DefaultEpochBlockInterval = int64(params.DefaultVRankEpoch)
 
+// initialLockup mirrors CnStakingV4Factory.INITIAL_LOCKUP, which the factory
+// stakes as dead shares when deploying with public delegation.
+const initialLockup = int64(1e9)
+
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
 	Owner              common.Address                     // Owner of beacons and Registry registrant.
@@ -52,6 +56,7 @@ type AllocPermissionlessConfig struct {
 	StakeAmts          []*big.Int                         // Stake amounts per validator.
 	DataConfig         abv2data.IABv2DataContractInitData // ABv2DataContract constructor data.
 	EpochBlockInterval int64                              // Blocks per epoch baked into ABv2 bytecode. 0 uses DefaultEpochBlockInterval.
+	UsePD              bool                               // Deploy every validator's CnStaking with a PublicDelegation.
 }
 
 // allocPermissionlessResult holds intermediate deployed addresses passed between internal steps.
@@ -103,8 +108,12 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 	if common.EmptyAddress(deployer) {
 		deployer = config.Owner
 	}
+	lockup := new(big.Int)
+	if config.UsePD {
+		lockup = big.NewInt(initialLockup)
+	}
 	for i, amt := range config.StakeAmts {
-		statedb.AddBalance(config.NodeInfos[i].Manager, amt)
+		statedb.AddBalance(config.NodeInfos[i].Manager, new(big.Int).Add(amt, lockup))
 	}
 
 	cfg := &runtime.Config{
@@ -274,10 +283,40 @@ func deployCnStakingFactory(cfg *runtime.Config, owner common.Address, activatio
 func deployCnStakingPerValidator(cfg *runtime.Config, config *AllocPermissionlessConfig, result *allocPermissionlessResult) error {
 	factoryABI, _ := cnstakingv4factory.CnStakingV4FactoryMetaData.GetAbi()
 	cnStakingABI, _ := cnstakingv4.CnStakingV4MetaData.GetAbi()
+	pdABI, _ := pdcontract.PublicDelegationMetaData.GetAbi()
 
 	for i := range config.NodeIds {
-		cfg.Origin = config.NodeInfos[i].Manager
-		retData, err := evmCallABIReturn(cfg, result.factory, factoryABI, "deployCnStaking", config.NodeInfos[i].Manager)
+		manager := config.NodeInfos[i].Manager
+		cfg.Origin = manager
+
+		if config.UsePD {
+			cfg.Value = big.NewInt(initialLockup)
+			retData, err := evmCallABIReturn(cfg, result.factory, factoryABI, "deployCnStakingWithPD", manager,
+				cnstakingv4factory.IPublicDelegationPDConstructorArgs{
+					Owner:          manager,
+					CommissionTo:   manager,
+					CommissionRate: new(big.Int),
+					GcName:         fmt.Sprintf("GC%d", i+1),
+				})
+			if err != nil {
+				return fmt.Errorf("deployCnStakingWithPD[%d]: %w", i, err)
+			}
+			proxyAddr := common.BytesToAddress(retData[12:32])
+			pdAddr := common.BytesToAddress(retData[44:64])
+
+			cfg.Value = config.StakeAmts[i]
+			if err := evmCallABI(cfg, pdAddr, pdABI, "stake"); err != nil {
+				return fmt.Errorf("stake[%d]: %w", i, err)
+			}
+			cfg.Value = new(big.Int)
+
+			config.NodeInfos[i].StakingContract = proxyAddr
+			// ABv2 requires a PD-backed node to pay its rewards to that PD.
+			config.NodeInfos[i].RewardAddress = pdAddr
+			continue
+		}
+
+		retData, err := evmCallABIReturn(cfg, result.factory, factoryABI, "deployCnStaking", manager)
 		if err != nil {
 			return fmt.Errorf("deployCnStaking[%d]: %w", i, err)
 		}
