@@ -101,8 +101,17 @@ func (v *BlockValidator) ValsetModule() valset.ValsetModule {
 	return v.mValset
 }
 
+// ValidateHeader validates a finalized header: every rule, including the presence and
+// quorum of the committed seals.
 func (v *BlockValidator) ValidateHeader(header *types.Header) error {
-	return v.validateHeader(header, nil)
+	return v.validateHeader(header, nil, true)
+}
+
+// ValidateProposalHeader validates a consensus proposal, which carries no committed seals
+// yet. Every rule applies except the committed-seal ones. Consensus path only: it leaves
+// the committed seals unchecked.
+func (v *BlockValidator) ValidateProposalHeader(header *types.Header) error {
+	return v.validateHeader(header, nil, false)
 }
 
 func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error) {
@@ -144,7 +153,9 @@ func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <
 	return abort, results
 }
 
-func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Header) error {
+// validateHeader runs every header rule. withSeals selects whether the committed-seal
+// rules apply; every other rule runs either way.
+func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Header, withSeals bool) error {
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(big.NewInt(time.Now().Add(time.Duration(params.DefaultBlockGenerationInterval)*time.Second).Unix())) > 0 {
 		return consensus.ErrFutureBlock
@@ -220,14 +231,17 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 	}
 
 	// Verify the header's seal and consensus-specific fields.
-	if err := v.verifySeals(header); err != nil {
+	if err := v.verifySeals(header, withSeals); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (v *BlockValidator) verifySeals(header *types.Header) error {
+// verifySeals authorizes the header author, and verifies the committed seals when
+// withSeals is set. The author is recoverable from header.Extra alone, so it is checked
+// either way; only the seal presence and quorum need a committed header.
+func (v *BlockValidator) verifySeals(header *types.Header, withSeals bool) error {
 	if header.Number.Uint64() == 0 {
 		return nil
 	}
@@ -243,6 +257,25 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
 	}
 
+	// Skip module-dependent validation when gov/valset modules are not registered.
+	modulesReady := v.mValset != nil && v.mGov != nil
+
+	var (
+		signerSet    *valset.AddressSet
+		qualifiedLen int
+	)
+	if modulesReady {
+		// Also yields the set the committed seals are counted against, so both use the same one.
+		signerSet, qualifiedLen, err = v.authorizeAuthor(header, author, blockNum, rules)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !withSeals {
+		return nil
+	}
+
 	// Committers is fork-aware: post-permissionless it recovers with the round-bound preimage.
 	committers, err := v.sealer.Committers(header)
 	if err != nil {
@@ -251,61 +284,24 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	if len(committers) == 0 {
 		return istanbul.ErrEmptyCommittedSeals
 	}
-
-	// Skip module-dependent seal validation when gov/valset modules are not registered.
-	if v.mValset == nil || v.mGov == nil {
+	if !modulesReady {
 		return nil
 	}
 
-	if rules.IsPermissionless {
-		round, err := v.sealer.Round(header)
-		if err != nil {
-			return err
-		}
-		// Count committed seals only from the round's committee, matching the set the
-		// live consensus commits against (handleCommit rejects non-committee senders),
-		// rather than the broader qualified/council set.
-		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
-		if err != nil {
-			return err
-		}
-		committeeSet := valset.NewAddressSet(committee)
-		if !committeeSet.Contains(author) {
-			return consensus.ErrUnauthorized
-		}
-		validSeal, err := countValidCommittedSeals(committers, committeeSet)
-		if err != nil {
-			return err
-		}
-		// Require the quorum over the committee. Post-permissionless the committee
-		// equals the qualified set, so pass its size for both arguments.
-		if validSeal < v.sealer.Quorum(blockNum, len(committee), len(committee)) {
-			return istanbul.ErrInvalidCommittedSeals
-		}
-		return nil
-	}
-
-	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
-	if err != nil {
-		return err
-	}
-	qualifiedSet := valset.NewAddressSet(qualified)
-	if !qualifiedSet.Contains(author) {
-		return consensus.ErrUnauthorized
-	}
-
-	// Reached only pre-permissionless (post-fork returns above); count seals against the council.
-	council, err := v.mValset.GetCouncil(blockNum)
-	if err != nil {
-		return err
-	}
-	signerSet := valset.NewAddressSet(council).Copy()
 	validSeal, err := countValidCommittedSeals(committers, signerSet)
 	if err != nil {
 		return err
 	}
 
-	qualifiedLen := len(qualified)
+	if rules.IsPermissionless {
+		// Require the quorum over the committee. Post-permissionless the committee
+		// equals the qualified set, so pass its size for both arguments.
+		if validSeal < v.sealer.Quorum(blockNum, qualifiedLen, qualifiedLen) {
+			return istanbul.ErrInvalidCommittedSeals
+		}
+		return nil
+	}
+
 	committeeSize := qualifiedLen
 	if !gov.DeprecatedAt(gov.IstanbulCommitteeSize, rules) {
 		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
@@ -316,6 +312,49 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil
+}
+
+// authorizeAuthor checks that the header's recovered author may produce this block, and
+// returns the set the committed seals are counted against plus the size the quorum is
+// derived from. It reads only header.Extra and the validator set, so it is valid on a
+// proposal as well as a finalized header.
+func (v *BlockValidator) authorizeAuthor(header *types.Header, author common.Address, blockNum uint64, rules params.Rules) (*valset.AddressSet, int, error) {
+	if rules.IsPermissionless {
+		round, err := v.sealer.Round(header)
+		if err != nil {
+			return nil, 0, err
+		}
+		// Membership, not "author == this round's proposer": a hash-locked proposal is
+		// re-proposed verbatim while the header's round advances. The committee is not
+		// round-subselected here, so membership holds across those rounds.
+		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
+		if err != nil {
+			return nil, 0, err
+		}
+		committeeSet := valset.NewAddressSet(committee)
+		if !committeeSet.Contains(author) {
+			return nil, 0, consensus.ErrUnauthorized
+		}
+		// Count committed seals only from the round's committee, matching the set the
+		// live consensus commits against (handleCommit rejects non-committee senders),
+		// rather than the broader qualified/council set.
+		return committeeSet, len(committee), nil
+	}
+
+	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
+	if err != nil {
+		return nil, 0, err
+	}
+	if !valset.NewAddressSet(qualified).Contains(author) {
+		return nil, 0, consensus.ErrUnauthorized
+	}
+	// Pre-permissionless counts committed seals against the council, which is broader
+	// than the qualified set.
+	council, err := v.mValset.GetCouncil(blockNum)
+	if err != nil {
+		return nil, 0, err
+	}
+	return valset.NewAddressSet(council), len(qualified), nil
 }
 
 func countValidCommittedSeals(committers []common.Address, signerSet *valset.AddressSet) (int, error) {

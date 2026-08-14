@@ -1091,6 +1091,20 @@ func (mr *MockBlockChainMockRecorder) ValidateHeader(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateHeader), arg0)
 }
 
+// ValidateProposalHeader mocks base method.
+func (m *MockBlockChain) ValidateProposalHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateProposalHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateProposalHeader indicates an expected call of ValidateProposalHeader.
+func (mr *MockBlockChainMockRecorder) ValidateProposalHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProposalHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateProposalHeader), arg0)
+}
+
 // Validator mocks base method.
 func (m *MockBlockChain) Validator() blockchain.Validator {
 	m.ctrl.T.Helper()

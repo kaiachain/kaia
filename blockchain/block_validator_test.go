@@ -270,7 +270,7 @@ func TestVerifySealsPermissionlessRejectsNonCommitteeAuthor(t *testing.T) {
 		mValset: mValset,
 	}
 
-	assert.ErrorIs(t, validator.verifySeals(header), consensus.ErrUnauthorized)
+	assert.ErrorIs(t, validator.verifySeals(header, true), consensus.ErrUnauthorized)
 }
 
 func TestVerifySealsBeforePermissionlessUsesQualifiedSet(t *testing.T) {
@@ -299,7 +299,7 @@ func TestVerifySealsBeforePermissionlessUsesQualifiedSet(t *testing.T) {
 		mValset: mValset,
 	}
 
-	assert.NoError(t, validator.verifySeals(header))
+	assert.NoError(t, validator.verifySeals(header, true))
 }
 
 func TestVerifySealsPermissionlessAcceptsCommitteeAuthor(t *testing.T) {
@@ -324,7 +324,7 @@ func TestVerifySealsPermissionlessAcceptsCommitteeAuthor(t *testing.T) {
 		mValset: mValset,
 	}
 
-	assert.NoError(t, validator.verifySeals(header))
+	assert.NoError(t, validator.verifySeals(header, true))
 }
 
 // TestVerifySealsPermissionlessUsesSealerQuorum checks that post-permissionless, the
@@ -362,7 +362,7 @@ func TestVerifySealsPermissionlessUsesSealerQuorum(t *testing.T) {
 		mValset: mValset,
 	}
 
-	assert.NoError(t, validator.verifySeals(header))
+	assert.NoError(t, validator.verifySeals(header, true))
 	// Quorum is computed over the committee size, passed as both arguments.
 	assert.Equal(t, len(committee), sealer.qualifiedLen)
 	assert.Equal(t, len(committee), sealer.committeeSize)
@@ -401,7 +401,7 @@ func TestVerifySealsPermissionlessRejectsBelowQuorum(t *testing.T) {
 		mValset: mValset,
 	}
 
-	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+	assert.ErrorIs(t, validator.verifySeals(header, true), istanbul.ErrInvalidCommittedSeals)
 }
 
 // TestVerifySealsPermissionlessRejectsNonCommitteeCommitter checks that a committed
@@ -438,7 +438,7 @@ func TestVerifySealsPermissionlessRejectsNonCommitteeCommitter(t *testing.T) {
 		mValset: mValset,
 	}
 
-	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+	assert.ErrorIs(t, validator.verifySeals(header, true), istanbul.ErrInvalidCommittedSeals)
 }
 
 // roundBoundSealer stands in for the post-permissionless dynamicSealer: it always recovers
@@ -496,10 +496,10 @@ func TestVerifySealsPermissionlessRejectsMutatedRound(t *testing.T) {
 
 	validator := &BlockValidator{config: config, sealer: sealer, mGov: mGov, mValset: mValset}
 
-	require.NoError(t, validator.verifySeals(header))
+	require.NoError(t, validator.verifySeals(header, true))
 
 	sealer.WriteRound(header, round+1)
-	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+	assert.ErrorIs(t, validator.verifySeals(header, true), istanbul.ErrInvalidCommittedSeals)
 }
 
 // TestVerifySealsPermissionlessAcceptsHashLockedAuthor covers the block a round change
@@ -552,7 +552,7 @@ func TestVerifySealsPermissionlessAcceptsHashLockedAuthor(t *testing.T) {
 		mValset: mValset,
 	}
 
-	require.NoError(t, validator.verifySeals(header))
+	require.NoError(t, validator.verifySeals(header, true))
 }
 
 func TestVerifyBlockBody(t *testing.T) {
@@ -797,4 +797,157 @@ func TestValidateHeaderRejectsOutOfUint64Number(t *testing.T) {
 		BlockScore: params.DefaultBlockScore,
 	}
 	assert.ErrorIs(t, v.ValidateHeader(h), ErrInvalidBlockNumber)
+}
+
+type roundShiftSealer struct {
+	*verifySealsTestSealer
+	round byte
+}
+
+func (s *roundShiftSealer) Round(*types.Header) (byte, error) { return s.round, nil }
+
+func permissionlessConfig(t *testing.T, on bool, blockNum uint64) *params.ChainConfig {
+	t.Helper()
+	config := params.TestKaiaConfig("permissionless").Copy()
+	if !on {
+		config.PermissionlessCompatibleBlock = big.NewInt(int64(blockNum + 100))
+	}
+	return config
+}
+
+// A proposal has no committed seals, but its author must still be authorized.
+func TestProposalHeaderRejectsUnauthorizedAuthor(t *testing.T) {
+	var (
+		outsider = common.HexToAddress("0x00ff")
+		a        = common.HexToAddress("0x0001")
+		b        = common.HexToAddress("0x0002")
+		blockNum = uint64(7)
+	)
+
+	for _, permissionless := range []bool{false, true} {
+		name := "pre-permissionless"
+		if permissionless {
+			name = "post-permissionless"
+		}
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			t.Cleanup(ctrl.Finish)
+
+			sealer := &verifySealsTestSealer{author: outsider, committers: nil}
+			header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+
+			mGov := mock_gov.NewMockGovModule(ctrl)
+			mValset := mock_valset.NewMockValsetModule(ctrl)
+			if permissionless {
+				mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{a, b}, nil)
+			} else {
+				mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{a, b}, nil)
+			}
+
+			v := &BlockValidator{
+				config: permissionlessConfig(t, permissionless, blockNum),
+				sealer: sealer, mGov: mGov, mValset: mValset,
+			}
+			assert.ErrorIs(t, v.verifySeals(header, false), consensus.ErrUnauthorized)
+		})
+	}
+}
+
+// On the proposal path, absent committed seals are expected and must not raise an error.
+func TestProposalHeaderAcceptsAuthorizedAuthorWithoutSeals(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		b        = common.HexToAddress("0x0002")
+		blockNum = uint64(7)
+	)
+
+	for _, permissionless := range []bool{false, true} {
+		name := "pre-permissionless"
+		if permissionless {
+			name = "post-permissionless"
+		}
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			t.Cleanup(ctrl.Finish)
+
+			sealer := &verifySealsTestSealer{author: author, committers: nil}
+			header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+
+			mGov := mock_gov.NewMockGovModule(ctrl)
+			mValset := mock_valset.NewMockValsetModule(ctrl)
+			if permissionless {
+				mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author, b}, nil)
+			} else {
+				mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author, b}, nil)
+				mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author, b}, nil)
+			}
+
+			v := &BlockValidator{
+				config: permissionlessConfig(t, permissionless, blockNum),
+				sealer: sealer, mGov: mGov, mValset: mValset,
+			}
+			assert.NoError(t, v.verifySeals(header, false))
+		})
+	}
+}
+
+// The import path still requires committed seals.
+func TestImportPathStillRequiresCommittedSeals(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		b        = common.HexToAddress("0x0002")
+		blockNum = uint64(7)
+	)
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	sealer := &verifySealsTestSealer{author: author, committers: nil}
+	header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author, b}, nil)
+
+	v := &BlockValidator{
+		config: permissionlessConfig(t, true, blockNum),
+		sealer: sealer, mGov: mGov, mValset: mValset,
+	}
+	assert.ErrorIs(t, v.verifySeals(header, true), istanbul.ErrEmptyCommittedSeals)
+}
+
+// A hash-locked proposal keeps its original author's seal while the header's round
+// advances. It must stay valid on both paths.
+func TestRoundShiftedLockedProposalStaysValid(t *testing.T) {
+	var (
+		round0Proposer = common.HexToAddress("0x0001")
+		round1Proposer = common.HexToAddress("0x0002")
+		third          = common.HexToAddress("0x0003")
+		blockNum       = uint64(7)
+		committee      = []common.Address{round0Proposer, round1Proposer, third}
+	)
+
+	for _, withSeals := range []bool{false, true} {
+		name := "proposal path"
+		if withSeals {
+			name = "import path"
+		}
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			t.Cleanup(ctrl.Finish)
+
+			base := &verifySealsTestSealer{author: round0Proposer, committers: committee, quorum: 3}
+			sealer := &roundShiftSealer{verifySealsTestSealer: base, round: 1}
+			header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+
+			mGov := mock_gov.NewMockGovModule(ctrl)
+			mValset := mock_valset.NewMockValsetModule(ctrl)
+			mValset.EXPECT().GetCommittee(blockNum, uint64(1)).Return(committee, nil)
+
+			v := &BlockValidator{
+				config: params.TestKaiaConfig("permissionless"),
+				sealer: sealer, mGov: mGov, mValset: mValset,
+			}
+			assert.NoError(t, v.verifySeals(header, withSeals))
+		})
+	}
 }

@@ -47,6 +47,9 @@ type Validator interface {
 	// ValidateHeader validates or preprocesses the given header.
 	ValidateHeader(header *types.Header) error
 
+	// ValidateProposalHeader validates a consensus proposal. Consensus path only.
+	ValidateProposalHeader(header *types.Header) error
+
 	// ValidateBody validates the given block's content.
 	ValidateBody(block *types.Block) error
 

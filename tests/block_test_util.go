@@ -222,6 +222,11 @@ func (e *eestAdaptor) Preprocess(headers []*types.Header) (chan<- struct{}, <-ch
 	return nil, nil
 }
 
+// ValidateProposalHeader is unused by the EEST adaptor, which has no consensus path.
+func (e *eestAdaptor) ValidateProposalHeader(header *types.Header) error {
+	return e.ValidateHeader(header)
+}
+
 func (e *eestAdaptor) ValidateHeader(header *types.Header) error {
 	if header == nil || header.Number == nil {
 		return consensus.ErrUnknownBlock

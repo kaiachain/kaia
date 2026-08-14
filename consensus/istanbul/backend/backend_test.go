@@ -29,16 +29,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -308,4 +312,113 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 		_, err := engine.Verify(oversized)
 		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
 	})
+}
+
+// A proposal sealed by an address outside the validator set must be rejected at
+// proposal-verification time, before it can reach a committed-seal quorum.
+//
+// The author here is BLS-registered, so the Randao header check resolves its public key,
+// but has no staking entry and is therefore demoted out of the qualified set.
+func TestVerifyRejectsUnauthorizedProposalAuthor(t *testing.T) {
+	const (
+		validatorCount = 5
+		outsiderIndex  = validatorCount - 1
+		minStake       = uint64(5_000_000)
+	)
+
+	setNodeKeys(validatorCount, nil)
+	stakingInfo := makeTestStakingInfo([]uint64{minStake, minStake, minStake, minStake, 0}, 0)
+	stakingInfo.NodeIds = stakingInfo.NodeIds[:outsiderIndex]
+	stakingInfo.StakingContracts = stakingInfo.StakingContracts[:outsiderIndex]
+	stakingInfo.RewardAddrs = stakingInfo.RewardAddrs[:outsiderIndex]
+	stakingInfo.StakingAmounts = stakingInfo.StakingAmounts[:outsiderIndex]
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mStaking := staking_mock.NewMockStakingModule(ctrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+
+	config := testRandaoConfig.Copy()
+	config.IstanbulCompatibleBlock = common.Big0
+	config.PermissionlessCompatibleBlock = nil
+	config.Istanbul.ProposerPolicy = params.WeightedRandom
+	config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(minStake)
+	config.Governance.Reward.StakingUpdateInterval = 1
+	config.Governance.Reward.ProposerUpdateInterval = 1
+
+	chain, engine := newBlockChain(t, validatorCount, config, mStaking, blockPeriod(0))
+	defer chain.Stop()
+	defer engine.Stop()
+
+	outsiderKey, outsiderAddr := nodeKeys[outsiderIndex], addrs[outsiderIndex]
+	outsiderBlsKey, err := bls.DeriveFromECDSA(outsiderKey)
+	require.NoError(t, err)
+
+	proposal := sealProposalWithForeignAuthor(t, chain, outsiderKey, outsiderBlsKey)
+
+	qualified, err := engine.valsetModule.GetQualifiedValidators(proposal.NumberU64())
+	require.NoError(t, err)
+	require.NotContains(t, qualified, outsiderAddr, "author must be outside the qualified set")
+
+	author, err := engine.sealer.Author(proposal.Header())
+	require.NoError(t, err)
+	require.Equal(t, outsiderAddr, author)
+
+	require.ErrorIs(t, chain.ValidateProposalHeader(proposal.Header()), consensus.ErrUnauthorized)
+
+	_, err = engine.Verify(proposal)
+	require.ErrorIs(t, err, consensus.ErrUnauthorized,
+		"backend.Verify must reject a proposal sealed by an unauthorized author")
+}
+
+// A well-formed proposal must still be accepted, its absent committed seals raising no error.
+func TestVerifyAcceptsWellFormedProposal(t *testing.T) {
+	chain, engine := newBlockChain(t, 1)
+	defer chain.Stop()
+	defer engine.Stop()
+
+	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+	proposal, err := engine.updateBlock(block)
+	require.NoError(t, err)
+
+	require.NoError(t, chain.ValidateProposalHeader(proposal.Header()))
+	_, err = engine.Verify(proposal)
+	require.NoError(t, err)
+}
+
+func sealProposalWithForeignAuthor(t *testing.T, chain *blockchain.BlockChain, authorKey *ecdsa.PrivateKey, authorBlsKey bls.SecretKey) *types.Block {
+	t.Helper()
+
+	parent := chain.CurrentBlock()
+	header := makeHeader(parent, chain.Config())
+	require.NoError(t, chain.PrepareHeader(header))
+
+	// Re-derive the Randao fields under the other author's BLS key so the Randao header
+	// module resolves that author's registered public key.
+	msg := common.BytesToHash(header.Number.Bytes())
+	header.RandomReveal = bls.Sign(authorBlsKey, msg.Bytes()).Marshal()
+	var prevMixHash []byte
+	if chain.Config().IsRandaoForkBlockParent(parent.Number()) {
+		prevMixHash = append([]byte(nil), params.ZeroMixHash...)
+	} else {
+		prevMixHash = append([]byte(nil), parent.Header().MixHash...)
+	}
+	require.Len(t, prevMixHash, 32)
+	revealHash := crypto.Keccak256(header.RandomReveal)
+	header.MixHash = make([]byte, 32)
+	for i := range 32 {
+		header.MixHash[i] = prevMixHash[i] ^ revealHash[i]
+	}
+
+	state, err := chain.StateAt(parent.Root())
+	require.NoError(t, err)
+	block, err := chain.Processor().FinalizeState(header, state, nil, nil)
+	require.NoError(t, err)
+
+	sealed := block.Header()
+	s := istanbul.NewSealerImpl(authorKey)
+	seal, err := s.MakeAuthorSeal(sealed)
+	require.NoError(t, err)
+	require.NoError(t, s.WriteAuthorSeal(sealed, seal))
+	return block.WithSeal(sealed)
 }
