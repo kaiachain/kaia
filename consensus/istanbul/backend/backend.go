@@ -400,10 +400,11 @@ func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 		return 0, blockchain.ErrBlockOversized
 	}
 
-	// verify the header of proposed block
-	err := sb.chain.ValidateHeader(block.Header())
-	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == istanbul.ErrEmptyCommittedSeals {
+	// Verify the header of the proposed block. The proposal entry point skips the
+	// committed-seal rules by construction, so every other rule is enforced here and any
+	// failure rejects the proposal.
+	err := sb.chain.ValidateProposalHeader(block.Header())
+	if err == nil {
 		return 0, nil
 	} else if err == consensus.ErrFutureBlock {
 		return time.Unix(block.Header().Time.Int64(), 0).Sub(time.Now()), consensus.ErrFutureBlock
