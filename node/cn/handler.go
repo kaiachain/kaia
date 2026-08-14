@@ -1356,9 +1356,9 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errors.New("blob sidecar request manager is not initialized")
 	}
 
-	var sidecars []*blobSidecarsData
-	if err := msg.Decode(&sidecars); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	sidecars, err := decodeResponseList[*blobSidecarsData](msg, downloader.MaxBlobSidecarsFetch)
+	if err != nil {
+		return err
 	}
 
 	for _, sidecar := range sidecars {

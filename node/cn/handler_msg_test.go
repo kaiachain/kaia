@@ -1192,6 +1192,14 @@ func TestHandleResponseMsg_ListLimit(t *testing.T) {
 		}
 		return out
 	}
+	blobSidecars := func(n int) interface{} {
+		sidecar := generateTestSidecar(common.HexToHash("0x1"))
+		out := make([]*blobSidecarsData, n)
+		for i := range out {
+			out[i] = &blobSidecarsData{Sidecar: sidecar}
+		}
+		return out
+	}
 	nodeData := func(n int) interface{} { return make([][]byte, n) }
 	receipts := func(n int) interface{} { return make([][]*types.Receipt, n) }
 
@@ -1220,6 +1228,9 @@ func TestHandleResponseMsg_ListLimit(t *testing.T) {
 		{"StakingInfoMsg", StakingInfoMsg, downloader.MaxStakingInfoFetch, stakingInfos, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
 			d.EXPECT().DeliverStakingInfos(gomock.Any(), gomock.Any()).Times(1).Return(nil)
 		}},
+		// Sidecars are delivered through the txpool, not through these two, and they
+		// carry no pending request, so the handler drops them before reaching it.
+		{"BlobSidecarsMsg", BlobSidecarsMsg, downloader.MaxBlobSidecarsFetch, blobSidecars, nil},
 	}
 	for _, tc := range testcases {
 		newPM := func(mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *mocks2.MockProtocolManagerDownloader, *mocks2.MockProtocolManagerFetcher) {
@@ -1233,7 +1244,12 @@ func TestHandleResponseMsg_ListLimit(t *testing.T) {
 
 			mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 			mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
-			return &ProtocolManager{downloader: mockDownloader, fetcher: mockFetcher, chainconfig: chainConfig}, mockPeer, mockDownloader, mockFetcher
+			return &ProtocolManager{
+				downloader:            mockDownloader,
+				fetcher:               mockFetcher,
+				chainconfig:           chainConfig,
+				blobSidecarReqManager: &sidecarReqManager{list: map[common.Hash]*sidecarReq{}},
+			}, mockPeer, mockDownloader, mockFetcher
 		}
 
 		t.Run(tc.name+"/at limit", func(t *testing.T) {
@@ -1241,7 +1257,9 @@ func TestHandleResponseMsg_ListLimit(t *testing.T) {
 			defer mockCtrl.Finish()
 
 			pm, mockPeer, mockDownloader, mockFetcher := newPM(mockCtrl)
-			tc.deliver(mockDownloader, mockFetcher)
+			if tc.deliver != nil {
+				tc.deliver(mockDownloader, mockFetcher)
+			}
 
 			msg := generateMsg(t, tc.code, tc.payload(tc.limit))
 			assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
