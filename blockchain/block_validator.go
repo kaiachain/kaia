@@ -248,12 +248,12 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	if err != nil {
 		return err
 	}
-	if len(committers) == 0 {
-		return istanbul.ErrEmptyCommittedSeals
-	}
 
 	// Skip module-dependent seal validation when gov/valset modules are not registered.
 	if v.mValset == nil || v.mGov == nil {
+		if len(committers) == 0 {
+			return istanbul.ErrEmptyCommittedSeals
+		}
 		return nil
 	}
 
@@ -319,6 +319,10 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 }
 
 func countValidCommittedSeals(committers []common.Address, signerSet *valset.AddressSet) (int, error) {
+	// A proposal has no committed seals, so authorize the author before this gate, not after.
+	if len(committers) == 0 {
+		return 0, istanbul.ErrEmptyCommittedSeals
+	}
 	validSeal := 0
 	for _, addr := range committers {
 		if !signerSet.Remove(addr) {

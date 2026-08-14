@@ -273,6 +273,55 @@ func TestVerifySealsPermissionlessRejectsNonCommitteeAuthor(t *testing.T) {
 	assert.ErrorIs(t, validator.verifySeals(header), consensus.ErrUnauthorized)
 }
 
+// TestVerifySealsAuthorizesAuthorWithoutSeals checks that the author is authorized on a
+// header that carries no committed seals. Live consensus verifies proposals, which never
+// carry seals, so a check reachable only once seals exist would let a proposal be prepared
+// and hash-locked before any node refuses it.
+func TestVerifySealsAuthorizesAuthorWithoutSeals(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		other    = common.HexToAddress("0x0002")
+		blockNum = uint64(7)
+	)
+
+	testcases := []struct {
+		name        string
+		beforeFork  bool
+		signers     []common.Address
+		expectedErr error
+	}{
+		{"rejects non-committee author", false, []common.Address{other}, consensus.ErrUnauthorized},
+		{"committee author awaits seals", false, []common.Address{author}, istanbul.ErrEmptyCommittedSeals},
+		{"before fork rejects unqualified author", true, []common.Address{other}, consensus.ErrUnauthorized},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			t.Cleanup(ctrl.Finish)
+
+			config := params.TestKaiaConfig("permissionless").Copy()
+			mValset := mock_valset.NewMockValsetModule(ctrl)
+			if tc.beforeFork {
+				config.PermissionlessCompatibleBlock = big.NewInt(10)
+				mValset.EXPECT().GetQualifiedValidators(blockNum).Return(tc.signers, nil)
+			} else {
+				mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(tc.signers, nil)
+			}
+
+			validator := &BlockValidator{
+				config:  config,
+				sealer:  &verifySealsTestSealer{Sealer: faker.NewFaker(), author: author},
+				mGov:    mock_gov.NewMockGovModule(ctrl),
+				mValset: mValset,
+			}
+
+			header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+			assert.ErrorIs(t, validator.verifySeals(header), tc.expectedErr)
+		})
+	}
+}
+
 func TestVerifySealsBeforePermissionlessUsesQualifiedSet(t *testing.T) {
 	var (
 		author   = common.HexToAddress("0x0001")
