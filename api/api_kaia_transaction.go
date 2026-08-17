@@ -615,6 +615,8 @@ func (s *KaiaTransactionAPI) RecoverFromTransaction(ctx context.Context, encoded
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return common.Address{}, err
 	}
+	// NOTE: Deliberately not fork-gated because the block number is
+	// caller-supplied, so gating on it would let the caller bypass the limit.
 	if err := tx.ValidateSignatureListLength(); err != nil {
 		return common.Address{}, err
 	}
