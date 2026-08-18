@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -668,4 +669,51 @@ func TestBidPool_ConcurrentAddBid_OneWinnerPerSender(t *testing.T) {
 				"iter %d: both same-sender bids accepted", i)
 		}()
 	}
+}
+
+// HandleBid must not block the p2p worker that delivered the bid: the queue is
+// shared, so one blocked sender stalls every peer's bid ingress.
+func TestBidPool_HandleBidDropsWhenQueueFull(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pool := NewBidPool(testChainConfig, chain_mock.NewMockBlockChain(mockCtrl), &auction.AuctionConfig{MaxBidPoolSize: 1024})
+	require.NotNil(t, pool)
+	atomic.StoreUint32(&pool.running, 1)
+
+	for range cap(pool.bidMsgCh) {
+		pool.bidMsgCh <- testBids[0]
+	}
+
+	returned := make(chan struct{})
+	go func() {
+		pool.HandleBid("flooding-peer", testBids[0])
+		close(returned)
+	}()
+
+	select {
+	case <-returned:
+	case <-time.After(5 * time.Second):
+		t.Fatal("HandleBid blocked on a full bid queue")
+	}
+	require.Equal(t, cap(pool.bidMsgCh), len(pool.bidMsgCh))
+}
+
+// A rejected bid still allocates a rate limiter, so peer IDs must not accumulate
+// without bound as a peer reconnects under fresh identities.
+func TestBidPool_RateLimiterEvictsStalePeers(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pool := NewBidPool(testChainConfig, chain_mock.NewMockBlockChain(mockCtrl), &auction.AuctionConfig{MaxBidPoolSize: 1024})
+	require.NotNil(t, pool)
+
+	const overflow = 16
+	for i := range rateLimiterCacheSize + overflow {
+		require.True(t, pool.checkRateLimit(fmt.Sprintf("peer-%d", i)))
+	}
+
+	require.Equal(t, rateLimiterCacheSize, pool.peerRateLimiter.Len())
+	require.False(t, pool.peerRateLimiter.Contains("peer-0"), "oldest peer should be evicted")
+	require.True(t, pool.peerRateLimiter.Contains(fmt.Sprintf("peer-%d", rateLimiterCacheSize+overflow-1)))
 }

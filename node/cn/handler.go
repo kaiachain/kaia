@@ -47,6 +47,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -1272,10 +1273,17 @@ func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	return nil
 }
 
+// maxBidMsgSize bounds an encoded BidMsg: the Data cap plus slack for the other fields.
+const maxBidMsgSize = auction_impl.BidTxMaxDataSize + 2048
+
 // handleBidMsg handles bid message.
 func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if pm.IsAuctionModuleDisabled() {
 		return nil
+	}
+
+	if uint64(msg.Size) > maxBidMsgSize {
+		return errResp(ErrMsgTooLarge, "msg %v: %v > %v", msg, msg.Size, maxBidMsgSize)
 	}
 
 	var data *auction.Bid

@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
@@ -872,6 +873,38 @@ func TestHandleBidMsg(t *testing.T) {
 	assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg), "should not return error when protocol version is kaia66")
 
 	mockCtrl.Finish()
+
+	// The size gate runs before msg.Decode, so an oversized bid never reaches the pool.
+	for _, tc := range []struct {
+		name     string
+		dataLen  int
+		wantCall bool
+	}{
+		{"max legal data reaches the pool", int(auction_impl.BidTxMaxDataSize), true},
+		{"oversized data is refused", int(maxBidMsgSize) + 1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			module := auction_mock.NewMockAuctionModule(ctrl)
+			peer := NewMockPeer(ctrl)
+			if tc.wantCall {
+				peer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
+				module.EXPECT().HandleBid(gomock.Any(), gomock.Any()).Times(1)
+			}
+
+			sized := &auction.Bid{BidData: bidData}
+			sized.Data = make([]byte, tc.dataLen)
+			err := handleBidMsg(&ProtocolManager{auctionModule: module}, peer, generateMsg(t, BidMsg, sized))
+
+			if tc.wantCall {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, "Message too long")
+			}
+		})
+	}
 }
 
 func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
