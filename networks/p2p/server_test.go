@@ -48,6 +48,7 @@ type testTransport struct {
 	id discover.NodeID
 	*rlpxTransport
 	mutichannel bool
+	listenPorts []uint64
 
 	closeErr error
 }
@@ -69,7 +70,7 @@ func (c *testTransport) doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey,
 }
 
 func (c *testTransport) doProtoHandshake(our *protoHandshake) (*protoHandshake, error) {
-	return &protoHandshake{ID: c.id, Name: "test", Multichannel: c.mutichannel}, nil
+	return &protoHandshake{ID: c.id, Name: "test", Multichannel: c.mutichannel, ListenPort: c.listenPorts}, nil
 }
 
 func (c *testTransport) doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error) {
@@ -720,22 +721,34 @@ func TestServerSetCNPeersUpdatesDialSched(t *testing.T) {
 	blockedKey := newkey()
 	allowed := discover.NewNode(discover.PubkeyID(&allowedKey.PublicKey), net.ParseIP("10.0.0.1"), 30303, 30303, nil, discover.NodeTypeCN)
 	blocked := discover.NewNode(discover.PubkeyID(&blockedKey.PublicKey), net.ParseIP("10.0.0.2"), 30303, 30303, nil, discover.NodeTypeCN)
-	ds := NewDialSched(DialConfig{selfType: discover.NodeTypeCN}, nil, nil)
+	ds := NewDialSched(DialConfig{selfType: discover.NodeTypeCN}, &mockTable{nodesByType: map[discover.NodeType][]*discover.Node{}}, nil)
 	srv := &BaseServer{
 		dialSched: ds,
 		peers:     make(map[discover.NodeID]*Peer),
 	}
+	hasCandidate := func(nodes []*discover.Node, id discover.NodeID) bool {
+		for _, n := range nodes {
+			if n.ID == id {
+				return true
+			}
+		}
+		return false
+	}
 
 	srv.SetCNPeers([]common.Address{crypto.PubkeyToAddress(allowedKey.PublicKey)})
-	if !ds.dynamicCandidateAllowed(discover.NodeTypeCN, allowed) {
+	ds.candidateQueue[discover.NodeTypeCN] = []*discover.Node{allowed, blocked}
+	candidates, _ := ds.getCandidates()
+	if !hasCandidate(candidates, allowed.ID) {
 		t.Fatal("allowed CN should remain dialable")
 	}
-	if ds.dynamicCandidateAllowed(discover.NodeTypeCN, blocked) {
+	if hasCandidate(candidates, blocked.ID) {
 		t.Fatal("blocked CN should not remain dialable")
 	}
 
 	srv.SetCNPeers(nil)
-	if !ds.dynamicCandidateAllowed(discover.NodeTypeCN, blocked) {
+	ds.candidateQueue[discover.NodeTypeCN] = []*discover.Node{blocked}
+	candidates, _ = ds.getCandidates()
+	if !hasCandidate(candidates, blocked.ID) {
 		t.Fatal("nil CN peer allowlist should disable dynamic dial filtering")
 	}
 }

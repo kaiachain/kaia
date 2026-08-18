@@ -17,6 +17,7 @@
 package p2p
 
 import (
+	"crypto/ecdsa"
 	"net"
 	"testing"
 
@@ -122,6 +123,85 @@ func TestMultiChannelRejectsOutOfRangePortOrder(t *testing.T) {
 	c, _ := newCandidateConn(t, 1, PortOrder(len(srv.ListenAddrs)))
 	assert.ErrorIs(t, srv.handleAddPeerConn(c), DiscUnexpectedIdentity)
 	assert.Empty(t, srv.CandidateConns)
+}
+
+func TestMultiChannelCleanConnClosesOutboundCandidate(t *testing.T) {
+	srv := newCandidateTestServer(t, 4)
+
+	c, tt := newCandidateConn(t, 1, ConnDefault)
+	c.flags = dynDialedConn
+	require.NoError(t, srv.handleAddPeerConn(c))
+
+	stats := srv.CleanConn(c.id)
+
+	assert.Equal(t, errIncompleteMultiChannelDial, tt.closeErr)
+	assert.Equal(t, cleanConnStats{expectedChannels: 2, closedOutboundChannels: 1}, stats)
+	assert.Empty(t, srv.CandidateConns)
+	assert.Empty(t, srv.candidateSince)
+}
+
+func TestMultiChannelCleanConnKeepsInboundCandidate(t *testing.T) {
+	srv := newCandidateTestServer(t, 4)
+	srv.ListenAddrs = append(srv.ListenAddrs, ":32325")
+
+	inbound, inboundTransport := newCandidateConn(t, 1, ConnDefault)
+	require.NoError(t, srv.handleAddPeerConn(inbound))
+
+	outbound, outboundTransport := newCandidateConn(t, 1, 1)
+	outbound.flags = dynDialedConn
+	require.NoError(t, srv.handleAddPeerConn(outbound))
+
+	stats := srv.CleanConn(inbound.id)
+
+	assert.Nil(t, inboundTransport.closeErr)
+	assert.Equal(t, errIncompleteMultiChannelDial, outboundTransport.closeErr)
+	assert.Equal(t, cleanConnStats{expectedChannels: 3, closedOutboundChannels: 1, remainingInboundChannels: 1}, stats)
+	require.Contains(t, srv.CandidateConns, inbound.id)
+	assert.Same(t, inbound, srv.CandidateConns[inbound.id][ConnDefault])
+	assert.Nil(t, srv.CandidateConns[inbound.id][1])
+	assert.Contains(t, srv.candidateSince, inbound.id)
+}
+
+func TestMultiChannelSetupConnKeepsIncompleteCandidate(t *testing.T) {
+	srv := newCandidateTestServer(t, 4)
+	srv.PrivateKey = newkey()
+
+	serverFD, clientFD := net.Pipe()
+	t.Cleanup(func() { serverFD.Close(); clientFD.Close() })
+
+	id := discover.PubkeyID(&newkey().PublicKey)
+	t.Cleanup(func() { srv.CleanConn(id) })
+	tt := newTestTransport(id, serverFD, nil, true).(*testTransport)
+	tt.listenPorts = []uint64{30303, 30304}
+	srv.newTransport = func(net.Conn, *ecdsa.PublicKey) transport { return tt }
+	dialDest := &discover.Node{ID: id, IP: net.ParseIP("10.0.0.1"), TCPs: []uint16{30303, 30304}}
+
+	err := srv.SetupConn(serverFD, dynDialedConn, dialDest)
+
+	require.NoError(t, err)
+	require.Contains(t, srv.CandidateConns, id)
+}
+
+func TestMultiChannelSetupConnKeepsIncompleteFinalCandidate(t *testing.T) {
+	srv := newCandidateTestServer(t, 4)
+	srv.PrivateKey = newkey()
+
+	serverFD, clientFD := net.Pipe()
+	t.Cleanup(func() { serverFD.Close(); clientFD.Close() })
+
+	id := discover.PubkeyID(&newkey().PublicKey)
+	t.Cleanup(func() { srv.CleanConn(id) })
+	tt := newTestTransport(id, serverFD, nil, true).(*testTransport)
+	tt.listenPorts = []uint64{30303, 30304}
+	srv.newTransport = func(net.Conn, *ecdsa.PublicKey) transport { return tt }
+	dialDest := &discover.Node{ID: id, IP: net.ParseIP("10.0.0.1"), TCPs: []uint16{30303, 30304}, PortOrder: 1}
+
+	err := srv.SetupConn(serverFD, dynDialedConn, dialDest)
+
+	require.NoError(t, err)
+	assert.Nil(t, tt.closeErr)
+	require.Contains(t, srv.CandidateConns, id)
+	assert.NotEmpty(t, srv.candidateSince)
 }
 
 func TestMultiChannelStopClosesCandidates(t *testing.T) {

@@ -547,6 +547,12 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 	return err
 }
 
+// CleanConn is a no-op for the single-channel server because it has no pending
+// multichannel candidate bookkeeping.
+func (srv *BaseServer) CleanConn(id discover.NodeID) cleanConnStats {
+	return cleanConnStats{}
+}
+
 func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Node) error {
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
