@@ -563,6 +563,12 @@ var (
 		Aliases: []string{"genesis.vrank-epoch"},
 	}
 
+	publicDelegationFlag = &cli.BoolFlag{
+		Name:    "public-delegation",
+		Usage:   "deploy each validator's CnStaking with a PublicDelegation in permissionless mode",
+		Aliases: []string{"genesis.public-delegation"},
+	}
+
 	pfsThresholdFlag = &cli.Int64Flag{
 		Name:    "pfs-threshold",
 		Usage:   "PFS threshold for severe violation in permissionless mode (default: 2)",
