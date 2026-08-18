@@ -817,3 +817,101 @@ func TestBlockMemoryExhaustionAttack(t *testing.T) {
 	}
 	verifyImportDone(t, imported)
 }
+
+// queueableBlocks returns n blocks above head+1, which therefore stay in the import
+// queue instead of being handed to the importer.
+func queueableBlocks(n int) []*types.Block {
+	hashes, blocks := makeChain(n+1, 1, unknownBlock)
+	queueable := make([]*types.Block, n)
+	for i := range queueable {
+		queueable[i] = blocks[hashes[i]]
+	}
+	return queueable
+}
+
+// TestQueuedBytesLimit checks that the import queue admits propagated blocks only
+// while its byte budget lasts, and that a block the consensus engine committed is
+// admitted regardless.
+func TestQueuedBytesLimit(t *testing.T) {
+	tester := newTester()
+
+	enqueued := int32(0)
+	tester.fetcher.queueChangeHook = func(hash common.Hash, added bool) {
+		if added {
+			atomic.AddInt32(&enqueued, 1)
+		} else {
+			atomic.AddInt32(&enqueued, -1)
+		}
+	}
+	queueable := queueableBlocks(4)
+
+	defer func(limit uint64) { queuedBytesLimit = limit }(queuedBytesLimit)
+	queuedBytesLimit = uint64(queueable[0].Size()) + uint64(queueable[1].Size())
+
+	for _, block := range queueable {
+		tester.fetcher.Enqueue("attacker", block)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 2 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 2)
+	}
+
+	tester.fetcher.EnqueueTrusted("istanbul", queueable[3])
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 3 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 3)
+	}
+}
+
+// TestForgetPeerReleasesQueue checks that a disconnected peer's blocks are released
+// instead of held until the chain reaches their height, that the byte budget they held
+// is returned, and that a block this node committed is not released with them.
+func TestForgetPeerReleasesQueue(t *testing.T) {
+	tester := newTester()
+
+	enqueued := int32(0)
+	tester.fetcher.queueChangeHook = func(hash common.Hash, added bool) {
+		if added {
+			atomic.AddInt32(&enqueued, 1)
+		} else {
+			atomic.AddInt32(&enqueued, -1)
+		}
+	}
+	queueable := queueableBlocks(5)
+
+	defer func(limit uint64) { queuedBytesLimit = limit }(queuedBytesLimit)
+	queuedBytesLimit = 0
+	for _, block := range queueable[:4] {
+		queuedBytesLimit += uint64(block.Size())
+	}
+
+	for _, block := range queueable[:4] {
+		tester.fetcher.Enqueue("attacker", block)
+	}
+	tester.fetcher.Enqueue("attacker", queueable[4]) // budget spent, discarded
+	time.Sleep(200 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 4 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 4)
+	}
+
+	tester.fetcher.ForgetPeer("attacker")
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 0 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 0)
+	}
+
+	// The released budget is available again.
+	tester.fetcher.Enqueue("valid", queueable[4])
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 1 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 1)
+	}
+
+	// Committing the block a peer already queued keeps it across that peer's disconnect.
+	tester.fetcher.EnqueueTrusted("istanbul", queueable[4])
+	tester.fetcher.ForgetPeer("valid")
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 1 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 1)
+	}
+}
