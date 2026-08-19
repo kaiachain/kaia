@@ -306,42 +306,41 @@ func TestFetchVRankCtx(t *testing.T) {
 		assert.Nil(t, gotPfReport)
 	})
 
-	t.Run("CFS read failure propagates", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
+	t.Run("read failure propagates", func(t *testing.T) {
 		vrankErr := errors.New("vrank unavailable")
+		// num 9 is the epoch boundary (10) minus one, so only it reads CFS.
+		testcases := []struct {
+			name   string
+			num    uint64
+			expect func(*vrank_mock.MockVRankModule)
+		}{
+			{"CFS", 9, func(m *vrank_mock.MockVRankModule) {
+				m.EXPECT().GetCFS(uint64(9)).Return(nil, vrankErr)
+			}},
+			{"pfReport", 8, func(m *vrank_mock.MockVRankModule) {
+				m.EXPECT().GetPfReport(uint64(8)).Return(nil, vrankErr)
+			}},
+			{"PFS", 8, func(m *vrank_mock.MockVRankModule) {
+				m.EXPECT().GetPfReport(uint64(8)).Return([]common.Address{addr1}, nil)
+				m.EXPECT().GetPFS(uint64(8)).Return(nil, vrankErr)
+			}},
+		}
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				mockChain := chain_mock.NewMockBlockChain(ctrl)
+				mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+				mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+				tc.expect(mockVRank)
 
-		mockChain := chain_mock.NewMockBlockChain(ctrl)
-		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+				v := NewValsetModule()
+				v.Chain = mockChain
+				v.VRankModule = mockVRank
 
-		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-		mockVRank.EXPECT().GetCFS(uint64(9)).Return(nil, vrankErr)
-
-		v := NewValsetModule()
-		v.Chain = mockChain
-		v.VRankModule = mockVRank
-
-		_, _, _, err := v.fetchVRankCtx(9)
-		require.ErrorIs(t, err, vrankErr)
-	})
-
-	t.Run("PFS read failure propagates", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		pfReport := []common.Address{addr1}
-		vrankErr := errors.New("vrank unavailable")
-
-		mockChain := chain_mock.NewMockBlockChain(ctrl)
-		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
-
-		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-		mockVRank.EXPECT().GetPfReport(uint64(8)).Return(pfReport, nil)
-		mockVRank.EXPECT().GetPFS(uint64(8)).Return(nil, vrankErr)
-
-		v := NewValsetModule()
-		v.Chain = mockChain
-		v.VRankModule = mockVRank
-
-		_, _, _, err := v.fetchVRankCtx(8)
-		require.ErrorIs(t, err, vrankErr)
+				_, _, _, err := v.fetchVRankCtx(tc.num)
+				require.ErrorIs(t, err, vrankErr)
+			})
+		}
 	})
 
 	t.Run("post-fork without VRankModule is an error", func(t *testing.T) {
