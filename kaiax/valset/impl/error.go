@@ -31,6 +31,7 @@ var (
 	errNoVoteBlockNums        = errors.New("no validator vote block nums")
 	errMismatchedValidators   = errors.New("header extra validators do not match qualified validators")
 	errPermissionlessDisabled = errors.New("permissionless fork is not enabled")
+	errVRankModuleNotSet      = errors.New("VRankModule is not set")
 
 	// rpc related errors
 	errPendingNotAllowed       = errors.New("pending is not allowed")

@@ -204,6 +204,39 @@ func TestGetNodesParentReadErrors(t *testing.T) {
 	})
 }
 
+// The transition result cache is shared with the consensus write path
+// (writeTransitionToABv2), so a transition computed from a failed vrank read
+// must fail without leaving a cache entry; a later call must recompute.
+func TestGetNodesVRankFailureIsNotCached(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h := newABv2Harness(t)
+
+	mockGov := gov_mock.NewMockGovModule(ctrl)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		MinimumStake: common.Big0,
+	}).AnyTimes()
+
+	vrankErr := errors.New("vrank unavailable")
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	gomock.InOrder(
+		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, vrankErr),
+		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil),
+	)
+
+	v := h.Valset
+	v.GovModule = mockGov
+	v.VRankModule = mockVRank
+
+	_, err := v.getNodes(1)
+	require.ErrorIs(t, err, vrankErr)
+	_, inCache := v.transitionResultCache.Get(uint64(1))
+	require.False(t, inCache, "a transition computed from a failed vrank read must not be cached")
+
+	nodes, err := v.getNodes(1)
+	require.NoError(t, err)
+	require.NotEmpty(t, nodes)
+}
+
 func TestWriteTransitionToABv2PreForkNoOp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
@@ -247,7 +280,8 @@ func TestFetchVRankCtx(t *testing.T) {
 		v.Chain = mockChain
 		v.VRankModule = mockVRank
 
-		gotCFS, gotPFS, gotPfReport := v.fetchVRankCtx(9)
+		gotCFS, gotPFS, gotPfReport, err := v.fetchVRankCtx(9)
+		require.NoError(t, err)
 		assert.Equal(t, cfs, gotCFS)
 		assert.Equal(t, pfs, gotPFS)
 		assert.Equal(t, pfReport, gotPfReport)
@@ -265,13 +299,32 @@ func TestFetchVRankCtx(t *testing.T) {
 		v.Chain = mockChain
 		v.VRankModule = mockVRank
 
-		gotCFS, gotPFS, gotPfReport := v.fetchVRankCtx(8)
+		gotCFS, gotPFS, gotPfReport, err := v.fetchVRankCtx(8)
+		require.NoError(t, err)
 		assert.Nil(t, gotCFS)
 		assert.Nil(t, gotPFS)
 		assert.Nil(t, gotPfReport)
 	})
 
-	t.Run("errors fail open", func(t *testing.T) {
+	t.Run("CFS read failure propagates", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		vrankErr := errors.New("vrank unavailable")
+
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetCFS(uint64(9)).Return(nil, vrankErr)
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+		v.VRankModule = mockVRank
+
+		_, _, _, err := v.fetchVRankCtx(9)
+		require.ErrorIs(t, err, vrankErr)
+	})
+
+	t.Run("PFS read failure propagates", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		pfReport := []common.Address{addr1}
 		vrankErr := errors.New("vrank unavailable")
@@ -280,18 +333,27 @@ func TestFetchVRankCtx(t *testing.T) {
 		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
 
 		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-		mockVRank.EXPECT().GetCFS(uint64(9)).Return(nil, vrankErr)
-		mockVRank.EXPECT().GetPfReport(uint64(9)).Return(pfReport, nil)
-		mockVRank.EXPECT().GetPFS(uint64(9)).Return(nil, vrankErr)
+		mockVRank.EXPECT().GetPfReport(uint64(8)).Return(pfReport, nil)
+		mockVRank.EXPECT().GetPFS(uint64(8)).Return(nil, vrankErr)
 
 		v := NewValsetModule()
 		v.Chain = mockChain
 		v.VRankModule = mockVRank
 
-		gotCFS, gotPFS, gotPfReport := v.fetchVRankCtx(9)
-		assert.Nil(t, gotCFS)
-		assert.Nil(t, gotPFS)
-		assert.Equal(t, pfReport, gotPfReport)
+		_, _, _, err := v.fetchVRankCtx(8)
+		require.ErrorIs(t, err, vrankErr)
+	})
+
+	t.Run("post-fork without VRankModule is an error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+
+		_, _, _, err := v.fetchVRankCtx(8)
+		require.ErrorIs(t, err, errVRankModuleNotSet)
 	})
 
 	t.Run("pre-fork block returns empty context without vrank reads", func(t *testing.T) {
@@ -303,7 +365,8 @@ func TestFetchVRankCtx(t *testing.T) {
 		v.Chain = mockChain
 		v.VRankModule = vrank_mock.NewMockVRankModule(ctrl)
 
-		gotCFS, gotPFS, gotPfReport := v.fetchVRankCtx(29)
+		gotCFS, gotPFS, gotPfReport, err := v.fetchVRankCtx(29)
+		require.NoError(t, err)
 		assert.Nil(t, gotCFS)
 		assert.Nil(t, gotPFS)
 		assert.Nil(t, gotPfReport)
