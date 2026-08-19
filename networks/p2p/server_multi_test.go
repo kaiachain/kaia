@@ -155,3 +155,31 @@ func TestMultiChannelStopClosesCandidates(t *testing.T) {
 	assert.Equal(t, DiscQuitting, tt.closeErr)
 	assert.Empty(t, srv.CandidateConns)
 }
+
+// A peer's advertised port list drives one dial each, so it is bounded before it is used.
+func TestListenPortsToTCPs(t *testing.T) {
+	const maxChannels = 2
+	testcases := []struct {
+		name  string
+		ports []uint64
+		want  []uint16
+	}{
+		{"single channel", []uint64{30303}, []uint16{30303}},
+		{"all channels", []uint64{30303, 30304}, []uint16{30303, 30304}},
+		{"more ports than listeners", []uint64{30303, 30304, 30305}, nil},
+		{"port zero", []uint64{30303, 0}, nil},
+		{"port above uint16", []uint64{30303, 65536 + 22}, nil},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tcps, err := listenPortsToTCPs(tc.ports, maxChannels)
+			if tc.want == nil {
+				assert.Equal(t, DiscProtocolError, err)
+				assert.Nil(t, tcps)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, tcps)
+		})
+	}
+}
