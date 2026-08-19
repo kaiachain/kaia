@@ -124,6 +124,25 @@ func TestMultiChannelRejectsOutOfRangePortOrder(t *testing.T) {
 	assert.Empty(t, srv.CandidateConns)
 }
 
+// One multichannel peer opens a single-channel dial that ends in errUpdateDial, then
+// one connection per listener, all from the same IP within microseconds. The per-IP
+// inbound throttle has to fit them all, since handleAddPeerConn only builds a Peer
+// once every channel has arrived.
+func TestMultiChannelInboundThrottleFitsOnePeer(t *testing.T) {
+	srv := newCandidateTestServer(t, 10)
+	allowance := srv.inboundAllowance()
+	require.Equal(t, 3, allowance, "a two-channel node must fit one dial per listener plus the single-channel dial")
+
+	// TEST-NET-3 is public, so netutil.IsLAN does not exempt it the way loopback does.
+	ip := net.ParseIP("203.0.113.7")
+	now := mclock.AbsTime(0)
+
+	for i := 0; i < allowance; i++ {
+		require.NoError(t, srv.checkInboundConn(ip, allowance, now), "connection %d of one peer was rejected", i)
+	}
+	require.Error(t, srv.checkInboundConn(ip, allowance, now), "the throttle must still bound connections beyond one peer")
+}
+
 func TestMultiChannelStopClosesCandidates(t *testing.T) {
 	srv := newCandidateTestServer(t, 4)
 	srv.quit = make(chan struct{})

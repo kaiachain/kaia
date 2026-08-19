@@ -213,6 +213,13 @@ func (srv *MultiChannelServer) startListening() error {
 	return nil
 }
 
+// Overrides BaseServer.inboundAllowance(): a peer opens one connection per listener,
+// plus the single-channel dial it made before the handshake told it that this node is
+// multichannel.
+func (srv *MultiChannelServer) inboundAllowance() int {
+	return len(srv.ListenAddrs) + 1
+}
+
 // listenLoop waits for an external connection and connects it.
 func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 	defer srv.loopWG.Done()
@@ -232,7 +239,7 @@ func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 		// Wait for a handshake slot before accepting.
 		<-slots
 
-		fd := srv.acceptInbound(listener, &lastLog)
+		fd := srv.acceptInbound(listener, srv.inboundAllowance(), &lastLog)
 		if fd == nil {
 			return
 		}
