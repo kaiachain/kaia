@@ -641,8 +641,10 @@ func (ds *DialSched) markDialFailure(id discover.NodeID) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	ds.connectedAll.remove(id)
-	ds.connectedOutbound.remove(id)
+	// Being connected means this dial was redundant, not that the peer is unreachable.
+	if ds.connectedAll.contains(id) {
+		return
+	}
 
 	if n := ds.static.get(id); n != nil {
 		ds.connFails[id]++
