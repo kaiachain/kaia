@@ -140,13 +140,11 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 		return nil, nil, err
 	}
 
-	// The registry entries are initially registered at activation=1, so the
-	// initialization calls can resolve them while running against the genesis
-	// staging state. The activation slots are patched back to zero below.
-	if installABv2 {
-		// Advance block number so getActiveAddr finds records with activation=1
-		cfg.BlockNumber = big.NewInt(1)
+	// Patch all Registry activation slots to 0 so contracts are active from genesis.
+	// Must precede the calls below, which resolve these records at block 0.
+	patchRegistryActivations(statedb, "CnStakingFactory", "ABv2DataContract")
 
+	if installABv2 {
 		// Step 5: Install ABv2 at 0x400 and call initialize()
 		if err := installAndInitABv2(cfg, statedb, result.abv2Impl); err != nil {
 			return nil, nil, err
@@ -159,9 +157,6 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 			return nil, nil, err
 		}
 	}
-
-	// Patch all Registry activation slots to 0 so contracts are active from genesis
-	patchRegistryActivations(statedb, "CnStakingFactory", "ABv2DataContract")
 
 	// Clean up balances for all managers
 	for _, info := range config.NodeInfos {
