@@ -604,6 +604,9 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 
 	if ctx.IsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
+		if cfg.SyncMode == downloader.FastSync {
+			log.Fatalf("Fast sync is no longer supported. Use --syncmode full, or bootstrap from a chaindata snapshot: https://docs.kaia.io")
+		}
 		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {
 			log.Fatalf("Full Sync or Snap Sync (prototype) is supported only!")
 		}
