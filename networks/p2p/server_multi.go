@@ -25,6 +25,7 @@ package p2p
 import (
 	"context"
 	"errors"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -336,13 +337,15 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	c.caps, c.name, c.multiChannel = phs.Caps, phs.Name, phs.Multichannel
 
 	if c.multiChannel && dialDest != nil && (dialDest.TCPs == nil || len(dialDest.TCPs) < 2) && len(dialDest.TCPs) < len(phs.ListenPort) {
+		tcps, err := listenPortsToTCPs(phs.ListenPort, len(srv.ListenAddrs))
+		if err != nil {
+			clog.Trace("Rejected multichannel peer", "ports", len(phs.ListenPort), "err", err)
+			return err
+		}
 		logger.Debug("[Dial] update and retry the dial candidate as a multichannel",
 			"id", dialDest.ID, "addr", dialDest.IP, "previous", dialDest.TCPs, "new", phs.ListenPort)
 
-		dialDest.TCPs = make([]uint16, 0, len(phs.ListenPort))
-		for _, listenPort := range phs.ListenPort {
-			dialDest.TCPs = append(dialDest.TCPs, uint16(listenPort))
-		}
+		dialDest.TCPs = tcps
 		return errUpdateDial
 	}
 
@@ -355,6 +358,22 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 	// launched by handleAddPeerConn.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
+}
+
+// listenPortsToTCPs turns a peer's advertised ports into dial targets, one dial per entry,
+// so the count may not exceed this node's listener count.
+func listenPortsToTCPs(listenPorts []uint64, maxChannels int) ([]uint16, error) {
+	if len(listenPorts) > maxChannels {
+		return nil, DiscProtocolError
+	}
+	tcps := make([]uint16, 0, len(listenPorts))
+	for _, port := range listenPorts {
+		if port == 0 || port > math.MaxUint16 {
+			return nil, DiscProtocolError
+		}
+		tcps = append(tcps, uint16(port))
+	}
+	return tcps, nil
 }
 
 // Override BaseServer.handleAddPeerConn because multichannel peer admission
