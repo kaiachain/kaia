@@ -145,8 +145,8 @@ func (s *CN) cnPeerSyncLoop(ch <-chan blockchain.ChainHeadEvent, sub event.Subsc
 
 	for {
 		select {
-		case ev := <-ch:
-			s.cnPeerUpdater.syncHead(ev.Block)
+		case <-ch:
+			s.cnPeerUpdater.syncHead(s.blockchain.CurrentBlock())
 		case err, ok := <-sub.Err():
 			if ok && err != nil {
 				logger.Warn("CN peer sync stopped", "err", err)

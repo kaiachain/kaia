@@ -119,16 +119,22 @@ func (v *ValsetModule) applyTransition(header *types.Header, statedb *state.Stat
 	}
 	abv2result.Nodes.MarkSuspended(abv2result.SuspendedValidators)
 
-	ctx := v.newTransitionContext(header, abv2result)
+	ctx, err := v.newTransitionContext(header, abv2result)
+	if err != nil {
+		return nil, err
+	}
 	return ctx.ApplyAllTransitions(abv2result.Nodes), nil
 }
 
-func (v *ValsetModule) newTransitionContext(header *types.Header, abv2result *system.ABv2Snapshot) *TransitionContext {
+func (v *ValsetModule) newTransitionContext(header *types.Header, abv2result *system.ABv2Snapshot) (*TransitionContext, error) {
 	headNum := header.Number.Uint64()
 	nextNum := headNum + 1
 
 	pset := v.GovModule.GetParamSet(nextNum)
-	cfs, pfs, pfReport := v.fetchVRankCtx(headNum)
+	cfs, pfs, pfReport, err := v.fetchVRankCtx(headNum)
+	if err != nil {
+		return nil, err
+	}
 
 	ctx := NewTransitionContext()
 	ctx.SetBlockCtx(header, v.isVrankEpoch(nextNum))
@@ -136,44 +142,37 @@ func (v *ValsetModule) newTransitionContext(header *types.Header, abv2result *sy
 	ctx.SetABv2TransitionParam(abv2result.TransitionParam())
 	ctx.SetSlotsCtx(slotLimitsFor(abv2result.EpochVACount))
 	ctx.SetVRankCtx(cfs, pfs, pfReport)
-	return ctx
+	return ctx, nil
 }
 
 // fetchVRankCtx pulls the three vrank scores transitions need at block num.
-// Errors are swallowed here so the orchestrator stays robust to transient vrank failures.
-func (v *ValsetModule) fetchVRankCtx(num uint64) (cfs, pfs map[common.Address]uint64, pfReport []common.Address) {
-	if v.VRankModule == nil {
-		logger.Error("VRankModule is nil")
-		return nil, nil, nil
-	}
+// Read failures are returned, never absorbed into an empty context: transition
+// results are cached (getTransitionResult) and consumed by the consensus write
+// path (writeTransitionToABv2), so a result computed with missing vrank
+// evidence must fail instead of being produced as a valid result.
+func (v *ValsetModule) fetchVRankCtx(num uint64) (cfs, pfs map[common.Address]uint64, pfReport []common.Address, err error) {
 	// Pre-HF blocks have no VRank evidence. Keep applyTr(HF-1) as a no-op
 	// for VRank-dependent transitions by returning an empty VRank context.
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return nil, nil, nil
+		return nil, nil, nil, nil
+	}
+	if v.VRankModule == nil {
+		return nil, nil, nil, errVRankModuleNotSet
 	}
 	if nextNum := num + 1; v.isVrankEpoch(nextNum) {
-		c, err := v.VRankModule.GetCFS(num)
-		if err != nil {
-			logger.Error("fetchVRankCtx: GetCFS failed", "num", num, "err", err)
-		} else {
-			cfs = c
+		if cfs, err = v.VRankModule.GetCFS(num); err != nil {
+			return nil, nil, nil, fmt.Errorf("GetCFS(%d) failed: %w", num, err)
 		}
 	}
-	r, err := v.VRankModule.GetPfReport(num)
-	if err != nil {
-		logger.Error("fetchVRankCtx: GetPfReport failed", "num", num, "err", err)
-	} else {
-		pfReport = r
+	if pfReport, err = v.VRankModule.GetPfReport(num); err != nil {
+		return nil, nil, nil, fmt.Errorf("GetPfReport(%d) failed: %w", num, err)
 	}
 	if len(pfReport) > 0 {
-		p, err := v.VRankModule.GetPFS(num)
-		if err != nil {
-			logger.Error("fetchVRankCtx: GetPFS failed", "num", num, "err", err)
-		} else {
-			pfs = p
+		if pfs, err = v.VRankModule.GetPFS(num); err != nil {
+			return nil, nil, nil, fmt.Errorf("GetPFS(%d) failed: %w", num, err)
 		}
 	}
-	return cfs, pfs, pfReport
+	return cfs, pfs, pfReport, nil
 }
 
 func (v *ValsetModule) isVrankEpoch(num uint64) bool {
