@@ -1277,6 +1277,9 @@ func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if pm.IsAuctionModuleDisabled() {
 		return nil
 	}
+	if p.ConnType() != common.CONSENSUSNODE {
+		return errResp(ErrInvalidMsgCode, "bid message from a non-CN peer: conntype %d", p.ConnType())
+	}
 
 	var data *auction.Bid
 	if err := msg.Decode(&data); err != nil {
