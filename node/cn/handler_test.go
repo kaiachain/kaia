@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/mocks"
@@ -158,11 +159,35 @@ func TestNewProtocolManager(t *testing.T) {
 
 		pm, err := NewProtocolManager(params.TestChainConfig, downloader.FastSync, 0, nil, mockTxPool,
 			&testConsensusHandler{}, mockBlockChain, nil, 1, common.CONSENSUSNODE,
-			&Config{DownloaderDisable: true, FetcherDisable: true})
+			&Config{DownloaderDisable: true, FetcherDisable: true}, nil)
 
 		assert.NotNil(t, pm)
 		assert.NoError(t, err)
 	}
+}
+
+// The downloader must be constructed with a live staking module.
+func TestNewProtocolManager_downloaderHoldsStakingModule(t *testing.T) {
+	mockCtrl, mockBlockChain, mockTxPool := newMocks(t)
+	defer mockCtrl.Finish()
+
+	// Staking info recovery refuses ranges at or after the Kaia fork, so use a config with none.
+	config := params.TestKaiaConfig("istanbul")
+	mockBlockChain.EXPECT().Config().Return(config).AnyTimes()
+	mockBlockChain.EXPECT().CurrentBlock().Return(newBlock(0)).AnyTimes()
+
+	db := database.NewMemoryDBManager()
+	db.WriteCanonicalHash(common.HexToHash("0x1"), 0)
+
+	mStaking := staking_mock.NewMockStakingModule(mockCtrl)
+	mStaking.EXPECT().GetStakingInfoFromDB(uint64(0)).Return(nil).Times(1)
+
+	pm, err := NewProtocolManager(config, downloader.FullSync, 0, nil, mockTxPool,
+		&testConsensusHandler{}, mockBlockChain, db, 1, common.CONSENSUSNODE,
+		&Config{FetcherDisable: true}, mStaking)
+	assert.NoError(t, err)
+
+	assert.Error(t, pm.Downloader().SyncStakingInfo("no-such-peer", 0, 0))
 }
 
 func TestProtocolManager_RegisterValidator(t *testing.T) {
@@ -1382,7 +1407,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		},
 	}
 
-	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, faker.NewFaker(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
+	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, faker.NewFaker(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

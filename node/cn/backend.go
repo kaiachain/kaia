@@ -363,7 +363,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if !ok {
 		return nil, errUnsupportedEnginePolicy
 	}
-	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, handler, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, handler, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config, cn.stakingModule); err != nil {
 		return nil, err
 	}
 
