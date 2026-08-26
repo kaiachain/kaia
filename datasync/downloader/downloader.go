@@ -104,6 +104,7 @@ type Downloader struct {
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
 	isStakingInfoRecovery     bool
+	stakingInfoRecoveryPeer   string
 	stakingInfoRecoveryTotal  int
 	stakingInfoRecoveryCh     chan []*staking.P2PStakingInfo
 	stakingInfoRecoveryBlocks []uint64
@@ -636,6 +637,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 		return errors.New("the given peer is not registered")
 	}
 
+	d.stakingInfoRecoveryPeer = id
 	d.stakingInfoRecoveryBlocks = blockNums
 	d.stakingInfoRecoveryTotal = len(blockNums)
 	d.stakingInfoRecoveryCh = make(chan []*staking.P2PStakingInfo, 1)
@@ -669,15 +671,21 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 				return
 			case stakingInfos := <-d.stakingInfoRecoveryCh:
 				logger.Info("received stakinginfos", "len", len(stakingInfos))
-				for _, stakingInfo := range stakingInfos {
-					if d.stakingInfoRecoveryBlocks[0] != stakingInfo.BlockNum {
-						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[0], "actual", stakingInfo.BlockNum)
+				if len(stakingInfos) > len(d.stakingInfoRecoveryBlocks) {
+					logger.Error("received more staking infos than requested", "received", len(stakingInfos), "pending", len(d.stakingInfoRecoveryBlocks))
+					return
+				}
+				for i, stakingInfo := range stakingInfos {
+					if d.stakingInfoRecoveryBlocks[i] != stakingInfo.BlockNum {
+						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[i], "actual", stakingInfo.BlockNum)
 						return
 					}
-					d.stakingModule.PutStakingInfoToDB(stakingInfo.BlockNum, staking.ToStakingInfo(stakingInfo))
-					fixed++
-					d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[1:]
 				}
+				for i, stakingInfo := range stakingInfos {
+					d.stakingModule.PutStakingInfoToDB(d.stakingInfoRecoveryBlocks[i], staking.ToStakingInfo(stakingInfo))
+					fixed++
+				}
+				d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[len(stakingInfos):]
 
 				if len(d.stakingInfoRecoveryBlocks) == 0 {
 					logger.Info("syncing staking info is finished", "fixed", fixed)
@@ -1934,8 +1942,11 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 
 // DeliverStakingInfos injects a new batch of staking information received from a remote node.
 func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error {
-	if d.isStakingInfoRecovery {
-		d.stakingInfoRecoveryCh <- stakingInfos
+	if d.isStakingInfoRecovery && id == d.stakingInfoRecoveryPeer {
+		select {
+		case d.stakingInfoRecoveryCh <- stakingInfos:
+		default:
+		}
 	}
 	return d.deliver(id, d.stakingInfoCh, &stakingInfoPack{id, stakingInfos}, stakingInfoInMeter, stakingInfoDropMeter)
 }
