@@ -172,7 +172,7 @@ var (
 	defaultSyncMode = cn.GetDefaultConfig().SyncMode
 	SyncModeFlag    = &TextMarshalerFlag{
 		Name:     "syncmode",
-		Usage:    `Blockchain sync mode ("full" or "snap")`,
+		Usage:    `Blockchain sync mode ("full")`,
 		Value:    &defaultSyncMode,
 		Aliases:  []string{"common.syncmode"},
 		EnvVars:  []string{"KLAYTN_SYNCMODE", "KAIA_SYNCMODE"},
