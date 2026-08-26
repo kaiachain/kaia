@@ -530,6 +530,68 @@ func TestApplyViolationTransition_EmptyPfReport_NoOp(t *testing.T) {
 // With n=4, maxSlot=1 for each but minActive=3 means only 1 total can leave ValActive
 // (either 1 paused or 1 exiting, not both), since 4-2=2 < minActive=3.
 // ============================================================
+func TestApplyViolationTransition_Priority(t *testing.T) {
+	const (
+		slotMax      = uint64(1) // maxSlotAvailable(4)
+		minActive    = uint64(3) // minActiveCount(4)
+		pfsThreshold = uint64(2)
+	)
+	fourActive := func() NodeMap {
+		return NodeMap{
+			addr1: {State: ValActive, StakingAmount: aboveMinStake},
+			addr2: {State: ValActive, StakingAmount: aboveMinStake},
+			addr3: {State: ValActive, StakingAmount: aboveMinStake},
+			addr4: {State: ValActive, StakingAmount: aboveMinStake},
+		}
+	}
+	pfsCtx := func(pfs map[common.Address]uint64) *TransitionContext {
+		return violationCtx(t, ctxOpts{
+			PfsThreshold:     pfsThreshold,
+			MaxSlotAvailable: slotMax,
+			MinActiveCount:   minActive,
+			PFS:              pfs,
+			PfReport:         []common.Address{addr1},
+		})
+	}
+
+	t.Run("severe is served before minor regardless of address", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			pfs     map[common.Address]uint64
+			exiting common.Address
+		}{
+			{"severe on the higher address", map[common.Address]uint64{addr1: pfsThreshold - 1, addr2: pfsThreshold + 1}, addr2},
+			{"severe on the lower address", map[common.Address]uint64{addr1: pfsThreshold + 1, addr2: pfsThreshold - 1}, addr1},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				out := pfsCtx(tc.pfs).applyViolationTransition(fourActive())
+				assert.Equal(t, ValExiting, out[tc.exiting].State, "the severe violator must take the last slot")
+				assert.Equal(t, 0, int(out.CountByState(ValPaused)), "the minor violator must not consume the floor first")
+			})
+		}
+	})
+
+	t.Run("worst PFS is served first within a severity", func(t *testing.T) {
+		out := pfsCtx(map[common.Address]uint64{addr1: pfsThreshold + 1, addr2: pfsThreshold + 5}).applyViolationTransition(fourActive())
+		assert.Equal(t, ValExiting, out[addr2].State)
+		assert.Equal(t, ValActive, out[addr1].State)
+	})
+
+	t.Run("minStake: active is served before paused for the exiting slot", func(t *testing.T) {
+		m := NodeMap{
+			addr1: {State: ValPaused, StakingAmount: belowMinStake},
+			addr2: {State: ValActive, StakingAmount: belowMinStake},
+			addr3: {State: ValActive, StakingAmount: aboveMinStake},
+			addr4: {State: ValActive, StakingAmount: aboveMinStake},
+		}
+		ctx := violationCtx(t, ctxOpts{MaxSlotAvailable: slotMax, MinActiveCount: 2})
+		out := ctx.applyViolationTransition(m)
+		assert.Equal(t, ValExiting, out[addr2].State)
+		assert.Equal(t, ValPaused, out[addr1].State)
+	})
+}
+
 func TestApplyViolationTransition_SlotLimits(t *testing.T) {
 	const (
 		slotMax      = uint64(1) // maxSlotAvailable(4)

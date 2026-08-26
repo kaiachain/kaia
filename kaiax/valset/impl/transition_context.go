@@ -297,33 +297,37 @@ func (ctx *TransitionContext) applyViolationTransition(m valset.NodeMap) valset.
 	// which validator is processed first, so random map iteration would be nondeterministic.
 	sortedAddrs := newValidators.Addresses()
 
-	// rule1: staking amount dropped below MinimumStake
-	for _, addr := range sortedAddrs {
-		val := newValidators[addr]
-		if val.StakingAmount >= ctx.MinStake {
-			continue
-		}
-		switch val.State {
-		case valset.ValActive:
-			// ValActive → ValExiting (slot + minActiveCount: removing an active validator reduces consensus participants)
-			if canDemoteActive(valset.ValExiting) {
-				logger.Trace("MinStake violation: ValActive → ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
-				val.State = valset.ValExiting
-			} else {
-				logger.Trace("MinStake violation: slot full, skipping ValActive transition", "addr", addr, "staking", val.StakingAmount)
+	// rule1: staking amount dropped below MinimumStake.
+	// Pass per source state: ValActive and ValPaused both draw on the ValExiting slots,
+	// and ValActive additionally draws on the active floor, so it is served first.
+	for _, state := range []valset.NodeState{valset.ValActive, valset.ValPaused, valset.ValReady} {
+		for _, addr := range sortedAddrs {
+			val := newValidators[addr]
+			if val.State != state || val.StakingAmount >= ctx.MinStake {
+				continue
 			}
-		case valset.ValPaused:
-			// ValPaused → ValExiting (slot only: ValPaused is already not in active set)
-			if hasSlot(valset.ValExiting) {
-				logger.Trace("MinStake violation: ValPaused → ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
-				val.State = valset.ValExiting
-			} else {
-				logger.Trace("MinStake violation: slot full, skipping ValPaused transition", "addr", addr, "staking", val.StakingAmount)
+			switch val.State {
+			case valset.ValActive:
+				// ValActive → ValExiting (slot + minActiveCount: removing an active validator reduces consensus participants)
+				if canDemoteActive(valset.ValExiting) {
+					logger.Trace("MinStake violation: ValActive → ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
+					val.State = valset.ValExiting
+				} else {
+					logger.Trace("MinStake violation: slot full, skipping ValActive transition", "addr", addr, "staking", val.StakingAmount)
+				}
+			case valset.ValPaused:
+				// ValPaused → ValExiting (slot only: ValPaused is already not in active set)
+				if hasSlot(valset.ValExiting) {
+					logger.Trace("MinStake violation: ValPaused → ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
+					val.State = valset.ValExiting
+				} else {
+					logger.Trace("MinStake violation: slot full, skipping ValPaused transition", "addr", addr, "staking", val.StakingAmount)
+				}
+			case valset.ValReady:
+				// ValReady → ValInactive (no slot check, not in active set)
+				logger.Trace("MinStake violation: ValReady → ValInactive", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
+				val.State = valset.ValInactive
 			}
-		case valset.ValReady:
-			// ValReady → ValInactive (no slot check, not in active set)
-			logger.Trace("MinStake violation: ValReady → ValInactive", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
-			val.State = valset.ValInactive
 		}
 	}
 
@@ -333,23 +337,39 @@ func (ctx *TransitionContext) applyViolationTransition(m valset.NodeMap) valset.
 	if len(ctx.PfReport) == 0 {
 		return newValidators
 	}
+
+	// Severe and minor violations both consume the active floor, so severe ones are
+	// served first and, within a severity, the worst PFS first. Address only breaks ties.
+	violators := make([]common.Address, 0, len(sortedAddrs))
 	for _, addr := range sortedAddrs {
+		if newValidators[addr].State == valset.ValActive && ctx.PFS[addr] > 0 {
+			violators = append(violators, addr)
+		}
+	}
+	slices.SortFunc(violators, func(a, b common.Address) int {
+		if c := cmp.Compare(ctx.PFS[b], ctx.PFS[a]); c != 0 {
+			return c
+		}
+		return bytes.Compare(a[:], b[:])
+	})
+
+	for _, addr := range violators {
 		val := newValidators[addr]
-		if val.State != valset.ValActive {
-			continue
-		}
-		pfs, ok := ctx.PFS[addr]
-		if !ok || pfs == 0 {
-			continue
-		}
-		if pfs >= ctx.PfsThreshold {
+		if pfs := ctx.PFS[addr]; pfs >= ctx.PfsThreshold {
 			if canDemoteActive(valset.ValExiting) {
 				logger.Trace("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "pfsThreshold", ctx.PfsThreshold)
 				val.State = valset.ValExiting
 			} else {
 				logger.Trace("PFS severe violation: slot full, skipping transition", "addr", addr, "pfs", pfs)
 			}
-		} else {
+		}
+	}
+	for _, addr := range violators {
+		val := newValidators[addr]
+		if val.State != valset.ValActive {
+			continue
+		}
+		if pfs := ctx.PFS[addr]; pfs < ctx.PfsThreshold {
 			if canDemoteActive(valset.ValPaused) {
 				logger.Trace("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "pfsThreshold", ctx.PfsThreshold)
 				val.State = valset.ValPaused
