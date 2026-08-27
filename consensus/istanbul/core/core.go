@@ -360,7 +360,7 @@ func (c *core) startNewRound(round *big.Int) {
 	// New snapshot for new round
 	c.updateRoundState(newView, roundChange, qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum)
 	// Clear invalid ROUND CHANGE messages
-	c.roundChangeSet = newRoundChangeSet(c.current.qualified)
+	c.roundChangeSet = newRoundChangeSet(c.current.qualified, c.current.requiredMessageCount)
 	// Calculate new proposer
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
