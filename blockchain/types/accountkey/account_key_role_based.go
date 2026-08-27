@@ -23,8 +23,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -277,6 +279,12 @@ func (a *AccountKeyRoleBased) Update(newKey AccountKey, currentBlockNumber uint6
 	lenOldKey := len(*a)
 	if lenOldKey < lenNewKey {
 		*a = append(*a, (*newRoleKey)[lenOldKey:]...)
+	} else if lenOldKey > lenNewKey && fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsPermissionless {
+		// TODO: gated to post-Permissionless for now; remove the fork gate if we decide it
+		// can be applied unconditionally.
+		// If the new key is shorter, the stored key set follows the length of the new key,
+		// so that any role not set by the new key maps to RoleTransaction by default.
+		*a = (*a)[:lenNewKey]
 	}
 	for i := range lenNewKey {
 		if (*newRoleKey)[i].Type() == AccountKeyTypeNil {
