@@ -44,11 +44,14 @@ type BlsPubkeyGetter interface {
 	GetBlsPubkey(nodeId common.Address, num *big.Int) (bls.PublicKey, error)
 }
 
-// Sealer is a narrow interface for reading the round and the author from a block header.
+// Sealer is a narrow view of the seal data VRank reads and verifies.
 // Typically satisfied by consensus.Sealer via the istanbul backend.
 type Sealer interface {
 	Round(header *types.Header) (byte, error)
 	Author(header *types.Header) (common.Address, error)
+	RawSeals(header *types.Header) ([]byte, [][]byte, error)
+	RecoverCommitters(hash common.Hash, round byte, seals [][]byte) ([]common.Address, error)
+	Quorum(blockNum uint64, qualifiedlen, committeeSize int) int
 }
 
 type VRankModule interface {

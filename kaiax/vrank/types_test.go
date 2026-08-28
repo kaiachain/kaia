@@ -31,41 +31,40 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEncodeDecodeReport(t *testing.T) {
+func TestEncodeDecodeVRank(t *testing.T) {
+	addrs := []common.Address{
+		common.HexToAddress("0x15d34AAf54267DB7D7cC839724318F2730aC377B"),
+		common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819D0A4DC"),
+	}
+	seals := [][]byte{make([]byte, 65), make([]byte, 65)}
+
 	cases := []struct {
-		name   string
-		report []common.Address
+		name        string
+		payload     VRankPayload
+		expectEmpty bool
 	}{
-		{
-			name:   "addresses",
-			report: []common.Address{common.HexToAddress("0x15d34AAf54267DB7D7cC839724318F2730aC377B"), common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819D0A4DC")},
-		},
-		{
-			name:   "empty",
-			report: []common.Address{},
-		},
+		// Decoding always yields non-nil slices, so the expectations spell out the empty ones.
+		{"report only", VRankPayload{Report: addrs, ParentCommittedSeal: [][]byte{}}, false},
+		{"parent round with seals", VRankPayload{Report: []common.Address{}, ParentRound: 3, ParentCommittedSeal: seals}, false},
+		{"both", VRankPayload{Report: addrs, ParentRound: 1, ParentCommittedSeal: seals}, false},
+		{"empty", VRankPayload{Report: []common.Address{}, ParentCommittedSeal: [][]byte{}}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			enc, err := EncodeReport(tc.report)
-			assert.NoError(t, err)
-			if len(tc.report) == 0 {
-				assert.Nil(t, enc, "an empty report is encoded as absent bytes")
+			enc, err := EncodeVRank(tc.payload)
+			require.NoError(t, err)
+			if tc.expectEmpty {
+				assert.Nil(t, enc, "an empty payload is encoded as absent bytes")
 			} else {
 				assert.NotEmpty(t, enc)
 			}
-			gotReport, err := DecodeReport(enc)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.report, gotReport)
+			got, err := DecodeVRank(enc)
+			require.NoError(t, err)
+			assert.Equal(t, tc.payload.Report, got.Report)
+			assert.Equal(t, tc.payload.ParentRound, got.ParentRound)
+			assert.Equal(t, tc.payload.ParentCommittedSeal, got.ParentCommittedSeal)
 		})
 	}
-}
-
-func TestEncodeAddressList_EmptyList(t *testing.T) {
-	// Epoch-start VRank encodes an empty CandTesting list as the canonical empty RLP list (0xc0).
-	enc, err := EncodeAddressList(nil)
-	assert.NoError(t, err)
-	assert.Equal(t, []byte{0xc0}, enc)
 }
 
 // The pre-fixed-size shapes. A wrong signature length is only expressible from here.

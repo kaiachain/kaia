@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 	"time"
@@ -24,6 +25,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
@@ -37,7 +40,7 @@ func makeSelfReportHeader(t *testing.T, number uint64, cfAddrs []common.Address)
 	t.Helper()
 	h := makeHeaderWithRound(number, 0)
 	if len(cfAddrs) > 0 {
-		encoded, err := vrank.EncodeReport(cfAddrs)
+		encoded, err := vrank.EncodeVRank(vrank.VRankPayload{Report: cfAddrs})
 		require.NoError(t, err)
 		h.VRank = encoded
 	}
@@ -46,7 +49,7 @@ func makeSelfReportHeader(t *testing.T, number uint64, cfAddrs []common.Address)
 
 func makeEpochStartVRankHeader(t *testing.T, number uint64, candidates []common.Address) *types.Header {
 	t.Helper()
-	encoded, err := vrank.EncodeAddressList(candidates)
+	encoded, err := vrank.EncodeVRank(vrank.VRankPayload{Report: candidates})
 	require.NoError(t, err)
 	return &types.Header{Number: big.NewInt(int64(number)), VRank: encoded}
 }
@@ -88,10 +91,10 @@ func TestVerifyHeader(t *testing.T) {
 			vrank.ErrEpochStartVRankMismatch)
 	})
 
-	t.Run("epoch-start: empty CandTesting is encoded as an RLP list", func(t *testing.T) {
+	t.Run("epoch-start: empty CandTesting leaves VRank absent", func(t *testing.T) {
 		v := newCN(t, withCandidates(nil)).VRankModule
 		h := makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, nil)
-		assert.Equal(t, []byte{0xc0}, h.VRank)
+		assert.Nil(t, h.VRank)
 		assert.NoError(t, v.VerifyHeader(h, nil))
 	})
 
@@ -177,27 +180,27 @@ func TestPrepareHeader(t *testing.T) {
 	})
 
 	t.Run("epoch-start fills CandTesting", func(t *testing.T) {
-		v := newCN(t, withCandidates(candidates), withoutStart()).VRankModule
+		v := newCN(t, withCandidates(candidates), withoutStart(), withParentAt(params.DefaultVRankEpoch)).VRankModule
 		header := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
 
 		require.NoError(t, v.PrepareHeader(header))
-		expected, err := vrank.EncodeAddressList(candidates)
+		expected, err := vrank.EncodeVRank(vrank.VRankPayload{Report: candidates})
 		require.NoError(t, err)
 		assert.Equal(t, expected, header.VRank)
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
-	t.Run("epoch-start with no candidates writes encoded empty list", func(t *testing.T) {
-		v := newCN(t, withCandidates(nil), withoutStart()).VRankModule
+	t.Run("epoch-start with no candidates leaves VRank nil", func(t *testing.T) {
+		v := newCN(t, withCandidates(nil), withoutStart(), withParentAt(params.DefaultVRankEpoch)).VRankModule
 		header := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
 
 		require.NoError(t, v.PrepareHeader(header))
-		assert.Equal(t, []byte{0xc0}, header.VRank)
+		assert.Nil(t, header.VRank)
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
 	t.Run("non-epoch with no own proposal leaves VRank nil", func(t *testing.T) {
-		v := newCN(t, withoutStart()).VRankModule
+		v := newCN(t, withoutStart(), withParentAt(11)).VRankModule
 		header := &types.Header{Number: big.NewInt(11)}
 
 		require.NoError(t, v.PrepareHeader(header))
@@ -210,8 +213,11 @@ func TestPrepareHeader(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		valset.EXPECT().GetCandTesting(gomock.Any()).Return(candidates, nil).AnyTimes()
 		targetHeader := makeHeaderWithRound(target, round)
-		cn := newCN(t, withValset(valset), withoutStart(),
-			withHeaders(map[uint64]*types.Header{target: targetHeader}))
+		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(map[uint64]*types.Header{
+			target: targetHeader,
+			// PrepareHeader(target+1) reads its parent for the certificate.
+			target + 1: makeHeaderWithRound(target+1, 0),
+		}))
 		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(cn.Addr, nil).AnyTimes()
 		cn.VRankModule.collector.AddPrepreparedTime(
 			vrank.ViewKey{N: target, R: uint8(round)}, time.Now(), types.NewBlockWithHeader(targetHeader).Hash())
@@ -219,24 +225,26 @@ func TestPrepareHeader(t *testing.T) {
 	}
 
 	t.Run("non-epoch reports candidate failures of own prior proposal", func(t *testing.T) {
-		v := setupOwnProposal(t, 10, 1)
+		v := setupOwnProposal(t, 10, 0)
 		header := makeHeaderWithRound(11, 0)
 
 		require.NoError(t, v.PrepareHeader(header))
-		report, err := vrank.DecodeReport(header.VRank)
+		payload, err := vrank.DecodeVRank(header.VRank)
 		require.NoError(t, err)
-		assert.Equal(t, candidates, report) // no responses collected ⇒ all candidates failed
+		assert.Equal(t, candidates, payload.Report) // no responses collected ⇒ all candidates failed
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
-	t.Run("high-round own proposal yields nil VRank", func(t *testing.T) {
+	t.Run("high-round own proposal yields an empty report", func(t *testing.T) {
 		// An own proposal committed above MaxRound is evaluated as empty (candidate msgs were dropped),
 		// so it must not fail PrepareHeader.
 		v := setupOwnProposal(t, 10, int64(vrank.MaxRound+1))
 		header := &types.Header{Number: big.NewInt(11)}
 
 		require.NoError(t, v.PrepareHeader(header))
-		assert.Nil(t, header.VRank)
+		payload, err := vrank.DecodeVRank(header.VRank)
+		require.NoError(t, err)
+		assert.Empty(t, payload.Report)
 	})
 }
 
@@ -313,5 +321,153 @@ func TestSelectReportTarget(t *testing.T) {
 
 		_, _, ok := v.selectReportTarget(epoch + 1)
 		assert.False(t, ok)
+	})
+}
+
+// certifiedParent returns a parent committed at `round`, the hash the child must carry as
+// ParentHash, and the signers' seals over that (hash, round).
+func certifiedParent(t *testing.T, number uint64, round byte, signers []*ecdsa.PrivateKey) (*types.Header, common.Hash, [][]byte) {
+	t.Helper()
+	parent := makeHeaderWithRound(number, int64(round))
+	hash := newTestSealer().HeaderHash(parent)
+	seals := make([][]byte, 0, len(signers))
+	for _, key := range signers {
+		seal, err := istanbul.NewSealerImpl(key).MakeCommittedSealFromHashWithRound(hash, round)
+		require.NoError(t, err)
+		seals = append(seals, seal)
+	}
+	return parent, hash, seals
+}
+
+// TestVerifyHeaderParentRound covers the parent-round certificate: a committee quorum must have
+// committed the parent at the claimed round.
+func TestVerifyHeaderParentRound(t *testing.T) {
+	const (
+		parentNum   = uint64(20)
+		parentRound = byte(2)
+	)
+
+	keys := make([]*ecdsa.PrivateKey, 4)
+	committee := make([]common.Address, 4)
+	for i := range keys {
+		key, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		keys[i] = key
+		committee[i] = crypto.PubkeyToAddress(key.PublicKey)
+	}
+	strangerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
+	// quorum over a 4-member committee is 3
+	_, parentHash, quorumSeals := certifiedParent(t, parentNum, parentRound, keys[:3])
+	_, _, wrongRoundSeals := certifiedParent(t, parentNum, parentRound+1, keys[:3])
+	_, _, strangerSeals := certifiedParent(t, parentNum, parentRound, []*ecdsa.PrivateKey{keys[0], keys[1], strangerKey})
+	_, _, dupSeals := certifiedParent(t, parentNum, parentRound, []*ecdsa.PrivateKey{keys[0], keys[0], keys[1]})
+	_, _, overlongSeals := certifiedParent(t, parentNum, parentRound, append(keys, keys[0]))
+
+	testcases := []struct {
+		name        string
+		payload     vrank.VRankPayload
+		expectedErr error
+	}{
+		{"quorum of the round's committee is accepted", vrank.VRankPayload{ParentRound: parentRound, ParentCommittedSeal: quorumSeals}, nil},
+		{"seals bound to another round are rejected", vrank.VRankPayload{ParentRound: parentRound, ParentCommittedSeal: wrongRoundSeals}, vrank.ErrInvalidParentCertificate},
+		{"a signer outside the committee is rejected", vrank.VRankPayload{ParentRound: parentRound, ParentCommittedSeal: strangerSeals}, vrank.ErrInvalidParentCertificate},
+		{"a repeated signer is rejected", vrank.VRankPayload{ParentRound: parentRound, ParentCommittedSeal: dupSeals}, vrank.ErrInvalidParentCertificate},
+		{"below quorum is rejected", vrank.VRankPayload{ParentRound: parentRound, ParentCommittedSeal: quorumSeals[:2]}, vrank.ErrInvalidParentCertificate},
+		{"a round without seals is rejected", vrank.VRankPayload{ParentRound: parentRound}, vrank.ErrInvalidParentCertificate},
+		{"more seals than the committee is rejected", vrank.VRankPayload{ParentRound: parentRound, ParentCommittedSeal: overlongSeals}, vrank.ErrTooManyParentSeals},
+		{"round zero with seals is rejected", vrank.VRankPayload{ParentCommittedSeal: quorumSeals}, vrank.ErrUnexpectedParentSeal},
+		{"round zero without seals is accepted", vrank.VRankPayload{}, nil},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+			valset.EXPECT().GetCommittee(parentNum, uint64(parentRound)).Return(committee, nil).AnyTimes()
+			valset.EXPECT().GetCandTesting(gomock.Any()).Return(nil, nil).AnyTimes()
+			v := newCN(t, withValset(valset), withoutStart()).VRankModule
+
+			encoded, err := vrank.EncodeVRank(tc.payload)
+			require.NoError(t, err)
+			header := &types.Header{
+				Number:     big.NewInt(int64(parentNum + 1)),
+				ParentHash: parentHash,
+				VRank:      encoded,
+			}
+
+			err = v.VerifyHeader(header, nil)
+			if tc.expectedErr == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			}
+		})
+	}
+}
+
+// TestPrepareHeaderCopiesParentCertificate checks that the certificate is copied from this node's
+// own stored parent and that the result verifies.
+func TestPrepareHeaderCopiesParentCertificate(t *testing.T) {
+	const (
+		parentNum   = uint64(30)
+		parentRound = byte(2)
+	)
+
+	keys := make([]*ecdsa.PrivateKey, 4)
+	committee := make([]common.Address, 4)
+	for i := range keys {
+		key, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		keys[i] = key
+		committee[i] = crypto.PubkeyToAddress(key.PublicKey)
+	}
+
+	parent, parentHash, seals := certifiedParent(t, parentNum, parentRound, keys[:3])
+	require.NoError(t, newTestSealer().WriteCommittedSeals(parent, seals))
+
+	valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+	valset.EXPECT().GetCommittee(parentNum, uint64(parentRound)).Return(committee, nil).AnyTimes()
+	valset.EXPECT().GetCandTesting(gomock.Any()).Return(nil, nil).AnyTimes()
+	v := newCN(t, withValset(valset), withoutStart(),
+		withHeaders(map[uint64]*types.Header{parentNum: parent})).VRankModule
+
+	header := &types.Header{Number: big.NewInt(int64(parentNum + 1)), ParentHash: parentHash}
+	require.NoError(t, v.PrepareHeader(header))
+
+	payload, err := vrank.DecodeVRank(header.VRank)
+	require.NoError(t, err)
+	assert.Equal(t, parentRound, payload.ParentRound)
+	assert.Equal(t, seals, payload.ParentCommittedSeal)
+	assert.NoError(t, v.VerifyHeader(header, nil))
+}
+
+// TestParentRoundAbsentAtEpochStart checks that an epoch start records no parent round: its parent
+// belongs to the previous epoch, whose failures may not score into this one.
+func TestParentRoundAbsentAtEpochStart(t *testing.T) {
+	const epochStart = uint64(params.DefaultVRankEpoch)
+
+	t.Run("PrepareHeader drops a non-zero parent round", func(t *testing.T) {
+		parent := makeHeaderWithRound(epochStart-1, 2)
+		v := newCN(t, withCandidates(nil), withoutStart(),
+			withHeaders(map[uint64]*types.Header{epochStart - 1: parent})).VRankModule
+
+		header := &types.Header{Number: new(big.Int).SetUint64(epochStart)}
+		require.NoError(t, v.PrepareHeader(header))
+
+		payload, err := vrank.DecodeVRank(header.VRank)
+		require.NoError(t, err)
+		assert.Zero(t, payload.ParentRound)
+		assert.Empty(t, payload.ParentCommittedSeal)
+	})
+
+	t.Run("VerifyHeader rejects a recorded parent round", func(t *testing.T) {
+		v := newCN(t, withCandidates(nil), withoutStart()).VRankModule
+
+		encoded, err := vrank.EncodeVRank(vrank.VRankPayload{ParentRound: 2})
+		require.NoError(t, err)
+		header := &types.Header{Number: new(big.Int).SetUint64(epochStart), VRank: encoded}
+
+		assert.ErrorIs(t, v.VerifyHeader(header, nil), vrank.ErrUnexpectedParentRound)
 	})
 }
