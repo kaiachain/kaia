@@ -84,11 +84,16 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to match the given (Sequence + Round)
 			// 2. The given block must exist
+			// 3. Post-permissionless, the stored round must match: the seal binds the round,
+			//    so answering another round would attest a quorum that never formed.
 			proposer, getProposerErr := c.valsetModule.GetProposer(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
 			if getProposerErr != nil {
 				return getProposerErr
 			}
-			if proposer == src && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			storedRound, hasProposal := c.backend.ProposalRound(preprepare.Proposal.Hash(), preprepare.Proposal.Number())
+			roundMatches := !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) ||
+				uint64(storedRound) == preprepare.View.Round.Uint64()
+			if proposer == src && hasProposal && roundMatches {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}

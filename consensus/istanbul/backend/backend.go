@@ -434,9 +434,16 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(hashData, sb.privateKey)
 }
 
-// HasPropsal implements istanbul.Backend.HashBlock
-func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return sb.chain.GetHeader(hash, number.Uint64()) != nil
+func (sb *backend) ProposalRound(hash common.Hash, number *big.Int) (byte, bool) {
+	header := sb.chain.GetHeader(hash, number.Uint64())
+	if header == nil {
+		return 0, false
+	}
+	round, err := sb.Sealer().Round(header)
+	if err != nil {
+		return 0, false
+	}
+	return round, true
 }
 
 func (sb *backend) LastProposal() (bft.Proposal, common.Address) {

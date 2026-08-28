@@ -66,8 +66,8 @@ type Backend interface {
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (bft.Proposal, common.Address)
 
-	// HasPropsal checks if the combination of the given hash and height matches any existing blocks
-	HasPropsal(hash common.Hash, number *big.Int) bool
+	// ProposalRound returns the round stored in the matching block, and whether it exists.
+	ProposalRound(hash common.Hash, number *big.Int) (byte, bool)
 
 	// HasBadProposal returns whether the proposal with the hash is a bad proposal
 	HasBadProposal(hash common.Hash) bool
