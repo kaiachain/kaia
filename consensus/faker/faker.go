@@ -185,6 +185,14 @@ func (f *Faker) CommittersWithRound(header *types.Header) ([]common.Address, err
 	return f.Committers(header)
 }
 
+func (f *Faker) RecoverCommitters(_ common.Hash, _ byte, seals [][]byte) ([]common.Address, error) {
+	committers := make([]common.Address, len(seals))
+	for i := range seals {
+		committers[i] = f.address
+	}
+	return committers, nil
+}
+
 func (f *Faker) Vanity(header *types.Header) ([]byte, error) {
 	if err := f.verifyFailure(header); err != nil {
 		return nil, err
