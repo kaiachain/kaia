@@ -413,6 +413,8 @@ func enablePermissionlessComputationCostModification(jt *JumpTable) {
 }
 
 func ChangeGasCostForTest(jt *JumpTable) {
+	// Callers pass a table whose entries are shared with a package-level one.
+	*jt = *copyJumpTable(jt)
 	// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
 	jt[EXTCODEHASH].constantGas = params.WarmStorageReadCostEIP2929
 	jt[EXTCODEHASH].dynamicGas = gasEip2929AccountCheck

@@ -123,6 +123,10 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 		default:
 			jt = ConstantinopleInstructionSet
 		}
+		if len(cfg.ExtraEips) > 0 {
+			// Deep-copy to prevent modification of opcodes in other tables.
+			jt = *copyJumpTable(&jt)
+		}
 		for i, eip := range cfg.ExtraEips {
 			if err := EnableEIP(eip, &jt); err != nil {
 				// Disable it, so caller can check if it's activated or not
