@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"maps"
 	"math/big"
-	"sort"
+	"slices"
 	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -129,8 +129,8 @@ func AllocKip113Proxy(init AllocKip113Init) map[common.Hash]common.Hash {
 	for addr := range init.Infos {
 		addrs = append(addrs, addr)
 	}
-	sort.Slice(addrs, func(i, j int) bool {
-		return strings.Compare(addrs[i].Hex(), addrs[j].Hex()) > 0
+	slices.SortFunc(addrs, func(a, b common.Address) int {
+		return strings.Compare(b.Hex(), a.Hex())
 	})
 
 	// slot[201]: address[] allNodeIds;
