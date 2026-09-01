@@ -143,6 +143,40 @@ func TestVerifyVote_SingleMode(t *testing.T) {
 	})
 }
 
+// A successor outside the council could never vote after Permissionless, since only the
+// governing node may vote from then on.
+func TestVerifyVote_GoverningNodeSuccessor(t *testing.T) {
+	tcs := []struct {
+		desc           string
+		permissionless bool
+		governingNode  common.Address
+		successor      common.Address
+		expectedError  error
+	}{
+		{"council member", true, validVoter, validVoter, nil},
+		{"zero address", true, validVoter, common.Address{}, ErrInvalidKeyValue},
+		{"outside the council", true, validVoter, common.Address{9}, ErrGovNodeNotInValSetList},
+		{"pre-permissionless accepts any address", false, validVoter, common.Address{}, nil},
+		{"governing node outside the council", false, common.Address{2}, validVoter, ErrGovNodeNotInValSetList},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			config := getTestChainConfig()
+			config.Governance.GoverningNode = tc.governingNode
+			if tc.permissionless {
+				config.PermissionlessCompatibleBlock = common.Big0
+			} else {
+				config.PermissionlessCompatibleBlock = nil
+			}
+			h := newHeaderGovModule(t, config)
+			vote := headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), tc.successor)
+			vb, err := vote.ToVoteBytes()
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedError, h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra}))
+		})
+	}
+}
+
 func TestGetVotesInEpoch(t *testing.T) {
 	h := newHeaderGovModule(t, getTestChainConfig())
 
