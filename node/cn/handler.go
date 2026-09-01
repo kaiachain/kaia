@@ -201,7 +201,7 @@ type ProtocolManager struct {
 // with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
 	txpool work.TxPool, handler consensus.Handler, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
-	nodetype common.ConnType, cnconfig *Config,
+	nodetype common.ConnType, cnconfig *Config, stakingModule staking.StakingModule,
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
@@ -218,6 +218,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		quitResendCh:      make(chan struct{}),
 		handler:           handler,
 		nodetype:          nodetype,
+		stakingModule:     stakingModule,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
 		verifiedBlobTxs:   newKnownHashSet(maxVerifiedBlobTxs),
 		blobSidecarReqManager: &sidecarReqManager{
