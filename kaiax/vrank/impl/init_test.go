@@ -189,7 +189,7 @@ func newCN(t *testing.T, options ...vrankOpt) *CN {
 		BlsKey:      blsKey,
 		Randao:      opts.randao,
 		Valset:      opts.valset,
-		RoundReader: testIstanbulRoundReader{},
+		Sealer:      testIstanbulSealer{},
 		ChainConfig: params.TestKaiaConfig(opts.hardfork),
 		Chain:       opts.chain,
 		ChainKv:     opts.db,
@@ -240,15 +240,30 @@ func (c *testChain) GetHeaderByNumber(number uint64) *types.Header {
 	return c.headers[number]
 }
 
-// testIstanbulRoundReader implements the vrank.RoundReader interface for tests by reading the
+// testIstanbulSealer implements the vrank.Sealer interface for tests by reading the
 // round byte that makeHeaderWithRound writes into header.Extra.
-type testIstanbulRoundReader struct{}
+type testIstanbulSealer struct{}
 
-func (testIstanbulRoundReader) Round(h *types.Header) (byte, error) {
+func (testIstanbulSealer) Round(h *types.Header) (byte, error) {
 	if len(h.Extra) < istanbul.IstanbulExtraVanity {
 		return 0, errors.New("header extra is too short")
 	}
 	return h.Extra[istanbul.IstanbulExtraVanity-1], nil
+}
+
+// Author returns the address withAuthor stashed in Rewardbase, so tests can make the author
+// differ from the round's proposer the way a hash-locked block does.
+func (testIstanbulSealer) Author(h *types.Header) (common.Address, error) {
+	if len(h.Extra) < istanbul.IstanbulExtraVanity {
+		return common.Address{}, errors.New("header extra is too short")
+	}
+	return h.Rewardbase, nil
+}
+
+// withAuthor sets the header's author for testIstanbulSealer.Author.
+func withAuthor(h *types.Header, author common.Address) *types.Header {
+	h.Rewardbase = author
+	return h
 }
 
 func makeHeaderWithRound(number uint64, round int64) *types.Header {
@@ -287,12 +302,12 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	checkpoint := testCheckpointInterval // must be a testCheckpointInterval multiple
 	P1, P2, C1 := numToAddr(1), numToAddr(2), numToAddr(10)
 
-	// The tail block (checkpoint+1) has round=1 and cfReport=[C1]:
+	// The tail block (checkpoint+1) has round=1, author=P2 and cfReport=[C1]:
 	//   - PFS:      pfReport=[P1] (proposer at round 0) → pfs[P1] incremented
-	//   - cpMatrix: reporter=P2   (proposer at round 1) → cpMatrix[C1][P2] incremented
+	//   - cpMatrix: reporter=P2   (the block's author)  → cpMatrix[C1][P2] incremented
 	headers := map[uint64]*types.Header{
 		checkpoint:     makeHeaderWithRound(checkpoint, 0),
-		checkpoint + 1: makeHeaderWithVRank(checkpoint+1, 1, []common.Address{C1}),
+		checkpoint + 1: withAuthor(makeHeaderWithVRank(checkpoint+1, 1, []common.Address{C1}), P2),
 	}
 
 	db := database.NewMemDB()
@@ -383,4 +398,15 @@ func TestVRankModule_RestartAfterStop(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("broadcast did not resume after restart")
 	}
+}
+
+// strictSealer rejects a header with no author stashed, the way IstanbulSealer.Author rejects a
+// header with no author seal. Genesis is the case that matters.
+type strictSealer struct{ testIstanbulSealer }
+
+func (strictSealer) Author(h *types.Header) (common.Address, error) {
+	if h.Rewardbase == (common.Address{}) {
+		return common.Address{}, errors.New("no author seal")
+	}
+	return h.Rewardbase, nil
 }

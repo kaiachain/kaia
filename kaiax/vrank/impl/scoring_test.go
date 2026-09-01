@@ -63,7 +63,7 @@ func generateHeadersFromCPMatrix(
 	candidates []common.Address,
 	proposers []common.Address,
 	cpMatrix [][]uint64,
-) (map[uint64]*types.Header, map[uint64]common.Address, uint64, uint64) {
+) (map[uint64]*types.Header, uint64) {
 	t.Helper()
 	require.Len(t, cpMatrix, len(candidates), "cpMatrix row count must equal number of candidates")
 	for i := range cpMatrix {
@@ -85,7 +85,6 @@ func generateHeadersFromCPMatrix(
 	}
 
 	headers := make(map[uint64]*types.Header, int(totalBlocks))
-	blockReporter := make(map[uint64]common.Address, int(totalBlocks))
 
 	nextBlock := start
 	for pi, p := range proposers {
@@ -96,13 +95,12 @@ func generateHeadersFromCPMatrix(
 					report = append(report, c)
 				}
 			}
-			headers[nextBlock] = makeHeaderWithVRank(nextBlock, 0, report)
-			blockReporter[nextBlock] = p
+			headers[nextBlock] = withAuthor(makeHeaderWithVRank(nextBlock, 0, report), p)
 			nextBlock++
 		}
 	}
 
-	return headers, blockReporter, nextBlock - 1, totalBlocks
+	return headers, nextBlock - 1
 }
 
 // # GetPFS
@@ -407,22 +405,16 @@ func TestGetCFS(t *testing.T) {
 		v := b.VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
-				epochStart:     makeHeaderWithVRank(epochStart, 0, nil),
-				epochStart + 1: makeHeaderWithVRank(epochStart+1, 0, []common.Address{C1, C2}),
-				epochStart + 2: makeHeaderWithVRank(epochStart+2, 1, []common.Address{C1}),
-				epochStart + 3: makeHeaderWithVRank(epochStart+3, 0, []common.Address{C1, C2, C3}),
-				epochStart + 4: makeHeaderWithVRank(epochStart+4, 0, []common.Address{C1, C2}),
-				epochStart + 5: makeHeaderWithVRank(epochStart+5, 0, []common.Address{C1, C2}),
+				// Per-block authors; can't use withProposer because each block has a different one.
+				epochStart:     withAuthor(makeHeaderWithVRank(epochStart, 0, nil), P1),
+				epochStart + 1: withAuthor(makeHeaderWithVRank(epochStart+1, 0, []common.Address{C1, C2}), P1),
+				epochStart + 2: withAuthor(makeHeaderWithVRank(epochStart+2, 1, []common.Address{C1}), P2),
+				epochStart + 3: withAuthor(makeHeaderWithVRank(epochStart+3, 0, []common.Address{C1, C2, C3}), P3),
+				epochStart + 4: withAuthor(makeHeaderWithVRank(epochStart+4, 0, []common.Address{C1, C2}), P4),
+				epochStart + 5: withAuthor(makeHeaderWithVRank(epochStart+5, 0, []common.Address{C1, C2}), P4),
 			},
 		}
 
-		// Per-block proposer assignments; can't use withProposer because each block has a different one.
-		b.Valset.EXPECT().GetProposer(epochStart, uint64(0)).Return(P1, nil)
-		b.Valset.EXPECT().GetProposer(epochStart+1, uint64(0)).Return(P1, nil)
-		b.Valset.EXPECT().GetProposer(epochStart+2, uint64(1)).Return(P2, nil)
-		b.Valset.EXPECT().GetProposer(epochStart+3, uint64(0)).Return(P3, nil)
-		b.Valset.EXPECT().GetProposer(epochStart+4, uint64(0)).Return(P4, nil)
-		b.Valset.EXPECT().GetProposer(epochStart+5, uint64(0)).Return(P4, nil)
 		cfs, err := v.GetCFS(epochStart + 5)
 		require.NoError(t, err)
 		// ProposerCount = 4, F = 4 - ceil(8/3) = 1. Sorted scores per candidate:
@@ -496,27 +488,28 @@ func TestGetCFS_Errors(t *testing.T) {
 		_, err = v.GetCFS(6)
 		assert.ErrorIs(t, err, vrank.ErrFutureBlock)
 	})
-	t.Run("GetProposer error", func(t *testing.T) {
+	t.Run("author error", func(t *testing.T) {
 		C1 := numToAddr(10)
 		headers := map[uint64]*types.Header{
 			0: makeHeaderWithRound(0, 0),
 			1: makeHeaderWithVRank(1, 0, []common.Address{C1}),
 		}
+		// A header whose author cannot be recovered must surface as an error rather than
+		// silently scoring the report against the zero address.
+		headers[1].Extra = nil
 		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
-		// Block 0 is the first block applied for the [0, 1] range, so its GetProposer is the first call — surface the error there and verify it propagates.
-		cn.Valset.EXPECT().GetProposer(uint64(0), uint64(0)).Return(common.Address{}, assert.AnError).Times(1)
 
 		_, err := cn.VRankModule.GetCFS(1)
-		assert.ErrorIs(t, err, assert.AnError)
+		assert.Error(t, err)
 	})
 	t.Run("missing header error", func(t *testing.T) {
 		C1 := numToAddr(10)
-		// Header exists for block 1 (so CurrentHeader()=1 and ErrFutureBlock is not triggered)
-		// but NOT for block 0, which applyCPMatrix will try to fetch first.
-		headers := map[uint64]*types.Header{1: makeHeaderWithRound(1, 0)}
+		// Header exists for block 2 (so CurrentHeader()=2 and ErrFutureBlock is not triggered)
+		// but NOT for block 1, which applyCPMatrix fetches once it has skipped genesis.
+		headers := map[uint64]*types.Header{2: makeHeaderWithRound(2, 0)}
 		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
 
-		_, err := cn.VRankModule.GetCFS(1)
+		_, err := cn.VRankModule.GetCFS(2)
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 	})
 }
@@ -752,19 +745,14 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		v := newCN(t, withValset(valset), withRandao(randao), withGenesis()).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
-				5: makeHeaderWithVRank(5, 0, nil),                          // epoch start, empty
-				6: makeHeaderWithVRank(6, 0, nil),                          // empty report
-				7: makeHeaderWithVRank(7, 0, []common.Address{C1, C2, C3}), // P3 reports all
-				8: makeHeaderWithVRank(8, 0, []common.Address{C1, C2}),     // P4 reports C1,C2
-				9: makeHeaderWithVRank(9, 0, []common.Address{C1, C2}),     // P4 reports C1,C2 again
+				5: withAuthor(makeHeaderWithVRank(5, 0, nil), P1),                          // epoch start, empty
+				6: withAuthor(makeHeaderWithVRank(6, 0, nil), P2),                          // empty report
+				7: withAuthor(makeHeaderWithVRank(7, 0, []common.Address{C1, C2, C3}), P3), // P3 reports all
+				8: withAuthor(makeHeaderWithVRank(8, 0, []common.Address{C1, C2}), P4),     // P4 reports C1,C2
+				9: withAuthor(makeHeaderWithVRank(9, 0, []common.Address{C1, C2}), P4),     // P4 reports C1,C2 again
 			},
 		}
 		valset.EXPECT().GetCandTesting(uint64(5)).Return(candidates, nil)
-		valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil)
-		valset.EXPECT().GetProposer(uint64(6), uint64(0)).Return(P2, nil)
-		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(P3, nil)
-		valset.EXPECT().GetProposer(uint64(8), uint64(0)).Return(P4, nil)
-		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(P4, nil)
 		cfs, err := computeCFS(v, 5, 9)
 		require.NoError(t, err)
 
@@ -826,7 +814,7 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		}
 
 		start := uint64(1000)
-		headers, blockReporter, end, totalBlocks := generateHeadersFromCPMatrix(t, start, candidates, proposers, cpMatrix)
+		headers, end := generateHeadersFromCPMatrix(t, start, candidates, proposers, cpMatrix)
 
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
@@ -835,18 +823,6 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		v.Chain = &testChain{headers: headers}
 
 		valset.EXPECT().GetCandTesting(start).Return(candidates, nil).Times(1)
-		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(blockNum, round uint64) (common.Address, error) {
-				if round != 0 {
-					return common.Address{}, assert.AnError
-				}
-				reporter, ok := blockReporter[blockNum]
-				if !ok {
-					return common.Address{}, assert.AnError
-				}
-				return reporter, nil
-			},
-		).Times(int(totalBlocks))
 
 		cfs, err := computeCFS(v, start, end)
 		require.NoError(t, err)
@@ -856,6 +832,62 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		assert.Equal(t, uint64(283), cfs[candidates[2]], "C3")
 		assert.Equal(t, uint64(221), cfs[candidates[3]], "C4")
 		assert.Equal(t, uint64(116), cfs[candidates[4]], "C5")
+	})
+
+	// A hash-locked block is re-proposed verbatim, so header.VRank is still the author's report
+	// even though another validator proposed the round that committed it. The author is the
+	// reporter; crediting the committing round's proposer would attribute a claim it never made.
+	t.Run("hash-locked block credits the author", func(t *testing.T) {
+		author, reproposer := numToAddr(1), numToAddr(2)
+		C1 := numToAddr(10)
+
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := newCN(t, withValset(valset), withRandao(randao), withGenesis()).VRankModule
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				0: makeHeaderWithRound(0, 0),
+				1: withAuthor(makeHeaderWithVRank(1, 2, []common.Address{C1}), author),
+			},
+		}
+		valset.EXPECT().GetCandTesting(uint64(0)).Return([]common.Address{C1}, nil)
+		// Present but never consulted: the reporter comes from the header, not the schedule.
+		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(reproposer, nil).AnyTimes()
+
+		cpMatrix, err := v.newCPMatrix(0)
+		require.NoError(t, err)
+		cpMatrix, err = v.applyBlocksForCPMatrix(0, 1, cpMatrix)
+		require.NoError(t, err)
+
+		assert.Equal(t, uint64(1), cpMatrix[C1][author], "author wrote the report")
+		assert.Equal(t, uint64(0), cpMatrix[C1][reproposer], "the committing round's proposer did not")
+	})
+
+	// Genesis carries no author seal, so the reporter lookup must not run for it. testIstanbulSealer
+	// is permissive about a missing author; strictSealer is not, matching IstanbulSealer.Author.
+	t.Run("genesis has no author to read", func(t *testing.T) {
+		author := numToAddr(1)
+		C1 := numToAddr(10)
+
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := newCN(t, withValset(valset), withRandao(randao), withGenesis()).VRankModule
+		v.Sealer = strictSealer{}
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				0: makeHeaderWithRound(0, 0), // no author, as in a real genesis
+				1: withAuthor(makeHeaderWithVRank(1, 0, []common.Address{C1}), author),
+			},
+		}
+		valset.EXPECT().GetCandTesting(uint64(0)).Return([]common.Address{C1}, nil)
+
+		cpMatrix, err := v.newCPMatrix(0)
+		require.NoError(t, err)
+		cpMatrix, err = v.applyBlocksForCPMatrix(0, 1, cpMatrix)
+		require.NoError(t, err, "genesis must be skipped instead of read")
+		assert.Equal(t, uint64(1), cpMatrix[C1][author])
 	})
 
 	t.Run("epoch_start", func(t *testing.T) {

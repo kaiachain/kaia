@@ -289,6 +289,23 @@ func TestSelectReportTarget(t *testing.T) {
 		assert.Equal(t, uint64(11), target)
 	})
 
+	// Under a hash lock the committed block keeps the round-0 proposer's seal, but the candidates
+	// that matter answered the round that committed it. The target belongs to that round's
+	// proposer, so the round-0 proposer must not claim it and report a view nobody asked for.
+	t.Run("hash-locked block belongs to the committing round", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		reproposer := numToAddr(777)
+		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(map[uint64]*types.Header{
+			7: makeHeaderWithRound(7, 2), // proposed here at round 0, committed at round 2
+		}))
+		v := cn.VRankModule
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 7, R: 0}, time.Now(), common.Hash{})
+		valset.EXPECT().GetProposer(uint64(7), uint64(2)).Return(reproposer, nil).AnyTimes()
+
+		_, _, ok := v.selectReportTarget(9)
+		assert.False(t, ok, "the round-0 proposer holds no view for the round that committed")
+	})
+
 	t.Run("prior-epoch proposal is not selected", func(t *testing.T) {
 		epoch := uint64(params.DefaultVRankEpoch)
 		v := newCN(t, withoutStart()).VRankModule

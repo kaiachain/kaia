@@ -174,6 +174,9 @@ func (v *VRankModule) applyBlocksForPFS(start, end uint64, seed map[common.Addre
 func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMatrix) (vrank.CPMatrix, error) {
 	cpMatrix := seed.Clone()
 	for blockNum := start; blockNum <= end; blockNum++ {
+		if blockNum == 0 {
+			continue
+		}
 		header := v.Chain.GetHeaderByNumber(blockNum)
 		if header == nil {
 			return nil, vrank.ErrHeaderNotFound
@@ -184,12 +187,9 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 			return nil, err
 		}
 
-		roundByte, err := v.RoundReader.Round(header)
-		if err != nil {
-			return nil, err
-		}
-		round := uint64(roundByte)
-		reporter, err := v.Valset.GetProposer(blockNum, round)
+		// header.VRank was written by whoever built this block. A hash-locked re-proposal
+		// carries it verbatim, so the committing round's proposer is not its reporter.
+		reporter, err := v.Sealer.Author(header)
 		if err != nil {
 			return nil, err
 		}

@@ -44,10 +44,11 @@ type BlsPubkeyGetter interface {
 	GetBlsPubkey(nodeId common.Address, num *big.Int) (bls.PublicKey, error)
 }
 
-// RoundReader is a narrow interface for reading the round number from a block header.
-// Typically satisfied by consensus.RoundReader via the istanbul backend.
-type RoundReader interface {
+// Sealer is a narrow interface for reading the round and the author from a block header.
+// Typically satisfied by consensus.Sealer via the istanbul backend.
+type Sealer interface {
 	Round(header *types.Header) (byte, error)
+	Author(header *types.Header) (common.Address, error)
 }
 
 type VRankModule interface {

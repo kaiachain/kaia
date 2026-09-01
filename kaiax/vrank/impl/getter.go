@@ -60,7 +60,7 @@ func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
 	}
-	roundByte, err := v.RoundReader.Round(header)
+	roundByte, err := v.Sealer.Round(header)
 	if err != nil {
 		return nil, err
 	}

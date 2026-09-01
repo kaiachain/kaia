@@ -1010,8 +1010,9 @@ func GetConsensusInfo(block *types.Block, mValset valset.ValsetModule, sealer co
 	}
 	sigHash := sealer.SigHash(block.Header())
 
-	// get proposer and committee information from valset module
-	currentProposer, err := mValset.GetProposer(block.NumberU64(), uint64(round))
+	// Proposer is the signer of SigHash, which under a hash lock is the author of the
+	// locked proposal rather than the proposer of the round that committed it.
+	currentProposer, err := sealer.Author(block.Header())
 	if err != nil {
 		return ConsensusInfo{}, err
 	}

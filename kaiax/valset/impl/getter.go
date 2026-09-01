@@ -100,15 +100,11 @@ func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address,
 	return v.getCommitteePermissioned(c, round)
 }
 
+// GetProposer returns the validator scheduled to propose at (num, round). It is not the
+// author of a committed block: under a hash lock the author only proposed an earlier round.
 func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 	if num == 0 {
 		return common.Address{}, nil
-	}
-	if header := v.Chain.GetHeaderByNumber(num); header != nil {
-		headerRound, err := v.Chain.Sealer().Round(header)
-		if err == nil && uint64(headerRound) == round {
-			return v.Chain.Sealer().Author(header)
-		}
 	}
 	// TODO-kaiax: Sync blockContext
 	c, err := v.getBlockContext(num)

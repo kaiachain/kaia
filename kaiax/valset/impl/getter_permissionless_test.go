@@ -24,6 +24,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/engine"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -281,4 +285,65 @@ func TestPermissionlessCommitteeFromHeader(t *testing.T) {
 	qualified, err := v.GetQualifiedValidators(testGetterBlock)
 	require.NoError(t, err)
 	assert.Equal(t, numsToAddrs(1, 2), qualified)
+}
+
+// GetProposer answers "who was scheduled for this round", never "who signed this block". A
+// hash-locked block commits at a later round while still carrying the seal of the validator that
+// built it, so reading the author here would name a node that did not propose the committing round.
+// Re-sealing the same header by a different validator must not move the answer.
+func TestGetProposerIgnoresHeaderAuthor(t *testing.T) {
+	var (
+		ctrl      = gomock.NewController(t)
+		sealer    = engine.NewSealer(nil, nil)
+		mockChain = chain_mock.NewMockBlockChain(ctrl)
+		mockGov   = gov_mock.NewMockGovModule(ctrl)
+		keyA, _   = crypto.GenerateKey()
+		keyB, _   = crypto.GenerateKey()
+		addrA     = crypto.PubkeyToAddress(keyA.PublicKey)
+		addrB     = crypto.PubkeyToAddress(keyB.PublicKey)
+		qualified = []common.Address{addrA, addrB, numToAddr(3), numToAddr(4)}
+	)
+
+	header := &types.Header{Number: big.NewInt(1)}
+	require.NoError(t, sealer.WriteValidators(header, qualified))
+	sealer.WriteRound(header, 2) // committed at round 2
+
+	mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(sealer).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(1)).Return(header).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{Number: big.NewInt(0)}).AnyTimes()
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerPolicy: uint64(istanbul.WeightedRandom),
+		MinimumStake:   big.NewInt(0),
+		GovernanceMode: "none",
+	}).AnyTimes()
+
+	v := NewValsetModule()
+	v.Chain = mockChain
+	v.GovModule = mockGov
+
+	// The schedule's answer for round 2, computed without going through GetProposer.
+	c, err := v.getBlockContext(1)
+	require.NoError(t, err)
+	roundProposer, err := v.getProposer(c, 2)
+	require.NoError(t, err)
+
+	// Seal the block as a validator that is NOT the round-2 proposer: that is the hash lock
+	// shape, where the block still carries the seal of the round it was originally built at.
+	authorKey, author := keyA, addrA
+	if roundProposer == addrA {
+		authorKey, author = keyB, addrB
+	}
+	require.NotEqual(t, roundProposer, author)
+	seal, err := istanbul.NewSealerImpl(authorKey).MakeAuthorSeal(header)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteAuthorSeal(header, seal))
+	sealed, err := sealer.Author(header)
+	require.NoError(t, err)
+	require.Equal(t, author, sealed, "the header really is sealed by `author`")
+
+	got, err := v.GetProposer(1, 2)
+	require.NoError(t, err)
+	assert.Equal(t, roundProposer, got, "the round's proposer answers")
+	assert.NotEqual(t, author, got, "the header's author does not")
 }
