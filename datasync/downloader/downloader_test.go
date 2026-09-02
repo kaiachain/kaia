@@ -1992,6 +1992,57 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	}
 }
 
+// newRecoveryTester starts a staking info recovery from "requested" and returns the
+// tester. The peer answers slowly, so the recovery is still pending on return.
+func newRecoveryTester(t *testing.T) *downloadTester {
+	config := params.TestKaiaConfig("cancun")
+	config.Governance.Reward.StakingUpdateInterval = testInterval
+
+	tester := newTesterWithConfig(t, config)
+	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(16, 0, tester.genesis, nil, false)
+	if err := tester.newSlowPeer("requested", 65, hashes, headers, blocks, receipts, stakingInfos, 500*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	for hash, info := range stakingInfos {
+		tester.stateDb.WriteCanonicalHash(hash, info.BlockNum)
+	}
+	// Pending blocks become [4, 8].
+	if err := tester.downloader.SyncStakingInfo("requested", 9, 9); err != nil {
+		t.Fatal(err)
+	}
+	return tester
+}
+
+func TestSyncStakingInfoIgnoresUnselectedPeer(t *testing.T) {
+	tester := newRecoveryTester(t)
+	defer tester.terminate()
+
+	forged := &staking.P2PStakingInfo{BlockNum: 4, KEFAddr: common.HexToAddress("0x2222222222222222222222222222222222222222")}
+	tester.downloader.DeliverStakingInfos("mallory", []*staking.P2PStakingInfo{forged})
+	time.Sleep(200 * time.Millisecond)
+
+	if si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), forged.BlockNum); si != nil {
+		t.Fatalf("staking info from an unselected peer was persisted: %+v", si)
+	}
+}
+
+func TestSyncStakingInfoRejectsOverlongBatch(t *testing.T) {
+	tester := newRecoveryTester(t)
+	defer tester.terminate()
+
+	// Three entries against two pending blocks: the batch must be dropped whole.
+	tester.downloader.DeliverStakingInfos("requested", []*staking.P2PStakingInfo{
+		{BlockNum: 4}, {BlockNum: 8}, {BlockNum: 12},
+	})
+	time.Sleep(200 * time.Millisecond)
+
+	for _, num := range []uint64{4, 8, 12} {
+		if si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), num); si != nil {
+			t.Fatalf("an entry of the overlong batch was persisted at %d: %+v", num, si)
+		}
+	}
+}
+
 func TestCalcStakingBlockNumber(t *testing.T) {
 	testCase := []struct {
 		interval uint64
