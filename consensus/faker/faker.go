@@ -185,7 +185,7 @@ func (f *Faker) CommittersWithRound(header *types.Header) ([]common.Address, err
 	return f.Committers(header)
 }
 
-func (f *Faker) RecoverCommitters(_ common.Hash, _ byte, seals [][]byte) ([]common.Address, error) {
+func (f *Faker) RecoverCommitters(_ uint64, _ common.Hash, _ byte, seals [][]byte) ([]common.Address, error) {
 	committers := make([]common.Address, len(seals))
 	for i := range seals {
 		committers[i] = f.address

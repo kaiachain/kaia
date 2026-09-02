@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"fmt"
 	"maps"
 	"math/big"
 	"slices"
@@ -154,7 +155,7 @@ func (v *VRankModule) epochCandidates(blockNum uint64) ([]common.Address, error)
 	logger.Warn("CandTesting unavailable from state, reading the epoch-start header", "num", blockNum, "err", err)
 	payload, decodeErr := vrank.DecodeVRank(header.VRank)
 	if decodeErr != nil {
-		return nil, err
+		return nil, fmt.Errorf("get CandTesting from state err: %v; decode epoch-start header VRank err: %w", err, decodeErr)
 	}
 	return payload.Report, nil
 }

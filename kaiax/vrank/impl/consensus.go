@@ -102,7 +102,7 @@ func (v *VRankModule) verifyParentRound(header *types.Header, payload vrank.VRan
 	if len(payload.ParentCommittedSeal) > len(committee) {
 		return vrank.ErrTooManyParentSeals
 	}
-	committers, err := v.Sealer.RecoverCommitters(header.ParentHash, payload.ParentRound, payload.ParentCommittedSeal)
+	committers, err := v.Sealer.RecoverCommitters(parentNum, header.ParentHash, payload.ParentRound, payload.ParentCommittedSeal)
 	if err != nil {
 		return vrank.ErrInvalidParentCertificate
 	}

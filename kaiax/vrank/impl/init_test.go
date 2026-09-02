@@ -263,8 +263,8 @@ func (testIstanbulSealer) RawSeals(h *types.Header) ([]byte, [][]byte, error) {
 	return newTestSealer().RawSeals(h)
 }
 
-func (testIstanbulSealer) RecoverCommitters(hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
-	return newTestSealer().RecoverCommitters(hash, round, seals)
+func (testIstanbulSealer) RecoverCommitters(blockNum uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
+	return newTestSealer().RecoverCommitters(blockNum, hash, round, seals)
 }
 
 func (testIstanbulSealer) Quorum(blockNum uint64, qualifiedLen, committeeSize int) int {

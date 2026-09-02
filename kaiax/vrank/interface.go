@@ -50,7 +50,7 @@ type Sealer interface {
 	Round(header *types.Header) (byte, error)
 	Author(header *types.Header) (common.Address, error)
 	RawSeals(header *types.Header) ([]byte, [][]byte, error)
-	RecoverCommitters(hash common.Hash, round byte, seals [][]byte) ([]common.Address, error)
+	RecoverCommitters(blockNum uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error)
 	Quorum(blockNum uint64, qualifiedlen, committeeSize int) int
 }
 

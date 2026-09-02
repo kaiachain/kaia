@@ -95,7 +95,7 @@ type Sealer interface {
 	Committers(header *types.Header) ([]common.Address, error)
 	CommittersWithRound(header *types.Header) ([]common.Address, error)
 	// RecoverCommitters recovers seal signers without a header to read them from.
-	RecoverCommitters(hash common.Hash, round byte, seals [][]byte) ([]common.Address, error)
+	RecoverCommitters(blockNum uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error)
 	Vanity(header *types.Header) ([]byte, error)
 	RawSeals(header *types.Header) ([]byte, [][]byte, error)
 	Round(header *types.Header) (byte, error)

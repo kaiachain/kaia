@@ -187,7 +187,7 @@ func (m *IstanbulSealer) CommittersWithRound(header *types.Header) ([]common.Add
 	return m.committers(header, PrepareCommittedSealWithRound(m.HeaderHash(header), round))
 }
 
-func (m *IstanbulSealer) RecoverCommitters(hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
+func (m *IstanbulSealer) RecoverCommitters(_ uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
 	proposalSeal := PrepareCommittedSealWithRound(hash, round)
 	committers := make([]common.Address, 0, len(seals))
 	for _, seal := range seals {

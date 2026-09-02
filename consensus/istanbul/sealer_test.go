@@ -76,6 +76,33 @@ func TestCommittersWithRoundDetectsRoundMutation(t *testing.T) {
 	assert.NotEqual(t, []common.Address{addr}, mutated)
 }
 
+// TestRecoverCommitters: a seal of the wrong length is rejected before recovery, since
+// signature recovery on a truncated seal would report an arbitrary address.
+func TestRecoverCommitters(t *testing.T) {
+	addr, sealer, header := singleValidatorHeader(t, 0)
+	hash := sealer.HeaderHash(header)
+	seal, err := sealer.MakeCommittedSealFromHashWithRound(hash, 0)
+	require.NoError(t, err)
+
+	got, err := sealer.RecoverCommitters(header.Number.Uint64(), hash, 0, [][]byte{seal})
+	require.NoError(t, err)
+	assert.Equal(t, []common.Address{addr}, got)
+
+	for _, tc := range []struct {
+		desc string
+		seal []byte
+	}{
+		{"truncated", seal[:len(seal)-1]},
+		{"overlong", append(append([]byte{}, seal...), 0)},
+		{"empty", nil},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			_, err := sealer.RecoverCommitters(header.Number.Uint64(), hash, 0, [][]byte{tc.seal})
+			assert.Equal(t, ErrInvalidCommittedSeals, err)
+		})
+	}
+}
+
 // TestCommittersRoundIndependent: the legacy Committers ignores the round byte,
 // so pre-fork blocks validate the same regardless of it.
 func TestCommittersRoundIndependent(t *testing.T) {

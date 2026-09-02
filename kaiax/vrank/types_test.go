@@ -82,6 +82,38 @@ type varSizePreprepare struct {
 	Sig   []byte
 }
 
+// ParentRound is a uint8, so RLP itself rejects a wider round: a header cannot declare a
+// parent round that the certificate could never be verified against.
+func TestDecodeVRankRejectsWideParentRound(t *testing.T) {
+	// Same field order as VRankPayload, with the round widened.
+	type widePayload struct {
+		Report              []common.Address
+		ParentRound         uint16
+		ParentCommittedSeal [][]byte
+	}
+	for _, tc := range []struct {
+		name    string
+		round   uint16
+		wantErr bool
+	}{
+		{"fits in a byte", 255, false},
+		{"needs two bytes", 256, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := rlp.EncodeToBytes(&widePayload{[]common.Address{}, tc.round, [][]byte{}})
+			require.NoError(t, err)
+
+			payload, err := DecodeVRank(data)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, uint8(tc.round), payload.ParentRound)
+		})
+	}
+}
+
 // The fixed-size fields are the only length guard: node/cn dropped its check for VRankCandidate
 // and never had one for VRankPreprepare.
 func TestVRankRLPSignatureLengths(t *testing.T) {
