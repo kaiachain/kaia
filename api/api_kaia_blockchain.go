@@ -48,6 +48,9 @@ import (
 
 var logger = log.NewModuleLogger(log.API)
 
+// maxConsensusInfoBlocks bounds an inclusive block range requested at once.
+const maxConsensusInfoBlocks = 50
+
 // Error variables for consensus info APIs
 var (
 	errInternalError           = errors.New("internal error")
@@ -57,7 +60,7 @@ var (
 	errStartNotPositive        = errors.New("start block number should be positive")
 	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
 	errStartLargerThanEnd      = errors.New("start should be smaller than end")
-	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
+	errRequestedBlocksTooLarge = fmt.Errorf("number of requested blocks should not exceed %d", maxConsensusInfoBlocks)
 	errNoCypressCreditContract = errors.New("no mainnet credit contract")
 )
 
@@ -326,8 +329,8 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumberRange(ctx context.C
 		return nil, errStartLargerThanEnd
 	}
 
-	if (endNum - startNum) > 50 {
-		logger.Trace("number of requested blocks should be smaller than 51 (inclusive)", "start", startNum, "end", endNum)
+	if endNum-startNum+1 > maxConsensusInfoBlocks {
+		logger.Trace("too many blocks requested", "start", startNum, "end", endNum, "max", maxConsensusInfoBlocks)
 		return nil, errRequestedBlocksTooLarge
 	}
 
