@@ -890,6 +890,7 @@ func TestHandleBidMsg(t *testing.T) {
 
 			module := auction_mock.NewMockAuctionModule(ctrl)
 			peer := NewMockPeer(ctrl)
+			peer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
 			if tc.wantCall {
 				peer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
 				module.EXPECT().HandleBid(gomock.Any(), gomock.Any()).Times(1)
