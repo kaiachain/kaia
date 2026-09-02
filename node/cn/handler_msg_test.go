@@ -866,6 +866,7 @@ func TestHandleBidMsg(t *testing.T) {
 
 	msg := generateMsg(t, BidMsg, testBid)
 
+	mockPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
 	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(11)
 	assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg), "should return error when protocol version is not kaia66")
 
@@ -903,6 +904,43 @@ func TestHandleBidMsg(t *testing.T) {
 			} else {
 				assert.ErrorContains(t, err, "Message too long")
 			}
+		})
+	}
+}
+
+func TestHandleBidMsgFromNonCNPeer(t *testing.T) {
+	tcs := []struct {
+		name       string
+		connType   common.ConnType
+		auctionOff bool
+		wantErr    bool
+		wantCalls  int
+	}{
+		{"cn", common.CONSENSUSNODE, false, false, 1},
+		{"en", common.ENDPOINTNODE, false, true, 0},
+		{"pn", common.PROXYNODE, false, true, 0},
+		{"en without auction", common.ENDPOINTNODE, true, false, 0},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().ConnType().Return(tc.connType).AnyTimes()
+			mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+			mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+			pm := &ProtocolManager{}
+			if !tc.auctionOff {
+				mockAuction := auction_mock.NewMockAuctionModule(mockCtrl)
+				mockAuction.EXPECT().HandleBid(gomock.Any(), gomock.Any()).Times(tc.wantCalls)
+				pm.auctionModule = mockAuction
+			}
+			msg := generateMsg(t, BidMsg, &auction.Bid{BidData: auction.BidData{Bid: common.Big0}})
+
+			err := pm.handleMsg(mockPeer, addrs[0], msg)
+			assert.Equal(t, tc.wantErr, err != nil, "err: %v", err)
 		})
 	}
 }

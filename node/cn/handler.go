@@ -1282,6 +1282,9 @@ func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if pm.IsAuctionModuleDisabled() {
 		return nil
 	}
+	if p.ConnType() != common.CONSENSUSNODE {
+		return errResp(ErrInvalidMsgCode, "bid message from a non-CN peer: conntype %d", p.ConnType())
+	}
 
 	if uint64(msg.Size) > maxBidMsgSize {
 		return errResp(ErrMsgTooLarge, "msg %v: %v > %v", msg, msg.Size, maxBidMsgSize)
