@@ -384,7 +384,7 @@ var (
 	rewardMinimumStakeFlag = &cli.StringFlag{
 		Name:    "reward-minimum-stake",
 		Usage:   "reward minimum stake flag",
-		Value:   "2000000",
+		Value:   "5000000",
 		Aliases: []string{"genesis.reward.minimum-stake"},
 	}
 
