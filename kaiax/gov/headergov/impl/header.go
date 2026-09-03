@@ -164,18 +164,27 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return nil
 		}
 
-		// we'll use blockNum-1 for the blocknumber of GetCouncil since blockNum cannot be available(eg. vote)
-		// it's definite that the valSet vote is not included in this block
-		// so the council(blockNum - 1) and council(blockNum) should be same
-		council, err := h.ValSet.GetCouncil(blockNum - 1)
+		council, err := h.ValSet.GetCouncil(blockNum)
 		if err != nil {
 			return err
 		}
 
-		if slices.Contains(council, params.GoverningNode) {
+		if !slices.Contains(council, params.GoverningNode) {
+			return ErrGovNodeNotInValSetList
+		}
+		if !h.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 			return nil
 		}
-		return ErrGovNodeNotInValSetList
+
+		// After Permissionless only the governing node may vote, so a successor outside the council could never vote again.
+		newNode, ok := vote.Value().(common.Address)
+		if !ok || common.EmptyAddress(newNode) {
+			return ErrInvalidKeyValue
+		}
+		if !slices.Contains(council, newNode) {
+			return ErrGovNodeNotInValSetList
+		}
+		return nil
 	case gov.Kip71LowerBoundBaseFee:
 		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) > params.UpperBoundBaseFee {

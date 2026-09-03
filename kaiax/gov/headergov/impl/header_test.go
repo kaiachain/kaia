@@ -12,6 +12,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/mocks"
@@ -141,6 +142,62 @@ func TestVerifyVote_SingleMode(t *testing.T) {
 		err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
 		assert.Equal(t, ErrVotePermissionDenied, err)
 	})
+}
+
+// A successor outside the council could never vote after Permissionless, since only the
+// governing node may vote from then on.
+func TestVerifyVote_GoverningNodeSuccessor(t *testing.T) {
+	tcs := []struct {
+		desc           string
+		permissionless bool
+		governingNode  common.Address
+		successor      common.Address
+		expectedError  error
+	}{
+		{"council member", true, validVoter, validVoter, nil},
+		{"zero address", true, validVoter, common.Address{}, ErrInvalidKeyValue},
+		{"outside the council", true, validVoter, common.Address{9}, ErrGovNodeNotInValSetList},
+		{"pre-permissionless accepts any address", false, validVoter, common.Address{}, nil},
+		{"governing node outside the council", false, common.Address{2}, validVoter, ErrGovNodeNotInValSetList},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			config := getTestChainConfig()
+			config.Governance.GoverningNode = tc.governingNode
+			if tc.permissionless {
+				config.PermissionlessCompatibleBlock = common.Big0
+			} else {
+				config.PermissionlessCompatibleBlock = nil
+			}
+			h := newHeaderGovModule(t, config)
+			vote := headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), tc.successor)
+			vb, err := vote.ToVoteBytes()
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedError, h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra}))
+		})
+	}
+}
+
+// VerifyVote admits a voter from the council at the block being verified, so the successor
+// is held to that council rather than the previous one.
+func TestVerifyVote_SuccessorUsesCouncilAtBlock(t *testing.T) {
+	newcomer := common.Address{7}
+	config := getTestChainConfig()
+	config.Governance.GoverningNode = validVoter
+	config.PermissionlessCompatibleBlock = common.Big0
+	h := newHeaderGovModule(t, config)
+
+	// The successor joined the council at the block being verified, not before it.
+	valSet := mock_valset.NewMockValsetModule(gomock.NewController(t))
+	valSet.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{validVoter, newcomer}, nil).AnyTimes()
+	valSet.EXPECT().GetCouncil(uint64(0)).Return([]common.Address{validVoter}, nil).AnyTimes()
+	valSet.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validVoter, nil).AnyTimes()
+	h.ValSet = valSet
+
+	vote := headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), newcomer)
+	vb, err := vote.ToVoteBytes()
+	require.NoError(t, err)
+	assert.NoError(t, h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra}))
 }
 
 func TestGetVotesInEpoch(t *testing.T) {
