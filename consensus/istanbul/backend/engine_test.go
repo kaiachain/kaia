@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -86,6 +87,8 @@ type (
 	kaiaCompatibleBlock      *big.Int
 	pragueCompatibleBlock    *big.Int
 	osakaCompatibleBlock     *big.Int
+
+	permissionlessCompatibleBlock *big.Int
 )
 
 type (
@@ -139,6 +142,26 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 	return nodeKeys, addrs
 }
 
+// abv2SpecsFromKeys derives one ABv2 spec per validator, taking each BLS key from the
+// node's consensus key so ABv2 publishes the keys the nodes actually sign with.
+func abv2SpecsFromKeys(keys []*ecdsa.PrivateKey) []system.ABv2NodeSpec {
+	specs := make([]system.ABv2NodeSpec, len(keys))
+	for i, key := range keys {
+		blsKey, err := bls.DeriveFromECDSA(key)
+		if err != nil {
+			panic(err)
+		}
+		specs[i] = system.ABv2NodeSpec{
+			NodeID: crypto.PubkeyToAddress(key.PublicKey),
+			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
+				PublicKey: blsKey.PublicKey().Marshal(),
+				Pop:       bls.PopProve(blsKey).Marshal(),
+			},
+		}
+	}
+	return specs
+}
+
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
@@ -183,6 +206,8 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			genesis.Config.PragueCompatibleBlock = v
 		case osakaCompatibleBlock:
 			genesis.Config.OsakaCompatibleBlock = v
+		case permissionlessCompatibleBlock:
+			genesis.Config.PermissionlessCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -237,8 +262,24 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	}
 	genesis.ExtraData = append([]byte(nil), genesisHeader.Extra...)
 
+	switch {
+	case genesis.Config.IsPermissionlessForkEnabled(common.Big0):
+		// Post-fork BLS keys come from ABv2, not KIP113 (randao.readBlsPermissionless), so the
+		// randao branch is dead here and its Registry must not overwrite this one.
+		specs := abv2SpecsFromKeys(nodeKeys)
+		alloc, err := system.AllocPermissionless(system.MakeABv2AllocConfig(common.HexToAddress("0xffff"), specs))
+		if err != nil {
+			panic(err)
+		}
+		if genesis.Alloc == nil {
+			genesis.Alloc = make(blockchain.GenesisAlloc)
+		}
+		for addr, account := range alloc {
+			genesis.Alloc[addr] = account
+		}
+
 	// Set up Registry and KIP113 contracts for Randao fork if RandaoCompatibleBlock is set
-	if genesis.Config.RandaoCompatibleBlock != nil {
+	case genesis.Config.RandaoCompatibleBlock != nil:
 		// Generate BLS keys for all nodes
 		nodeBlsKeys := make([]bls.SecretKey, n)
 		for i := range n {
