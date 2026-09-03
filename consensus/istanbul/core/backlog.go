@@ -45,12 +45,12 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 		return bft.ErrInvalidMessage
 	}
 
+	// The round is consumed as a uint64 (View.Round.Uint64()); reject out-of-range values.
+	if !view.Round.IsUint64() {
+		return bft.ErrInvalidMessage
+	}
+
 	if msgCode == bft.MsgRoundChange {
-		// Round-change buckets are keyed by uint64 round in roundChangeSet.
-		// Reject out-of-range round values early to avoid truncation collisions.
-		if !view.Round.IsUint64() {
-			return bft.ErrInvalidMessage
-		}
 		if view.Sequence.Cmp(c.currentView().Sequence) > 0 {
 			return errFutureMessage
 		} else if view.Cmp(c.currentView()) < 0 {
