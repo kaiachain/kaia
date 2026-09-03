@@ -303,29 +303,15 @@ CN filter operations for events and logs
 
 ## Bootnode APIs
 
-### cmd/kbn/api_bootnode.go (BootnodeAPI)
+### networks/p2p/discover/discovery_api.go (DiscoveryAPI)
 
-Bootnode operations
+Discovery table operations
 
-- `bootnode_getAuthorizedNodes`
-
-### cmd/kbn/api_bootnode_registry.go (BootnodeRegistryAPI)
-
-Bootnode registry operations
-
-- `bootnode_createUpdateNodeOnDB`
-- `bootnode_createUpdateNodeOnTable`
-- `bootnode_deleteAuthorizedNodes`
-- `bootnode_deleteNodeFromDB`
-- `bootnode_deleteNodeFromTable`
-- `bootnode_getNodeFromDB`
-- `bootnode_getTableEntries`
-- `bootnode_getTableReplacements`
-- `bootnode_lookup`
-- `bootnode_name`
-- `bootnode_putAuthorizedNodes`
-- `bootnode_readRandomNodes`
-- `bootnode_resolve`
+- `bootnode_refresh`
+- `bootnode_nodes`
+- `bootnode_getNode`
+- `bootnode_putNode`
+- `bootnode_deleteNode`
 
 ## DataSync APIs
 
