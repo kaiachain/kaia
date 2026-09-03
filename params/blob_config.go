@@ -53,6 +53,21 @@ func (bcfg *BlobConfig) MaxBlobGas() uint64 {
 	return uint64(bcfg.Max) * BlobTxBlobGasPerBlob
 }
 
+// validate checks that a blob config from a chain configuration is sane.
+// UpdateFraction must be non-zero because it is used as a division denominator.
+func (bcfg *BlobConfig) validate() error {
+	if bcfg.Max < 0 {
+		return errors.New("max < 0")
+	}
+	if bcfg.Target < 0 {
+		return errors.New("target < 0")
+	}
+	if bcfg.UpdateFraction == 0 {
+		return errors.New("update fraction must be defined and non-zero")
+	}
+	return nil
+}
+
 // blobPriceEIP4844 returns the price for EIP-4844 of one blob in Wei.
 func (bcfg *BlobConfig) BlobPriceEIP4844(excessBlobGas uint64) *big.Int {
 	f := bcfg.BlobBaseFeeEIP4844(excessBlobGas)
