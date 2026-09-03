@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_randao "github.com/kaiachain/kaia/kaiax/randao/mock"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
@@ -40,7 +39,7 @@ import (
 func TestGetCfReport(t *testing.T) {
 	t.Run("returns decoded report from header.VRank", func(t *testing.T) {
 		c1, c2 := numToAddr(1), numToAddr(2)
-		encoded, err := vrank.EncodeReport([]common.Address{c1, c2})
+		encoded, err := vrank.EncodeVRank(vrank.VRankPayload{Report: []common.Address{c1, c2}})
 		require.NoError(t, err)
 		h := makeHeaderWithRound(10, 0)
 		h.VRank = encoded
@@ -93,7 +92,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 // TestGetPfReport
 // ---------------------------------------------------------------------------
 func TestGetPfReport(t *testing.T) {
-	t.Run("round zero returns empty report", func(t *testing.T) {
+	t.Run("parent round zero returns empty report", func(t *testing.T) {
 		v := newCN(t, withHeaders(map[uint64]*types.Header{
 			10: makeHeaderWithRound(10, 0),
 		})).VRankModule
@@ -103,15 +102,15 @@ func TestGetPfReport(t *testing.T) {
 		assert.Empty(t, report)
 	})
 
-	t.Run("round greater than zero returns proposers in round order", func(t *testing.T) {
+	t.Run("parent round greater than zero returns proposers in round order", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		p0, p1, p2 := numToAddr(1), numToAddr(2), numToAddr(3)
-		valset.EXPECT().GetProposer(uint64(20), uint64(0)).Return(p0, nil).Times(2)
-		valset.EXPECT().GetProposer(uint64(20), uint64(1)).Return(p1, nil).Times(2)
-		valset.EXPECT().GetProposer(uint64(20), uint64(2)).Return(p2, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(19), uint64(0)).Return(p0, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(19), uint64(1)).Return(p1, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(19), uint64(2)).Return(p2, nil).Times(2)
 
 		v := newCN(t, withValset(valset), withHeaders(map[uint64]*types.Header{
-			20: makeHeaderWithRound(20, 3),
+			20: makeHeaderWithParentRound(20, 3),
 		})).VRankModule
 
 		report, err := v.pfReport(20)
@@ -146,24 +145,24 @@ func TestGetPfReport_Errors(t *testing.T) {
 		assert.Nil(t, report)
 	})
 
-	t.Run("short extra returns error", func(t *testing.T) {
-		v := newCN(t, withHeaders(map[uint64]*types.Header{
-			40: {Number: big.NewInt(40), Extra: make([]byte, istanbul.IstanbulExtraVanity-1)},
-		})).VRankModule
+	t.Run("undecodable vrank returns error", func(t *testing.T) {
+		header := makeHeaderWithRound(40, 0)
+		header.VRank = []byte{0x01, 0x02, 0x03}
+		v := newCN(t, withHeaders(map[uint64]*types.Header{40: header})).VRankModule
 
 		report, err := v.pfReport(40)
-		require.ErrorContains(t, err, "header extra is too short")
+		require.Error(t, err)
 		assert.Nil(t, report)
 	})
 
 	t.Run("GetProposer error is propagated", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		p0 := numToAddr(11)
-		valset.EXPECT().GetProposer(uint64(50), uint64(0)).Return(p0, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(50), uint64(1)).Return(common.Address{}, assert.AnError).Times(1)
+		valset.EXPECT().GetProposer(uint64(49), uint64(0)).Return(p0, nil).Times(1)
+		valset.EXPECT().GetProposer(uint64(49), uint64(1)).Return(common.Address{}, assert.AnError).Times(1)
 
 		v := newCN(t, withValset(valset), withHeaders(map[uint64]*types.Header{
-			50: makeHeaderWithRound(50, 2),
+			50: makeHeaderWithParentRound(50, 2),
 		})).VRankModule
 
 		report, err := v.pfReport(50)

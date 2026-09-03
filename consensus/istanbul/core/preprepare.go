@@ -81,14 +81,23 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(bft.MsgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
-			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to match the given (Sequence + Round)
-			// 2. The given block must exist
+			// This PRE-PREPARE targets an already-finalized height. Reply with a COMMIT
+			// to help the sender finish that block, only if:
+			// 1. The sender is the scheduled proposer of the given (sequence, round).
+			// 2. This node has the given block in its chain.
+			// 3. Post-permissionless: the given round equals the round this node stored.
+			//    The committed seal signs (hash, round), so answering another round would
+			//    sign a commit at a round this node never committed at; callers could
+			//    collect such seals into a quorum certificate for a round that never
+			//    reached quorum.
 			proposer, getProposerErr := c.valsetModule.GetProposer(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
 			if getProposerErr != nil {
 				return getProposerErr
 			}
-			if proposer == src && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			storedRound, hasProposal := c.backend.ProposalRound(preprepare.Proposal.Hash(), preprepare.Proposal.Number())
+			roundMatches := !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) ||
+				uint64(storedRound) == preprepare.View.Round.Uint64()
+			if proposer == src && hasProposal && roundMatches {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}

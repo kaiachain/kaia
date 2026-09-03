@@ -135,18 +135,18 @@ func (mr *MockBackendMockRecorder) HasBadProposal(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBadProposal", reflect.TypeOf((*MockBackend)(nil).HasBadProposal), arg0)
 }
 
-// HasPropsal mocks base method.
-func (m *MockBackend) HasPropsal(arg0 common.Hash, arg1 *big.Int) bool {
+// IsPermissionlessAt mocks base method.
+func (m *MockBackend) IsPermissionlessAt(arg0 uint64) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasPropsal", arg0, arg1)
+	ret := m.ctrl.Call(m, "IsPermissionlessAt", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// HasPropsal indicates an expected call of HasPropsal.
-func (mr *MockBackendMockRecorder) HasPropsal(arg0, arg1 interface{}) *gomock.Call {
+// IsPermissionlessAt indicates an expected call of IsPermissionlessAt.
+func (mr *MockBackendMockRecorder) IsPermissionlessAt(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPropsal", reflect.TypeOf((*MockBackend)(nil).HasPropsal), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPermissionlessAt", reflect.TypeOf((*MockBackend)(nil).IsPermissionlessAt), arg0)
 }
 
 // LastProposal mocks base method.
@@ -178,18 +178,19 @@ func (mr *MockBackendMockRecorder) NodeType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeType", reflect.TypeOf((*MockBackend)(nil).NodeType))
 }
 
-// IsPermissionlessAt mocks base method.
-func (m *MockBackend) IsPermissionlessAt(num uint64) bool {
+// ProposalRound mocks base method.
+func (m *MockBackend) ProposalRound(arg0 common.Hash, arg1 *big.Int) (byte, bool) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsPermissionlessAt", num)
-	ret0, _ := ret[0].(bool)
-	return ret0
+	ret := m.ctrl.Call(m, "ProposalRound", arg0, arg1)
+	ret0, _ := ret[0].(byte)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
 }
 
-// IsPermissionlessAt indicates an expected call of IsPermissionlessAt.
-func (mr *MockBackendMockRecorder) IsPermissionlessAt(num interface{}) *gomock.Call {
+// ProposalRound indicates an expected call of ProposalRound.
+func (mr *MockBackendMockRecorder) ProposalRound(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPermissionlessAt", reflect.TypeOf((*MockBackend)(nil).IsPermissionlessAt), num)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposalRound", reflect.TypeOf((*MockBackend)(nil).ProposalRound), arg0, arg1)
 }
 
 // Sealer mocks base method.

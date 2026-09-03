@@ -40,4 +40,8 @@ var (
 	ErrInvalidVRankCandidate               = errors.New("invalid vrank: address is not a candidate")
 	ErrDuplicateVRankCandidate             = errors.New("invalid vrank: duplicate candidate address")
 	ErrVRankNotSorted                      = errors.New("invalid vrank: addresses not sorted")
+	ErrUnexpectedParentRound               = errors.New("invalid vrank: unexpected parent round")
+	ErrUnexpectedParentSeal                = errors.New("invalid vrank: unexpected parent committed seal")
+	ErrTooManyParentSeals                  = errors.New("invalid vrank: more parent seals than committee members")
+	ErrInvalidParentCertificate            = errors.New("invalid vrank: parent round is not backed by a committee quorum")
 )

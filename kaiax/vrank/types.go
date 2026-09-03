@@ -94,27 +94,39 @@ type VRankCandidate struct {
 	BlsSig      [blstypes.SignatureLength]byte // Sign(vrankCandidateSigHash(), blsKey)
 }
 
-// EncodeReport encodes the failed CandTesting addresses, or nil when empty so an absent VRank stays
-// the "nothing" encoding.
-func EncodeReport(failed []common.Address) ([]byte, error) {
-	if len(failed) == 0 {
+// VRankPayload is the decoded header.VRank field.
+type VRankPayload struct {
+	// Report is CandTesting(N) at epoch-start blocks and the cfReport elsewhere.
+	Report []common.Address
+	// ParentRound is the canonical round of block N-1, proven by ParentCommittedSeal.
+	// Round 0 claims no proposal failure, so it carries no seals.
+	ParentRound         uint8
+	ParentCommittedSeal [][]byte
+}
+
+// EncodeVRank returns nil for an empty payload so an absent VRank stays the "nothing" encoding.
+func EncodeVRank(payload VRankPayload) ([]byte, error) {
+	if len(payload.Report) == 0 && payload.ParentRound == 0 && len(payload.ParentCommittedSeal) == 0 {
 		return nil, nil
 	}
-	return EncodeAddressList(failed)
+	return rlp.EncodeToBytes(&payload)
 }
 
-func EncodeAddressList(addrs []common.Address) ([]byte, error) {
-	return rlp.EncodeToBytes(addrs)
-}
-
-func DecodeReport(data []byte) ([]common.Address, error) {
+func DecodeVRank(data []byte) (VRankPayload, error) {
+	// Decoded payloads always carry non-nil slices.
 	if len(data) == 0 {
-		return []common.Address{}, nil
+		return VRankPayload{Report: []common.Address{}, ParentCommittedSeal: [][]byte{}}, nil
 	}
 
-	var report []common.Address
-	if err := rlp.DecodeBytes(data, &report); err != nil {
-		return nil, err
+	var payload VRankPayload
+	if err := rlp.DecodeBytes(data, &payload); err != nil {
+		return VRankPayload{}, err
 	}
-	return report, nil
+	if payload.Report == nil {
+		payload.Report = []common.Address{}
+	}
+	if payload.ParentCommittedSeal == nil {
+		payload.ParentCommittedSeal = [][]byte{}
+	}
+	return payload, nil
 }

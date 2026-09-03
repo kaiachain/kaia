@@ -187,6 +187,22 @@ func (m *IstanbulSealer) CommittersWithRound(header *types.Header) ([]common.Add
 	return m.committers(header, PrepareCommittedSealWithRound(m.HeaderHash(header), round))
 }
 
+func (m *IstanbulSealer) RecoverCommitters(_ uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
+	proposalSeal := PrepareCommittedSealWithRound(hash, round)
+	committers := make([]common.Address, 0, len(seals))
+	for _, seal := range seals {
+		if len(seal) != IstanbulExtraSeal {
+			return nil, ErrInvalidCommittedSeals
+		}
+		addr, err := cacheSignatureAddress(proposalSeal, seal)
+		if err != nil {
+			return nil, ErrInvalidSignature
+		}
+		committers = append(committers, addr)
+	}
+	return committers, nil
+}
+
 func (m *IstanbulSealer) committers(header *types.Header, proposalSeal []byte) ([]common.Address, error) {
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {

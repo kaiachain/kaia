@@ -40,18 +40,23 @@ func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
 	}
-	return vrank.DecodeReport(header.VRank)
+	payload, err := vrank.DecodeVRank(header.VRank)
+	if err != nil {
+		return nil, err
+	}
+	return payload.Report, nil
 }
 
-// GetPfReport reads the committed pfReport for block blockNum from header.Extra.
-// Returns an empty report if the block was finalized at round 0.
+// GetPfReport returns the proposers that failed to produce block blockNum-1, as recorded in
+// block blockNum. Empty when the parent committed at round 0 or is not scored by blockNum.
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Used by applyBlocksForPFS so that catchUp can process pre-fork blocks without error.
-// GetPfReport returns the proposal failure report for the given block.
 func (v *VRankModule) GetPfReport(blockNum uint64) ([]common.Address, error) {
 	return v.pfReport(blockNum)
 }
 
+// pfReport reads ParentRound, not the parent's own round byte: that byte is outside the block
+// hash, so nodes may hold different values for one block.
 func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, vrank.ErrNotPermissionless
@@ -60,18 +65,18 @@ func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
 	}
-	roundByte, err := v.Sealer.Round(header)
+	payload, err := vrank.DecodeVRank(header.VRank)
 	if err != nil {
 		return nil, err
 	}
-	round := uint64(roundByte)
-	if round == 0 {
+	if payload.ParentRound == 0 {
 		return []common.Address{}, nil
 	}
 
-	pfReport := make([]common.Address, 0, round)
-	for r := uint64(0); r < round; r++ {
-		proposer, err := v.Valset.GetProposer(blockNum, r)
+	parentNum := blockNum - 1
+	pfReport := make([]common.Address, 0, payload.ParentRound)
+	for r := uint64(0); r < uint64(payload.ParentRound); r++ {
+		proposer, err := v.Valset.GetProposer(parentNum, r)
 		if err != nil {
 			return nil, err
 		}

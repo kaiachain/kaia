@@ -23,13 +23,15 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
 // VerifyHeader checks the VRank field in the header:
 //   - Before the permissionless fork: VRank must be absent.
-//   - At epoch-start blocks: VRank must be RLPEncode(CandTesting(N)) or RLPEncode([]).
-//   - Otherwise: a cfReport whose failed addresses are sorted, deduped, and ⊆ CandTesting.
+//   - At epoch-start blocks: Report must equal CandTesting(N).
+//   - Otherwise: Report is a cfReport whose failed addresses are sorted, deduped, and ⊆ CandTesting.
+//   - Always: ParentRound must be backed by a committee quorum that committed the parent there.
 func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error {
 	number := header.Number.Uint64()
 	permissionless := v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(number))
@@ -42,24 +44,28 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 		return nil
 	}
 
+	payload, err := vrank.DecodeVRank(header.VRank)
+	if err != nil {
+		return vrank.ErrInvalidVRankFormat
+	}
+	if err := v.verifyParentRound(header, payload); err != nil {
+		return err
+	}
+
 	// Epoch-start block
 	if number%v.vrankEpoch() == 0 {
-		expected, err := v.encodeEpochStartVRank(number)
+		candidates, err := v.Valset.GetCandTesting(number)
 		if err != nil {
 			return err
 		}
-		if !bytes.Equal(header.VRank, expected) {
+		if !slices.Equal(payload.Report, candidates) {
 			return vrank.ErrEpochStartVRankMismatch
 		}
 		return nil
 	}
 
 	// Non-epoch-start block
-	report, err := vrank.DecodeReport(header.VRank)
-	if err != nil {
-		return vrank.ErrInvalidVRankFormat
-	}
-	if len(report) == 0 {
+	if len(payload.Report) == 0 {
 		return nil
 	}
 	// Failures score against the reporter's own byzantine-filterable column regardless of content,
@@ -68,14 +74,69 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 	if err != nil {
 		return err
 	}
-	return validateNonEpochVRank(report, candidates)
+	return validateNonEpochVRank(payload.Report, candidates)
+}
+
+// verifyParentRound checks that the seals prove a committee quorum committed the parent at the
+// claimed round. It never compares against this node's own stored round: two honest nodes can hold
+// different rounds for one block, so comparing would make them reject each other's headers.
+// The seals prove that the round happened, not that it was the last one, so a proposer can claim a
+// lower round that really happened but cannot invent a higher one.
+func (v *VRankModule) verifyParentRound(header *types.Header, payload vrank.VRankPayload) error {
+	if !v.hasParentCertificate(header.Number.Uint64()) || payload.ParentRound == 0 {
+		if payload.ParentRound != 0 {
+			return vrank.ErrUnexpectedParentRound
+		}
+		if len(payload.ParentCommittedSeal) > 0 {
+			return vrank.ErrUnexpectedParentSeal
+		}
+		return nil
+	}
+
+	parentNum := header.Number.Uint64() - 1
+	committee, err := v.Valset.GetCommittee(parentNum, uint64(payload.ParentRound))
+	if err != nil {
+		return err
+	}
+	// Bound the recovery work: seals beyond the committee size can never help.
+	if len(payload.ParentCommittedSeal) > len(committee) {
+		return vrank.ErrTooManyParentSeals
+	}
+	committers, err := v.Sealer.RecoverCommitters(parentNum, header.ParentHash, payload.ParentRound, payload.ParentCommittedSeal)
+	if err != nil {
+		return vrank.ErrInvalidParentCertificate
+	}
+	committeeSet := valset.NewAddressSet(committee)
+	valid := 0
+	for _, addr := range committers {
+		if !committeeSet.Remove(addr) {
+			return vrank.ErrInvalidParentCertificate
+		}
+		valid++
+	}
+	// The committee equals the qualified set post-permissionless, so pass its size for both.
+	if valid < v.Sealer.Quorum(parentNum, len(committee), len(committee)) {
+		return vrank.ErrInvalidParentCertificate
+	}
+	return nil
+}
+
+// hasParentCertificate reports whether block num records its parent's round. Two blocks do not:
+// an epoch start, whose parent's failures belong to the previous epoch, and the first
+// permissionless block, whose parent's seals predate the round binding.
+func (v *VRankModule) hasParentCertificate(num uint64) bool {
+	if num == 0 || num%v.vrankEpoch() == 0 {
+		return false
+	}
+	return v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num - 1))
 }
 
 // PrepareHeader fills header.VRank per KIP-227.
 //
-//   - At epoch-start blocks: VRank is CandTesting(N), encoded even when empty.
-//   - Otherwise: VRank is a cfReport about this proposer's own most recent prior proposal in
-//     the current epoch, or nil when there is no such block or no failures.
+//   - At epoch-start blocks: Report is CandTesting(N).
+//   - Otherwise: Report is a cfReport about this proposer's own most recent prior proposal in
+//     the current epoch, or empty when there is no such block or no failures.
+//   - ParentRound and its seals are copied from this node's own stored parent header.
 func (v *VRankModule) PrepareHeader(header *types.Header) error {
 	number := header.Number.Uint64()
 	if !v.ChainConfig.IsPermissionlessForkEnabled(header.Number) {
@@ -83,39 +144,64 @@ func (v *VRankModule) PrepareHeader(header *types.Header) error {
 		return nil
 	}
 
+	var payload vrank.VRankPayload
 	if number%v.vrankEpoch() == 0 {
-		encoded, err := v.encodeEpochStartVRank(number)
+		candidates, err := v.Valset.GetCandTesting(number)
 		if err != nil {
+			logger.Error("epoch-start VRank fill: GetCandTesting failed", "num", number, "err", err)
 			return err
 		}
-		header.VRank = encoded
+		payload.Report = candidates
 	} else {
-		encoded, err := v.encodeCandidateFailureVRank(number)
+		report, err := v.evaluateCandidateFailures(number)
 		if err != nil {
 			return err
 		}
-		header.VRank = encoded
+		payload.Report = report
 	}
 
+	round, seals, err := v.parentRoundCertificate(number)
+	if err != nil {
+		return err
+	}
+	payload.ParentRound = round
+	payload.ParentCommittedSeal = seals
+
+	encoded, err := vrank.EncodeVRank(payload)
+	if err != nil {
+		logger.Error("Failed to encode VRank payload", "err", err, "num", number)
+		return err
+	}
+	header.VRank = encoded
 	return nil
 }
 
-// encodeEpochStartVRank returns RLPEncode(CandTesting(N)) or RLPEncode([]) = 0xc0 when empty.
-func (v *VRankModule) encodeEpochStartVRank(number uint64) ([]byte, error) {
-	candidates, err := v.Valset.GetCandTesting(number)
-	if err != nil {
-		logger.Error("epoch-start VRank fill: GetCandTesting failed", "num", number, "err", err)
-		return nil, err
+// parentRoundCertificate reads the round and seals from this node's own stored parent, never from
+// seals gathered off the network: the proof of that round is the parent this node accepted.
+func (v *VRankModule) parentRoundCertificate(number uint64) (uint8, [][]byte, error) {
+	if !v.hasParentCertificate(number) {
+		return 0, nil, nil
 	}
-	encoded, err := vrank.EncodeAddressList(candidates)
-	if err != nil {
-		logger.Error("epoch-start VRank fill: EncodeAddressList failed", "num", number, "err", err)
-		return nil, err
+	parent := v.Chain.GetHeaderByNumber(number - 1)
+	if parent == nil {
+		return 0, nil, vrank.ErrHeaderNotFound
 	}
-	return encoded, nil
+	round, err := v.Sealer.Round(parent)
+	if err != nil {
+		return 0, nil, err
+	}
+	if round == 0 {
+		return 0, nil, nil
+	}
+	_, seals, err := v.Sealer.RawSeals(parent)
+	if err != nil {
+		return 0, nil, err
+	}
+	return round, seals, nil
 }
 
-func (v *VRankModule) encodeCandidateFailureVRank(number uint64) ([]byte, error) {
+// evaluateCandidateFailures reports on this proposer's own most recent prior proposal this epoch.
+func (v *VRankModule) evaluateCandidateFailures(number uint64) ([]common.Address, error) {
 	targetNum, round, ok := v.selectReportTarget(number)
 	if !ok {
 		// No own prior proposal this epoch (first proposal, or restart). Empty report — fail-safe.
@@ -127,15 +213,7 @@ func (v *VRankModule) encodeCandidateFailureVRank(number uint64) ([]byte, error)
 		return nil, err
 	}
 	v.collector.PruneReported(targetNum) // drop views older than targetNum; targetNum stays for re-report
-	if len(report) == 0 {
-		return nil, nil
-	}
-	encoded, err := vrank.EncodeReport(report)
-	if err != nil {
-		logger.Error("Failed to encode VRank report", "err", err, "report", report)
-		return nil, err
-	}
-	return encoded, nil
+	return report, nil
 }
 
 func validateNonEpochVRank(report, candidates []common.Address) error {

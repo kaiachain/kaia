@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"fmt"
 	"maps"
 	"math/big"
 	"slices"
@@ -152,10 +153,15 @@ func (v *VRankModule) epochCandidates(blockNum uint64) ([]common.Address, error)
 		return nil, err
 	}
 	logger.Warn("CandTesting unavailable from state, reading the epoch-start header", "num", blockNum, "err", err)
-	return vrank.DecodeReport(header.VRank)
+	payload, decodeErr := vrank.DecodeVRank(header.VRank)
+	if decodeErr != nil {
+		return nil, fmt.Errorf("get CandTesting from state err: %v; decode epoch-start header VRank err: %w", err, decodeErr)
+	}
+	return payload.Report, nil
 }
 
-// applyBlocksForPFS accumulates the pfReport for blocks in [start, end].
+// applyBlocksForPFS accumulates the pfReport recorded in blocks [start, end], which reports the
+// proposal failures at blocks [start, end-1]: an epoch start records nothing.
 func (v *VRankModule) applyBlocksForPFS(start, end uint64, seed map[common.Address]uint64) (map[common.Address]uint64, error) {
 	pfs := cloneMap(seed)
 	for blockNum := start; blockNum <= end; blockNum++ {

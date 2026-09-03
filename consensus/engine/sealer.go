@@ -87,6 +87,10 @@ func (s *dynamicSealer) CommittersWithRound(header *types.Header) ([]common.Addr
 	return s.implAt(header.Number.Uint64()).CommittersWithRound(header)
 }
 
+func (s *dynamicSealer) RecoverCommitters(blockNum uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
+	return s.implAt(blockNum).RecoverCommitters(blockNum, hash, round, seals)
+}
+
 func (s *dynamicSealer) Vanity(header *types.Header) ([]byte, error) {
 	if header == nil || header.Number == nil {
 		return nil, consensus.ErrUnknownBlock

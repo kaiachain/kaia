@@ -47,7 +47,7 @@ func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, e
 // cfAddrs may be nil/empty for an empty report.
 func makeHeaderWithVRank(number uint64, round int64, cfAddrs []common.Address) *types.Header {
 	h := makeHeaderWithRound(number, round)
-	encoded, err := vrank.EncodeReport(cfAddrs)
+	encoded, err := vrank.EncodeVRank(vrank.VRankPayload{Report: cfAddrs})
 	if err != nil {
 		panic(err)
 	}
@@ -111,14 +111,14 @@ func TestGetPFS(t *testing.T) {
 		headers := map[uint64]*types.Header{
 			0: makeHeaderWithRound(0, 0),
 			1: makeHeaderWithRound(1, 0),
-			2: makeHeaderWithRound(2, 1),
-			3: makeHeaderWithRound(3, 2),
+			2: makeHeaderWithParentRound(2, 1),
+			3: makeHeaderWithParentRound(3, 2),
 		}
 
 		cn := newCN(t, withHeaders(headers))
+		cn.Valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(p1, nil).Times(1)
 		cn.Valset.EXPECT().GetProposer(uint64(2), uint64(0)).Return(p1, nil).Times(1)
-		cn.Valset.EXPECT().GetProposer(uint64(3), uint64(0)).Return(p1, nil).Times(1)
-		cn.Valset.EXPECT().GetProposer(uint64(3), uint64(1)).Return(p2, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(uint64(2), uint64(1)).Return(p2, nil).Times(1)
 
 		v := cn.VRankModule
 		pfs, err := v.GetPFS(1)
@@ -139,7 +139,7 @@ func TestGetPFS(t *testing.T) {
 	})
 	t.Run("new epoch - scan one header", func(t *testing.T) {
 		epochStart := uint64(params.DefaultVRankEpoch)
-		headers := map[uint64]*types.Header{epochStart: makeHeaderWithRound(epochStart, 1)}
+		headers := map[uint64]*types.Header{epochStart: makeHeaderWithParentRound(epochStart, 1)}
 
 		cn := newCN(t, withHeaders(headers))
 		v := cn.VRankModule
@@ -149,7 +149,7 @@ func TestGetPFS(t *testing.T) {
 		pfs, err := v.GetPFS(epochStart - 1)
 		assert.Equal(t, uint64(99), pfs[proposer])
 
-		cn.Valset.EXPECT().GetProposer(uint64(epochStart), uint64(0)).Return(proposer, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(uint64(epochStart-1), uint64(0)).Return(proposer, nil).Times(1)
 		pfs, err = v.GetPFS(epochStart)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), pfs[proposer], "PFS must reset at epoch")
@@ -182,7 +182,7 @@ func TestGetPFS(t *testing.T) {
 		for i := range uint64(5) {
 			headers[i] = makeHeaderWithRound(i, 0)
 		}
-		headers[5] = makeHeaderWithRound(5, 1)
+		headers[5] = makeHeaderWithParentRound(5, 1)
 
 		proposer := numToAddr(1)
 		v := newCN(t, withProposer(proposer), withHeaders(headers)).VRankModule
@@ -221,12 +221,12 @@ func TestGetPFS_Errors(t *testing.T) {
 	t.Run("GetProposer error", func(t *testing.T) {
 		headers := map[uint64]*types.Header{
 			0: makeHeaderWithRound(0, 0),
-			1: makeHeaderWithRound(1, 1), // round=1 → needs GetProposer(1, 0)
+			1: makeHeaderWithParentRound(1, 1), // parent round=1 → needs GetProposer(0, 0)
 		}
 		cn := newCN(t, withHeaders(headers))
 		v := cn.VRankModule
 
-		cn.Valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(common.Address{}, assert.AnError)
+		cn.Valset.EXPECT().GetProposer(uint64(0), uint64(0)).Return(common.Address{}, assert.AnError)
 
 		_, err := v.GetPFS(1)
 		assert.ErrorIs(t, err, assert.AnError)
@@ -251,8 +251,8 @@ func TestGetPFS_CacheFallback(t *testing.T) {
 		for i := range uint64(5) {
 			headers[i] = makeHeaderWithRound(i, 0)
 		}
-		headers[5] = makeHeaderWithRound(5, 1)
-		headers[6] = makeHeaderWithRound(6, 1)
+		headers[5] = makeHeaderWithParentRound(5, 1)
+		headers[6] = makeHeaderWithParentRound(6, 1)
 
 		v := newCN(t, withHeaders(headers), withProposer(proposer)).VRankModule
 
@@ -273,8 +273,8 @@ func TestGetPFS_CacheFallback(t *testing.T) {
 	t.Run("no cache hit - scan all headers", func(t *testing.T) {
 		headers := map[uint64]*types.Header{
 			0: makeHeaderWithRound(0, 0),
-			1: makeHeaderWithRound(1, 1),
-			2: makeHeaderWithRound(2, 2),
+			1: makeHeaderWithParentRound(1, 1),
+			2: makeHeaderWithParentRound(2, 2),
 		}
 
 		// ensure no DB, no cache. Scans all headers in this case.
@@ -284,9 +284,9 @@ func TestGetPFS_CacheFallback(t *testing.T) {
 			require.False(t, inCache, "cache must be cold before first call")
 		}
 
+		cn.Valset.EXPECT().GetProposer(uint64(0), uint64(0)).Return(proposer, nil).Times(1)
 		cn.Valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer, nil).Times(1)
-		cn.Valset.EXPECT().GetProposer(uint64(2), uint64(0)).Return(proposer, nil).Times(1)
-		cn.Valset.EXPECT().GetProposer(uint64(2), uint64(1)).Return(proposer, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(uint64(1), uint64(1)).Return(proposer, nil).Times(1)
 
 		pfs, err := cn.VRankModule.GetPFS(2)
 		require.NoError(t, err)
@@ -300,14 +300,14 @@ func TestGetPFS_CacheFallback(t *testing.T) {
 		for i := range blockNum {
 			headers[i] = makeHeaderWithRound(i, 0)
 		}
-		headers[blockNum] = makeHeaderWithRound(blockNum, 1) // one failure
+		headers[blockNum] = makeHeaderWithParentRound(blockNum, 1) // one failure
 
 		cn := newCN(t, withHeaders(headers))
 
 		// forge cache - it must be used
 		cn.VRankModule.pfsCache.Add(boundary, map[common.Address]uint64{proposer: 12345})
 
-		cn.Valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposer, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(blockNum-1, uint64(0)).Return(proposer, nil).Times(1)
 
 		pfs, err := cn.VRankModule.GetPFS(blockNum)
 		require.NoError(t, err)
@@ -321,14 +321,14 @@ func TestGetPFS_CacheFallback(t *testing.T) {
 		for i := range blockNum {
 			headers[i] = makeHeaderWithRound(i, 0)
 		}
-		headers[blockNum] = makeHeaderWithRound(blockNum, 1) // one failure
+		headers[blockNum] = makeHeaderWithParentRound(blockNum, 1) // one failure
 
 		cn := newCN(t, withHeaders(headers))
 
 		// forge cache - it must NOT be used
 		cn.VRankModule.pfsCache.Add(boundary-1, map[common.Address]uint64{proposer: 12345})
 
-		cn.Valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposer, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(blockNum-1, uint64(0)).Return(proposer, nil).Times(1)
 
 		pfs, err := cn.VRankModule.GetPFS(blockNum)
 		require.NoError(t, err)
@@ -354,16 +354,16 @@ func TestGetPFS_DBFallback(t *testing.T) {
 		assert.Equal(t, uint64(12345), pfs[proposer], "GetPFS(ckpt) must return the DB-stored checkpoint seed verbatim")
 	})
 	t.Run("checkpoint hit - advance one block accumulates", func(t *testing.T) {
-		headers := map[uint64]*types.Header{ckpt + 1: makeHeaderWithRound(ckpt+1, 1)}
+		headers := map[uint64]*types.Header{ckpt + 1: makeHeaderWithParentRound(ckpt+1, 1)}
 
 		db := database.NewMemDB()
 		WriteCheckpoint(db, ckpt, map[common.Address]uint64{proposer: 12345}, vrank.CPMatrix{})
 		WriteLastCheckpoint(db, ckpt)
 
 		cn := newCN(t, withDB(db), withHeaders(headers))
-		// ckpt+1 has round=1 → adds one pfReport on top of the checkpoint seed.
+		// ckpt+1 declares parent round 1 → adds one pfReport on top of the checkpoint seed.
 		// No epoch reset because ckpt is not an epoch boundary (ckpt = vrankEpoch/8).
-		cn.Valset.EXPECT().GetProposer(uint64(ckpt+1), uint64(0)).Return(proposer, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(uint64(ckpt), uint64(0)).Return(proposer, nil).Times(1)
 
 		pfs, err := cn.VRankModule.GetPFS(ckpt + 1)
 		require.NoError(t, err)
@@ -702,17 +702,17 @@ func TestApplyBlocksForPFS(t *testing.T) {
 	v.Chain = &testChain{
 		headers: map[uint64]*types.Header{
 			10: makeHeaderWithRound(10, 0),
-			11: makeHeaderWithRound(11, 2),
-			12: makeHeaderWithRound(12, 1),
+			11: makeHeaderWithParentRound(11, 2),
+			12: makeHeaderWithParentRound(12, 1),
 		},
 	}
 
 	// block 10, round 0: no GetProposer calls (loop [0,0) is empty)
 	// block 11, round 2: proposers for rounds 0 and 1
-	valset.EXPECT().GetProposer(uint64(11), uint64(0)).Return(p1, nil)
-	valset.EXPECT().GetProposer(uint64(11), uint64(1)).Return(p2, nil)
+	valset.EXPECT().GetProposer(uint64(10), uint64(0)).Return(p1, nil)
+	valset.EXPECT().GetProposer(uint64(10), uint64(1)).Return(p2, nil)
 	// block 12, round 1: proposer for round 0
-	valset.EXPECT().GetProposer(uint64(12), uint64(0)).Return(p1, nil)
+	valset.EXPECT().GetProposer(uint64(11), uint64(0)).Return(p1, nil)
 
 	pfs, err := v.applyBlocksForPFS(10, 12, make(map[common.Address]uint64))
 	require.NoError(t, err)

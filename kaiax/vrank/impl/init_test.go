@@ -240,8 +240,16 @@ func (c *testChain) GetHeaderByNumber(number uint64) *types.Header {
 	return c.headers[number]
 }
 
+var testSealerKey, _ = crypto.GenerateKey()
+
+// newTestSealer returns a real sealer so seal writes and recovery behave as in production.
+func newTestSealer() *istanbul.IstanbulSealer {
+	return istanbul.NewSealerImpl(testSealerKey)
+}
+
 // testIstanbulSealer implements the vrank.Sealer interface for tests by reading the
-// round byte that makeHeaderWithRound writes into header.Extra.
+// round byte that makeHeaderWithRound writes into header.Extra. Seal reads and recovery
+// delegate to a real sealer, which is what the parent certificate is verified against.
 type testIstanbulSealer struct{}
 
 func (testIstanbulSealer) Round(h *types.Header) (byte, error) {
@@ -249,6 +257,18 @@ func (testIstanbulSealer) Round(h *types.Header) (byte, error) {
 		return 0, errors.New("header extra is too short")
 	}
 	return h.Extra[istanbul.IstanbulExtraVanity-1], nil
+}
+
+func (testIstanbulSealer) RawSeals(h *types.Header) ([]byte, [][]byte, error) {
+	return newTestSealer().RawSeals(h)
+}
+
+func (testIstanbulSealer) RecoverCommitters(blockNum uint64, hash common.Hash, round byte, seals [][]byte) ([]common.Address, error) {
+	return newTestSealer().RecoverCommitters(blockNum, hash, round, seals)
+}
+
+func (testIstanbulSealer) Quorum(blockNum uint64, qualifiedLen, committeeSize int) int {
+	return newTestSealer().Quorum(blockNum, qualifiedLen, committeeSize)
 }
 
 // Author returns the address withAuthor stashed in Rewardbase, so tests can make the author
@@ -271,9 +291,30 @@ func makeHeaderWithRound(number uint64, round int64) *types.Header {
 		Number:     big.NewInt(int64(number)),
 		Time:       big.NewInt(0),
 		BlockScore: big.NewInt(1),
-		Extra:      make([]byte, istanbul.IstanbulExtraVanity),
 	}
-	h.Extra[istanbul.IstanbulExtraVanity-1] = byte(round)
+	sealer := newTestSealer()
+	// A well-formed Istanbul extra, so the sealer can parse this header.
+	if err := sealer.WriteValidators(h, nil); err != nil {
+		panic(err)
+	}
+	sealer.WriteRound(h, round)
+	return h
+}
+
+// withParentAt seeds the round-0 parent that PrepareHeader(num) reads for the certificate.
+func withParentAt(num uint64) vrankOpt {
+	return withHeaders(map[uint64]*types.Header{num - 1: makeHeaderWithRound(num-1, 0)})
+}
+
+// makeHeaderWithParentRound declares the parent's round without a certificate: pfReport reads
+// the round, only VerifyHeader checks the seals.
+func makeHeaderWithParentRound(number uint64, parentRound uint8) *types.Header {
+	h := makeHeaderWithRound(number, 0)
+	encoded, err := vrank.EncodeVRank(vrank.VRankPayload{ParentRound: parentRound})
+	if err != nil {
+		panic(err)
+	}
+	h.VRank = encoded
 	return h
 }
 
@@ -302,12 +343,16 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	checkpoint := testCheckpointInterval // must be a testCheckpointInterval multiple
 	P1, P2, C1 := numToAddr(1), numToAddr(2), numToAddr(10)
 
-	// The tail block (checkpoint+1) has round=1, author=P2 and cfReport=[C1]:
-	//   - PFS:      pfReport=[P1] (proposer at round 0) → pfs[P1] incremented
-	//   - cpMatrix: reporter=P2   (the block's author)  → cpMatrix[C1][P2] incremented
+	// Tail block (checkpoint+1): round=1, author=P2, parent round=1, cfReport=[C1].
+	//   - PFS:      pfReport=[P1], the parent's round-0 proposer
+	//   - cpMatrix: reporter=P2, the block's author
+	tail := withAuthor(makeHeaderWithRound(checkpoint+1, 1), P2)
+	tailVRank, err := vrank.EncodeVRank(vrank.VRankPayload{Report: []common.Address{C1}, ParentRound: 1})
+	require.NoError(t, err)
+	tail.VRank = tailVRank
 	headers := map[uint64]*types.Header{
 		checkpoint:     makeHeaderWithRound(checkpoint, 0),
-		checkpoint + 1: withAuthor(makeHeaderWithVRank(checkpoint+1, 1, []common.Address{C1}), P2),
+		checkpoint + 1: tail,
 	}
 
 	db := database.NewMemDB()
