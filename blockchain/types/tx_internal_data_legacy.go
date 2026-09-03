@@ -291,6 +291,9 @@ func (t *TxInternalDataLegacy) UnmarshalJSON(b []byte) error {
 	t.Recipient = js.Recipient
 	t.Amount = (*big.Int)(js.Amount)
 	t.Payload = js.Payload
+	if len(js.TxSignatures) == 0 || js.TxSignatures[0] == nil {
+		return errEmptyTxSignatures
+	}
 	t.V = (*big.Int)(js.TxSignatures[0].V)
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)
