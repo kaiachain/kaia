@@ -164,10 +164,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return nil
 		}
 
-		// we'll use blockNum-1 for the blocknumber of GetCouncil since blockNum cannot be available(eg. vote)
-		// it's definite that the valSet vote is not included in this block
-		// so the council(blockNum - 1) and council(blockNum) should be same
-		council, err := h.ValSet.GetCouncil(blockNum - 1)
+		council, err := h.ValSet.GetCouncil(blockNum)
 		if err != nil {
 			return err
 		}
