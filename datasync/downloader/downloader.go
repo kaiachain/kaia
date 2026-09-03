@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -883,14 +884,14 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 			}
 			// Check if a common ancestor was found
 			finished = true
-			for i := len(headers) - 1; i >= 0; i-- {
+			for i, header := range slices.Backward(headers) {
 				// Skip any headers that underflow/overflow our requested set
-				if headers[i].Number.Int64() < from || headers[i].Number.Uint64() > ceil {
+				if header.Number.Int64() < from || header.Number.Uint64() > ceil {
 					continue
 				}
 				// Otherwise check if we already know the header or not
-				if (mode == FullSync && d.blockchain.HasBlock(headers[i].Hash(), headers[i].Number.Uint64())) || (mode != FullSync && d.lightchain.HasHeader(headers[i].Hash(), headers[i].Number.Uint64())) {
-					number, hash = headers[i].Number.Uint64(), headers[i].Hash()
+				if (mode == FullSync && d.blockchain.HasBlock(header.Hash(), header.Number.Uint64())) || (mode != FullSync && d.lightchain.HasHeader(header.Hash(), header.Number.Uint64())) {
+					number, hash = header.Number.Uint64(), header.Hash()
 
 					// If every header is known, even future ones, the peer straight out lied about its head
 					if number > height && i == limit-1 {
