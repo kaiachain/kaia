@@ -888,6 +888,21 @@ func (tx *Transaction) RawSignatureValues() TxSignatures {
 	return tx.data.RawSignatureValues()
 }
 
+// ValidateSignatureListLength checks the signature-list limit applied to
+// untrusted transaction ingress. It must not be used while decoding or
+// executing blocks because pre-Istanbul blocks may contain longer lists.
+func (tx *Transaction) ValidateSignatureListLength() error {
+	if uint64(len(tx.RawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	if feePayerTx, ok := tx.data.(TxInternalDataFeePayer); ok && uint64(len(feePayerTx.GetFeePayerRawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	return nil
+}
+
 func (tx *Transaction) String() string {
 	b, _ := json.Marshal(tx)
 	return string(b)

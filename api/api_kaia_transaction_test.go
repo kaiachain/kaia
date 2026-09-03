@@ -12,11 +12,16 @@ import (
 	mock_accounts "github.com/kaiachain/kaia/accounts/mocks"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // test tx types and internal data to be supported by APIs in KaiaTransactionAPI.
@@ -156,6 +161,31 @@ func TestTxTypeSupport(t *testing.T) {
 		testTxTypeSupport_noFieldValues(t, api, ctx, args)
 		testTxTypeSupport_unnecessaryFieldValues(t, api, ctx, args)
 	}
+}
+
+func TestRecoverFromTransactionRejectsOversizedSignatureList(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	api := KaiaTransactionAPI{b: mock_api.NewMockBackend(mockCtrl)}
+
+	txData := &types.TxInternalDataFeeDelegatedValueTransfer{
+		Price:     big.NewInt(1),
+		GasLimit:  21000,
+		Amount:    big.NewInt(0),
+		From:      common.Address{1},
+		FeePayer:  common.Address{2},
+		Recipient: common.Address{},
+	}
+	sig := &types.TxSignature{V: big.NewInt(37), R: big.NewInt(1), S: big.NewInt(1)}
+	txData.SetSignature(types.TxSignatures{sig})
+	txData.SetFeePayerSignatures(make(types.TxSignatures, accountkey.MaxNumKeysForMultiSig+1))
+	for i := range txData.GetFeePayerRawSignatureValues() {
+		txData.GetFeePayerRawSignatureValues()[i] = sig
+	}
+
+	encodedTx, err := rlp.EncodeToBytes(types.NewTx(txData))
+	require.NoError(t, err)
+	_, err = api.RecoverFromTransaction(context.Background(), encodedTx, rpc.LatestBlockNumber)
+	require.ErrorIs(t, err, kerrors.ErrMaxKeysExceed)
 }
 
 // testTxTypeSupport_normalCase tests APIs with proper SendTxArgs values.

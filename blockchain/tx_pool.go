@@ -795,6 +795,10 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction) error {
+	if err := tx.ValidateSignatureListLength(); err != nil {
+		return err
+	}
+
 	// Accept only legacy transactions until EIP-2718/2930 activates.
 	if !pool.rules.IsEthTxType && tx.IsEthTypedTransaction() {
 		return ErrTxTypeNotSupported
@@ -1368,7 +1372,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 	}
 
 	// TODO-Kaia: Consider removing the next line and move the above logic to `addTx` or `AddRemotes`
-	senderCacher.recover(pool.signer, txs)
+	pool.recoverSenders(txs)
 	pool.txMsgCh <- txs
 }
 
@@ -1542,7 +1546,7 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
-	senderCacher.recover(pool.signer, []*types.Transaction{tx})
+	pool.recoverSenders([]*types.Transaction{tx})
 
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -1562,12 +1566,25 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
-	senderCacher.recover(pool.signer, txs)
+	pool.recoverSenders(txs)
 
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
 	return pool.addTxsLocked(txs, local)
+}
+
+// recoverSenders avoids ecrecover work for transactions that exceed the
+// signature-list limit accepted by the transaction pool. Block processing uses
+// senderCacher directly so historical transactions remain replayable.
+func (pool *TxPool) recoverSenders(txs []*types.Transaction) {
+	validTxs := make([]*types.Transaction, 0, len(txs))
+	for _, tx := range txs {
+		if tx.ValidateSignatureListLength() == nil {
+			validTxs = append(validTxs, tx)
+		}
+	}
+	senderCacher.recover(pool.signer, validTxs)
 }
 
 // addTxsLocked attempts to queue a batch of transactions if they are valid,

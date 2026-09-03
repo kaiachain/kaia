@@ -42,6 +42,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
@@ -49,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -320,6 +322,14 @@ func feeDelegatedWithRatioTx(nonce uint64, gaslimit uint64, gasPrice *big.Int, a
 	return signedTx
 }
 
+func signaturesWithLength(sig *types.TxSignature, length int) types.TxSignatures {
+	sigs := make(types.TxSignatures, length)
+	for i := range sigs {
+		sigs[i] = sig
+	}
+	return sigs
+}
+
 func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 	return setupTxPoolWithConfig(params.TestChainConfig)
 }
@@ -338,6 +348,26 @@ func setupTxPoolWithConfig(config *params.ChainConfig) (*TxPool, *ecdsa.PrivateK
 	pool := NewTxPool(testTxPoolConfig, config, blockchain, &dummyGovModule{chainConfig: config})
 
 	return pool, key
+}
+
+func TestTxPoolRejectsOversizedSignatureLists(t *testing.T) {
+	pool, senderKey := setupTxPool()
+	defer pool.Stop()
+
+	feePayerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	maxSignatures := int(accountkey.MaxNumKeysForMultiSig)
+
+	senderTx := feeDelegatedTx(0, 21000, big.NewInt(1), big.NewInt(0), senderKey, feePayerKey)
+	senderTx.SetSignature(signaturesWithLength(senderTx.RawSignatureValues()[0], maxSignatures+1))
+	require.ErrorIs(t, pool.AddRemote(senderTx), kerrors.ErrMaxKeysExceed)
+
+	feePayerTx := feeDelegatedTx(1, 21000, big.NewInt(1), big.NewInt(0), senderKey, feePayerKey)
+	feePayerSignatures, err := feePayerTx.GetFeePayerSignatures()
+	require.NoError(t, err)
+	require.NoError(t, feePayerTx.SetFeePayerSignatures(signaturesWithLength(feePayerSignatures[0], maxSignatures+1)))
+	require.ErrorIs(t, pool.AddRemote(feePayerTx), kerrors.ErrMaxKeysExceed)
+	require.Zero(t, pool.all.Count())
 }
 
 func setupTxPoolWithBlobStorage(t *testing.T) (*TxPool, *testBlockChain, *ecdsa.PrivateKey, string) {
