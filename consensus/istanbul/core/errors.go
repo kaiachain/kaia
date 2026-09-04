@@ -35,6 +35,12 @@ var (
 	// errFutureMessage is returned when current view is earlier than the
 	// view of the received message.
 	errFutureMessage = errors.New("future message")
+	// errRoundChangeTooFar is returned when a ROUND CHANGE is outside the
+	// retained future-round window.
+	errRoundChangeTooFar = errors.New("round change is too far in the future")
+	// errRoundChangeMessageLimit is returned when a ROUND CHANGE bucket already
+	// retains a quorum of distinct senders.
+	errRoundChangeMessageLimit = errors.New("round change message limit reached")
 	// errOldMessage is returned when the received message's view is earlier
 	// than current view.
 	errOldMessage = errors.New("old message")

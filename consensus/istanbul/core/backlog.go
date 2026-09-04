@@ -23,6 +23,8 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/bft"
@@ -35,6 +37,22 @@ var msgPriority = map[uint64]int{
 	bft.MsgCommit:     2,
 	bft.MsgPrepare:    3,
 }
+
+const (
+	// The limits below bound both the number and payload size of retained future
+	// messages. A PREPREPARE carries an entire block, so a count-only limit is
+	// not sufficient to bound backlog memory.
+	maxBacklogMessagesPerSender     = 128
+	maxBacklogPayloadBytesPerSender = 16 * 1024 * 1024
+	// Global limits allow up to eight senders to reach their per-sender limits.
+	maxBacklogMessages     = 1024
+	maxBacklogPayloadBytes = 128 * 1024 * 1024
+	// Keep only a small future-sequence window so far-future messages cannot
+	// occupy the global backlog budget until the node catches up. A node further
+	// behind than this window catches up through block synchronization rather
+	// than through retained consensus messages.
+	maxBacklogSequencesAhead = 8
+)
 
 // checkMessage checks the message state
 // return bft.ErrInvalidMessage if the message is invalid
@@ -99,25 +117,78 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	defer c.backlogsMu.Unlock()
 
 	backlog := c.backlogs[src]
+	messageBytes := backlogMessageBytes(msg)
+	if c.backlogLimitReached(src, backlog, messageBytes) {
+		// A full backlog is expected under load; avoid a warning for every
+		// dropped message.
+		logger.Trace("Discarding future message: backlog limit reached")
+		return
+	}
+
+	view, err := msg.GetView()
+	if err != nil || view == nil || view.Sequence == nil || view.Round == nil {
+		logger.Trace("Discarding future message: cannot decode view", "err", err)
+		return
+	}
+	if c.isBacklogSequenceTooFar(view.Sequence) {
+		logger.Trace("Discarding future message: sequence is too far ahead", "sequence", view.Sequence)
+		return
+	}
 	if backlog == nil {
 		backlog = prque.New()
+		c.backlogs[src] = backlog
 	}
-	switch msg.Code {
-	case bft.MsgPreprepare:
-		var p *bft.Preprepare
-		err := msg.Decode(&p)
-		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
-		}
-		// for bft.MsgRoundChange, bft.MsgPrepare and bft.MsgCommit cases
-	default:
-		var p *bft.Subject
-		err := msg.Decode(&p)
-		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
-		}
+	// toPriority truncates the sequence, so it runs only after
+	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
+	backlog.Push(msg, toPriority(msg.Code, view))
+	c.backlogMessageCount++
+	c.backlogSenderBytes[src] += messageBytes
+	c.backlogPayloadBytes += messageBytes
+}
+
+func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
+	if !sequence.IsUint64() {
+		return true
 	}
-	c.backlogs[src] = backlog
+	maxSequence := new(big.Int).Add(c.currentView().Sequence, big.NewInt(maxBacklogSequencesAhead))
+	return sequence.Cmp(maxSequence) > 0
+}
+
+func backlogMessageBytes(msg *bft.Message) uint64 {
+	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal))
+}
+
+func exceedsBacklogLimit(used, additional, limit uint64) bool {
+	return additional > limit || used > limit-additional
+}
+
+// backlogLimitReached reports whether retaining a message would exceed a
+// per-sender or global backlog limit. backlogsMu must be held by the caller.
+func (c *core) backlogLimitReached(src common.Address, backlog *prque.Prque, messageBytes uint64) bool {
+	if backlog != nil && backlog.Size() >= maxBacklogMessagesPerSender {
+		return true
+	}
+	if c.backlogMessageCount >= maxBacklogMessages {
+		return true
+	}
+	if exceedsBacklogLimit(c.backlogSenderBytes[src], messageBytes, maxBacklogPayloadBytesPerSender) {
+		return true
+	}
+	return exceedsBacklogLimit(c.backlogPayloadBytes, messageBytes, maxBacklogPayloadBytes)
+}
+
+// removeBacklogMessage updates accounting while backlogsMu is held. It also
+// drops the sender's byte entry once its last retained message is removed, so
+// no explicit cleanup is needed when the sender's queue becomes empty.
+func (c *core) removeBacklogMessage(src common.Address, msg *bft.Message) {
+	messageBytes := backlogMessageBytes(msg)
+	c.backlogMessageCount--
+	c.backlogPayloadBytes -= messageBytes
+	if senderBytes := c.backlogSenderBytes[src]; senderBytes > messageBytes {
+		c.backlogSenderBytes[src] = senderBytes - messageBytes
+	} else {
+		delete(c.backlogSenderBytes, src)
+	}
 }
 
 func (c *core) processBacklog() {
@@ -130,12 +201,11 @@ func (c *core) processBacklog() {
 		}
 
 		logger := c.logger.NewWith("from", src, "state", c.state)
-		isFuture := false
 
 		// We stop processing if
 		//   1. backlog is empty
 		//   2. The first message in queue is a future message
-		for !(backlog.Empty() || isFuture) {
+		for !backlog.Empty() {
 			m, prio := backlog.Pop()
 			msg := m.(*bft.Message)
 			var view *bft.View
@@ -143,22 +213,22 @@ func (c *core) processBacklog() {
 			switch msg.Code {
 			case bft.MsgPreprepare:
 				var m *bft.Preprepare
-				err := msg.Decode(&m)
-				if err == nil {
+				if err := msg.Decode(&m); err == nil && m != nil {
 					view = m.View
+					if m.Proposal != nil {
+						prevHash = m.Proposal.ParentHash()
+					}
 				}
-				prevHash = m.Proposal.ParentHash()
-				// for bft.MsgRoundChange, bft.MsgPrepare and bft.MsgCommit cases
 			default:
 				var sub *bft.Subject
-				err := msg.Decode(&sub)
-				if err == nil {
+				if err := msg.Decode(&sub); err == nil && sub != nil {
 					view = sub.View
+					prevHash = sub.PrevHash
 				}
-				prevHash = sub.PrevHash
 			}
 			if view == nil {
 				logger.Debug("Nil view", "msg", msg)
+				c.removeBacklogMessage(src, msg)
 				continue
 			}
 			// Push back if it's a future message
@@ -167,19 +237,26 @@ func (c *core) processBacklog() {
 				if err == errFutureMessage {
 					logger.Trace("Stop processing backlog", "msg", msg)
 					backlog.Push(msg, prio)
-					isFuture = true
 					break
 				}
 				logger.Trace("Skip the backlog event", "msg", msg, "err", err)
+				c.removeBacklogMessage(src, msg)
 				continue
 			}
 			logger.Trace("Post backlog event", "msg", msg)
+			c.removeBacklogMessage(src, msg)
 
 			go c.sendEvent(backlogEvent{
 				src:  src,
 				msg:  msg,
 				Hash: prevHash,
 			})
+		}
+
+		// Do not retain prque's backing storage after all messages from this
+		// sender have been processed or discarded.
+		if backlog.Empty() {
+			delete(c.backlogs, src)
 		}
 	}
 }
