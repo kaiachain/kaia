@@ -32,6 +32,90 @@ func TestPostInsertBlock(t *testing.T) {
 	cp := testCheckpointInterval
 	P1, C1 := numToAddr(1), numToAddr(10)
 
+	t.Run("score warming failure is ignored", func(t *testing.T) {
+		const (
+			forkBlock = uint64(120)
+			epoch     = uint64(50)
+		)
+		cn := newCN(t, withHeaders(map[uint64]*types.Header{
+			forkBlock: makeHeaderWithRound(forkBlock, 0),
+		}))
+		cn.VRankModule.ChainConfig.PermissionlessCompatibleBlock = new(big.Int).SetUint64(forkBlock)
+		cn.VRankModule.ChainConfig.VRankEpoch = epoch
+
+		// This invalid configuration puts the fork in the middle of the epoch
+		// [100, 149], so score warming reaches into pre-fork blocks.
+		_, err := cn.VRankModule.GetPFS(forkBlock)
+		require.ErrorIs(t, err, vrank.ErrNotPermissionless)
+
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(forkBlock)})
+		require.NoError(t, cn.VRankModule.PostInsertBlock(block))
+
+		_, ok := cn.VRankModule.pfsCache.Get(forkBlock)
+		assert.False(t, ok, "failed PFS warming should not populate the cache")
+		_, ok = cn.VRankModule.cpMatrixCache.Get(forkBlock)
+		assert.False(t, ok, "CP matrix warming should be skipped after PFS failure")
+		assert.Nil(t, ReadCheckpointPFS(cn.DB, forkBlock), "partial checkpoint should not be written")
+		_, hasCP := ReadLastCheckpoint(cn.DB)
+		assert.False(t, hasCP, "lastCheckpoint should not advance after a warming failure")
+	})
+
+	t.Run("CP matrix warming failure is ignored", func(t *testing.T) {
+		cn := newCN(t, withHeaders(map[uint64]*types.Header{
+			cp: makeHeaderWithRound(cp, 0),
+		}))
+		cn.VRankModule.pfsCache.Add(cp, map[common.Address]uint64{})
+		// Block 0 is intentionally absent, so epochCandidates cannot fall back to
+		// the epoch-start header when GetCandTesting fails.
+		cn.Valset.EXPECT().GetCandTesting(cp).Return(nil, assert.AnError)
+
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(cp)})
+		require.NoError(t, cn.VRankModule.PostInsertBlock(block))
+
+		_, ok := cn.VRankModule.cpMatrixCache.Get(cp)
+		assert.False(t, ok, "failed CP matrix warming should not populate the cache")
+		assert.Nil(t, ReadCheckpointPFS(cn.DB, cp), "partial checkpoint should not be written")
+		_, hasCP := ReadLastCheckpoint(cn.DB)
+		assert.False(t, hasCP, "lastCheckpoint should not advance after a warming failure")
+	})
+
+	t.Run("later checkpoint succeeds after warming failure", func(t *testing.T) {
+		const (
+			epoch          = uint64(16)
+			checkpoint     = epoch / 8
+			nextCheckpoint = 2 * checkpoint
+		)
+		headers := map[uint64]*types.Header{
+			1:          makeHeaderWithRound(1, 0),
+			checkpoint: makeHeaderWithRound(checkpoint, 0),
+		}
+		cn := newCN(t, withHeaders(headers), withProposer(P1))
+		cn.VRankModule.ChainConfig.VRankEpoch = epoch
+		cn.VRankModule.pfsCache.Add(checkpoint, map[common.Address]uint64{})
+
+		// The first checkpoint cannot initialize its CP matrix because neither
+		// CandTesting state nor the epoch-start header is available.
+		cn.Valset.EXPECT().GetCandTesting(checkpoint).Return(nil, assert.AnError)
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(checkpoint)})
+		require.NoError(t, cn.VRankModule.PostInsertBlock(block))
+		assert.Nil(t, ReadCheckpointPFS(cn.DB, checkpoint))
+
+		// Once the missing inputs become available, the next checkpoint succeeds
+		// and advances lastCheckpoint across the gap.
+		headers[0] = makeHeaderWithRound(0, 0)
+		headers[3] = makeHeaderWithRound(3, 0)
+		headers[nextCheckpoint] = makeHeaderWithRound(nextCheckpoint, 0)
+		cn.Valset.EXPECT().GetCandTesting(nextCheckpoint).Return([]common.Address{C1}, nil)
+		block = types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(nextCheckpoint)})
+		require.NoError(t, cn.VRankModule.PostInsertBlock(block))
+
+		assert.NotNil(t, ReadCheckpointPFS(cn.DB, nextCheckpoint))
+		assert.NotNil(t, ReadCheckpointCPMatrix(cn.DB, nextCheckpoint))
+		lastCP, hasCP := ReadLastCheckpoint(cn.DB)
+		assert.True(t, hasCP)
+		assert.Equal(t, nextCheckpoint, lastCP)
+	})
+
 	t.Run("DB/cache write at checkpoint", func(t *testing.T) {
 		// Build just enough headers around the checkpoint block.
 		// Seed the cache at cp-1 so GetPFS/GetCFS use the nearby-hit branch
