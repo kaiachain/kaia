@@ -846,6 +846,9 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		}
 
 	case p.GetVersion() >= kaia68 && msg.Code == VRankPreprepareMsg:
+		if p.ConnType() != common.CONSENSUSNODE {
+			return errResp(ErrInvalidMsgCode, "VRankPreprepare from a non-CN peer: conntype %d", p.ConnType())
+		}
 		if err := handleVRankPreprepareMsg(pm, p, msg); err != nil {
 			return err
 		}
@@ -1315,6 +1318,9 @@ func handleVRankPreprepareMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 
 	if err := pm.vrankModule.HandleVRankPreprepare(data); err != nil {
+		if errors.Is(err, vrank.ErrViewMismatch) || errors.Is(err, vrank.ErrRoundOutOfRange) || errors.Is(err, vrank.ErrInvalidProposerSig) || errors.Is(err, vrank.ErrMsgFromNonProposer) {
+			return err
+		}
 		logger.Debug("Failed to handle VRankPreprepare", "err", err)
 	}
 

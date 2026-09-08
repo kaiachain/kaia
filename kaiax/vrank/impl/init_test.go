@@ -226,6 +226,14 @@ type testChain struct {
 	engine  consensus.Engine
 }
 
+func (c *testChain) CurrentBlock() *types.Block {
+	header := c.CurrentHeader()
+	if header == nil {
+		return nil
+	}
+	return types.NewBlockWithHeader(header)
+}
+
 func (c *testChain) CurrentHeader() *types.Header {
 	var result *types.Header
 	for num, h := range c.headers {
