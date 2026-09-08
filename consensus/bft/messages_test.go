@@ -18,11 +18,13 @@ package bft_test
 
 import (
 	"encoding/hex"
+	"errors"
 	"math/big"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -131,6 +133,82 @@ func TestMessageRoundTrip(t *testing.T) {
 		!equalBytes(decoded.Signature, orig.Signature) ||
 		!equalBytes(decoded.CommittedSeal, orig.CommittedSeal) {
 		t.Fatalf("round-trip mismatch: got %+v want %+v", &decoded, orig)
+	}
+}
+
+func TestMessageFromPayloadRejectsUnexpectedCommittedSealLengthBeforeSignatureRecovery(t *testing.T) {
+	tests := []struct {
+		name string
+		msg  *bft.Message
+	}{
+		{
+			name: "prepare with committed seal",
+			msg: &bft.Message{
+				Code: bft.MsgPrepare, Signature: make([]byte, crypto.SignatureLength),
+				CommittedSeal: []byte{1},
+			},
+		},
+		{
+			name: "round change with committed seal",
+			msg: &bft.Message{
+				Code: bft.MsgRoundChange, Signature: make([]byte, crypto.SignatureLength),
+				CommittedSeal: []byte{1},
+			},
+		},
+		{
+			name: "commit without committed seal",
+			msg:  &bft.Message{Code: bft.MsgCommit, Signature: make([]byte, crypto.SignatureLength)},
+		},
+		{
+			name: "commit with oversized committed seal",
+			msg: &bft.Message{
+				Code: bft.MsgCommit, Signature: make([]byte, crypto.SignatureLength),
+				CommittedSeal: make([]byte, crypto.SignatureLength+1),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, err := tc.msg.Payload()
+			if err != nil {
+				t.Fatal(err)
+			}
+			called := false
+			var decoded bft.Message
+			err = decoded.FromPayload(payload, func([]byte, []byte) (common.Address, error) {
+				called = true
+				return tc.msg.Address, nil
+			})
+			if !errors.Is(err, bft.ErrInvalidMessage) {
+				t.Fatalf("got %v, want ErrInvalidMessage", err)
+			}
+			if called {
+				t.Fatal("signature recovery ran for an invalid committed seal")
+			}
+		})
+	}
+}
+
+func TestMessageFromPayloadAcceptsValidEnvelopeShapes(t *testing.T) {
+	tests := []*bft.Message{
+		{Code: bft.MsgPreprepare, Signature: make([]byte, crypto.SignatureLength)},
+		{Code: bft.MsgPrepare, Signature: make([]byte, crypto.SignatureLength)},
+		{Code: bft.MsgCommit, Signature: make([]byte, crypto.SignatureLength), CommittedSeal: make([]byte, crypto.SignatureLength)},
+		{Code: bft.MsgRoundChange, Signature: make([]byte, crypto.SignatureLength)},
+	}
+
+	for _, msg := range tests {
+		payload, err := msg.Payload()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded bft.Message
+		if err := decoded.FromPayload(payload, func([]byte, []byte) (common.Address, error) {
+			return msg.Address, nil
+		}); err != nil {
+			t.Fatalf("message code %d: %v", msg.Code, err)
+		}
 	}
 }
 

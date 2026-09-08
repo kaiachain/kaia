@@ -23,6 +23,7 @@ import (
 	"io"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -81,6 +82,9 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 	if err := rlp.DecodeBytes(b, &m); err != nil {
 		return err
 	}
+	if err := m.validateCommittedSealLength(); err != nil {
+		return err
+	}
 	if validateFn != nil {
 		payload, err := m.PayloadNoSig()
 		if err != nil {
@@ -92,6 +96,21 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 		}
 		if !bytes.Equal(signerAddr.Bytes(), m.Address.Bytes()) {
 			return ErrInvalidSigner
+		}
+	}
+	return nil
+}
+
+// validateCommittedSealLength checks the envelope shape before signature recovery.
+func (m *Message) validateCommittedSealLength() error {
+	switch m.Code {
+	case MsgCommit:
+		if len(m.CommittedSeal) != crypto.SignatureLength {
+			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, len(m.CommittedSeal))
+		}
+	case MsgPreprepare, MsgPrepare, MsgRoundChange:
+		if len(m.CommittedSeal) != 0 {
+			return fmt.Errorf("%w: unexpected committed seal on message code %d", ErrInvalidMessage, m.Code)
 		}
 	}
 	return nil
