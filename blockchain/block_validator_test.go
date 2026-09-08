@@ -50,12 +50,26 @@ import (
 
 type verifySealsTestSealer struct {
 	consensus.Sealer
-	author        common.Address
-	committers    []common.Address
-	quorum        int
-	f             int
-	qualifiedLen  int
-	committeeSize int
+	author         common.Address
+	committers     []common.Address
+	quorum         int
+	f              int
+	qualifiedLen   int
+	committeeSize  int
+	sealCount      int
+	committerCalls int
+}
+
+type preprocessTestChain struct {
+	consensus.ChainReader
+	parent *types.Header
+}
+
+func (c *preprocessTestChain) GetHeaderByNumber(number uint64) *types.Header {
+	if c.parent != nil && c.parent.Number != nil && c.parent.Number.Uint64() == number {
+		return c.parent
+	}
+	return nil
 }
 
 func (s *verifySealsTestSealer) Author(*types.Header) (common.Address, error) {
@@ -63,7 +77,15 @@ func (s *verifySealsTestSealer) Author(*types.Header) (common.Address, error) {
 }
 
 func (s *verifySealsTestSealer) Committers(*types.Header) ([]common.Address, error) {
+	s.committerCalls++
 	return s.committers, nil
+}
+
+func (s *verifySealsTestSealer) RawSeals(*types.Header) ([]byte, [][]byte, error) {
+	if s.sealCount != 0 {
+		return nil, make([][]byte, s.sealCount), nil
+	}
+	return nil, make([][]byte, len(s.committers)), nil
 }
 
 func (s *verifySealsTestSealer) Round(*types.Header) (byte, error) {
@@ -781,6 +803,173 @@ func TestPreprocessHeaderVerification(t *testing.T) {
 			testPreprocessHeaderVerification(t, threads)
 		})
 	}
+}
+
+func TestPreprocessDefersCommittedSealsWithoutValidatorContext(t *testing.T) {
+	sealer := &verifySealsTestSealer{sealCount: 129}
+	validator := &BlockValidator{sealer: sealer}
+
+	abort, results := validator.Preprocess([]*types.Header{{Number: big.NewInt(1)}})
+	defer close(abort)
+	assert.NoError(t, <-results)
+	assert.Zero(t, sealer.committerCalls)
+}
+
+func TestPreprocessRejectsExcessCommittedSealsWithExactValidatorContext(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		parent   = &types.Header{Number: new(big.Int).SetUint64(blockNum - 1)}
+		header   = &types.Header{ParentHash: parent.Hash(), Number: new(big.Int).SetUint64(blockNum)}
+		sealer   = &verifySealsTestSealer{author: author, sealCount: 2}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author}, nil)
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		hc:      &preprocessTestChain{parent: parent},
+		sealer:  sealer,
+		mValset: mValset,
+	}
+
+	abort, results := validator.Preprocess([]*types.Header{header})
+	defer close(abort)
+	assert.ErrorIs(t, <-results, istanbul.ErrInvalidCommittedSeals)
+	assert.Zero(t, sealer.committerCalls)
+}
+
+func TestPreprocessRejectsExcessCommittedSealsBeforePermissionless(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		parent   = &types.Header{Number: new(big.Int).SetUint64(blockNum - 1)}
+		header   = &types.Header{ParentHash: parent.Hash(), Number: new(big.Int).SetUint64(blockNum)}
+		sealer   = &verifySealsTestSealer{author: author, sealCount: 2}
+		config   = params.TestKaiaConfig("permissionless").Copy()
+	)
+	config.PermissionlessCompatibleBlock = big.NewInt(10)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author}, nil)
+	validator := &BlockValidator{
+		config:  config,
+		hc:      &preprocessTestChain{parent: parent},
+		sealer:  sealer,
+		mValset: mValset,
+	}
+
+	abort, results := validator.Preprocess([]*types.Header{header})
+	defer close(abort)
+	assert.ErrorIs(t, <-results, istanbul.ErrInvalidCommittedSeals)
+	assert.Zero(t, sealer.committerCalls)
+}
+
+func TestPreprocessRecoversCommittedSealsWithExactValidatorContext(t *testing.T) {
+	var (
+		author    = common.HexToAddress("0x0001")
+		committer = common.HexToAddress("0x0002")
+		blockNum  = uint64(7)
+		parent    = &types.Header{Number: new(big.Int).SetUint64(blockNum - 1)}
+		header    = &types.Header{ParentHash: parent.Hash(), Number: new(big.Int).SetUint64(blockNum)}
+		sealer    = &verifySealsTestSealer{author: author, committers: []common.Address{author, committer}, sealCount: 2}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author, committer}, nil)
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		hc:      &preprocessTestChain{parent: parent},
+		sealer:  sealer,
+		mValset: mValset,
+	}
+
+	abort, results := validator.Preprocess([]*types.Header{header})
+	defer close(abort)
+	assert.NoError(t, <-results)
+	assert.Equal(t, 1, sealer.committerCalls)
+}
+
+func TestVerifySealsRejectsExcessCommittedSealsBeforeRecovery(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		header   = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		sealer   = &verifySealsTestSealer{author: author, sealCount: 2}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author}, nil)
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+	assert.Zero(t, sealer.committerCalls)
+}
+
+func TestVerifySealsRejectsExcessCommittedSealsBeforePermissionless(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		header   = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		sealer   = &verifySealsTestSealer{author: author, sealCount: 2}
+		config   = params.TestKaiaConfig("permissionless").Copy()
+	)
+	config.PermissionlessCompatibleBlock = big.NewInt(10)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author}, nil)
+	mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author}, nil)
+	validator := &BlockValidator{
+		config:  config,
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+	assert.Zero(t, sealer.committerCalls)
+}
+
+func TestFutureHeaderRejectsExcessCommittedSeals(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		header   = &types.Header{
+			Number: new(big.Int).SetUint64(blockNum),
+			Time:   big.NewInt(time.Now().Add(time.Minute).Unix()),
+		}
+		sealer = &verifySealsTestSealer{sealCount: 2}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author}, nil)
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		sealer:  sealer,
+		mValset: mValset,
+	}
+
+	assert.ErrorIs(t, validator.ValidateHeader(header), istanbul.ErrInvalidCommittedSeals)
+	assert.Zero(t, sealer.committerCalls)
 }
 
 func testPreprocessHeaderVerification(t *testing.T, threads int) {

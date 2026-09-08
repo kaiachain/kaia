@@ -118,15 +118,7 @@ func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <
 				if header.Number == nil {
 					err = consensus.ErrUnknownBlock
 				} else if header.Number.Uint64() != 0 {
-					_, err = v.sealer.Author(header)
-					if err == nil {
-						cs, committersErr := v.sealer.Committers(header)
-						if committersErr != nil {
-							err = committersErr
-						} else if len(cs) == 0 {
-							err = istanbul.ErrEmptyCommittedSeals
-						}
-					}
+					err = v.preprocessSeals(header)
 				}
 			}
 
@@ -144,9 +136,115 @@ func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <
 	return abort, results
 }
 
+func (v *BlockValidator) preprocessSeals(header *types.Header) error {
+	sealCount, err := v.committedSealCount(header)
+	if err != nil {
+		return err
+	}
+	if _, err := v.sealer.Author(header); err != nil {
+		return err
+	}
+
+	signerCount, available, err := v.preprocessSignerCount(header)
+	if err != nil {
+		return err
+	}
+	if available && sealCount > signerCount {
+		return istanbul.ErrInvalidCommittedSeals
+	}
+	if !available && sealCount > 0 {
+		return nil
+	}
+
+	committers, err := v.sealer.Committers(header)
+	if err != nil {
+		return err
+	}
+	if len(committers) == 0 {
+		return istanbul.ErrEmptyCommittedSeals
+	}
+	return nil
+}
+
+func (v *BlockValidator) preprocessSignerCount(header *types.Header) (int, bool, error) {
+	if v.config == nil || v.hc == nil || v.mValset == nil || header.Number == nil || !header.Number.IsUint64() {
+		return 0, false, nil
+	}
+	blockNum := header.Number.Uint64()
+	if blockNum == 0 {
+		return 0, false, nil
+	}
+	parent := v.hc.GetHeaderByNumber(blockNum - 1)
+	if parent == nil || parent.Hash() != header.ParentHash {
+		return 0, false, nil
+	}
+
+	if v.config.Rules(header.Number).IsPermissionless {
+		round, err := v.sealer.Round(header)
+		if err != nil {
+			return 0, false, err
+		}
+		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
+		if err != nil {
+			return 0, false, nil
+		}
+		return len(committee), true, nil
+	}
+	council, err := v.mValset.GetCouncil(blockNum)
+	if err != nil {
+		return 0, false, nil
+	}
+	return len(council), true, nil
+}
+
+func (v *BlockValidator) committedSealCount(header *types.Header) (int, error) {
+	_, committedSeals, err := v.sealer.RawSeals(header)
+	if err != nil {
+		return 0, err
+	}
+	return len(committedSeals), nil
+}
+
+func (v *BlockValidator) validateCommittedSealCount(header *types.Header, signerCount int) error {
+	sealCount, err := v.committedSealCount(header)
+	if err != nil {
+		return err
+	}
+	if sealCount > signerCount {
+		return istanbul.ErrInvalidCommittedSeals
+	}
+	return nil
+}
+
+func (v *BlockValidator) validateFutureCommittedSealCount(header *types.Header) error {
+	if v.mValset == nil || header.Number == nil || !header.Number.IsUint64() {
+		return nil
+	}
+	blockNum := header.Number.Uint64()
+	if v.config != nil && v.config.Rules(header.Number).IsPermissionless {
+		round, err := v.sealer.Round(header)
+		if err != nil {
+			return err
+		}
+		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
+		if err != nil {
+			return err
+		}
+		return v.validateCommittedSealCount(header, len(committee))
+	}
+	council, err := v.mValset.GetCouncil(blockNum)
+	if err != nil {
+		return err
+	}
+	return v.validateCommittedSealCount(header, len(council))
+}
+
 func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Header) error {
-	// Don't waste time checking blocks from the future
+	// Check certificate size before deferring blocks from the future.
 	if header.Time.Cmp(big.NewInt(time.Now().Add(time.Duration(params.DefaultBlockGenerationInterval)*time.Second).Unix())) > 0 {
+		if err := v.validateFutureCommittedSealCount(header); err != nil {
+			return err
+		}
 		return consensus.ErrFutureBlock
 	}
 
@@ -243,14 +341,12 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
 	}
 
-	// Committers is fork-aware: post-permissionless it recovers with the round-bound preimage.
-	committers, err := v.sealer.Committers(header)
-	if err != nil {
-		return err
-	}
-
 	// Skip module-dependent seal validation when gov/valset modules are not registered.
 	if v.mValset == nil || v.mGov == nil {
+		committers, err := v.sealer.Committers(header)
+		if err != nil {
+			return err
+		}
 		if len(committers) == 0 {
 			return istanbul.ErrEmptyCommittedSeals
 		}
@@ -272,6 +368,14 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		committeeSet := valset.NewAddressSet(committee)
 		if !committeeSet.Contains(author) {
 			return consensus.ErrUnauthorized
+		}
+		if err := v.validateCommittedSealCount(header, committeeSet.Len()); err != nil {
+			return err
+		}
+		// Committers is fork-aware: post-permissionless it recovers with the round-bound preimage.
+		committers, err := v.sealer.Committers(header)
+		if err != nil {
+			return err
 		}
 		validSeal, err := countValidCommittedSeals(committers, committeeSet)
 		if err != nil {
@@ -300,6 +404,13 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		return err
 	}
 	signerSet := valset.NewAddressSet(council).Copy()
+	if err := v.validateCommittedSealCount(header, signerSet.Len()); err != nil {
+		return err
+	}
+	committers, err := v.sealer.Committers(header)
+	if err != nil {
+		return err
+	}
 	validSeal, err := countValidCommittedSeals(committers, signerSet)
 	if err != nil {
 		return err
