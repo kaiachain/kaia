@@ -270,10 +270,7 @@ func (t *httpReadWriteNopCloser) Close() error {
 // Deprecated: Server implements http.Handler
 func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv http.Handler) *http.Server {
 	timeouts = sanitizeTimeouts(timeouts)
-	// Wrap the CORS-handler within a host-handler
-	handler := newCorsHandler(srv, cors)
-	handler = newVHostHandler(vhosts, handler)
-	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
+	handler := srv
 
 	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
 	nrApp := newNewRelicApp()
@@ -286,6 +283,11 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	if ddTracer != nil {
 		handler = newDatadogHTTPHandler(ddTracer, handler)
 	}
+
+	// Wrap the CORS-handler within a host-handler.
+	handler = newCorsHandler(handler, cors)
+	handler = newVHostHandler(vhosts, handler)
+	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
 
 	return &http.Server{
 		Handler:      handler,
