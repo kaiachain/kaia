@@ -1089,3 +1089,64 @@ func makeRCMsgPayload(t *testing.T, round int64, sequence int64, prevHash common
 
 	return payload
 }
+
+// An oversized PREPARE, COMMIT or ROUND CHANGE must be rejected before any of
+// the retention paths (backlog, roundChangeSet, messageSet) can keep it. The
+// envelope can be inflated through CommittedSeal, which is only validated for
+// COMMIT, or through a view field, since rlp does not cap big.Int on decode.
+func TestHandleCheckedMsgRejectsOversizedSubjectMessage(t *testing.T) {
+	src := common.HexToAddress("0x1")
+	subject, err := bft.Encode(&bft.Subject{View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}})
+	require.NoError(t, err)
+	oversizedRound, err := bft.Encode(&bft.Subject{View: &bft.View{
+		Sequence: big.NewInt(1),
+		Round:    new(big.Int).Lsh(big.NewInt(1), 8*maxSubjectMessageBytes),
+	}})
+	require.NoError(t, err)
+
+	for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
+		for name, msg := range map[string]*bft.Message{
+			"committed seal": {Code: code, Msg: subject, CommittedSeal: make([]byte, maxSubjectMessageBytes+1)},
+			"view field":     {Code: code, Msg: oversizedRound},
+		} {
+			t.Run(fmt.Sprintf("code %d/%s", code, name), func(t *testing.T) {
+				c := newTestBacklogCore()
+				c.roundChangeSet = newRoundChangeSet(valset.NewAddressSet([]common.Address{src}), 1)
+
+				err := c.handleCheckedMsg(msg, src)
+
+				require.ErrorIs(t, err, errMessageTooLarge)
+				assert.Empty(t, c.backlogs)
+				assert.Zero(t, c.current.Prepares.Size())
+				assert.Zero(t, c.current.Commits.Size())
+				assert.Empty(t, c.roundChangeSet.roundChanges)
+			})
+		}
+	}
+}
+
+// A well-formed message of every code must stay inside the size limit, even at
+// the largest view. PREPREPARE carries a block and is bounded by the block size
+// rather than by this check.
+func TestCheckMessageSizeFitsWellFormedMessages(t *testing.T) {
+	subject, err := bft.Encode(&bft.Subject{
+		View: &bft.View{
+			Sequence: new(big.Int).SetUint64(^uint64(0)),
+			Round:    new(big.Int).SetUint64(^uint64(0)),
+		},
+	})
+	require.NoError(t, err)
+
+	for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
+		require.NoError(t, checkMessageSize(&bft.Message{
+			Code:          code,
+			Msg:           subject,
+			Signature:     make([]byte, crypto.SignatureLength),
+			CommittedSeal: make([]byte, crypto.SignatureLength),
+		}))
+	}
+	require.NoError(t, checkMessageSize(&bft.Message{
+		Code: bft.MsgPreprepare,
+		Msg:  make([]byte, maxSubjectMessageBytes+1),
+	}))
+}

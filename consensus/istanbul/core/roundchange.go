@@ -37,14 +37,6 @@ import (
 // beyond this window for bounded local memory.
 const maxRoundChangeRoundsAhead = 128
 
-// maxRoundChangeMessageBytes bounds a single retained ROUND CHANGE. Retained
-// ROUND CHANGE messages are not covered by the backlog byte accounting, and the
-// message envelope carries a CommittedSeal that is only validated for COMMIT, so
-// without this limit a round bucket could retain arbitrarily large messages. The
-// limit is far above a well-formed ROUND CHANGE, whose subject and signature
-// take a few hundred bytes.
-const maxRoundChangeMessageBytes = 1024
-
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
 func (c *core) sendNextRoundChange(loc string) {
 	if c.backend.NodeType() != common.CONSENSUSNODE {
@@ -200,12 +192,6 @@ func (rcs *roundChangeSet) Add(currentRound, messageRound *big.Int, msg *bft.Mes
 	// an existing bucket even if callers bypass checkMessage.
 	if !messageRound.IsUint64() {
 		return 0, bft.ErrInvalidMessage
-	}
-
-	// Retained ROUND CHANGE messages are not covered by the backlog byte
-	// accounting, so bound each one here.
-	if retainedMessageBytes(msg) > maxRoundChangeMessageBytes {
-		return 0, errRoundChangeTooLarge
 	}
 
 	rcs.mu.Lock()

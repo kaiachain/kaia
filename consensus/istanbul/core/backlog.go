@@ -173,9 +173,8 @@ func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
 	return sequence.Cmp(maxSequence) > 0
 }
 
-// retainedMessageBytes reports the memory a retained message occupies. Every
-// retention path uses it, so that the backlog and roundChangeSet limits measure
-// a message the same way.
+// retainedMessageBytes reports the memory a retained message occupies, so that
+// every size limit measures a message the same way.
 func retainedMessageBytes(msg *bft.Message) uint64 {
 	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal))
 }

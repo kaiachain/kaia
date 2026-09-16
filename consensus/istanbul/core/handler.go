@@ -186,8 +186,34 @@ func (c *core) handleMsg(payload []byte) error {
 	return c.handleCheckedMsg(msg, msg.Address)
 }
 
+// maxSubjectMessageBytes bounds a PREPARE, COMMIT or ROUND CHANGE. These carry a
+// fixed-shape subject, but the envelope is not otherwise bounded: CommittedSeal
+// is only validated for COMMIT, and rlp does not cap the length of a big.Int
+// view field. The limit is far above a well-formed message, whose subject,
+// signature and committed seal take a few hundred bytes. PREPREPARE carries a
+// block and is bounded by the block size instead.
+const maxSubjectMessageBytes = 1024
+
+// checkMessageSize rejects an oversized PREPARE, COMMIT or ROUND CHANGE. It runs
+// before the retention paths diverge (backlog, roundChangeSet, messageSet), so
+// every retained copy of these messages is bounded per message.
+func checkMessageSize(msg *bft.Message) error {
+	if msg.Code == bft.MsgPreprepare {
+		return nil
+	}
+	if retainedMessageBytes(msg) > maxSubjectMessageBytes {
+		return errMessageTooLarge
+	}
+	return nil
+}
+
 func (c *core) handleCheckedMsg(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
+
+	if err := checkMessageSize(msg); err != nil {
+		logger.Debug("Discarding oversized message", "code", msg.Code, "bytes", retainedMessageBytes(msg))
+		return err
+	}
 
 	// Store the message if it's a future message, or catch up if we're behind
 	testBacklog := func(err error) error {

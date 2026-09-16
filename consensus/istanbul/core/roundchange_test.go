@@ -22,7 +22,6 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,44 +100,6 @@ func TestRoundChangeSetRejectsRoundOutsideUint64(t *testing.T) {
 
 	require.ErrorIs(t, err, bft.ErrInvalidMessage)
 	assert.Empty(t, rcs.roundChanges)
-}
-
-func TestRoundChangeSetRejectsOversizedMessage(t *testing.T) {
-	src := common.HexToAddress("0x1")
-	rcs := newRoundChangeSet(valset.NewAddressSet([]common.Address{src}), 1)
-	// A ROUND CHANGE carries no committed seal, but the envelope has the field
-	// and it is only validated for COMMIT.
-	oversized := &bft.Message{
-		Address:       src,
-		Code:          bft.MsgRoundChange,
-		CommittedSeal: make([]byte, maxRoundChangeMessageBytes+1),
-	}
-
-	_, err := rcs.Add(big.NewInt(0), big.NewInt(1), oversized)
-
-	require.ErrorIs(t, err, errRoundChangeTooLarge)
-	assert.Empty(t, rcs.roundChanges)
-}
-
-// A well-formed ROUND CHANGE must stay well inside the size limit.
-func TestRoundChangeSetAcceptsWellFormedMessage(t *testing.T) {
-	src := common.HexToAddress("0x1")
-	rcs := newRoundChangeSet(valset.NewAddressSet([]common.Address{src}), 1)
-	payload, err := bft.Encode(&bft.Subject{
-		View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(1)},
-	})
-	require.NoError(t, err)
-	msg := &bft.Message{
-		Address:   src,
-		Code:      bft.MsgRoundChange,
-		Msg:       payload,
-		Signature: make([]byte, crypto.SignatureLength),
-	}
-	require.Less(t, retainedMessageBytes(msg), uint64(maxRoundChangeMessageBytes))
-
-	_, err = rcs.Add(big.NewInt(0), big.NewInt(1), msg)
-
-	require.NoError(t, err)
 }
 
 func TestHandleRoundChangeEnforcesFutureRoundWindow(t *testing.T) {
