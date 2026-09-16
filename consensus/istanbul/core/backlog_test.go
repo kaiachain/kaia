@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -34,13 +35,14 @@ import (
 func newTestBacklogCore() *core {
 	qualified := valset.NewAddressSet(nil)
 	return &core{
-		address:        common.HexToAddress("0xdead"),
-		state:          StateAcceptRequest,
-		logger:         logger.NewWith(),
-		backlogs:       make(map[common.Address]*prque.Prque),
-		backlogsMu:     new(sync.Mutex),
-		backlogSenders: make(map[common.Address]backlogUsage),
-		current:        newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil),
+		address:            common.HexToAddress("0xdead"),
+		state:              StateAcceptRequest,
+		logger:             logger.NewWith(),
+		backlogs:           make(map[common.Address]*prque.Prque),
+		backlogsMu:         new(sync.Mutex),
+		backlogCounts:      make(map[common.Address]int),
+		backlogPreprepares: make(map[common.Address]*bft.Message),
+		current:            newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil),
 	}
 }
 
@@ -60,14 +62,19 @@ func newTestBacklogMessage(t *testing.T, sequence int64) *bft.Message {
 	return &bft.Message{Code: bft.MsgPrepare, Msg: payload}
 }
 
-func newTestBacklogPreprepare(t *testing.T, sequence int64) *bft.Message {
+func newTestBacklogPreprepare(t *testing.T, sequence, round int64) *bft.Message {
 	t.Helper()
 	payload, err := bft.Encode(&bft.Preprepare{
-		View:     &bft.View{Sequence: big.NewInt(sequence), Round: big.NewInt(0)},
+		View:     &bft.View{Sequence: big.NewInt(sequence), Round: big.NewInt(round)},
 		Proposal: types.NewBlockWithHeader(&types.Header{Number: big.NewInt(sequence)}),
 	})
 	require.NoError(t, err)
 	return &bft.Message{Code: bft.MsgPreprepare, Msg: payload}
+}
+
+func setTestBacklogView(c *core, sequence, round int64) {
+	c.current = newRoundState(&bft.View{Sequence: big.NewInt(sequence), Round: big.NewInt(round)},
+		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil)
 }
 
 func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
@@ -80,61 +87,21 @@ func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
 	}
 
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogs[src].Size())
-	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogTotal.messages)
+	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogCounts[src])
 }
 
-func TestStoreBacklogBoundsPayloadBytesPerSender(t *testing.T) {
-	src := common.HexToAddress("0x1")
-	msg := newTestBacklogMessage(t, 2)
-	c := newTestBacklogCore()
-	msg.Signature = make([]byte, int(maxBacklogPayloadBytesPerSender-retainedMessageBytes(msg)+1))
-
-	c.storeBacklog(msg, src)
-
-	assert.Empty(t, c.backlogs)
-	assert.Empty(t, c.backlogSenders)
-	assert.Zero(t, c.backlogTotal.messages)
-	assert.Zero(t, c.backlogTotal.bytes)
-}
-
-func TestStoreBacklogBoundsMessagesAcrossSenders(t *testing.T) {
-	require.Zero(t, maxBacklogMessages%maxBacklogMessagesPerSender,
-		"the test fills the global cap with senders that each reach the per-sender cap")
-	senders := maxBacklogMessages / maxBacklogMessagesPerSender
+// The message budget is per sender, so a sender that has filled its own budget
+// leaves every other sender's untouched.
+func TestStoreBacklogMessageBudgetIsPerSender(t *testing.T) {
 	c := newTestBacklogCore()
 	msg := newTestBacklogMessage(t, 2)
-
-	for sender := 1; sender <= senders; sender++ {
-		for range maxBacklogMessagesPerSender {
-			c.storeBacklog(msg, backlogSender(sender))
-		}
+	for range maxBacklogMessagesPerSender {
+		c.storeBacklog(msg, backlogSender(1))
 	}
-	rejected := backlogSender(senders + 1)
-	c.storeBacklog(msg, rejected)
 
-	assert.Equal(t, maxBacklogMessages, c.backlogTotal.messages)
-	assert.Len(t, c.backlogs, senders)
-	assert.NotContains(t, c.backlogs, rejected)
-}
+	c.storeBacklog(msg, backlogSender(2))
 
-func TestStoreBacklogBoundsPayloadBytesAcrossSenders(t *testing.T) {
-	require.Zero(t, maxBacklogPayloadBytes%maxBacklogPayloadBytesPerSender,
-		"the test fills the global cap with senders that each reach the per-sender byte cap")
-	senders := maxBacklogPayloadBytes / maxBacklogPayloadBytesPerSender
-	msg := newTestBacklogMessage(t, 2)
-	// One message per sender, sized to exactly the per-sender byte cap.
-	msg.Signature = make([]byte, int(maxBacklogPayloadBytesPerSender-retainedMessageBytes(msg)))
-	c := newTestBacklogCore()
-
-	for sender := 1; sender <= senders; sender++ {
-		c.storeBacklog(msg, backlogSender(sender))
-	}
-	rejected := backlogSender(senders + 1)
-	c.storeBacklog(msg, rejected)
-
-	assert.Equal(t, senders, c.backlogTotal.messages)
-	assert.Equal(t, uint64(maxBacklogPayloadBytes), c.backlogTotal.bytes)
-	assert.NotContains(t, c.backlogs, rejected)
+	assert.Equal(t, 1, c.backlogs[backlogSender(2)].Size())
 }
 
 func TestStoreBacklogBoundsFutureSequence(t *testing.T) {
@@ -143,9 +110,11 @@ func TestStoreBacklogBoundsFutureSequence(t *testing.T) {
 
 	c.storeBacklog(newTestBacklogMessage(t, 1+maxBacklogSequencesAhead), src)
 	c.storeBacklog(newTestBacklogMessage(t, 2+maxBacklogSequencesAhead), src)
+	c.storeBacklog(newTestBacklogPreprepare(t, 2+maxBacklogSequencesAhead, 0), src)
 
 	assert.Equal(t, 1, c.backlogs[src].Size())
-	assert.Equal(t, 1, c.backlogTotal.messages)
+	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Empty(t, c.backlogPreprepares)
 }
 
 func TestBacklogRejectsSequenceOutsideUint64(t *testing.T) {
@@ -165,33 +134,30 @@ func TestStoreBacklogSkipsUndecodableMessage(t *testing.T) {
 	c := newTestBacklogCore()
 
 	c.storeBacklog(&bft.Message{Code: bft.MsgPrepare, Msg: []byte{0xff}}, src)
+	c.storeBacklog(&bft.Message{Code: bft.MsgPreprepare, Msg: []byte{0xff}}, src)
 
 	assert.Empty(t, c.backlogs)
-	assert.Empty(t, c.backlogSenders)
-	assert.Zero(t, c.backlogTotal.messages)
-	assert.Zero(t, c.backlogTotal.bytes)
+	assert.Empty(t, c.backlogCounts)
+	assert.Empty(t, c.backlogPreprepares)
 }
 
 func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	qualified := valset.NewAddressSet(nil)
 	msg := newTestBacklogMessage(t, 2)
 
 	for range maxBacklogMessagesPerSender {
 		c.storeBacklog(msg, src)
 	}
-	c.current = newRoundState(&bft.View{Sequence: big.NewInt(3), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil)
+	setTestBacklogView(c, 3, 0)
 	c.processBacklog()
 
 	assert.Empty(t, c.backlogs)
-	assert.Empty(t, c.backlogSenders)
-	assert.Zero(t, c.backlogTotal.messages)
-	assert.Zero(t, c.backlogTotal.bytes)
+	assert.Empty(t, c.backlogCounts)
 
 	c.storeBacklog(msg, src)
 	assert.Equal(t, 1, c.backlogs[src].Size())
-	assert.Equal(t, 1, c.backlogTotal.messages)
+	assert.Equal(t, 1, c.backlogCounts[src])
 }
 
 func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
@@ -203,91 +169,102 @@ func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 
 	c.backlogs[src] = prque.New()
 	c.backlogs[src].Push(msg, 0)
-	c.addBacklogMessage(src, msg.Code, retainedMessageBytes(msg))
+	c.backlogCounts[src] = 1
 	c.processBacklog()
 
 	assert.Empty(t, c.backlogs)
-	assert.Empty(t, c.backlogSenders)
-	assert.Zero(t, c.backlogTotal.messages)
-	assert.Zero(t, c.backlogTotal.bytes)
+	assert.Empty(t, c.backlogCounts)
 }
 
-func TestExceedsBacklogLimit(t *testing.T) {
-	assert.False(t, exceedsBacklogLimit(15, 1, 16))
-	assert.True(t, exceedsBacklogLimit(15, 2, 16))
-	assert.True(t, exceedsBacklogLimit(0, 17, 16))
-}
-
-func TestStoreBacklogBoundsPreprepareMessagesPerSender(t *testing.T) {
+func TestStoreBacklogKeepsNewestPrepreparePerSender(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	msg := newTestBacklogPreprepare(t, 2)
+	older := newTestBacklogPreprepare(t, 1, 1)
+	newer := newTestBacklogPreprepare(t, 1, 2)
 
-	for range maxBacklogPreprepareMessagesPerSender + 1 {
-		c.storeBacklog(msg, src)
-	}
+	c.storeBacklog(older, src)
+	c.storeBacklog(newer, src)
 
-	assert.Equal(t, maxBacklogPreprepareMessagesPerSender, c.backlogs[src].Size())
-	assert.Equal(t, maxBacklogPreprepareMessagesPerSender, c.backlogTotal.preprepares)
+	assert.Same(t, newer, c.backlogPreprepares[src])
+	assert.Empty(t, c.backlogs)
+	assert.Empty(t, c.backlogCounts)
 }
 
-func TestStoreBacklogBoundsPreprepareMessagesAcrossSenders(t *testing.T) {
-	require.Zero(t, maxBacklogPreprepareMessages%maxBacklogPreprepareMessagesPerSender,
-		"the test fills the global cap with senders that each reach the per-sender cap")
-	senders := maxBacklogPreprepareMessages / maxBacklogPreprepareMessagesPerSender
+// The PREPREPARE slot is per sender, so senders flooding their own slots cannot
+// take the slot of the proposer the node is waiting for.
+func TestStoreBacklogPreprepareSlotIsPerSender(t *testing.T) {
+	const flooders = 8
 	c := newTestBacklogCore()
-	msg := newTestBacklogPreprepare(t, 2)
-
-	for sender := 1; sender <= senders; sender++ {
-		for range maxBacklogPreprepareMessagesPerSender {
-			c.storeBacklog(msg, backlogSender(sender))
+	for sender := 1; sender <= flooders; sender++ {
+		for round := range int64(16) {
+			c.storeBacklog(newTestBacklogPreprepare(t, 1, round+1), backlogSender(sender))
 		}
 	}
-	rejected := backlogSender(senders + 1)
-	c.storeBacklog(msg, rejected)
+	proposer := backlogSender(flooders + 1)
+	msg := newTestBacklogPreprepare(t, 1, 1)
 
-	assert.Equal(t, maxBacklogPreprepareMessages, c.backlogTotal.preprepares)
-	assert.NotContains(t, c.backlogs, rejected)
+	c.storeBacklog(msg, proposer)
+
+	assert.Len(t, c.backlogPreprepares, flooders+1)
+	assert.Same(t, msg, c.backlogPreprepares[proposer])
 }
 
-// A sender that has filled its PREPREPARE budget must still be able to retain
-// the small messages of the sequences it is waiting for.
-func TestStoreBacklogCountsPreprepareApartFromOtherMessages(t *testing.T) {
+// A retained PREPREPARE does not consume the sender's message budget, and a
+// full message budget does not block the sender's PREPREPARE.
+func TestStoreBacklogPreprepareSlotIsApartFromMessageBudget(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-
-	for range maxBacklogPreprepareMessagesPerSender {
-		c.storeBacklog(newTestBacklogPreprepare(t, 2), src)
+	msg := newTestBacklogMessage(t, 2)
+	for range maxBacklogMessagesPerSender {
+		c.storeBacklog(msg, src)
 	}
-	c.storeBacklog(newTestBacklogMessage(t, 2), src)
+	preprepare := newTestBacklogPreprepare(t, 2, 0)
 
-	assert.Equal(t, maxBacklogPreprepareMessagesPerSender, c.backlogTotal.preprepares)
-	assert.Equal(t, 1, c.backlogTotal.messages)
+	c.storeBacklog(preprepare, src)
+	c.storeBacklog(msg, src)
+
+	assert.Same(t, preprepare, c.backlogPreprepares[src])
+	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogCounts[src])
 }
 
-// An honest committee lagging within the retained sequence window must not be
-// able to fill the global budget: every member sends a PREPARE, a COMMIT and a
-// ROUND CHANGE for each retained sequence.
-func TestBacklogGlobalLimitFitsLaggingCommittee(t *testing.T) {
-	const messagesPerSequencePerSender = 3
-
-	assert.GreaterOrEqual(t, maxBacklogMessages,
-		maxBacklogSenders*maxBacklogSequencesAhead*messagesPerSequencePerSender)
-}
-
-func TestProcessBacklogReleasesPreprepareAccounting(t *testing.T) {
+// During a round change, checkMessage reports even the current view as future,
+// so the next round's PREPREPARE is retained. It must stay retained until the
+// round starts, then be delivered and released from the slot.
+func TestProcessBacklogDeliversPreprepareAfterRoundChange(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
+	mockBackend, _, _, _ := newMockBackend(t, []common.Address{c.address, src, common.HexToAddress("0x3")}, false)
+	c.backend = mockBackend
+	events := mockBackend.EventMux().Subscribe(backlogEvent{})
+	defer events.Unsubscribe()
 
-	c.storeBacklog(newTestBacklogPreprepare(t, 2), src)
-	c.storeBacklog(newTestBacklogMessage(t, 2), src)
-	c.current = newRoundState(&bft.View{Sequence: big.NewInt(3), Round: big.NewInt(0)},
-		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil)
+	setTestBacklogView(c, 1, 1)
+	c.waitingForRoundChange = true
+	msg := newTestBacklogPreprepare(t, 1, 1)
+	c.storeBacklog(msg, src)
+	c.processBacklog()
+	assert.Same(t, msg, c.backlogPreprepares[src], "retained while the round change is pending")
+
+	c.waitingForRoundChange = false
 	c.processBacklog()
 
-	assert.Empty(t, c.backlogs)
-	assert.Empty(t, c.backlogSenders)
-	assert.Zero(t, c.backlogTotal.preprepares)
-	assert.Zero(t, c.backlogTotal.messages)
-	assert.Zero(t, c.backlogTotal.bytes)
+	assert.Empty(t, c.backlogPreprepares)
+	select {
+	case ev := <-events.Chan():
+		assert.Same(t, msg, ev.Data.(backlogEvent).msg)
+	case <-time.After(time.Second):
+		t.Fatal("retained PREPREPARE was not delivered")
+	}
+}
+
+// A retained PREPREPARE whose view has passed is released without delivery.
+func TestProcessBacklogDropsStalePreprepare(t *testing.T) {
+	src := common.HexToAddress("0x1")
+	c := newTestBacklogCore()
+	c.storeBacklog(newTestBacklogPreprepare(t, 1, 1), src)
+
+	setTestBacklogView(c, 1, 2)
+	c.processBacklog()
+
+	assert.Empty(t, c.backlogPreprepares)
 }

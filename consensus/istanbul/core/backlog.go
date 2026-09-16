@@ -39,40 +39,24 @@ var msgPriority = map[uint64]int{
 }
 
 const (
-	// The limits below bound both the number and payload size of retained future
-	// messages. PREPREPARE is counted apart from the other message types because
-	// it carries an entire block, so one count covering both would be either too
-	// loose for PREPREPARE or too tight for the small messages.
-
-	// maxBacklogSenders sizes the global count limits, so that honest senders
-	// lagging a few sequences behind cannot exhaust the global budget before
-	// reaching their own. handleMsg only accepts the qualified council, so the
-	// council bounds the distinct senders. 50 is the default cap on active and
-	// paused validators (DefaultMaxValActivePausedCount), not a hard bound: a
-	// larger council only means the global limit binds before the per-sender one.
-	maxBacklogSenders = 50
+	// The backlog retains future messages per sender only, with no budget shared
+	// between senders: a shared budget lets a few senders fill it ahead of an
+	// honest one, and during a round change the message dropped that way is the
+	// next round's PREPREPARE. The per-sender limits bound the total on their
+	// own, since handleMsg admits only the qualified council, the council is
+	// bounded by ABv2 (DefaultMaxValActivePausedCount), and every message is
+	// bounded by checkMessageSize or the block size.
 
 	// Keep only a small future-sequence window so far-future messages cannot
-	// occupy the global backlog budget until the node catches up. A node further
-	// behind than this window catches up through block synchronization rather
-	// than through retained consensus messages.
+	// occupy a sender's budget until the node catches up. A node further behind
+	// than this window catches up through block synchronization rather than
+	// through retained consensus messages.
 	maxBacklogSequencesAhead = 8
 
-	// PREPARE, COMMIT and ROUND CHANGE carry a fixed-size subject, so a count
-	// limit bounds the memory they occupy.
+	// PREPARE, COMMIT and ROUND CHANGE are bounded by checkMessageSize, so a
+	// count limit bounds the memory they occupy. A PREPREPARE carries an entire
+	// block and takes the sender's single PREPREPARE slot instead.
 	maxBacklogMessagesPerSender = 128
-	maxBacklogMessages          = maxBacklogMessagesPerSender * maxBacklogSenders
-
-	// A sender proposes at most once per round, so few PREPREPAREs need to be
-	// retained per sender. The global count lets every sequence in the window
-	// hold that budget; the byte limits below are what bound their memory.
-	maxBacklogPreprepareMessagesPerSender = 16
-	maxBacklogPreprepareMessages          = maxBacklogPreprepareMessagesPerSender * maxBacklogSequencesAhead
-
-	// Byte limits bound retained memory regardless of the counts above, because a
-	// PREPREPARE carries an entire block.
-	maxBacklogPayloadBytesPerSender = 16 * 1024 * 1024
-	maxBacklogPayloadBytes          = 128 * 1024 * 1024
 )
 
 // checkMessage checks the message state
@@ -124,6 +108,12 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	return nil
 }
 
+// storeBacklog retains a future message for processBacklog. PREPARE, COMMIT
+// and ROUND CHANGE queue per sender up to maxBacklogMessagesPerSender. A
+// PREPREPARE takes the sender's single slot and replaces whatever it held: a
+// sender proposes at most once per round, and only its newest proposal can
+// still be handled. The slot is never shared, so no sender can take the slot of
+// the proposer the node is waiting for.
 func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
@@ -137,14 +127,6 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	messageBytes := retainedMessageBytes(msg)
-	if c.backlogLimitReached(src, msg.Code, messageBytes) {
-		// A full backlog is expected under load; avoid a warning for every
-		// dropped message.
-		logger.Trace("Discarding future message: backlog limit reached")
-		return
-	}
-
 	view, err := msg.GetView()
 	if err != nil || view == nil || view.Sequence == nil || view.Round == nil {
 		logger.Trace("Discarding future message: cannot decode view", "err", err)
@@ -152,6 +134,21 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	}
 	if c.isBacklogSequenceTooFar(view.Sequence) {
 		logger.Trace("Discarding future message: sequence is too far ahead", "sequence", view.Sequence)
+		return
+	}
+
+	if msg.Code == bft.MsgPreprepare {
+		if _, replaced := c.backlogPreprepares[src]; replaced {
+			logger.Debug("Replacing retained PREPREPARE", "view", view)
+		}
+		c.backlogPreprepares[src] = msg
+		return
+	}
+
+	if c.backlogCounts[src] >= maxBacklogMessagesPerSender {
+		// A full backlog is expected under load; avoid a warning for every
+		// dropped message.
+		logger.Trace("Discarding future message: sender backlog limit reached")
 		return
 	}
 	backlog := c.backlogs[src]
@@ -162,7 +159,7 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	// toPriority truncates the sequence, so it runs only after
 	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
 	backlog.Push(msg, toPriority(msg.Code, view))
-	c.addBacklogMessage(src, msg.Code, messageBytes)
+	c.backlogCounts[src]++
 }
 
 func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
@@ -179,99 +176,69 @@ func retainedMessageBytes(msg *bft.Message) uint64 {
 	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal))
 }
 
-func exceedsBacklogLimit(used, additional, limit uint64) bool {
-	return additional > limit || used > limit-additional
+// removeBacklogMessage releases one queued message of a sender while backlogsMu
+// is held. It drops the sender's counter at zero, so no explicit cleanup is
+// needed when the sender's queue becomes empty.
+func (c *core) removeBacklogMessage(src common.Address) {
+	if c.backlogCounts[src] <= 1 {
+		delete(c.backlogCounts, src)
+		return
+	}
+	c.backlogCounts[src]--
 }
 
-// backlogUsage is the retained-message accounting of one sender, or of the whole
-// backlog. PREPREPARE is counted apart from the other message types because it
-// carries an entire block.
-type backlogUsage struct {
-	messages    int
-	preprepares int
-	bytes       uint64
-}
-
-func (u backlogUsage) count(msgCode uint64) int {
-	if msgCode == bft.MsgPreprepare {
-		return u.preprepares
+// backlogMessageView decodes the view a retained message belongs to and the
+// parent hash to post it under. The view is nil for an undecodable message.
+func backlogMessageView(msg *bft.Message) (*bft.View, common.Hash) {
+	switch msg.Code {
+	case bft.MsgPreprepare:
+		var p *bft.Preprepare
+		if err := msg.Decode(&p); err != nil || p == nil {
+			return nil, common.Hash{}
+		}
+		if p.Proposal == nil {
+			return p.View, common.Hash{}
+		}
+		return p.View, p.Proposal.ParentHash()
+	default:
+		var sub *bft.Subject
+		if err := msg.Decode(&sub); err != nil || sub == nil {
+			return nil, common.Hash{}
+		}
+		return sub.View, sub.PrevHash
 	}
-	return u.messages
-}
-
-func (u backlogUsage) empty() bool {
-	return u.messages == 0 && u.preprepares == 0
-}
-
-func (u *backlogUsage) add(msgCode uint64, messageBytes uint64) {
-	if msgCode == bft.MsgPreprepare {
-		u.preprepares++
-	} else {
-		u.messages++
-	}
-	u.bytes += messageBytes
-}
-
-func (u *backlogUsage) remove(msgCode uint64, messageBytes uint64) {
-	if msgCode == bft.MsgPreprepare {
-		u.preprepares--
-	} else {
-		u.messages--
-	}
-	if u.bytes > messageBytes {
-		u.bytes -= messageBytes
-	} else {
-		u.bytes = 0
-	}
-}
-
-// backlogLimitReached reports whether retaining a message would exceed a
-// per-sender or global backlog limit. backlogsMu must be held by the caller.
-func (c *core) backlogLimitReached(src common.Address, msgCode uint64, messageBytes uint64) bool {
-	perSenderCount, globalCount := maxBacklogMessagesPerSender, maxBacklogMessages
-	if msgCode == bft.MsgPreprepare {
-		perSenderCount, globalCount = maxBacklogPreprepareMessagesPerSender, maxBacklogPreprepareMessages
-	}
-
-	sender := c.backlogSenders[src]
-	if sender.count(msgCode) >= perSenderCount {
-		return true
-	}
-	if c.backlogTotal.count(msgCode) >= globalCount {
-		return true
-	}
-	if exceedsBacklogLimit(sender.bytes, messageBytes, maxBacklogPayloadBytesPerSender) {
-		return true
-	}
-	return exceedsBacklogLimit(c.backlogTotal.bytes, messageBytes, maxBacklogPayloadBytes)
-}
-
-// addBacklogMessage updates accounting while backlogsMu is held.
-func (c *core) addBacklogMessage(src common.Address, msgCode uint64, messageBytes uint64) {
-	sender := c.backlogSenders[src]
-	sender.add(msgCode, messageBytes)
-	c.backlogSenders[src] = sender
-	c.backlogTotal.add(msgCode, messageBytes)
-}
-
-// removeBacklogMessage updates accounting while backlogsMu is held. It also
-// drops the sender's entry once its last retained message is removed, so no
-// explicit cleanup is needed when the sender's queue becomes empty.
-func (c *core) removeBacklogMessage(src common.Address, msg *bft.Message) {
-	messageBytes := retainedMessageBytes(msg)
-	sender := c.backlogSenders[src]
-	sender.remove(msg.Code, messageBytes)
-	if sender.empty() {
-		delete(c.backlogSenders, src)
-	} else {
-		c.backlogSenders[src] = sender
-	}
-	c.backlogTotal.remove(msg.Code, messageBytes)
 }
 
 func (c *core) processBacklog() {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
+
+	for src, msg := range c.backlogPreprepares {
+		logger := c.logger.NewWith("from", src, "state", c.state)
+		view, prevHash := backlogMessageView(msg)
+		if view == nil {
+			logger.Debug("Nil view", "msg", msg)
+			delete(c.backlogPreprepares, src)
+			continue
+		}
+		err := c.checkMessage(msg.Code, view)
+		if err == errFutureMessage {
+			// The slot is released once its view arrives or passes.
+			continue
+		}
+		delete(c.backlogPreprepares, src)
+		if err != nil {
+			logger.Trace("Skip the backlog event", "msg", msg, "err", err)
+			continue
+		}
+		logger.Trace("Post backlog event", "msg", msg)
+
+		go c.sendEvent(backlogEvent{
+			src:  src,
+			msg:  msg,
+			Hash: prevHash,
+		})
+	}
 
 	for src, backlog := range c.backlogs {
 		if backlog == nil {
@@ -286,27 +253,10 @@ func (c *core) processBacklog() {
 		for !backlog.Empty() {
 			m, prio := backlog.Pop()
 			msg := m.(*bft.Message)
-			var view *bft.View
-			var prevHash common.Hash
-			switch msg.Code {
-			case bft.MsgPreprepare:
-				var m *bft.Preprepare
-				if err := msg.Decode(&m); err == nil && m != nil {
-					view = m.View
-					if m.Proposal != nil {
-						prevHash = m.Proposal.ParentHash()
-					}
-				}
-			default:
-				var sub *bft.Subject
-				if err := msg.Decode(&sub); err == nil && sub != nil {
-					view = sub.View
-					prevHash = sub.PrevHash
-				}
-			}
+			view, prevHash := backlogMessageView(msg)
 			if view == nil {
 				logger.Debug("Nil view", "msg", msg)
-				c.removeBacklogMessage(src, msg)
+				c.removeBacklogMessage(src)
 				continue
 			}
 			// Push back if it's a future message
@@ -318,11 +268,11 @@ func (c *core) processBacklog() {
 					break
 				}
 				logger.Trace("Skip the backlog event", "msg", msg, "err", err)
-				c.removeBacklogMessage(src, msg)
+				c.removeBacklogMessage(src)
 				continue
 			}
 			logger.Trace("Post backlog event", "msg", msg)
-			c.removeBacklogMessage(src, msg)
+			c.removeBacklogMessage(src)
 
 			go c.sendEvent(backlogEvent{
 				src:  src,
