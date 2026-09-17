@@ -645,7 +645,7 @@ func TestDialSched_DialMultiRollbackOnSetupFailure(t *testing.T) {
 	multiNode := discover.NewNode(testNodeID(402), net.ParseIP("10.0.0.42"), 30303, 30303, []uint16{30304, 30305}, discover.NodeTypeEN)
 	setupErr := errors.New("setup failed")
 	mb := &multiDialLifecycleBackend{
-		setupErrByPort: map[uint16]error{0: setupErr},
+		setupErrByPort: map[uint16]error{1: setupErr},
 	}
 	t.Cleanup(mb.Close)
 
@@ -666,7 +666,7 @@ func TestDialSched_DialMultiRollbackOnSetupFailure(t *testing.T) {
 	err := ds.dialMulti(multiNode, dynDialedConn)
 
 	require.ErrorIs(t, err, setupErr)
-	require.Len(t, mb.calls, 1, "SetupConn should stop after the first failure")
+	require.Len(t, mb.calls, 2, "SetupConn should stop after the first failure")
 	require.Len(t, mb.cleanups, 1)
 	assert.Equal(t, multiNode.ID, mb.cleanups[0])
 	for i, conn := range conns {
