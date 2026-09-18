@@ -133,6 +133,50 @@ func TestIntermediateLeaks(t *testing.T) {
 	}
 }
 
+func TestFinaliseDeferredStorageRoot(t *testing.T) {
+	addr := common.HexToAddress("0x1234")
+	newState := func() *StateDB {
+		stateDB, err := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+		assert.NoError(t, err)
+		return stateDB
+	}
+	emptyRoot := newState().IntermediateRoot(true)
+
+	t.Run("deleted object", func(t *testing.T) {
+		stateDB := newState()
+		stateDB.AddBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+		assert.Contains(t, stateDB.stateObjectsDirtyStorage, addr)
+
+		stateDB.SubBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+		assert.Nil(t, stateDB.getStateObject(addr))
+
+		root := stateDB.IntermediateRoot(true)
+		committedRoot, err := stateDB.Commit(true)
+		assert.NoError(t, err)
+		assert.Equal(t, emptyRoot, root)
+		assert.Equal(t, root, committedRoot)
+	})
+
+	t.Run("recreated object", func(t *testing.T) {
+		stateDB := newState()
+		stateDB.AddBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+		stateDB.SubBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+
+		stateDB.AddBalance(addr, big.NewInt(1))
+		stateDB.Finalise(true, false)
+
+		root := stateDB.IntermediateRoot(true)
+		committedRoot, err := stateDB.Commit(true)
+		assert.NoError(t, err)
+		assert.NotEqual(t, emptyRoot, root)
+		assert.Equal(t, root, committedRoot)
+	})
+}
+
 // TestCopy tests that copying a statedb object indeed makes the original and
 // the copy independent of each other. This test is a regression test against
 // https://github.com/ethereum/go-ethereum/pull/15549.
