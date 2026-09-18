@@ -41,7 +41,7 @@ func newTestBacklogCore() *core {
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),
 		backlogCounts:      make(map[common.Address]int),
-		backlogPreprepares: make(map[common.Address]*bft.Message),
+		backlogPreprepares: make(map[common.Address]backlogPreprepare),
 		current:            newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil),
 	}
 }
@@ -176,16 +176,28 @@ func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 	assert.Empty(t, c.backlogCounts)
 }
 
-func TestStoreBacklogKeepsNewestPrepreparePerSender(t *testing.T) {
+// A sender's slot keeps the PREPREPARE for the highest view: a higher view
+// replaces it, while a delayed older one, or another proposal for the same
+// view, cannot evict it.
+func TestStoreBacklogKeepsHighestViewPrepreparePerSender(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	older := newTestBacklogPreprepare(t, 1, 1)
-	newer := newTestBacklogPreprepare(t, 1, 2)
+	round1 := newTestBacklogPreprepare(t, 1, 1)
+	round2 := newTestBacklogPreprepare(t, 1, 2)
+	nextSequence := newTestBacklogPreprepare(t, 2, 0)
 
-	c.storeBacklog(older, src)
-	c.storeBacklog(newer, src)
+	c.storeBacklog(round1, src)
+	c.storeBacklog(round2, src)
+	assert.Same(t, round2, c.backlogPreprepares[src].msg)
 
-	assert.Same(t, newer, c.backlogPreprepares[src])
+	c.storeBacklog(round1, src)
+	assert.Same(t, round2, c.backlogPreprepares[src].msg, "an older view must not replace a newer one")
+
+	c.storeBacklog(newTestBacklogPreprepare(t, 1, 2), src)
+	assert.Same(t, round2, c.backlogPreprepares[src].msg, "the same view must not replace the retained one")
+
+	c.storeBacklog(nextSequence, src)
+	assert.Same(t, nextSequence, c.backlogPreprepares[src].msg)
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
 }
@@ -206,7 +218,7 @@ func TestStoreBacklogPreprepareSlotIsPerSender(t *testing.T) {
 	c.storeBacklog(msg, proposer)
 
 	assert.Len(t, c.backlogPreprepares, flooders+1)
-	assert.Same(t, msg, c.backlogPreprepares[proposer])
+	assert.Same(t, msg, c.backlogPreprepares[proposer].msg)
 }
 
 // A retained PREPREPARE does not consume the sender's message budget, and a
@@ -223,7 +235,7 @@ func TestStoreBacklogPreprepareSlotIsApartFromMessageBudget(t *testing.T) {
 	c.storeBacklog(preprepare, src)
 	c.storeBacklog(msg, src)
 
-	assert.Same(t, preprepare, c.backlogPreprepares[src])
+	assert.Same(t, preprepare, c.backlogPreprepares[src].msg)
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogCounts[src])
 }
 
@@ -243,7 +255,7 @@ func TestProcessBacklogDeliversPreprepareAfterRoundChange(t *testing.T) {
 	msg := newTestBacklogPreprepare(t, 1, 1)
 	c.storeBacklog(msg, src)
 	c.processBacklog()
-	assert.Same(t, msg, c.backlogPreprepares[src], "retained while the round change is pending")
+	assert.Same(t, msg, c.backlogPreprepares[src].msg, "retained while the round change is pending")
 
 	c.waitingForRoundChange = false
 	c.processBacklog()

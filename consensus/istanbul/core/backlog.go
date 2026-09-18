@@ -108,12 +108,22 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	return nil
 }
 
+// backlogPreprepare is the one PREPREPARE retained per sender. The view and
+// parent hash are decoded once at retention, so that neither a replacement nor
+// processBacklog decodes the block again.
+type backlogPreprepare struct {
+	msg      *bft.Message
+	view     *bft.View
+	prevHash common.Hash
+}
+
 // storeBacklog retains a future message for processBacklog. PREPARE, COMMIT
 // and ROUND CHANGE queue per sender up to maxBacklogMessagesPerSender. A
-// PREPREPARE takes the sender's single slot and replaces whatever it held: a
-// sender proposes at most once per round, and only its newest proposal can
-// still be handled. The slot is never shared, so no sender can take the slot of
-// the proposer the node is waiting for.
+// PREPREPARE takes the sender's single slot, replacing a retained one only when
+// its view is higher: a sender proposes at most once per round, and only its
+// proposal for the highest view can still be handled, while a delayed older one
+// must not evict it. The slot is never shared, so no sender can take the slot
+// of the proposer the node is waiting for.
 func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
@@ -127,9 +137,9 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	view, err := msg.GetView()
-	if err != nil || view == nil || view.Sequence == nil || view.Round == nil {
-		logger.Trace("Discarding future message: cannot decode view", "err", err)
+	view, prevHash := backlogMessageView(msg)
+	if view == nil {
+		logger.Trace("Discarding future message: cannot decode view")
 		return
 	}
 	if c.isBacklogSequenceTooFar(view.Sequence) {
@@ -138,10 +148,11 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	}
 
 	if msg.Code == bft.MsgPreprepare {
-		if _, replaced := c.backlogPreprepares[src]; replaced {
-			logger.Debug("Replacing retained PREPREPARE", "view", view)
+		if held, ok := c.backlogPreprepares[src]; ok && view.Cmp(held.view) <= 0 {
+			logger.Trace("Discarding future PREPREPARE: not newer than the retained one", "view", view, "retained", held.view)
+			return
 		}
-		c.backlogPreprepares[src] = msg
+		c.backlogPreprepares[src] = backlogPreprepare{msg: msg, view: view, prevHash: prevHash}
 		return
 	}
 
@@ -187,98 +198,78 @@ func (c *core) removeBacklogMessage(src common.Address) {
 	c.backlogCounts[src]--
 }
 
-// backlogMessageView decodes the view a retained message belongs to and the
-// parent hash to post it under. The view is nil for an undecodable message.
-func backlogMessageView(msg *bft.Message) (*bft.View, common.Hash) {
-	switch msg.Code {
-	case bft.MsgPreprepare:
+// backlogMessageView decodes the view a message belongs to and the parent hash
+// to post it under. The view is nil when the message cannot be retained.
+func backlogMessageView(msg *bft.Message) (view *bft.View, prevHash common.Hash) {
+	if msg.Code == bft.MsgPreprepare {
 		var p *bft.Preprepare
-		if err := msg.Decode(&p); err != nil || p == nil {
+		if err := msg.Decode(&p); err != nil || p == nil || p.Proposal == nil {
 			return nil, common.Hash{}
 		}
-		if p.Proposal == nil {
-			return p.View, common.Hash{}
-		}
-		return p.View, p.Proposal.ParentHash()
-	default:
+		view, prevHash = p.View, p.Proposal.ParentHash()
+	} else {
 		var sub *bft.Subject
 		if err := msg.Decode(&sub); err != nil || sub == nil {
 			return nil, common.Hash{}
 		}
-		return sub.View, sub.PrevHash
+		view, prevHash = sub.View, sub.PrevHash
 	}
+	if view == nil || view.Sequence == nil || view.Round == nil {
+		return nil, common.Hash{}
+	}
+	return view, prevHash
+}
+
+// postBacklogMessage posts a retained message once its view is current, or
+// discards it once its view has passed. It reports whether the message is
+// still in the future and must stay retained.
+func (c *core) postBacklogMessage(src common.Address, msg *bft.Message, view *bft.View, prevHash common.Hash) (future bool) {
+	logger := c.logger.NewWith("from", src, "state", c.state)
+
+	if view == nil {
+		logger.Debug("Nil view", "msg", msg)
+		return false
+	}
+	err := c.checkMessage(msg.Code, view)
+	if err == errFutureMessage {
+		return true
+	}
+	if err != nil {
+		logger.Trace("Skip the backlog event", "msg", msg, "err", err)
+		return false
+	}
+	logger.Trace("Post backlog event", "msg", msg)
+
+	go c.sendEvent(backlogEvent{
+		src:  src,
+		msg:  msg,
+		Hash: prevHash,
+	})
+	return false
 }
 
 func (c *core) processBacklog() {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
-	for src, msg := range c.backlogPreprepares {
-		logger := c.logger.NewWith("from", src, "state", c.state)
-		view, prevHash := backlogMessageView(msg)
-		if view == nil {
-			logger.Debug("Nil view", "msg", msg)
+	for src, held := range c.backlogPreprepares {
+		if !c.postBacklogMessage(src, held.msg, held.view, held.prevHash) {
 			delete(c.backlogPreprepares, src)
-			continue
 		}
-		err := c.checkMessage(msg.Code, view)
-		if err == errFutureMessage {
-			// The slot is released once its view arrives or passes.
-			continue
-		}
-		delete(c.backlogPreprepares, src)
-		if err != nil {
-			logger.Trace("Skip the backlog event", "msg", msg, "err", err)
-			continue
-		}
-		logger.Trace("Post backlog event", "msg", msg)
-
-		go c.sendEvent(backlogEvent{
-			src:  src,
-			msg:  msg,
-			Hash: prevHash,
-		})
 	}
 
 	for src, backlog := range c.backlogs {
-		if backlog == nil {
-			continue
-		}
-
-		logger := c.logger.NewWith("from", src, "state", c.state)
-
-		// We stop processing if
-		//   1. backlog is empty
-		//   2. The first message in queue is a future message
+		// Stop at the first future message: the queue is ordered by view, so
+		// everything behind it is in the future as well.
 		for !backlog.Empty() {
 			m, prio := backlog.Pop()
 			msg := m.(*bft.Message)
 			view, prevHash := backlogMessageView(msg)
-			if view == nil {
-				logger.Debug("Nil view", "msg", msg)
-				c.removeBacklogMessage(src)
-				continue
+			if c.postBacklogMessage(src, msg, view, prevHash) {
+				backlog.Push(msg, prio)
+				break
 			}
-			// Push back if it's a future message
-			err := c.checkMessage(msg.Code, view)
-			if err != nil {
-				if err == errFutureMessage {
-					logger.Trace("Stop processing backlog", "msg", msg)
-					backlog.Push(msg, prio)
-					break
-				}
-				logger.Trace("Skip the backlog event", "msg", msg, "err", err)
-				c.removeBacklogMessage(src)
-				continue
-			}
-			logger.Trace("Post backlog event", "msg", msg)
 			c.removeBacklogMessage(src)
-
-			go c.sendEvent(backlogEvent{
-				src:  src,
-				msg:  msg,
-				Hash: prevHash,
-			})
 		}
 
 		// Do not retain prque's backing storage after all messages from this
