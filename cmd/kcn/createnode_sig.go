@@ -48,7 +48,7 @@ var (
 	}
 	signNodeIdFlag = &cli.StringFlag{
 		Name:  "node-id",
-		Usage: "Node ID address (default: derived from the signing key)",
+		Usage: "Expected node ID address; fails if it does not match the signing key",
 	}
 )
 
@@ -68,8 +68,8 @@ func signCreateNodeAction(ctx *cli.Context) error {
 		return fmt.Errorf("load key: %w (use --private-key to specify explicitly)", err)
 	}
 	nodeId := crypto.PubkeyToAddress(key.PublicKey)
-	if v := ctx.String("node-id"); v != "" {
-		nodeId = common.HexToAddress(v)
+	if v := ctx.String("node-id"); v != "" && common.HexToAddress(v) != nodeId {
+		return fmt.Errorf("--node-id %s does not match the signing key's address %s", v, nodeId.Hex())
 	}
 	digest := createNodeDigest(
 		big.NewInt(ctx.Int64("chain-id")),
