@@ -53,6 +53,7 @@ import (
 	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	vrank_impl "github.com/kaiachain/kaia/kaiax/vrank/impl"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -351,6 +352,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
 	mSystem := system_impl.NewSystemModule()
+	mVRank := vrank_impl.NewVRankModule()
 	if mStaking == nil {
 		mStaking = staking_impl.NewStakingModule()
 	}
@@ -378,6 +380,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			ChainKv:       bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
 			GovModule:     mGov,
 			StakingModule: mStaking,
+			VRankModule:   mVRank,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
 			ChainConfig:  bc.Config(),
@@ -387,6 +390,16 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		}),
 		mSystem.Init(&system_impl.InitOpts{
 			Chain: bc,
+		}),
+		mVRank.Init(&vrank_impl.InitOpts{
+			Valset:      mValset,
+			Randao:      mRandao,
+			Sealer:      bc.Sealer(),
+			NodeKey:     b.privateKey,
+			BlsKey:      blsSecretKey,
+			ChainConfig: genesis.Config,
+			Chain:       bc,
+			ChainKv:     bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
 		}),
 		func() error {
 			if stakingImpl, ok := mStaking.(*staking_impl.StakingModule); ok {
