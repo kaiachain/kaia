@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
@@ -405,6 +406,70 @@ func TestCollectStakingAmounts(t *testing.T) {
 		stakingAmounts := collectStakingAmounts(tc.validators, tc.stakingInfo)
 		for idx, nodeId := range tc.validators {
 			assert.Equal(t, stakingAmounts[nodeId], tc.expectedStakingAmounts[idx])
+		}
+	}
+}
+
+// The selectors must return an in-set proposer for any round value.
+func TestSelectorLargeRoundStaysInSet(t *testing.T) {
+	qualified := valset.NewAddressSet([]common.Address{
+		common.HexToAddress("0x1"), common.HexToAddress("0x2"),
+		common.HexToAddress("0x3"), common.HexToAddress("0x4"),
+	})
+	prev := common.HexToAddress("0x1")
+	list := qualified.List()
+
+	inSet := func(a common.Address) bool {
+		for _, x := range list {
+			if x == a {
+				return true
+			}
+		}
+		return false
+	}
+
+	rounds := []uint64{
+		0, 1, 2, 3, 4, 5,
+		uint64(math.MaxInt64),
+		uint64(math.MaxInt64) + 1,
+		uint64(math.MaxInt64) + 2,
+		uint64(math.MaxInt64) + 3,
+		math.MaxUint64 - 1,
+		math.MaxUint64,
+	}
+	for _, r := range rounds {
+		if a := selectRoundRobinProposer(qualified, prev, r); !inSet(a) {
+			t.Fatalf("round_robin round=%d returned out-of-set %s", r, a.Hex())
+		}
+		if a := selectStickyProposer(qualified, prev, r); !inSet(a) {
+			t.Fatalf("sticky round=%d returned out-of-set %s", r, a.Hex())
+		}
+		if a := selectWeightedRandomProposer(list, 0, 1, r); !inSet(a) {
+			t.Fatalf("weighted round=%d returned out-of-set %s", r, a.Hex())
+		}
+	}
+}
+
+// For the small rounds seen in normal operation the selectors are unchanged.
+func TestSelectorSmallRoundEquivalence(t *testing.T) {
+	qualified := valset.NewAddressSet([]common.Address{
+		common.HexToAddress("0x1"), common.HexToAddress("0x2"),
+		common.HexToAddress("0x3"), common.HexToAddress("0x4"),
+	})
+	list := qualified.List()
+	n := qualified.Len()
+	for _, prev := range list {
+		pi := qualified.IndexOf(prev)
+		for round := uint64(0); round < 1000; round++ {
+			if got, want := selectRoundRobinProposer(qualified, prev, round), qualified.At((pi+int(round)+1)%n); got != want {
+				t.Fatalf("round_robin mismatch prev=%s round=%d: got %s want %s", prev.Hex(), round, got.Hex(), want.Hex())
+			}
+			if got, want := selectStickyProposer(qualified, prev, round), qualified.At((pi+int(round))%n); got != want {
+				t.Fatalf("sticky mismatch prev=%s round=%d: got %s want %s", prev.Hex(), round, got.Hex(), want.Hex())
+			}
+			if got, want := selectWeightedRandomProposer(list, 0, 1, round), list[int(round)%len(list)]; got != want {
+				t.Fatalf("weighted mismatch round=%d: got %s want %s", round, got.Hex(), want.Hex())
+			}
 		}
 	}
 }
