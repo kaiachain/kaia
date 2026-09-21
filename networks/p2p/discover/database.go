@@ -396,6 +396,7 @@ func nextNode(db *nodeDB, it iterator.Iterator) *Node {
 			db.deleteNode(id)
 			continue
 		}
+		n.sha = crypto.Keccak256Hash(n.ID[:])
 		return &n
 	}
 	return nil

@@ -30,6 +30,10 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var nodeDBKeyTests = []struct {
@@ -296,6 +300,32 @@ func TestNodeDBSeedQuery(t *testing.T) {
 			t.Errorf("missing seed: %v", id)
 		}
 	}
+}
+
+// Without sha the kademlia storage buckets every seed together, capping the table at bucketSize.
+func TestNodeDBSeedQueryBuckets(t *testing.T) {
+	db, _ := newNodeDB("", Version, NodeID{})
+	defer db.close()
+
+	const count = bucketSize * 2
+	for i := 0; i < count; i++ {
+		key, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		// A distinct /24 each, so the storage IP limits do not interfere.
+		n := NewNode(PubkeyID(&key.PublicKey), net.IPv4(10, byte(i), 1, 1), 30303, 30303, nil, NodeTypeEN)
+		require.NoError(t, db.updateNode(n))
+		require.NoError(t, db.updateBondTime(n.ID, n.IP, time.Now()))
+	}
+
+	seeds := db.querySeeds(count, time.Hour)
+	require.Greater(t, len(seeds), bucketSize, "need more seeds than one bucket holds to be meaningful")
+
+	s := newKademliaStorage(testSelf, newSharedRand())
+	for _, seed := range seeds {
+		assert.Equal(t, crypto.Keccak256Hash(seed.ID[:]), seed.sha)
+		s.add(seed)
+	}
+	assert.Greater(t, s.len(), bucketSize, "seeds piled into a single bucket")
 }
 
 func TestNodeDBPersistency(t *testing.T) {
