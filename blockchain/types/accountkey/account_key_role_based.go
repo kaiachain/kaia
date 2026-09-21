@@ -19,6 +19,7 @@
 package accountkey
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
@@ -125,6 +126,19 @@ func (a *AccountKeyRoleBased) DecodeRLP(s *rlp.Stream) error {
 
 	keys := make([]AccountKey, len(enc))
 	for i, b := range enc {
+		stream := rlp.NewStream(bytes.NewReader(b), uint64(len(b)))
+		var keyType AccountKeyType
+		if err := stream.Decode(&keyType); err != nil {
+			return err
+		}
+		key, err := NewAccountKey(keyType)
+		if err != nil {
+			return err
+		}
+		if key.IsCompositeType() {
+			return kerrors.ErrNestedCompositeType
+		}
+
 		serializer := NewAccountKeySerializer()
 		if err := rlp.DecodeBytes(b, &serializer); err != nil {
 			return err
@@ -148,14 +162,18 @@ func (a *AccountKeyRoleBased) MarshalJSON() ([]byte, error) {
 }
 
 func (a *AccountKeyRoleBased) UnmarshalJSON(b []byte) error {
-	var serializers []*AccountKeySerializer
-	if err := json.Unmarshal(b, &serializers); err != nil {
+	var encodedKeys []json.RawMessage
+	if err := json.Unmarshal(b, &encodedKeys); err != nil {
 		return err
 	}
 
-	*a = make(AccountKeyRoleBased, len(serializers))
-	for i, s := range serializers {
-		(*a)[i] = s.key
+	*a = make(AccountKeyRoleBased, len(encodedKeys))
+	for i, encodedKey := range encodedKeys {
+		serializer := NewAccountKeySerializer()
+		if err := serializer.unmarshalJSON(encodedKey, false); err != nil {
+			return err
+		}
+		(*a)[i] = serializer.key
 	}
 
 	return nil
