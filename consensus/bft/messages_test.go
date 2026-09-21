@@ -17,16 +17,51 @@
 package bft_test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
 )
+
+// TestOptionalCertificateWireCompatibility ensures ordinary round-0 and
+// legacy ROUND-CHANGE messages keep their pre-certificate RLP bytes. The new
+// fields appear only when the permissionless fork actually supplies evidence.
+func TestOptionalCertificateWireCompatibility(t *testing.T) {
+	view := &bft.View{Round: big.NewInt(0), Sequence: big.NewInt(1)}
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+
+	legacyPreprepare, err := rlp.EncodeToBytes([]any{view, block})
+	if err != nil {
+		t.Fatal(err)
+	}
+	newPreprepare, err := rlp.EncodeToBytes(&bft.Preprepare{View: view, Proposal: block})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(legacyPreprepare, newPreprepare) {
+		t.Fatalf("preprepare wire drift: got %x want %x", newPreprepare, legacyPreprepare)
+	}
+
+	subject := &bft.Subject{View: view, PrevHash: common.HexToHash("0x01")}
+	legacyRoundChange, err := rlp.EncodeToBytes(subject)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newRoundChange, err := rlp.EncodeToBytes(&bft.RoundChange{View: view, PrevHash: subject.PrevHash})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(legacyRoundChange, newRoundChange) {
+		t.Fatalf("round-change wire drift: got %x want %x", newRoundChange, legacyRoundChange)
+	}
+}
 
 // TestViewWireBytes pins the RLP byte output of bft.View{Round:7, Sequence:42}
 // to a historical value computed from the pre-move istanbul.View encoding.

@@ -273,6 +273,18 @@ func (net *scenarioNet) modify(code uint64, from *validator, recipients []*valid
 	})
 }
 
+// drop discards messages on the selected directed routes for the scenario.
+func (s *scenarioNet) drop(code uint64, from, to []*validator, round ...uint64) {
+	s.t.Helper()
+	require.NotEmpty(s.t, from)
+	require.NotEmpty(s.t, to)
+	for _, sender := range from {
+		for _, recipient := range to {
+			newMessageRule(s, code, sender, []*validator{recipient}, round...).drop = true
+		}
+	}
+}
+
 // message returns bytes actually broadcast by this node, not fabricated honest votes.
 func (s *scenarioNet) message(from *validator, code, height, round uint64) istanbul.MessageEvent {
 	s.t.Helper()
@@ -625,18 +637,25 @@ func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) er
 				rule.held = append(rule.held, ev)
 				deliver = false
 			case rule.proposal != nil:
-				var view *bft.View
 				if msg.Code == bft.MsgPreprepare {
 					var pp *bft.Preprepare
 					require.NoError(b.net.t, msg.Decode(&pp))
-					view = pp.View
+					require.Equal(b.net.t, pp.View.Sequence, rule.proposal.Number(), "modified proposal must keep the message's sequence")
+					// An equivocating proposer changes only the block. Preserve a real
+					// higher-round ROUND-CHANGE certificate so receivers can test that
+					// it binds the proposal rather than merely being present.
+					pp.Proposal = rule.proposal
+					encoded, err := bft.Encode(pp)
+					require.NoError(b.net.t, err)
+					payload, err := rule.from.core.finalizeMessage(&bft.Message{Hash: rule.proposal.ParentHash(), Code: msg.Code, Msg: encoded})
+					require.NoError(b.net.t, err)
+					ev.data = istanbul.MessageEvent{Hash: rule.proposal.ParentHash(), Payload: payload}
 				} else {
 					var subject *bft.Subject
 					require.NoError(b.net.t, msg.Decode(&subject))
-					view = subject.View
+					require.Equal(b.net.t, subject.View.Sequence, rule.proposal.Number(), "modified proposal must keep the message's sequence")
+					ev.data = rule.from.message(msg.Code, rule.proposal, subject.View.Round.Uint64())
 				}
-				require.Equal(b.net.t, view.Sequence, rule.proposal.Number(), "modified proposal must keep the message's sequence")
-				ev.data = rule.from.message(msg.Code, rule.proposal, view.Round.Uint64())
 			}
 		}
 		if deliver {

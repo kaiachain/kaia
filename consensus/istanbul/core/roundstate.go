@@ -27,38 +27,42 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// newRoundState creates a new roundState instance with the given view and validatorSet
-// lockedHash and preprepare are for round change when lock exists,
-// we need to keep a reference of preprepare in order to propose locked proposal when there is a lock and itself is the proposer
-func newRoundState(view *bft.View, qualified *valset.AddressSet, lockedHash common.Hash, preprepare *bft.Preprepare, pendingRequest *bft.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
+// newRoundState creates a new roundState instance with the given view and validatorSet.
+// A round change retains the accepted PRE-PREPARE, which is the proposal behind a
+// local hash lock. The new round is recorded in round, independently of the
+// PRE-PREPARE's original view.
+func newRoundState(view *bft.View, qualified *valset.AddressSet, lockedHash common.Hash, preprepare *bft.Preprepare, preparedCertificate *bft.PreparedCertificate, pendingRequest *bft.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
 	return &roundState{
-		round:          view.Round,
-		sequence:       view.Sequence,
-		Preprepare:     preprepare,
-		Prepares:       newMessageSet(qualified),
-		Commits:        newMessageSet(qualified),
-		lockedHash:     lockedHash,
-		mu:             new(sync.RWMutex),
-		pendingRequest: pendingRequest,
-		hasBadProposal: hasBadProposal,
+		round:               view.Round,
+		sequence:            view.Sequence,
+		Preprepare:          preprepare,
+		Prepares:            newMessageSet(qualified),
+		Commits:             newMessageSet(qualified),
+		lockedHash:          lockedHash,
+		preparedCertificate: preparedCertificate,
+		mu:                  new(sync.RWMutex),
+		pendingRequest:      pendingRequest,
+		hasBadProposal:      hasBadProposal,
 	}
 }
 
 // roundState stores the consensus state
 type roundState struct {
-	round          *big.Int
-	sequence       *big.Int
-	Preprepare     *bft.Preprepare
-	Prepares       *messageSet
-	Commits        *messageSet
-	lockedHash     common.Hash
-	pendingRequest *bft.Request
+	round               *big.Int
+	sequence            *big.Int
+	Preprepare          *bft.Preprepare
+	Prepares            *messageSet
+	Commits             *messageSet
+	lockedHash          common.Hash
+	preparedCertificate *bft.PreparedCertificate
+	pendingRequest      *bft.Request
 
 	mu             *sync.RWMutex
 	hasBadProposal func(hash common.Hash) bool
@@ -123,6 +127,39 @@ func (s *roundState) Proposal() bft.Proposal {
 	return nil
 }
 
+// PreparedCertificate returns the signed quorum that established the local
+// lock. It is carried across rounds and advertised in ROUND-CHANGE messages.
+func (s *roundState) PreparedCertificate() *bft.PreparedCertificate {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.preparedCertificate
+}
+
+func (s *roundState) LockedRound() *big.Int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.preparedCertificate == nil || s.preparedCertificate.View == nil {
+		return nil
+	}
+	return new(big.Int).Set(s.preparedCertificate.View.Round)
+}
+
+// AdoptPreparedCertificate updates the local lock from an independently
+// verified certificate. This is used when the node did not observe the
+// original PREPARE quorum itself but learns it during round change.
+func (s *roundState) AdoptPreparedCertificate(cert *bft.PreparedCertificate) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if cert == nil || cert.Proposal == nil {
+		return
+	}
+	s.lockedHash = cert.Proposal.Hash()
+	s.preparedCertificate = cert
+}
+
 func (s *roundState) SetRound(r *big.Int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -157,6 +194,30 @@ func (s *roundState) LockHash() {
 
 	if s.Preprepare != nil {
 		s.lockedHash = s.Preprepare.Proposal.Hash()
+		block, ok := s.Preprepare.Proposal.(*types.Block)
+		if !ok {
+			s.preparedCertificate = nil
+			return
+		}
+		messages := make([]*bft.Message, 0, s.Prepares.Size()+s.Commits.Size())
+		seen := make(map[common.Address]struct{})
+		for _, set := range []*messageSet{s.Prepares, s.Commits} {
+			for _, msg := range set.Values() {
+				if _, exists := seen[msg.Address]; exists {
+					continue
+				}
+				seen[msg.Address] = struct{}{}
+				messages = append(messages, msg)
+			}
+		}
+		s.preparedCertificate = &bft.PreparedCertificate{
+			View: &bft.View{
+				Round:    new(big.Int).Set(s.round),
+				Sequence: new(big.Int).Set(s.sequence),
+			},
+			Proposal: block,
+			Messages: messages,
+		}
 	}
 }
 
@@ -165,6 +226,7 @@ func (s *roundState) UnlockHash() {
 	defer s.mu.Unlock()
 
 	s.lockedHash = common.Hash{}
+	s.preparedCertificate = nil
 }
 
 func (s *roundState) IsHashLocked() bool {
@@ -189,13 +251,14 @@ func (s *roundState) GetLockedHash() common.Hash {
 // be confusing.
 func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	var ss struct {
-		Round          *big.Int
-		Sequence       *big.Int
-		Preprepare     *bft.Preprepare
-		Prepares       *messageSet
-		Commits        *messageSet
-		lockedHash     common.Hash
-		pendingRequest *bft.Request
+		Round               *big.Int
+		Sequence            *big.Int
+		Preprepare          *bft.Preprepare `rlp:"nil"`
+		Prepares            *messageSet
+		Commits             *messageSet
+		LockedHash          common.Hash
+		PendingRequest      *bft.Request             `rlp:"nil"`
+		PreparedCertificate *bft.PreparedCertificate `rlp:"optional,nilList"`
 	}
 
 	if err := stream.Decode(&ss); err != nil {
@@ -206,8 +269,9 @@ func (s *roundState) DecodeRLP(stream *rlp.Stream) error {
 	s.Preprepare = ss.Preprepare
 	s.Prepares = ss.Prepares
 	s.Commits = ss.Commits
-	s.lockedHash = ss.lockedHash
-	s.pendingRequest = ss.pendingRequest
+	s.lockedHash = ss.LockedHash
+	s.preparedCertificate = ss.PreparedCertificate
+	s.pendingRequest = ss.PendingRequest
 	s.mu = new(sync.RWMutex)
 
 	return nil
@@ -233,5 +297,6 @@ func (s *roundState) EncodeRLP(w io.Writer) error {
 		s.Commits,
 		s.lockedHash,
 		s.pendingRequest,
+		s.preparedCertificate,
 	})
 }

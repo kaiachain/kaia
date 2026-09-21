@@ -42,7 +42,7 @@ func newTestBacklogCore() *core {
 		backlogsMu:         new(sync.Mutex),
 		backlogCounts:      make(map[common.Address]int),
 		backlogPreprepares: make(map[common.Address]backlogPreprepare),
-		current:            newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil),
+		current:            newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil),
 	}
 }
 
@@ -74,7 +74,7 @@ func newTestBacklogPreprepare(t *testing.T, sequence, round int64) *bft.Message 
 
 func setTestBacklogView(c *core, sequence, round int64) {
 	c.current = newRoundState(&bft.View{Sequence: big.NewInt(sequence), Round: big.NewInt(round)},
-		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil)
+		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil, nil)
 }
 
 func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
@@ -123,7 +123,7 @@ func TestBacklogRejectsSequenceOutsideUint64(t *testing.T) {
 	// admit the message; only the uint64 check may reject it.
 	c.current = newRoundState(
 		&bft.View{Sequence: new(big.Int).SetUint64(math.MaxUint64), Round: big.NewInt(0)},
-		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil)
+		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil, nil)
 	tooLarge := new(big.Int).Add(new(big.Int).SetUint64(math.MaxUint64), big.NewInt(1))
 
 	assert.True(t, c.isBacklogSequenceTooFar(tooLarge))

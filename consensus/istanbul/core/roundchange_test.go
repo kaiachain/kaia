@@ -105,7 +105,7 @@ func TestRoundChangeSetRejectsRoundOutsideUint64(t *testing.T) {
 func TestHandleRoundChangeEnforcesFutureRoundWindow(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	qualified := valset.NewAddressSet([]common.Address{src})
-	current := newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil)
+	current := newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil)
 	current.committee = qualified
 	current.requiredMessageCount = 2
 	c := &core{

@@ -150,10 +150,11 @@ type core struct {
 	current   *roundState
 	handlerWg *sync.WaitGroup
 
-	roundChangeSet    *roundChangeSet
-	roundChangeTimer  atomic.Value //*time.Timer
-	pendingRequests   *prque.Prque
-	pendingRequestsMu *sync.Mutex
+	roundChangeSet         *roundChangeSet
+	roundChangeCertificate []*bft.Message
+	roundChangeTimer       atomic.Value //*time.Timer
+	pendingRequests        *prque.Prque
+	pendingRequestsMu      *sync.Mutex
 
 	consensusTimestamp time.Time
 	// the meter to record the round change rate
@@ -365,14 +366,27 @@ func (c *core) startNewRound(round *big.Int) {
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
 	if roundChange && c.isProposer() && c.current != nil {
-		// If it is locked, propose the old proposal
-		// If we have pending request, propose pending request
-		if c.current.IsHashLocked() {
+		proposedPrepared := false
+		if c.backend.IsPermissionlessAt(newView.Sequence.Uint64()) && len(c.roundChangeCertificate) > 0 {
+			prepared, verifyErr := c.verifyRoundChangeCertificate(c.roundChangeCertificate, newView)
+			if verifyErr != nil {
+				logger.Error("Invalid round-change certificate selected for new round", "err", verifyErr)
+				c.sendNextRoundChange("startNewRound. Invalid round-change certificate")
+				return
+			}
+			if prepared != nil {
+				c.sendPreprepare(&bft.Request{Proposal: prepared.Proposal})
+				proposedPrepared = true
+			}
+		}
+		// If it is locked, propose the old proposal.
+		// If we have pending request, propose pending request.
+		if !proposedPrepared && c.current.IsHashLocked() {
 			r := &bft.Request{
-				Proposal: c.current.Proposal(), // c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
+				Proposal: c.current.Proposal(),
 			}
 			c.sendPreprepare(r)
-		} else if c.current.pendingRequest != nil {
+		} else if !proposedPrepared && c.current.pendingRequest != nil {
 			c.sendPreprepare(c.current.pendingRequest)
 		}
 	}
@@ -418,12 +432,20 @@ func (c *core) updateRoundState(view *bft.View, roundChange bool,
 	// Lock only if both roundChange is true and it is locked
 	if roundChange && c.current != nil {
 		if c.current.IsHashLocked() {
-			c.current = newRoundState(view, qualified, c.current.GetLockedHash(), c.current.Preprepare, c.current.pendingRequest, c.backend.HasBadProposal)
+			c.current = newRoundState(view, qualified, c.current.GetLockedHash(), c.current.Preprepare, c.current.PreparedCertificate(), c.current.pendingRequest, c.backend.HasBadProposal)
 		} else {
-			c.current = newRoundState(view, qualified, common.Hash{}, nil, c.current.pendingRequest, c.backend.HasBadProposal)
+			c.current = newRoundState(view, qualified, common.Hash{}, nil, nil, c.current.pendingRequest, c.backend.HasBadProposal)
 		}
 	} else {
-		c.current = newRoundState(view, qualified, common.Hash{}, nil, nil, c.backend.HasBadProposal)
+		newSequence := c.current == nil || c.current.Sequence().Cmp(view.Sequence) != 0
+		c.current = newRoundState(view, qualified, common.Hash{}, nil, nil, nil, c.backend.HasBadProposal)
+		// A proposer can have already caught up to this round when the final
+		// ROUND-CHANGE message completes its quorum. startNewRound then has no
+		// round delta, but it still needs that quorum to justify its PRE-PREPARE.
+		// Only a new height makes the certificate stale.
+		if newSequence {
+			c.roundChangeCertificate = nil
+		}
 	}
 	// Update new committee state
 	c.current.qualified = qualified
