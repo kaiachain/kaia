@@ -2075,15 +2075,20 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			continue
 		}
 
-		// try to get blob sidecar from tx
+		// persist an inline sidecar only if it matches the tx's blob hashes;
+		// otherwise fall through to the pool / validated fetch path
 		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
-			logger.Debug("saving blob sidecar from tx in finalized block", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
-			go func() {
-				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
-					logger.Warn("failed to save blob sidecar", "err", err)
-				}
-			}()
-			continue
+			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+				logger.Warn("discarding invalid inline blob sidecar", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash(), "err", err)
+			} else {
+				logger.Debug("saving blob sidecar from tx in finalized block", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
+				go func() {
+					if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
+						logger.Warn("failed to save blob sidecar", "err", err)
+					}
+				}()
+				continue
+			}
 		}
 
 		// try to get blob sidecar from local
