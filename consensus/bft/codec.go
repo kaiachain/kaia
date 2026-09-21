@@ -153,12 +153,18 @@ func (m *Message) GetView() (*View, error) {
 			return nil, decodeErr
 		}
 		msgView = preprepare.View
-	case MsgPrepare, MsgCommit, MsgRoundChange:
+	case MsgPrepare, MsgCommit:
 		var subject *Subject
 		if decodeErr := m.Decode(&subject); decodeErr != nil {
 			return nil, decodeErr
 		}
 		msgView = subject.View
+	case MsgRoundChange:
+		var roundChange *RoundChange
+		if decodeErr := m.Decode(&roundChange); decodeErr != nil {
+			return nil, decodeErr
+		}
+		msgView = roundChange.View
 	default:
 		return nil, ErrInvalidMessage
 	}

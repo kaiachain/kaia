@@ -23,11 +23,14 @@
 package core
 
 import (
+	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
@@ -62,6 +65,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	logger.Warn("[RC] Commit messages received before catchUpRound",
 		"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 
+	preparedCertificate := c.current.PreparedCertificate()
 	c.catchUpRound(&bft.View{
 		// The round number we'd like to transfer to.
 		Round:    new(big.Int).Set(round),
@@ -72,10 +76,13 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 	// Now we have the new round number and sequence number
 	cv = c.currentView()
-	rc := &bft.Subject{
+	rc := &bft.RoundChange{
 		View:     cv,
 		Digest:   common.Hash{},
 		PrevHash: lastProposal.Hash(),
+	}
+	if c.backend.IsPermissionlessAt(cv.Sequence.Uint64()) {
+		rc.PreparedCertificate = preparedCertificate
 	}
 
 	payload, err := bft.Encode(rc)
@@ -95,7 +102,7 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("state", c.state, "from", src.Hex())
 
 	// Decode ROUND CHANGE message
-	var rc *bft.Subject
+	var rc *bft.RoundChange
 	if err := msg.Decode(&rc); err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
 		return bft.ErrInvalidMessage
@@ -103,6 +110,24 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 
 	if err := c.checkMessage(bft.MsgRoundChange, rc.View); err != nil {
 		return err
+	}
+	// Some focused unit tests exercise round-change-set admission with a bare
+	// core and no backend. Production cores always have one; the extension
+	// validation itself requires it and therefore applies only when present.
+	if c.backend != nil && c.backend.IsPermissionlessAt(rc.View.Sequence.Uint64()) {
+		if !common.EmptyHash(rc.Digest) {
+			return bft.ErrInvalidMessage
+		}
+		lastProposal, _ := c.backend.LastProposal()
+		if lastProposal == nil || rc.PrevHash != lastProposal.Hash() {
+			return bft.ErrInvalidMessage
+		}
+		if rc.PreparedCertificate != nil {
+			if err := c.verifyPreparedCertificate(rc.PreparedCertificate, rc.View); err != nil {
+				logger.Warn("Invalid prepared certificate in ROUND CHANGE", "err", err)
+				return bft.ErrInvalidMessage
+			}
+		}
 	}
 
 	// Restrict round-change admission to committee members, mirroring handleCommit.
@@ -143,6 +168,9 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 			"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round",
 			"currentRound", cv.Round.String(), "newRound", roundView.Round.String())
+		if c.backend.IsPermissionlessAt(roundView.Sequence.Uint64()) {
+			c.roundChangeCertificate = c.roundChangeSet.Values(roundView.Round)
+		}
 		c.startNewRound(roundView.Round)
 		return nil
 	} else if c.waitingForRoundChange && num == numCatchUp {
@@ -162,6 +190,130 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		return errIgnored
 	}
 	return nil
+}
+
+// verifyPreparedCertificate authenticates a quorum of votes for one proposal
+// in a round strictly before the target ROUND-CHANGE view.
+func (c *core) verifyPreparedCertificate(cert *bft.PreparedCertificate, target *bft.View) error {
+	if cert == nil || cert.View == nil || cert.Proposal == nil || target == nil ||
+		cert.View.Sequence == nil || cert.View.Round == nil || target.Sequence == nil || target.Round == nil {
+		return errors.New("incomplete prepared certificate")
+	}
+	if cert.View.Sequence.Cmp(target.Sequence) != 0 || cert.View.Round.Cmp(target.Round) >= 0 ||
+		cert.Proposal.Number().Cmp(cert.View.Sequence) != 0 {
+		return errors.New("prepared certificate has invalid view")
+	}
+
+	_, committee, _, _, quorum, _, err := getRoundCommitteeState(c, cert.View.Sequence.Uint64(), cert.View.Round.Uint64())
+	if err != nil {
+		return err
+	}
+	// A certificate has at most one meaningful vote per committee member. Reject
+	// excess entries before signature recovery so a Byzantine peer cannot turn a
+	// syntactically valid but oversized certificate into avoidable CPU work.
+	if len(cert.Messages) > committee.Len() {
+		return fmt.Errorf("prepared certificate has %d votes, maximum is %d", len(cert.Messages), committee.Len())
+	}
+	seen := make(map[common.Address]struct{}, len(cert.Messages))
+	for _, vote := range cert.Messages {
+		if vote == nil || (vote.Code != bft.MsgPrepare && vote.Code != bft.MsgCommit) || !committee.Contains(vote.Address) {
+			return errors.New("prepared certificate contains an ineligible vote")
+		}
+		if _, duplicate := seen[vote.Address]; duplicate {
+			return fmt.Errorf("prepared certificate contains duplicate voter %s", vote.Address)
+		}
+		unsigned, err := vote.PayloadNoSig()
+		if err != nil {
+			return err
+		}
+		signer, err := c.validateFn(unsigned, vote.Signature)
+		if err != nil || signer != vote.Address {
+			return fmt.Errorf("prepared certificate contains invalid signature")
+		}
+		var subject *bft.Subject
+		if err := vote.Decode(&subject); err != nil {
+			return err
+		}
+		expected := &bft.Subject{View: cert.View, Digest: cert.Proposal.Hash(), PrevHash: cert.Proposal.ParentHash()}
+		if !subject.Equal(expected) {
+			return fmt.Errorf("prepared certificate vote has inconsistent subject")
+		}
+		if vote.Code == bft.MsgCommit {
+			preimage := istanbul.PrepareCommittedSeal(subject.Digest)
+			if c.backend.IsPermissionlessAt(subject.View.Sequence.Uint64()) {
+				preimage = istanbul.PrepareCommittedSealWithRound(subject.Digest, byte(subject.View.Round.Uint64()))
+			}
+			committer, err := istanbul.GetSignatureAddress(preimage, vote.CommittedSeal)
+			if err != nil || committer != vote.Address {
+				return fmt.Errorf("prepared certificate contains invalid committed seal")
+			}
+		}
+		seen[vote.Address] = struct{}{}
+	}
+	if len(seen) < quorum {
+		return fmt.Errorf("prepared certificate has %d votes, need %d", len(seen), quorum)
+	}
+	return nil
+}
+
+// verifyRoundChangeCertificate checks the signed ROUND-CHANGE quorum carried by
+// a higher-round PRE-PREPARE and returns its highest prepared certificate.
+func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft.View) (*bft.PreparedCertificate, error) {
+	_, committee, _, _, quorum, _, err := getRoundCommitteeState(c, target.Sequence.Uint64(), target.Round.Uint64())
+	if err != nil {
+		return nil, err
+	}
+	// Like prepared certificates, a round-change certificate has at most one
+	// meaningful message from each committee member.
+	if len(messages) > committee.Len() {
+		return nil, fmt.Errorf("round-change certificate has %d messages, maximum is %d", len(messages), committee.Len())
+	}
+	seen := make(map[common.Address]struct{}, len(messages))
+	var highest *bft.PreparedCertificate
+	lastProposal, _ := c.backend.LastProposal()
+	if lastProposal == nil {
+		return nil, fmt.Errorf("last proposal unavailable")
+	}
+	for _, message := range messages {
+		if message == nil || message.Code != bft.MsgRoundChange || !committee.Contains(message.Address) {
+			return nil, fmt.Errorf("round-change certificate contains an ineligible message")
+		}
+		if _, duplicate := seen[message.Address]; duplicate {
+			return nil, fmt.Errorf("round-change certificate contains duplicate sender %s", message.Address)
+		}
+		unsigned, err := message.PayloadNoSig()
+		if err != nil {
+			return nil, err
+		}
+		signer, err := c.validateFn(unsigned, message.Signature)
+		if err != nil || signer != message.Address {
+			return nil, fmt.Errorf("round-change certificate contains invalid signature")
+		}
+		var roundChange *bft.RoundChange
+		if err := message.Decode(&roundChange); err != nil {
+			return nil, err
+		}
+		if roundChange.View == nil || roundChange.View.Cmp(target) != 0 || !common.EmptyHash(roundChange.Digest) ||
+			roundChange.PrevHash != lastProposal.Hash() {
+			return nil, fmt.Errorf("round-change certificate has inconsistent view")
+		}
+		if roundChange.PreparedCertificate != nil {
+			if err := c.verifyPreparedCertificate(roundChange.PreparedCertificate, target); err != nil {
+				return nil, err
+			}
+			candidate := roundChange.PreparedCertificate
+			if highest == nil || highest.View.Round.Cmp(candidate.View.Round) < 0 {
+				highest = candidate
+			} else if highest.View.Round.Cmp(candidate.View.Round) == 0 && highest.Proposal.Hash() != candidate.Proposal.Hash() {
+				return nil, fmt.Errorf("conflicting prepared certificates at round %s", candidate.View.Round)
+			}
+		}
+		seen[message.Address] = struct{}{}
+	}
+	if len(seen) < quorum {
+		return nil, fmt.Errorf("round-change certificate has %d messages, need %d", len(seen), quorum)
+	}
+	return highest, nil
 }
 
 // ----------------------------------------------------------------------------
@@ -247,4 +399,16 @@ func (rcs *roundChangeSet) MaxRound(num int) *big.Int {
 		}
 	}
 	return maxRound
+}
+
+// Values returns the messages collected for one target round.
+func (rcs *roundChangeSet) Values(round *big.Int) []*bft.Message {
+	rcs.mu.Lock()
+	defer rcs.mu.Unlock()
+
+	set := rcs.roundChanges[round.Uint64()]
+	if set == nil {
+		return nil
+	}
+	return set.Values()
 }

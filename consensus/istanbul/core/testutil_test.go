@@ -294,6 +294,18 @@ func (net *scenarioNet) modify(code uint64, from *validator, recipients []*valid
 	})
 }
 
+// drop discards messages on the selected directed routes for the scenario.
+func (s *scenarioNet) drop(code uint64, from, to []*validator, round ...uint64) {
+	s.t.Helper()
+	require.NotEmpty(s.t, from)
+	require.NotEmpty(s.t, to)
+	for _, sender := range from {
+		for _, recipient := range to {
+			newMessageRule(s, code, sender, []*validator{recipient}, round...).drop = true
+		}
+	}
+}
+
 // message returns bytes actually broadcast by this node, not fabricated honest votes.
 func (s *scenarioNet) message(from *validator, code, height, round uint64) istanbul.MessageEvent {
 	s.t.Helper()
@@ -691,28 +703,41 @@ func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) er
 				rule.held = append(rule.held, ev)
 				deliver = false
 			case rule.proposal != nil:
-				var view *bft.View
 				if msg.Code == bft.MsgPreprepare {
 					var pp *bft.Preprepare
 					if err := msg.Decode(&pp); err != nil {
 						return fmt.Errorf("node %d decode modified PREPREPARE: %w", b.id, err)
 					}
-					view = pp.View
+					if pp.View.Sequence.Cmp(rule.proposal.Number()) != 0 {
+						return fmt.Errorf("modified proposal must keep the message's sequence: have %s, want %s", rule.proposal.Number(), pp.View.Sequence)
+					}
+					// An equivocating proposer changes only the block. Preserve a real
+					// higher-round ROUND-CHANGE certificate so receivers can test that
+					// it binds the proposal rather than merely being present.
+					pp.Proposal = rule.proposal
+					encoded, err := bft.Encode(pp)
+					if err != nil {
+						return fmt.Errorf("node %d encode modified PREPREPARE: %w", b.id, err)
+					}
+					payload, err := rule.from.core.finalizeMessage(&bft.Message{Hash: rule.proposal.ParentHash(), Code: msg.Code, Msg: encoded})
+					if err != nil {
+						return fmt.Errorf("node %d create modified PREPREPARE: %w", b.id, err)
+					}
+					ev.data = istanbul.MessageEvent{Hash: rule.proposal.ParentHash(), Payload: payload}
 				} else {
 					var subject *bft.Subject
 					if err := msg.Decode(&subject); err != nil {
 						return fmt.Errorf("node %d decode modified message: %w", b.id, err)
 					}
-					view = subject.View
+					if subject.View.Sequence.Cmp(rule.proposal.Number()) != 0 {
+						return fmt.Errorf("modified proposal must keep the message's sequence: have %s, want %s", rule.proposal.Number(), subject.View.Sequence)
+					}
+					modified, err := rule.from.makeMessage(msg.Code, rule.proposal, subject.View.Round.Uint64())
+					if err != nil {
+						return fmt.Errorf("node %d create modified message: %w", b.id, err)
+					}
+					ev.data = modified
 				}
-				if view.Sequence.Cmp(rule.proposal.Number()) != 0 {
-					return fmt.Errorf("modified proposal must keep the message's sequence: have %s, want %s", rule.proposal.Number(), view.Sequence)
-				}
-				modified, err := rule.from.makeMessage(msg.Code, rule.proposal, view.Round.Uint64())
-				if err != nil {
-					return fmt.Errorf("node %d create modified message: %w", b.id, err)
-				}
-				ev.data = modified
 			}
 		}
 		if deliver {

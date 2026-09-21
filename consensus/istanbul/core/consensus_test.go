@@ -466,11 +466,86 @@ func TestConsensusRoundChange(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				s := newScenarioNet(t, tc.count, tc.committee, params.TestChainConfig.Copy())
+				// These cases assert legacy hash-lock recovery. Permissionless
+				// prepared-certificate behavior is covered separately below.
+				s := newScenarioNet(t, tc.count, tc.committee, params.TestKaiaConfig("osaka"))
 				tc.run(s)
 			})
 		})
 	}
+}
+
+// TestConsensusSplitLockPreparedCertificate covers the post-Permissionless
+// counterexample where the next proposer did not observe the prepared value.
+func TestConsensusSplitLockPreparedCertificate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		require.True(t, s.validators[0].backend.IsPermissionlessAt(1))
+		attacker, nextProposer := s.validators[0], s.validators[1]
+		locked := s.nodes(2, 3)
+		x := attacker.proposal(1)
+		y := attacker.alternative(x)
+
+		// A equivocates: B, the next proposer, sees Y while C/D see X. A votes
+		// only for X and withholds its COMMIT. C/D lock X, but it is undecided.
+		s.modify(bft.MsgPreprepare, attacker, s.nodes(1), y)
+		s.drop(bft.MsgPrepare, s.nodes(0), s.nodes(1))
+		s.drop(bft.MsgCommit, s.nodes(0), s.nodes(0, 1, 2, 3))
+		s.advanceConsensus(1, s.nodes(0, 1, 2, 3))
+		for _, n := range locked {
+			n.assertHashLocked(x.Hash())
+			n.assertUncommitted(1)
+			require.NoError(t, nextProposer.core.verifyPreparedCertificate(
+				n.core.current.PreparedCertificate(), &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(1)}))
+		}
+		nextProposer.assertHashLocked(common.Hash{})
+
+		// The honest round-change quorum carries X's prepared proof. In round 1,
+		// B must learn and re-propose X even though B was not itself locked on X.
+		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(0, 1, 2, 3))
+		s.timeout(s.nodes(1, 2, 3))
+		s.advanceConsensus(1, s.nodes(0))
+		for _, n := range s.nodes(1, 2, 3) {
+			require.Equal(t, x.Hash(), n.assertCommitted(1, 1).Hash())
+		}
+	})
+}
+
+// TestConsensusSplitLockReproposalRefreshesPreparedCertificate ensures a
+// locked node re-establishes its prepared proof in the recovery round before
+// it can contribute a COMMIT. Retaining only the r0 proof after sending a
+// r1 COMMIT would let a later RCC prefer a conflicting, newer certificate.
+func TestConsensusSplitLockReproposalRefreshesPreparedCertificate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		attacker := s.validators[0]
+		locked := s.nodes(2, 3)
+		x := attacker.proposal(1)
+		y := attacker.alternative(x)
+
+		// C/D prepare and lock X in round 0 while B sees an equivocated Y.
+		s.modify(bft.MsgPreprepare, attacker, s.nodes(1), y)
+		s.drop(bft.MsgPrepare, s.nodes(0), s.nodes(1))
+		s.drop(bft.MsgCommit, s.nodes(0), s.nodes(0, 1, 2, 3))
+		s.advanceConsensus(1, s.nodes(0, 1, 2, 3))
+		for _, n := range locked {
+			require.Equal(t, int64(0), n.core.current.LockedRound().Int64())
+		}
+
+		// In r1, B learns X through C/D's round changes. Drop the locked nodes'
+		// final COMMITs so the test can inspect their evidence before H1 commits.
+		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(0, 1, 2, 3))
+		s.drop(bft.MsgCommit, locked, s.nodes(0, 1, 2, 3), 1)
+		s.timeout(s.nodes(1, 2, 3))
+		s.drain()
+
+		for _, n := range locked {
+			cert := n.core.current.PreparedCertificate()
+			require.NotNil(t, cert)
+			require.Equal(t, int64(1), cert.View.Round.Int64())
+			require.Equal(t, x.Hash(), cert.Proposal.Hash())
+		}
+	})
 }
 
 // TestConsensusInputValidation checks malformed messages, sender eligibility, proposal validity and commit seals.

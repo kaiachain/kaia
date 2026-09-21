@@ -43,10 +43,14 @@ func (c *core) sendPreprepare(request *bft.Request) {
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
-		preprepare, err := bft.Encode(&bft.Preprepare{
+		message := &bft.Preprepare{
 			View:     curView,
 			Proposal: request.Proposal,
-		})
+		}
+		if c.backend.IsPermissionlessAt(curView.Sequence.Uint64()) && curView.Round.Sign() > 0 {
+			message.RoundChangeCertificate = c.roundChangeCertificate
+		}
+		preprepare, err := bft.Encode(message)
 		if err != nil {
 			logger.Error("Failed to encode", "view", curView)
 			return
@@ -111,6 +115,26 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 		return errNotFromProposer
 	}
 
+	var highestPrepared *bft.PreparedCertificate
+	if c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+		if preprepare.View.Round.Sign() == 0 {
+			if len(preprepare.RoundChangeCertificate) != 0 {
+				return bft.ErrInvalidMessage
+			}
+		} else {
+			highestPrepared, err = c.verifyRoundChangeCertificate(preprepare.RoundChangeCertificate, preprepare.View)
+			if err != nil {
+				logger.Warn("Invalid round-change certificate in PRE-PREPARE", "err", err)
+				return bft.ErrInvalidMessage
+			}
+			if highestPrepared != nil && highestPrepared.Proposal.Hash() != preprepare.Proposal.Hash() {
+				logger.Warn("PRE-PREPARE does not carry the highest prepared proposal",
+					"expected", highestPrepared.Proposal.Hash(), "got", preprepare.Proposal.Hash())
+				return bft.ErrInvalidMessage
+			}
+		}
+	}
+
 	// Verify the proposal we received
 	if duration, err := c.backend.Verify(preprepare.Proposal); err != nil {
 		logger.Warn("Failed to verify proposal", "err", err, "duration", duration)
@@ -132,19 +156,41 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 
 	// Here is about to accept the PRE-PREPARE
 	if c.state == StateAcceptRequest {
+		if highestPrepared != nil {
+			lockedRound := c.current.LockedRound()
+			if lockedRound == nil || highestPrepared.View.Round.Cmp(lockedRound) > 0 {
+				c.current.AdoptPreparedCertificate(highestPrepared)
+			}
+		}
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
-			header := c.current.Preprepare.Proposal.Header()
-			c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
-			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
-
+			// Legacy IBFT re-seals the locally retained proposal with the new
+			// round before comparing it. Keep that wire-compatible behavior on
+			// the legacy path. A Permissionless node may instead have adopted a
+			// certificate without a local Preprepare, so it must not dereference
+			// or mutate that optional local proposal.
+			if !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) && c.current.Preprepare != nil {
+				header := c.current.Preprepare.Proposal.Header()
+				c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
+				c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
+			}
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
-				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
-				// Broadcast COMMIT and enters Prepared state directly
-				c.acceptPreprepare(preprepare)
-				c.postPrepreparedEvent(preprepare)
-				c.setState(StatePrepared)
-				c.sendCommit()
+				if !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+					logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
+					// Preserve the legacy shortcut before Permissionless activation.
+					c.acceptPreprepare(preprepare)
+					c.postPrepreparedEvent(preprepare)
+					c.setState(StatePrepared)
+					c.sendCommit()
+				} else {
+					// A carried certificate proves a prior round, not this one. Re-establish
+					// a quorum at the current view before sending COMMIT, so every honest
+					// committer can advertise a current-round certificate in a later RC.
+					c.acceptPreprepare(preprepare)
+					c.postPrepreparedEvent(preprepare)
+					c.setState(StatePreprepared)
+					c.sendPrepare()
+				}
 			} else {
 				// Send round change
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")

@@ -108,13 +108,18 @@ func (v *View) Cmp(y *View) int {
 
 // Preprepare is the message sent by the proposer to propose a new block.
 type Preprepare struct {
-	View     *View
-	Proposal Proposal
+	View                   *View
+	Proposal               Proposal
+	RoundChangeCertificate []*Message
 }
 
 // EncodeRLP serializes a Preprepare into the Kaia RLP format.
 func (b *Preprepare) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{b.View, b.Proposal})
+	return rlp.Encode(w, struct {
+		View                   *View
+		Proposal               Proposal
+		RoundChangeCertificate []*Message `rlp:"optional"`
+	}{b.View, b.Proposal, b.RoundChangeCertificate})
 }
 
 // DecodeRLP deserializes a Preprepare from a Kaia RLP stream.
@@ -122,14 +127,36 @@ func (b *Preprepare) EncodeRLP(w io.Writer) error {
 // implementation exchanged on the wire.
 func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 	var preprepare struct {
-		View     *View
-		Proposal *types.Block
+		View                   *View
+		Proposal               *types.Block
+		RoundChangeCertificate []*Message `rlp:"optional"`
 	}
 	if err := s.Decode(&preprepare); err != nil {
 		return err
 	}
-	b.View, b.Proposal = preprepare.View, preprepare.Proposal
+	b.View, b.Proposal, b.RoundChangeCertificate = preprepare.View, preprepare.Proposal, preprepare.RoundChangeCertificate
 	return nil
+}
+
+// PreparedCertificate proves that a proposal reached the prepared state in a
+// prior round. Messages are the signed PREPARE/COMMIT envelopes that form the
+// quorum; carrying the complete envelopes lets receivers authenticate every
+// voter without persisting the certificate in the block header.
+type PreparedCertificate struct {
+	View     *View
+	Proposal *types.Block
+	Messages []*Message
+}
+
+// RoundChange is the ROUND-CHANGE wire payload. Its first three fields match
+// Subject exactly, so a message without PreparedCertificate retains the legacy
+// wire encoding. The optional fourth field is enabled by the permissionless
+// consensus fork.
+type RoundChange struct {
+	View                *View
+	Digest              common.Hash
+	PrevHash            common.Hash
+	PreparedCertificate *PreparedCertificate `rlp:"optional,nilList"`
 }
 
 // Subject is the common payload of prepare/commit/round-change messages.

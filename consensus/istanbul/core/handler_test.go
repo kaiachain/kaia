@@ -186,7 +186,7 @@ func TestStartNewRoundUsesViewRound(t *testing.T) {
 	c.RegisterKaiaxModules(mValset, mock_gov.NewMockGovModule(ctrl))
 	c.current = newRoundState(
 		&bft.View{Sequence: big.NewInt(10), Round: big.NewInt(0)},
-		valset.NewAddressSet(validators), common.Hash{}, nil, nil, backend.HasBadProposal,
+		valset.NewAddressSet(validators), common.Hash{}, nil, nil, nil, backend.HasBadProposal,
 	)
 	c.startNewRound(big.NewInt(3))
 	t.Cleanup(c.stopTimer)
