@@ -17,7 +17,7 @@ require (
 	github.com/cespare/cp v1.0.0
 	github.com/clevergo/websocket v1.0.0
 	github.com/consensys/gnark-crypto v0.18.1
-	github.com/crate-crypto/go-eth-kzg v1.3.0
+	github.com/crate-crypto/go-eth-kzg v1.5.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
