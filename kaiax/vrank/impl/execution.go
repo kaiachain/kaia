@@ -17,10 +17,12 @@
 package impl
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
 var _ kaiax.ExecutionModule = (*VRankModule)(nil)
@@ -31,13 +33,18 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 		return nil
 	}
 
+	// Score warming is best effort. This runs after the block is already written
+	// (canonical or side), so a cache failure must not make the importer reject
+	// the chain or drop its peer.
 	pfs, err := v.GetPFS(blockNum)
 	if err != nil {
-		return err
+		logScoreWarmingFailure("PFS", blockNum, err)
+		return nil
 	}
 	cpMatrix, err := v.getCPMatrix(blockNum)
 	if err != nil {
-		return err
+		logScoreWarmingFailure("CP matrix", blockNum, err)
+		return nil
 	}
 
 	if blockNum%v.scoreCheckpointInterval() == 0 {
@@ -45,4 +52,12 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 		WriteLastCheckpoint(v.ChainKv, blockNum)
 	}
 	return nil
+}
+
+func logScoreWarmingFailure(score string, blockNum uint64, err error) {
+	if errors.Is(err, vrank.ErrNotPermissionless) || errors.Is(err, vrank.ErrFutureBlock) {
+		logger.Debug("Failed to warm score cache", "score", score, "num", blockNum, "err", err)
+	} else {
+		logger.Warn("Failed to warm score cache", "score", score, "num", blockNum, "err", err)
+	}
 }

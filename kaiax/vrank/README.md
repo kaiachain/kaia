@@ -183,7 +183,7 @@ Called when a `VRankCandidate` message is received. The handler does not try to 
 
 #### PostInsertBlock
 
-After each canonical block is inserted, proactively calls `GetPFS` and `getCPMatrix` to keep caches warm. At every `scoreCheckpointInterval` boundary, writes the current PFS and CP matrix to the DB and updates the `lastCheckpoint` pointer.
+After each block is inserted, proactively calls `GetPFS` and `getCPMatrix` to keep caches warm. At every `scoreCheckpointInterval` boundary, writes the current PFS and CP matrix to the DB and updates the `lastCheckpoint` pointer. Warming may fail, but errors are logged and ignored; a skipped checkpoint is rebuilt from the epoch start on a later cold lookup.
 
 ### Rewind
 
