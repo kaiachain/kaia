@@ -27,9 +27,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// createNodeTag domain-separates the createNode proof; must match NodeVerifier.CREATE_NODE_TAG.
-var createNodeTag = crypto.Keccak256Hash([]byte("KAIA_ADDRESS_BOOK_V2_CREATE_NODE_V1"))
-
 var (
 	signChainIDFlag = &cli.Int64Flag{
 		Name:     "chain-id",
@@ -71,32 +68,16 @@ func signCreateNodeAction(ctx *cli.Context) error {
 	if v := ctx.String("node-id"); v != "" && common.HexToAddress(v) != nodeId {
 		return fmt.Errorf("--node-id %s does not match the signing key's address %s", v, nodeId.Hex())
 	}
-	digest := createNodeDigest(
+	sig, err := system.SignCreateNodeProof(
+		key,
 		big.NewInt(ctx.Int64("chain-id")),
 		common.HexToAddress(ctx.String("manager")),
 		nodeId,
 		common.HexToAddress(ctx.String("staking-contract")),
 	)
-	sig, err := crypto.Sign(digest, key)
 	if err != nil {
 		return err
 	}
-	sig[64] += 27 // AddressBookV2 verifies via OZ ECDSA.tryRecover, which expects v in {27,28}
 	fmt.Println(hexutil.Encode(sig))
 	return nil
-}
-
-// createNodeDigest reproduces NodeVerifier._verifyNodeIdProof:
-// keccak256(abi.encode(TAG, chainId, addressBook, manager, nodeId, stakingContract)).
-// Every field is static, so abi.encode is the 32-byte-word concatenation below.
-func createNodeDigest(chainID *big.Int, manager, nodeId, staking common.Address) []byte {
-	word := func(b []byte) []byte { return common.LeftPadBytes(b, 32) }
-	buf := make([]byte, 0, 32*6)
-	buf = append(buf, createNodeTag.Bytes()...)
-	buf = append(buf, word(chainID.Bytes())...)
-	buf = append(buf, word(system.AddressBookAddr.Bytes())...)
-	buf = append(buf, word(manager.Bytes())...)
-	buf = append(buf, word(nodeId.Bytes())...)
-	buf = append(buf, word(staking.Bytes())...)
-	return crypto.Keccak256(buf)
 }

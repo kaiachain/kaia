@@ -18,6 +18,7 @@ package system
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"sort"
@@ -31,6 +32,7 @@ import (
 	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	abv2contracts "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/contracts/bindings/multicall"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
@@ -264,4 +266,33 @@ func ReadAddressBookV2BlsAll(backend bind.ContractCaller, num *big.Int) (BlsPubl
 	return buildBlsPublicKeyInfos(ret.NodeIdList, len(ret.PubkeyList), func(i int) ([]byte, []byte) {
 		return ret.PubkeyList[i].PublicKey, ret.PubkeyList[i].Pop
 	})
+}
+
+// createNodeTag domain-separates the createNode proof; must match NodeVerifier.CREATE_NODE_TAG.
+var createNodeTag = crypto.Keccak256Hash([]byte("KAIA_ADDRESS_BOOK_V2_CREATE_NODE_V1"))
+
+// SignCreateNodeProof produces the nodeId-ownership signature AddressBookV2.createNode requires.
+// manager is the address that will send createNode.
+func SignCreateNodeProof(key *ecdsa.PrivateKey, chainID *big.Int, manager, nodeId, staking common.Address) ([]byte, error) {
+	sig, err := crypto.Sign(CreateNodeProofDigest(chainID, manager, nodeId, staking), key)
+	if err != nil {
+		return nil, err
+	}
+	sig[64] += 27 // AddressBookV2 verifies via OZ ECDSA.tryRecover, which expects v in {27,28}
+	return sig, nil
+}
+
+// CreateNodeProofDigest reproduces NodeVerifier._verifyNodeIdProof:
+// keccak256(abi.encode(TAG, chainId, addressBook, manager, nodeId, stakingContract)).
+// Every field is static, so abi.encode is the 32-byte-word concatenation below.
+func CreateNodeProofDigest(chainID *big.Int, manager, nodeId, staking common.Address) []byte {
+	word := func(b []byte) []byte { return common.LeftPadBytes(b, 32) }
+	buf := make([]byte, 0, 32*6)
+	buf = append(buf, createNodeTag.Bytes()...)
+	buf = append(buf, word(chainID.Bytes())...)
+	buf = append(buf, word(AddressBookAddr.Bytes())...)
+	buf = append(buf, word(manager.Bytes())...)
+	buf = append(buf, word(nodeId.Bytes())...)
+	buf = append(buf, word(staking.Bytes())...)
+	return crypto.Keccak256(buf)
 }
