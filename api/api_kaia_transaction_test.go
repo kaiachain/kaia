@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 	"reflect"
 	"testing"
@@ -63,6 +64,34 @@ var (
 	senderPrvKey, _   = crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
 	feePayerPrvKey, _ = crypto.HexToECDSA("aebb680a5e596c1d1a01bac78a3985b62c685c5e995d780c176138cb2679ba3e")
 )
+
+func TestSendTxArgsUnmarshalSignatures(t *testing.T) {
+	testcases := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"missing", `{}`, false},
+		{"null", `{"signatures":null}`, false},
+		{"empty", `{"signatures":[]}`, false},
+		{"null_element", `{"signatures":[null]}`, true},
+		{"empty_element", `{"signatures":[{}]}`, true},
+		{"partial_element", `{"signatures":[{"V":"0x1"}]}`, true},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var args SendTxArgs
+			err := json.Unmarshal([]byte(tc.input), &args)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Empty(t, args.TxSignatures)
+			}
+		})
+	}
+}
 
 // TestTxTypeSupport tests tx type support of APIs in KaiaTransactionAPI.
 func TestTxTypeSupport(t *testing.T) {

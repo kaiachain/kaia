@@ -110,6 +110,8 @@ var (
 	errUndefinedTxType                        = errors.New("undefined tx type")
 	errCannotBeSignedByFeeDelegator           = errors.New("this transaction type cannot be signed by a fee delegator")
 	errUndefinedKeyRemains                    = errors.New("undefined key remains")
+	errEmptyTxSignatures                      = errors.New("tx signatures must not be empty")
+	errInvalidTxSignatureJSON                 = errors.New("invalid tx signature JSON")
 
 	errValueKeyHumanReadableMustBool     = errors.New("HumanReadable must be a type of bool")
 	errValueKeyAccountKeyMustAccountKey  = errors.New("AccountKey must be a type of AccountKey")
