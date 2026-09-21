@@ -50,48 +50,61 @@ var (
 
 // HandleMsg implements consensus.Handler.HandleMsg
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+	if msg.Code != consensus.ConsensusMsgCode {
+		return false, nil
+	}
+
+	event, shouldPost, err := sb.prepareConsensusMessageEvent(addr, msg)
+	if err != nil || !shouldPost {
+		return true, err
+	}
+
+	// Post outside coreMu so a stalled event consumer applies backpressure to
+	// this peer without blocking Start or Stop from changing the core lifecycle.
+	return true, sb.istanbulEventMux.Post(event)
+}
+
+// prepareConsensusMessageEvent validates an incoming consensus envelope and
+// records its duplicate-cache state. The event is posted by HandleMsg after
+// coreMu is released, so a slow core cannot turn inbound messages into an
+// unbounded number of blocked goroutines.
+func (sb *backend) prepareConsensusMessageEvent(addr common.Address, msg p2p.Msg) (istanbul.MessageEvent, bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 
-	if msg.Code == consensus.ConsensusMsgCode {
-		if !sb.coreStarted.Load() {
-			return true, istanbul.ErrStoppedEngine
-		}
-
-		var cmsg bft.ConsensusMsg
-
-		// var data []byte
-		if err := msg.Decode(&cmsg); err != nil {
-			return true, errDecodeFailed
-		}
-		data := cmsg.Payload
-		hash := istanbul.RLPHash(data)
-
-		// Mark peer's message
-		var m *lru.ARCCache
-		ms, ok := sb.recentMessages.Get(addr)
-		if ok {
-			m, _ = ms.(*lru.ARCCache)
-		} else {
-			m, _ = lru.NewARC(inmemoryMessages)
-			sb.recentMessages.Add(addr, m)
-		}
-		m.Add(hash, true)
-
-		// Mark self known message
-		if _, ok := sb.knownMessages.Get(hash); ok {
-			return true, nil
-		}
-		sb.knownMessages.Add(hash, true)
-
-		go sb.istanbulEventMux.Post(istanbul.MessageEvent{
-			Payload: data,
-			Hash:    cmsg.PrevHash,
-		})
-
-		return true, nil
+	if !sb.coreStarted.Load() {
+		return istanbul.MessageEvent{}, false, istanbul.ErrStoppedEngine
 	}
-	return false, nil
+
+	var cmsg bft.ConsensusMsg
+
+	if err := msg.Decode(&cmsg); err != nil {
+		return istanbul.MessageEvent{}, false, errDecodeFailed
+	}
+	data := cmsg.Payload
+	hash := istanbul.RLPHash(data)
+
+	// Mark peer's message
+	var m *lru.ARCCache
+	ms, ok := sb.recentMessages.Get(addr)
+	if ok {
+		m, _ = ms.(*lru.ARCCache)
+	} else {
+		m, _ = lru.NewARC(inmemoryMessages)
+		sb.recentMessages.Add(addr, m)
+	}
+	m.Add(hash, true)
+
+	// Mark self known message
+	if _, ok := sb.knownMessages.Get(hash); ok {
+		return istanbul.MessageEvent{}, false, nil
+	}
+	sb.knownMessages.Add(hash, true)
+
+	return istanbul.MessageEvent{
+		Payload: data,
+		Hash:    cmsg.PrevHash,
+	}, true, nil
 }
 
 func (sb *backend) ValidatePeerType(addr common.Address) error {
