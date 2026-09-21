@@ -262,7 +262,11 @@ func TestAccountKeyWeightedMultiSig_Validate(t *testing.T) {
 }
 
 func TestAccountKeyWeightedMultiSig_CheckInstallable_ZeroThreshold(t *testing.T) {
-	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)})
+	const permissionlessBlock = 100
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(permissionlessBlock),
+	})
 
 	k, _ := crypto.GenerateKey()
 	keys := WeightedPublicKeys{
@@ -270,12 +274,13 @@ func TestAccountKeyWeightedMultiSig_CheckInstallable_ZeroThreshold(t *testing.T)
 	}
 	m := NewAccountKeyWeightedMultiSigWithValues(0, keys)
 
-	// CheckInstallable must reject threshold=0 to prevent signature bypass via Validate().
-	assert.EqualError(t, m.CheckInstallable(0), "threshold is zero")
+	// Before Permissionless: zero threshold still accepted, so historical blocks don't diverge.
+	assert.NoError(t, m.CheckInstallable(permissionlessBlock-1))
+	assert.True(t, m.Validate(permissionlessBlock-1, RoleTransaction, []*ecdsa.PublicKey{}, common.Address{}))
 
-	// Validate() also rejects threshold=0 directly, covering any pre-existing accounts
-	// that may have been installed before CheckInstallable began enforcing this.
-	assert.False(t, m.Validate(0, RoleTransaction, []*ecdsa.PublicKey{}, common.Address{}))
+	// After Permissionless: rejected by both CheckInstallable and Validate.
+	assert.EqualError(t, m.CheckInstallable(permissionlessBlock), "threshold is zero")
+	assert.False(t, m.Validate(permissionlessBlock, RoleTransaction, []*ecdsa.PublicKey{}, common.Address{}))
 }
 
 func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {

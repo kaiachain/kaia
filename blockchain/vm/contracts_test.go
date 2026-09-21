@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -132,6 +133,12 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	stateDb.SetTxContext(txhash, common.Hash{}, 0)
 	evm := NewEVM(BlockContext{BlockNumber: big.NewInt(0)}, TxContext{}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
+
+	// validateSender consults fork.Rules, so the global hardfork config must be initialized.
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(0),
+	})
 
 	// Only stdout logging is tested to avoid file handling. It is used at vmLog test.
 	params.VMLogTarget = params.VMLogToStdout
@@ -628,8 +635,13 @@ func TestConsoleLog(t *testing.T) {
 }
 
 // TestValidateSenderPrecompile_ZeroSignatures verifies that the validateSender precompile
-// (0x400) rejects inputs that carry no signatures.
+// (0x3ff) rejects inputs that carry no signatures once the Permissionless fork is active.
 func TestValidateSenderPrecompile_ZeroSignatures(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(0),
+	})
+
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")

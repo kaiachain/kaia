@@ -50,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/bn256"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/crypto/secp256r1"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -899,7 +900,8 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 	}
 
 	numSigs := len(ptr) / common.SignatureLength
-	if numSigs == 0 {
+	// Reject zero signatures, but only after Permissionless so historical blocks don't diverge.
+	if fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsPermissionless && numSigs == 0 {
 		return errNoSignatures
 	}
 	pubs := make([]*ecdsa.PublicKey, numSigs)
