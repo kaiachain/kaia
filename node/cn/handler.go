@@ -1636,17 +1636,21 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// defensive measure against potential DoS attacks.
 		if tx.Type() == types.TxTypeEthereumBlob {
 			// Without blob hashes the verification below passes vacuously.
-			if len(tx.BlobHashes()) == 0 {
+			hashes := tx.BlobHashes()
+			if len(hashes) == 0 {
 				return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errBloblessBlobTx)
+			}
+			if len(hashes) > params.BlobTxMaxBlobs {
+				return errResp(ErrDecode, "Invalid blob transaction with sidecar: blob limit exceeded: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
 			}
 			sidecar := tx.BlobTxSidecar()
 			if sidecar != nil {
-				key := blobSidecarKey(tx.BlobHashes(), sidecar)
+				key := blobSidecarKey(hashes, sidecar)
 				if !pm.verifiedBlobTxs.Contains(key) {
 					// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
 					// KZG verification is computationally expensive, so this acts as a
 					// defensive measure against potential DoS attacks.
-					if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+					if err := sidecar.ValidateWithBlobHashes(hashes); err != nil {
 						logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
 						return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
 					}

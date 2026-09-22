@@ -470,6 +470,24 @@ func TestHandleTxMsg_BloblessBlobTx(t *testing.T) {
 	assert.Contains(t, err.Error(), errBloblessBlobTx.Error())
 }
 
+func TestHandleTxMsg_BlobLimit(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, _ := prepareBlobTxMsg(t, mockCtrl)
+	sidecar, hashes := newBlobSidecar(t)
+	sidecar.Blobs = append(sidecar.Blobs, sidecar.Blobs[0])
+	sidecar.Commitments = append(sidecar.Commitments, sidecar.Commitments[0])
+	sidecar.Proofs = append(sidecar.Proofs, sidecar.Proofs...)
+	hashes = append(hashes, hashes[0])
+	tx := newBlobTx(t, 0, hashes, sidecar)
+
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{tx}))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "blob limit exceeded")
+	assert.Equal(t, 0, pm.verifiedBlobTxs.Len())
+}
+
 func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks.MockBlockChain, *ProtocolManager) {
 	mockCtrl := gomock.NewController(t)
 	mockPeer := NewMockPeer(mockCtrl)
