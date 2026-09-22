@@ -1082,10 +1082,17 @@ func TestInvalidBalance(t *testing.T) {
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
+	// test account for blob tx will be lack of KAIA
+	testAccBlob, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
+	assert.Equal(t, nil, err)
+
 	gasPrice := big.NewInt(25 * params.Gkei)
 	amount := uint64(25 * params.Gkei)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
 	cost.Add(cost, new(big.Int).SetUint64(amount))
+	blobGasPrice := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
+	blobFee := new(big.Int).Mul(blobGasPrice, new(big.Int).SetUint64(params.BlobTxBlobGasPerBlob)) // expect 1 blob
+	costBlob := new(big.Int).Add(cost, blobFee)
 
 	// deploy a contract for contract execution tx type
 	{
@@ -1141,6 +1148,27 @@ func TestInvalidBalance(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
+	// generate a test account for blob tx with a specific amount of KAIA
+	{
+		var txs types.Transactions
+
+		valueMapForCreation, _ := genMapForTxTypes(reservoir, testAccBlob, types.TxTypeValueTransfer)
+		valueMapForCreation[types.TxValueKeyAmount] = costBlob
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, valueMapForCreation)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
 	// make TxPool to test validation in 'TxPool add' process
 	txpool := blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bcdata.bc.Config(), bcdata.bc, bcdata.govModule)
 
@@ -1149,6 +1177,10 @@ func TestInvalidBalance(t *testing.T) {
 		txType := testTxType.txType
 
 		if !txType.IsFeeDelegatedTransaction() {
+			testAcc := testAcc
+			if txType == types.TxTypeEthereumBlob {
+				testAcc = testAccBlob
+			}
 			// tx with a specific amount or a gasLimit requiring more KAIA than the sender has.
 			{
 				valueMap, _ := genMapForTxTypes(testAcc, reservoir, txType)

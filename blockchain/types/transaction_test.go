@@ -123,6 +123,21 @@ var testKaiaChainConfig = &params.ChainConfig{
 	UnitPrice:                25000000000, // 25 ston
 }
 
+func TestBlobTransactionCost(t *testing.T) {
+	tx := NewTx(&TxInternalDataEthereumBlob{
+		GasFeeCap:  uint256.NewInt(3),
+		GasLimit:   2,
+		Amount:     uint256.NewInt(5),
+		BlobFeeCap: uint256.NewInt(7),
+		BlobHashes: []common.Hash{{1}},
+	})
+	want := new(big.Int).SetUint64(params.BlobTxBlobGasPerBlob)
+	want.Mul(want, big.NewInt(7))
+	want.Add(want, big.NewInt(11))
+
+	assert.Equal(t, want, tx.Cost())
+}
+
 func TestTransactionSigHash(t *testing.T) {
 	signer := LatestSignerForChainID(common.Big1)
 	if signer.Hash(emptyTx) != common.HexToHash("a715f8447b97e3105d2cc0a8aca1466fa3a02f7cc6d2f9a3fe89f2581c9111c5") {

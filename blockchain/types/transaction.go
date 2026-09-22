@@ -777,9 +777,13 @@ func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transa
 	return cpy, nil
 }
 
-// Cost returns amount + gasprice * gaslimit.
+// Cost returns the maximum transaction cost.
 func (tx *Transaction) Cost() *big.Int {
 	total := tx.Fee()
+	if blobFeeCap := tx.BlobGasFeeCap(); blobFeeCap != nil {
+		blobFee := new(big.Int).Mul(new(big.Int).SetUint64(tx.BlobGas()), blobFeeCap)
+		total.Add(total, blobFee)
+	}
 	total.Add(total, tx.data.GetValue())
 	return total
 }
