@@ -146,7 +146,7 @@ var (
 		UnitPrice: 25000000000,
 	}
 
-	TestChainConfig = TestKaiaConfig("osaka")
+	TestChainConfig = TestKaiaConfig("permissionless")
 )
 
 func TestKaiaConfig(maxHardfork string) *ChainConfig {
