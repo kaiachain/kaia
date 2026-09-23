@@ -35,6 +35,7 @@ var (
 	dialMaxRetries     = 3  // Maximum number of retries to dial the same node.
 
 	dialBackoff      = 30 * time.Second // Minimum interval between the dial for the same node ID.
+	maxDialBackoff   = time.Hour        // Upper bound of the backoff grown by consecutive static dial failures.
 	refreshBackoff   = 4 * time.Second  // Minimum interval between discretionary discovery table refreshes.
 	idleDialInterval = 10 * time.Second // Spins down the dial loop when there are no ongoing dial attempts.
 
@@ -617,7 +618,17 @@ func (ds *DialSched) markDialEnd(id discover.NodeID) {
 	defer ds.mu.Unlock()
 
 	ds.dialing.remove(id)
-	ds.dialBackoff[id] = time.Now().Add(dialBackoff)
+	ds.dialBackoff[id] = time.Now().Add(staticDialBackoff(ds.connFails[id]))
+}
+
+// staticDialBackoff stretches the retry interval of a static node that keeps failing, so an
+// unreachable one stops competing for dial slots without leaving the operator's list.
+func staticDialBackoff(connFails int) time.Duration {
+	backoff := dialBackoff
+	for i := dialMaxRetries; i < connFails && backoff < maxDialBackoff; i++ {
+		backoff *= 2
+	}
+	return min(backoff, maxDialBackoff)
 }
 
 func (ds *DialSched) markPeerConnected(id discover.NodeID, nType discover.NodeType, inbound bool) {
@@ -634,8 +645,9 @@ func (ds *DialSched) markPeerConnected(id discover.NodeID, nType discover.NodeTy
 		ds.connectedOutbound.add(n)
 	}
 
-	// Reset consecutive failure counter.
+	// Reaching the node clears both speed bumps.
 	delete(ds.connFails, id)
+	delete(ds.dialBackoff, id)
 }
 
 func (ds *DialSched) markDialFailure(id discover.NodeID) {
@@ -649,12 +661,10 @@ func (ds *DialSched) markDialFailure(id discover.NodeID) {
 		return
 	}
 
-	if n := ds.static.get(id); n != nil {
+	// A static node is a standing instruction from the operator, so it is never dropped;
+	// markDialEnd turns the failure count into a longer backoff instead.
+	if ds.static.contains(id) {
 		ds.connFails[id]++
-		if ds.connFails[id] > dialMaxRetries {
-			logger.Warn("Removing static node after too many connection failures", "node", n.String())
-			ds.static.remove(id)
-		}
 	}
 }
 
