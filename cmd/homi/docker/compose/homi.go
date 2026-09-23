@@ -40,9 +40,9 @@ type Homi struct {
 }
 
 func New(ipPrefix string, number int, secret string, addresses, nodeKeys []string,
-	genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes, staticSCNNodes, staticSPNNodes, staticSENNodes,
+	genesis, scGenesis, staticCNNodes, staticENNodes, staticSCNNodes, staticSENNodes,
 	bridgeNodes, dockerImageId string, useFastHttp bool, networkId, parentChainId int,
-	useGrafana bool, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, useTxGen bool,
+	useGrafana bool, enNodeKeys, scnNodeKeys, senNodeKeys []string, useTxGen bool,
 	txGenOpt service.TxGenOption,
 ) *Homi {
 	ist := &Homi{
@@ -51,15 +51,15 @@ func New(ipPrefix string, number int, secret string, addresses, nodeKeys []strin
 		UseGrafana: useGrafana,
 		UseTxGen:   useTxGen,
 	}
-	ist.init(number, addresses, nodeKeys, genesis, scGenesis, staticCNNodes, staticPNNodes, staticENNodes,
-		staticSCNNodes, staticSPNNodes, staticSENNodes, bridgeNodes, dockerImageId, useFastHttp, networkId,
-		parentChainId, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys, txGenOpt)
+	ist.init(number, addresses, nodeKeys, genesis, scGenesis, staticCNNodes, staticENNodes,
+		staticSCNNodes, staticSENNodes, bridgeNodes, dockerImageId, useFastHttp, networkId,
+		parentChainId, enNodeKeys, scnNodeKeys, senNodeKeys, txGenOpt)
 	return ist
 }
 
-func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenesis, staticCNNodes, staticPNNodes,
-	staticENNodes, staticSCNNodes, staticSPNNodes, staticSENNodes, bridgeNodes, dockerImageId string, useFastHttp bool,
-	networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, txGenOpt service.TxGenOption,
+func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenesis, staticCNNodes,
+	staticENNodes, staticSCNNodes, staticSENNodes, bridgeNodes, dockerImageId string, useFastHttp bool,
+	networkId, parentChainId int, enNodeKeys, scnNodeKeys, senNodeKeys []string, txGenOpt service.TxGenOption,
 ) {
 	var validatorNames []string
 	for i := range number {
@@ -90,35 +90,6 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 		validatorNames = append(validatorNames, s.Name)
 	}
 
-	numPNs := len(proxyNodeKeys)
-	for i := range numPNs {
-		s := service.NewValidator(i,
-			genesis,
-			"",
-			"",
-			proxyNodeKeys[i],
-			"",
-			"",
-			32323+number+i,
-			8551+number+i,
-			61001+number+i,
-			ist.EthStats.Host(),
-			// from subnet ip 10
-			fmt.Sprintf("%v.%v", ist.IPPrefix, number+i+10),
-			dockerImageId,
-			useFastHttp,
-			networkId,
-			0,
-			"PN",
-			"pn",
-			false,
-		)
-
-		staticPNNodes = strings.Replace(staticPNNodes, "0.0.0.0", s.IP, 1)
-		ist.Services = append(ist.Services, s)
-		validatorNames = append(validatorNames, s.Name)
-	}
-
 	numENs := len(enNodeKeys)
 	for i := range enNodeKeys {
 		s := service.NewValidator(i,
@@ -128,12 +99,12 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			enNodeKeys[i],
 			"",
 			"",
-			32323+number+numPNs+i,
-			8551+number+numPNs+i,
-			61001+number+numPNs+i,
+			32323+number+i,
+			8551+number+i,
+			61001+number+i,
 			ist.EthStats.Host(),
 			// from subnet ip 10
-			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+i+10),
+			fmt.Sprintf("%v.%v", ist.IPPrefix, number+i+10),
 			dockerImageId,
 			useFastHttp,
 			networkId,
@@ -154,7 +125,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	numSCNs := len(scnNodeKeys)
 	scnParentChainId := parentChainId
 	scnBridgeNodes := bridgeNodes
-	if len(spnNodeKeys) > 0 || len(senNodeKeys) > 0 {
+	if len(senNodeKeys) > 0 {
 		scnParentChainId = 0
 		scnBridgeNodes = ""
 	}
@@ -166,12 +137,12 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			scnNodeKeys[i],
 			"",
 			scnBridgeNodes,
-			32323+number+numPNs+numENs+i,
-			8551+number+numPNs+numENs+i,
-			61001+number+numPNs+numENs+i,
+			32323+number+numENs+i,
+			8551+number+numENs+i,
+			61001+number+numENs+i,
 			ist.EthStats.Host(),
 			// from subnet ip 10
-			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+numENs+i+10),
+			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numENs+i+10),
 			dockerImageId,
 			useFastHttp,
 			networkId,
@@ -186,41 +157,6 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 		validatorNames = append(validatorNames, s.Name)
 	}
 
-	numSPNs := len(spnNodeKeys)
-	spnParentChainId := parentChainId
-	spnBridgeNodes := bridgeNodes
-	if len(senNodeKeys) > 0 {
-		spnParentChainId = 0
-		spnBridgeNodes = ""
-	}
-	for i := range spnNodeKeys {
-		s := service.NewValidator(i,
-			"",
-			scGenesis,
-			"",
-			spnNodeKeys[i],
-			"",
-			spnBridgeNodes,
-			32323+number+numPNs+numENs+numSCNs+i,
-			8551+number+numPNs+numENs+numSCNs+i,
-			61001+number+numPNs+numENs+numSCNs+i,
-			ist.EthStats.Host(),
-			// from subnet ip 10
-			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+numENs+numSCNs+i+10),
-			dockerImageId,
-			useFastHttp,
-			networkId,
-			spnParentChainId,
-			"SPN",
-			"spn",
-			false,
-		)
-
-		staticSPNNodes = strings.Replace(staticSPNNodes, "0.0.0.0", s.IP, 1)
-		ist.Services = append(ist.Services, s)
-		validatorNames = append(validatorNames, s.Name)
-	}
-
 	for i := range senNodeKeys {
 		s := service.NewValidator(i,
 			"",
@@ -229,12 +165,12 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			senNodeKeys[i],
 			"",
 			bridgeNodes,
-			32323+number+numPNs+numENs+numSCNs+numSPNs+i,
-			8551+number+numPNs+numENs+numSCNs+numSPNs+i,
-			61001+number+numPNs+numENs+numSCNs+numSPNs+i,
+			32323+number+numENs+numSCNs+i,
+			8551+number+numENs+numSCNs+i,
+			61001+number+numENs+numSCNs+i,
 			ist.EthStats.Host(),
 			// from subnet ip 10
-			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numPNs+numENs+numSCNs+numSPNs+i+10),
+			fmt.Sprintf("%v.%v", ist.IPPrefix, number+numENs+numSCNs+i+10),
 			dockerImageId,
 			useFastHttp,
 			networkId,
@@ -252,12 +188,8 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	for i := range ist.Services {
 		if ist.Services[i].NodeType == "scn" {
 			ist.Services[i].StaticNodes = staticSCNNodes
-		} else if ist.Services[i].NodeType == "spn" {
-			ist.Services[i].StaticNodes = staticSCNNodes
 		} else if ist.Services[i].NodeType == "sen" {
-			ist.Services[i].StaticNodes = staticSPNNodes
-		} else if ist.Services[i].NodeType == "en" {
-			ist.Services[i].StaticNodes = staticPNNodes
+			ist.Services[i].StaticNodes = staticSCNNodes
 		} else {
 			ist.Services[i].StaticNodes = staticCNNodes
 		}

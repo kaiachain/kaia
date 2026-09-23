@@ -44,10 +44,8 @@ func AllNodeFlags() []cli.Flag {
 	nodeFlags = union(nodeFlags, DBMigrationDstFlags)
 	nodeFlags = union(nodeFlags, BNFlags)
 	nodeFlags = union(nodeFlags, KCNFlags)
-	nodeFlags = union(nodeFlags, KPNFlags)
 	nodeFlags = union(nodeFlags, KENFlags)
 	nodeFlags = union(nodeFlags, KSCNFlags)
-	nodeFlags = union(nodeFlags, KSPNFlags)
 	nodeFlags = union(nodeFlags, KSENFlags)
 	return nodeFlags
 }
@@ -75,20 +73,12 @@ func KcnNodeFlags() []cli.Flag {
 	return append(CommonNodeFlags, KCNFlags...)
 }
 
-func KpnNodeFlags() []cli.Flag {
-	return append(CommonNodeFlags, KPNFlags...)
-}
-
 func KenNodeFlags() []cli.Flag {
 	return append(CommonNodeFlags, KENFlags...)
 }
 
 func KscnNodeFlags() []cli.Flag {
 	return append(CommonNodeFlags, KSCNFlags...)
-}
-
-func KspnNodeFlags() []cli.Flag {
-	return append(CommonNodeFlags, KSPNFlags...)
 }
 
 func KsenNodeFlags() []cli.Flag {
@@ -111,16 +101,6 @@ func KcnAppFlags() []cli.Flag {
 	return flags
 }
 
-func KpnAppFlags() []cli.Flag {
-	flags := append([]cli.Flag{}, KpnNodeFlags()...)
-	flags = append(flags, CommonRPCFlags...)
-	flags = append(flags, ConsoleFlags...)
-	flags = append(flags, debug.Flags...)
-	flags = append(flags, DBMigrationDstFlags...)
-	flags = append(flags, ChainDataFetcherFlags...)
-	return flags
-}
-
 func KenAppFlags() []cli.Flag {
 	flags := append([]cli.Flag{}, KenNodeFlags()...)
 	flags = append(flags, CommonRPCFlags...)
@@ -136,15 +116,6 @@ func KscnAppFlags() []cli.Flag {
 	flags = append(flags, CommonRPCFlags...)
 	flags = append(flags, ConsoleFlags...)
 	flags = append(flags, debug.Flags...)
-	return flags
-}
-
-func KspnAppFlags() []cli.Flag {
-	flags := append([]cli.Flag{}, KspnNodeFlags()...)
-	flags = append(flags, CommonRPCFlags...)
-	flags = append(flags, ConsoleFlags...)
-	flags = append(flags, debug.Flags...)
-	flags = append(flags, ChainDataFetcherFlags...)
 	return flags
 }
 
@@ -358,15 +329,6 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewBoolFlag(gasless.DisableFlag),
 }
 
-var KPNFlags = []cli.Flag{
-	altsrc.NewUint64Flag(TxResendIntervalFlag),
-	altsrc.NewIntFlag(TxResendCountFlag),
-	altsrc.NewBoolFlag(TxResendUseLegacyFlag),
-	altsrc.NewBoolFlag(MainnetFlag),
-	altsrc.NewBoolFlag(KairosFlag),
-	altsrc.NewBoolFlag(TxPoolSpamThrottlerDisableFlag),
-}
-
 var KENFlags = []cli.Flag{
 	altsrc.NewStringFlag(ServiceChainSignerFlag),
 	altsrc.NewBoolFlag(MainnetFlag),
@@ -402,37 +364,6 @@ var KSCNFlags = []cli.Flag{
 	altsrc.NewStringFlag(RewardbaseFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
-	altsrc.NewStringFlag(ServiceChainSignerFlag),
-	altsrc.NewUint64Flag(AnchoringPeriodFlag),
-	altsrc.NewUint64Flag(SentChainTxsLimit),
-	altsrc.NewBoolFlag(MainBridgeFlag),
-	altsrc.NewIntFlag(MainBridgeListenPortFlag),
-	altsrc.NewBoolFlag(ChildChainIndexingFlag),
-	altsrc.NewBoolFlag(SubBridgeFlag),
-	altsrc.NewIntFlag(SubBridgeListenPortFlag),
-	altsrc.NewIntFlag(ParentChainIDFlag),
-	altsrc.NewBoolFlag(VTRecoveryFlag),
-	altsrc.NewUint64Flag(VTRecoveryIntervalFlag),
-	altsrc.NewBoolFlag(ServiceChainNewAccountFlag),
-	altsrc.NewBoolFlag(ServiceChainAnchoringFlag),
-	altsrc.NewUint64Flag(ServiceChainParentOperatorTxGasLimitFlag),
-	altsrc.NewUint64Flag(ServiceChainChildOperatorTxGasLimitFlag),
-	// KAS
-	altsrc.NewBoolFlag(KASServiceChainAnchorFlag),
-	altsrc.NewUint64Flag(KASServiceChainAnchorPeriodFlag),
-	altsrc.NewStringFlag(KASServiceChainAnchorUrlFlag),
-	altsrc.NewStringFlag(KASServiceChainAnchorOperatorFlag),
-	altsrc.NewStringFlag(KASServiceChainSecretKeyFlag),
-	altsrc.NewStringFlag(KASServiceChainAccessKeyFlag),
-	altsrc.NewStringFlag(KASServiceChainXChainIdFlag),
-	altsrc.NewDurationFlag(KASServiceChainAnchorRequestTimeoutFlag),
-}
-
-var KSPNFlags = []cli.Flag{
-	altsrc.NewUint64Flag(TxResendIntervalFlag),
-	altsrc.NewIntFlag(TxResendCountFlag),
-	altsrc.NewBoolFlag(TxResendUseLegacyFlag),
-	altsrc.NewBoolFlag(TxPoolSpamThrottlerDisableFlag),
 	altsrc.NewStringFlag(ServiceChainSignerFlag),
 	altsrc.NewUint64Flag(AnchoringPeriodFlag),
 	altsrc.NewUint64Flag(SentChainTxsLimit),
