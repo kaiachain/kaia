@@ -168,6 +168,39 @@ func TestGetRoundCommitteeStateUsesReturnedCommitteeSize(t *testing.T) {
 	}
 }
 
+func TestStartNewRoundUsesViewRound(t *testing.T) {
+	validators := []common.Address{
+		common.HexToAddress("0x1"),
+		common.HexToAddress("0x2"),
+		common.HexToAddress("0x3"),
+		common.HexToAddress("0x4"),
+	}
+	ctrl := gomock.NewController(t)
+	backend := mock_istanbul.NewMockBackend(ctrl)
+	backend.EXPECT().Address().Return(validators[0]).AnyTimes()
+	backend.EXPECT().LastProposal().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)}), common.Address{})
+	backend.EXPECT().SetCurrentView(gomock.Any())
+	backend.EXPECT().EventMux().Return(new(event.TypeMux))
+
+	mValset := valset_mock.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCouncil(uint64(11)).Return(validators, nil)
+	mValset.EXPECT().GetDemotedValidators(uint64(11)).Return(nil, nil)
+	mValset.EXPECT().GetCommittee(uint64(11), uint64(0)).Return(validators, nil)
+	mValset.EXPECT().GetProposer(uint64(11), uint64(0)).Return(validators[1], nil)
+
+	c := New(backend, istanbul.DefaultConfig).(*core)
+	c.RegisterKaiaxModules(mValset, mock_gov.NewMockGovModule(ctrl))
+	c.current = newRoundState(
+		&bft.View{Sequence: big.NewInt(10), Round: big.NewInt(0)},
+		valset.NewAddressSet(validators), common.Hash{}, nil, nil, backend.HasBadProposal,
+	)
+	c.startNewRound(big.NewInt(3))
+	t.Cleanup(c.stopTimer)
+
+	assert.Equal(t, uint64(0), c.current.Round().Uint64())
+	assert.Equal(t, validators[1], c.current.proposer)
+}
+
 // getTestCommitteeState returns qualified, committee, proposer, nonCommittee for tests using the same logic as newMockBackend
 func getTestCommitteeState(validatorAddrs []common.Address, committeeSize uint64, seq, round uint64) (qualified, committee *valset.AddressSet, proposer common.Address, nonCommittee *valset.AddressSet) {
 	qualified = valset.NewAddressSet(validatorAddrs).Subtract(valset.NewAddressSet([]common.Address{}))

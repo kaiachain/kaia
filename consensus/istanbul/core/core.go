@@ -338,7 +338,7 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 
-	seq, r := newView.Sequence.Uint64(), round.Uint64()
+	seq, r := newView.Sequence.Uint64(), newView.Round.Uint64()
 	qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err := getRoundCommitteeState(c, seq, r)
 	if err != nil {
 		logger.Error("Failed to get round committee state", "err", err)
