@@ -104,6 +104,8 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		backend:            backend,
 		backlogs:           make(map[common.Address]*prque.Prque),
 		backlogsMu:         new(sync.Mutex),
+		backlogCounts:      make(map[common.Address]int),
+		backlogPreprepares: make(map[common.Address]backlogPreprepare),
 		pendingRequests:    prque.New(),
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
@@ -140,8 +142,10 @@ type core struct {
 	waitingForRoundChange bool
 	validateFn            func([]byte, []byte) (common.Address, error)
 
-	backlogs   map[common.Address]*prque.Prque
-	backlogsMu *sync.Mutex
+	backlogs           map[common.Address]*prque.Prque
+	backlogsMu         *sync.Mutex
+	backlogCounts      map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
+	backlogPreprepares map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
 
 	current   *roundState
 	handlerWg *sync.WaitGroup
@@ -356,7 +360,7 @@ func (c *core) startNewRound(round *big.Int) {
 	// New snapshot for new round
 	c.updateRoundState(newView, roundChange, qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum)
 	// Clear invalid ROUND CHANGE messages
-	c.roundChangeSet = newRoundChangeSet(c.current.qualified)
+	c.roundChangeSet = newRoundChangeSet(c.current.qualified, c.current.requiredMessageCount)
 	// Calculate new proposer
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)

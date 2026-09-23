@@ -31,6 +31,12 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
+// maxRoundChangeRoundsAhead retains the current round plus this many future
+// rounds while a sequence is stalled. The window bounds memory while keeping the
+// near-round buckets the node needs to catch up. It deliberately trades catch-up
+// beyond this window for bounded local memory.
+const maxRoundChangeRoundsAhead = 128
+
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
 func (c *core) sendNextRoundChange(loc string) {
 	if c.backend.NodeType() != common.CONSENSUSNODE {
@@ -115,9 +121,9 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 
 	// Add the ROUND CHANGE message to its message set and return how many
 	// messages we've got with the same round number and sequence number.
-	num, err := c.roundChangeSet.Add(roundView.Round, msg)
+	num, err := c.roundChangeSet.Add(cv.Round, roundView.Round, msg)
 	if err != nil {
-		logger.Warn("Failed to add round change message", "from", src, "msg", msg, "err", err)
+		logger.Trace("Discarding ROUND CHANGE", "from", src, "round", roundView.Round, "err", err)
 		return err
 	}
 
@@ -151,7 +157,7 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		return nil
 	} else if cv.Round.Cmp(roundView.Round) < 0 {
 		// Only gossip the message with current round to other validators.
-		logger.Warn("[RC] Received round is bigger but not enough number of messages. Message ignored",
+		logger.Trace("[RC] Received round is bigger but not enough number of messages. Message ignored",
 			"currentRound", cv.Round.String(), "newRound", roundView.Round.String(), "numRC", num)
 		return errIgnored
 	}
@@ -160,34 +166,57 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 
 // ----------------------------------------------------------------------------
 
-func newRoundChangeSet(qualified *valset.AddressSet) *roundChangeSet {
+func newRoundChangeSet(qualified *valset.AddressSet, maxMessagesPerRound int) *roundChangeSet {
 	return &roundChangeSet{
-		qualified:    qualified,
-		roundChanges: make(map[uint64]*messageSet),
-		mu:           new(sync.Mutex),
+		qualified:           qualified,
+		maxMessagesPerRound: maxMessagesPerRound,
+		roundChanges:        make(map[uint64]*messageSet),
+		mu:                  new(sync.Mutex),
 	}
 }
 
 type roundChangeSet struct {
-	qualified    *valset.AddressSet
-	roundChanges map[uint64]*messageSet
-	mu           *sync.Mutex
+	qualified           *valset.AddressSet
+	maxMessagesPerRound int
+	roundChanges        map[uint64]*messageSet
+	mu                  *sync.Mutex
 }
 
-// Add adds the round and message into round change set
-func (rcs *roundChangeSet) Add(r *big.Int, msg *bft.Message) (int, error) {
+// Add retains a ROUND CHANGE only when its round is within the current window.
+// A retained round needs no more than a quorum's worth of messages: once that
+// limit is reached, any further distinct sender cannot change its outcome.
+// Add holds rcs.mu and is the only writer of a retained messageSet, so reading
+// that set's size before adding to it cannot race.
+func (rcs *roundChangeSet) Add(currentRound, messageRound *big.Int, msg *bft.Message) (int, error) {
+	// roundChanges is keyed by uint64, so reject values that would truncate to
+	// an existing bucket even if callers bypass checkMessage.
+	if !messageRound.IsUint64() {
+		return 0, bft.ErrInvalidMessage
+	}
+
 	rcs.mu.Lock()
 	defer rcs.mu.Unlock()
 
-	round := r.Uint64()
-	if rcs.roundChanges[round] == nil {
-		rcs.roundChanges[round] = newMessageSet(rcs.qualified)
+	maxRound := new(big.Int).Add(currentRound, big.NewInt(maxRoundChangeRoundsAhead))
+	if messageRound.Cmp(maxRound) > 0 {
+		return 0, errRoundChangeTooFar
 	}
-	err := rcs.roundChanges[round].Add(msg)
-	if err != nil {
+
+	// A bucket is stored only after a message is accepted, so a rejected message
+	// never leaves an empty bucket behind.
+	round := messageRound.Uint64()
+	messages := rcs.roundChanges[round]
+	if messages == nil {
+		messages = newMessageSet(rcs.qualified)
+	}
+	if messages.Get(msg.Address) == nil && messages.Size() >= rcs.maxMessagesPerRound {
+		return 0, errRoundChangeMessageLimit
+	}
+	if err := messages.Add(msg); err != nil {
 		return 0, err
 	}
-	return rcs.roundChanges[round].Size(), nil
+	rcs.roundChanges[round] = messages
+	return messages.Size(), nil
 }
 
 // Clear deletes the messages with smaller round
