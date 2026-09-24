@@ -117,9 +117,10 @@ func TestTrieSyncExistCacheSeparatesNodesAndCode(t *testing.T) {
 	hash := common.HexToHash("0x01")
 
 	tests := []struct {
-		name     string
-		populate func(*TrieSync)
-		schedule func(*TrieSync)
+		name        string
+		populate    func(*TrieSync)
+		schedule    func(*TrieSync)
+		wantPending int
 	}{
 		{
 			name: "code does not hide node",
@@ -129,6 +130,7 @@ func TestTrieSyncExistCacheSeparatesNodesAndCode(t *testing.T) {
 			schedule: func(sync *TrieSync) {
 				sync.AddSubTrie(hash, nil, 0, common.Hash{}, nil)
 			},
+			wantPending: 1,
 		},
 		{
 			name: "node does not hide code",
@@ -138,6 +140,27 @@ func TestTrieSyncExistCacheSeparatesNodesAndCode(t *testing.T) {
 			schedule: func(sync *TrieSync) {
 				sync.AddCodeEntry(hash, nil, 0, common.Hash{})
 			},
+			wantPending: 1,
+		},
+		{
+			name: "cached node is not scheduled again",
+			populate: func(sync *TrieSync) {
+				sync.membatch.nodes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddSubTrie(hash, nil, 0, common.Hash{}, nil)
+			},
+			wantPending: 0,
+		},
+		{
+			name: "cached code is not scheduled again",
+			populate: func(sync *TrieSync) {
+				sync.membatch.codes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddCodeEntry(hash, nil, 0, common.Hash{})
+			},
+			wantPending: 0,
 		},
 	}
 
@@ -154,8 +177,8 @@ func TestTrieSyncExistCacheSeparatesNodesAndCode(t *testing.T) {
 				t.Fatal(err)
 			}
 			test.schedule(sync)
-			if sync.Pending() != 1 {
-				t.Fatalf("pending requests = %d, want 1", sync.Pending())
+			if sync.Pending() != test.wantPending {
+				t.Fatalf("pending requests = %d, want %d", sync.Pending(), test.wantPending)
 			}
 		})
 	}
