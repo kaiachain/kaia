@@ -43,6 +43,15 @@ func TestCommitters(t *testing.T) {
 	assert.NotEmpty(t, committedSeals)
 }
 
+func TestCommittersClassifiesInvalidCommittedSeal(t *testing.T) {
+	_, sealer, header := singleValidatorHeader(t, 0)
+	require.NoError(t, sealer.WriteCommittedSeals(header, [][]byte{make([]byte, IstanbulExtraSeal)}))
+
+	_, err := sealer.Committers(header)
+	assert.ErrorIs(t, err, ErrInvalidCommittedSeals)
+	assert.NotErrorIs(t, err, ErrInvalidSignature)
+}
+
 // singleValidatorHeader builds a header whose validator set is {addr} with the
 // given round written; the caller adds the committed seal.
 func singleValidatorHeader(t *testing.T, round int64) (common.Address, *IstanbulSealer, *types.Header) {
@@ -95,6 +104,7 @@ func TestRecoverCommitters(t *testing.T) {
 		{"truncated", seal[:len(seal)-1]},
 		{"overlong", append(append([]byte{}, seal...), 0)},
 		{"empty", nil},
+		{"unrecoverable", make([]byte, IstanbulExtraSeal)},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			_, err := sealer.RecoverCommitters(header.Number.Uint64(), hash, 0, [][]byte{tc.seal})

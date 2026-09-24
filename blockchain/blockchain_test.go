@@ -46,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/common/compiler"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -60,6 +61,35 @@ var (
 	canonicalSeed = 1
 	forkSeed      = 2
 )
+
+func TestShouldMarkBadProposal(t *testing.T) {
+	tests := []struct {
+		err  error
+		want bool
+	}{
+		{errors.New("invalid state root"), true},
+		{istanbul.ErrInvalidSignature, true},
+		{istanbul.ErrEmptyCommittedSeals, false},
+		{istanbul.ErrInvalidCommittedSeals, false},
+		{fmt.Errorf("wrapped: %w", istanbul.ErrInvalidCommittedSeals), false},
+	}
+
+	for _, test := range tests {
+		assert.Equal(t, test.want, shouldMarkBadProposal(test.err))
+	}
+}
+
+func TestReportBlockRecordPolicy(t *testing.T) {
+	db := database.NewMemoryDBManager()
+	blockchain := &BlockChain{db: db, chainConfig: params.TestChainConfig}
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+
+	blockchain.reportBlock(block, nil, istanbul.ErrInvalidCommittedSeals)
+	assert.Nil(t, db.ReadBadBlock(block.Hash()))
+
+	blockchain.reportBlock(block, nil, errors.New("invalid state root"))
+	assert.NotNil(t, db.ReadBadBlock(block.Hash()))
+}
 
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a

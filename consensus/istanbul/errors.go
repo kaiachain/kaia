@@ -44,7 +44,7 @@ var (
 	ErrInvalidVotingChain = errors.New("invalid voting chain")
 	// ErrUnknownBlock is returned when a required block/header context is missing.
 	ErrUnknownBlock = errors.New("unknown block")
-	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
+	// ErrInvalidCommittedSeals is returned when the committed-seal certificate is invalid.
 	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
 	ErrEmptyCommittedSeals = errors.New("zero committed seals")

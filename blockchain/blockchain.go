@@ -46,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/common/mclock"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
@@ -2645,7 +2646,9 @@ func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
 // reportBlock logs a bad block error.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	badBlockCounter.Inc(1)
-	bc.db.WriteBadBlock(block)
+	if shouldMarkBadProposal(err) {
+		bc.db.WriteBadBlock(block)
+	}
 
 	var receiptString strings.Builder
 	for i, receipt := range receipts {
@@ -2654,6 +2657,12 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 			receipt.Bloom, receipt.Logs))
 	}
 	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString.String(), err))
+}
+
+func shouldMarkBadProposal(err error) bool {
+	// Committed seals are added after proposal voting and are excluded from the proposal hash.
+	return !errors.Is(err, istanbul.ErrEmptyCommittedSeals) &&
+		!errors.Is(err, istanbul.ErrInvalidCommittedSeals)
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local
