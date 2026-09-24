@@ -276,6 +276,7 @@ type BlockChain interface {
 	Export(w io.Writer) error
 	ExportN(w io.Writer, first, last uint64) error
 	ValidateHeader(header *types.Header) error
+	ValidateProposalHeader(header *types.Header) error
 	Sealer() consensus.Sealer
 	PrepareHeader(header *types.Header) error
 	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mExecution []kaiax.ExecutionModule, mRewindable []kaiax.RewindableModule, mHeader []kaiax.HeaderModule, mBlockState []kaiax.BlockStateModule)

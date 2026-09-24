@@ -51,6 +51,10 @@ type ChainReader interface {
 	// ValidateHeader validates a header according to chain rules.
 	ValidateHeader(header *types.Header) error
 
+	// ValidateProposalHeader validates a consensus proposal according to chain rules,
+	// skipping only the committed-seal rules.
+	ValidateProposalHeader(header *types.Header) error
+
 	// GetHeader retrieves a block header from the database by hash and number.
 	GetHeader(hash common.Hash, number uint64) *types.Header
 
