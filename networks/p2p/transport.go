@@ -44,6 +44,8 @@ const (
 	// This is shorter than the usual timeout because we don't want
 	// to wait if the connection is known to be bad anyway.
 	discWriteTimeout = 1 * time.Second
+
+	protocolHandshakeFrameLimit = baseProtocolMaxMsgSize + 9 // payload plus an RLP-encoded message code
 )
 
 type transport interface {
@@ -70,7 +72,9 @@ type rlpxTransport struct {
 }
 
 func newRLPX(conn net.Conn, dialDest *ecdsa.PublicKey) transport {
-	return &rlpxTransport{conn: rlpx.NewConn(conn, dialDest)}
+	rconn := rlpx.NewConn(conn, dialDest)
+	rconn.SetReadFrameLimit(protocolHandshakeFrameLimit)
+	return &rlpxTransport{conn: rconn}
 }
 
 func (t *rlpxTransport) ReadMsg() (Msg, error) {
@@ -156,6 +160,8 @@ func (t *rlpxTransport) doProtoHandshake(our *protoHandshake) (their *protoHands
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("write error: %v", err)
 	}
+	// A zero limit allows the full RLPx frame size after the handshake.
+	t.conn.SetReadFrameLimit(0)
 	// If the protocol version supports Snappy encoding, upgrade immediately
 	t.conn.SetSnappy(their.Version >= snappyProtocolVersion)
 
