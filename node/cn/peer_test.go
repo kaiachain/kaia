@@ -21,6 +21,7 @@ package cn
 import (
 	"math/big"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -31,10 +32,42 @@ import (
 
 var version = 63
 
+type oversizedBlockHashMessageRW struct {
+	reads int
+}
+
+func (rw *oversizedBlockHashMessageRW) ReadMsg() (p2p.Msg, error) {
+	rw.reads++
+	return p2p.Msg{Code: NewBlockHashesMsg, Size: maxBlockHashMessageBytes + 1}, nil
+}
+
+func (*oversizedBlockHashMessageRW) WriteMsg(p2p.Msg) error {
+	return nil
+}
+
 func newBasePeer() (Peer, *p2p.MsgPipeRW, *p2p.MsgPipeRW) {
 	pipe1, pipe2 := p2p.MsgPipe()
 
 	return newPeer(version, p2pPeers[0], pipe1), pipe1, pipe2
+}
+
+func TestMultiChannelPeerStopsReadingAfterInvalidMessageSize(t *testing.T) {
+	peer := &multiChannelPeer{basePeer: &basePeer{Peer: p2pPeers[0]}}
+	rw := new(oversizedBlockHashMessageRW)
+	errCh := make(chan error, 1)
+	closed := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	peer.ReadMsg(rw, p2p.ConnDefault, errCh, &wg, closed)
+	wg.Wait()
+
+	if err := <-errCh; err == nil {
+		t.Fatal("expected oversized message error")
+	}
+	if rw.reads != 1 {
+		t.Fatalf("read %d messages after invalid size, want 1", rw.reads)
+	}
 }
 
 func TestBasePeer_AddToKnownBlocks(t *testing.T) {

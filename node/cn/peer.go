@@ -1228,6 +1228,9 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 		for {
 			// TODO-Kaia: check 30-second timeout works
 			msg, err := rw.ReadMsg()
+			if err == nil {
+				err = validateInboundMessageSize(msg)
+			}
 			select {
 			case <-closed:
 				return
@@ -1235,6 +1238,9 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 				p2p.Msg
 				error
 			}{msg, err}:
+			}
+			if err != nil {
+				return
 			}
 		}
 	}()
@@ -1259,12 +1265,6 @@ func (p *multiChannelPeer) ReadMsg(rw p2p.MsgReadWriter, connectionOrder int, er
 		msgCh, err := p.chMgr.GetChannelWithMsgCode(connectionOrder, msg.Code)
 		if err != nil {
 			p.GetP2PPeer().Log().Warn("ProtocolManager failed to get msg channel", "err", err)
-			errCh <- err
-			return
-		}
-		if msg.Size > ProtocolMaxMsgSize {
-			err = errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
-			p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 			errCh <- err
 			return
 		}

@@ -79,8 +79,10 @@ const (
 	// vrankChanSize is the size of channel listening to VRankBroadcastEvent.
 	vrankChanSize = 2048
 
-	concurrentPerPeer  = 3
-	channelSizePerPeer = 20
+	concurrentPerPeer         = 3
+	channelSizePerPeer        = 20
+	maxBlockHashAnnouncements = 1024
+	maxBlockHashMessageBytes  = 64 * 1024
 
 	blockReceivingPNLimit  = 5 // maximum number of PNs that a CN broadcasts block.
 	minNumPeersToSendBlock = 3 // minimum number of peers that a node broadcasts block.
@@ -135,6 +137,17 @@ func blobSidecarKey(hashes []common.Hash, sc *types.BlobTxSidecar) common.Hash {
 
 func errResp(code errCode, format string, v ...interface{}) error {
 	return fmt.Errorf("%v - %v", code, fmt.Sprintf(format, v...))
+}
+
+func validateInboundMessageSize(msg p2p.Msg) error {
+	limit := uint32(ProtocolMaxMsgSize)
+	if msg.Code == NewBlockHashesMsg {
+		limit = maxBlockHashMessageBytes
+	}
+	if msg.Size > limit {
+		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, limit)
+	}
+	return nil
 }
 
 type ProtocolManager struct {
@@ -674,12 +687,10 @@ func (pm *ProtocolManager) handle(p Peer) error {
 			p.GetP2PPeer().Log().Warn("ProtocolManager failed to read msg", "err", err)
 			return err
 		}
-		if msg.Size > ProtocolMaxMsgSize {
-			err := errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
+		if err := validateInboundMessageSize(msg); err != nil {
 			p.GetP2PPeer().Log().Warn("ProtocolManager over max msg size", "err", err)
 			return err
 		}
-
 		select {
 		case err := <-errChannel:
 			return err
@@ -1480,12 +1491,12 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 // handleNewBlockHashesMsg handles new block hashes message.
 func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	var (
-		announces     newBlockHashesData
 		maxTD         uint64
 		candidateHash *common.Hash
 	)
-	if err := msg.Decode(&announces); err != nil {
-		return errResp(ErrDecode, "%v: %v", msg, err)
+	announces, err := decodeResponseList[newBlockHashData](msg, maxBlockHashAnnouncements)
+	if err != nil {
+		return err
 	}
 	// Mark the hashes as present at the remote node
 	// Schedule all the unknown hashes for retrieval

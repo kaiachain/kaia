@@ -65,6 +65,24 @@ func generateMsg(t *testing.T, msgCode uint64, data interface{}) p2p.Msg {
 	}
 }
 
+func TestHandleNewBlockHashesMsgRejectsLargeBatch(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	announces := make(newBlockHashesData, maxBlockHashAnnouncements+1)
+	err := handleNewBlockHashesMsg(&ProtocolManager{}, NewMockPeer(mockCtrl), generateMsg(t, NewBlockHashesMsg, announces))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errCode(ErrTooManyItems).String())
+}
+
+func TestValidateInboundMessageSizeRejectsLargeBlockHashMessage(t *testing.T) {
+	msg := p2p.Msg{Code: NewBlockHashesMsg, Size: maxBlockHashMessageBytes + 1}
+	require.Error(t, validateInboundMessageSize(msg))
+
+	msg.Code = NewBlockMsg
+	require.NoError(t, validateInboundMessageSize(msg))
+}
+
 // prepareTestHandleNewBlockMsg creates structs for TestHandleNewBlockMsg_ tests.
 func prepareTestHandleNewBlockMsg(t *testing.T, mockCtrl *gomock.Controller, blockNum int) (*types.Block, p2p.Msg, *MockPeer, *mocks2.MockProtocolManagerFetcher) {
 	mockPeer := NewMockPeer(mockCtrl)
