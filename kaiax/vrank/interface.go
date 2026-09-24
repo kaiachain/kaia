@@ -34,6 +34,7 @@ import (
 // behind IsPermissionlessForkEnabled and will be wired to a real backend once
 // the permissionless system contracts land.
 type Chain interface {
+	CurrentBlock() *types.Block
 	CurrentHeader() *types.Header
 	GetHeaderByNumber(number uint64) *types.Header
 }

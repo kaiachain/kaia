@@ -113,7 +113,10 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 	valset.EXPECT().GetCandTesting(blockNum).Return(addrsOf(s.Candidates), nil).AnyTimes()
 	valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(nameToCN[s.Proposer].Addr, nil).AnyTimes()
 
-	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	block1 := types.NewBlockWithHeader(&types.Header{
+		Number:     big.NewInt(1),
+		ParentHash: makeHeaderWithRound(0, 0).Hash(),
+	})
 	view1_0 := &bft.View{Sequence: big.NewInt(1), Round: common.Big0}
 	proposerCN := nameToCN[s.Proposer]
 	pppSig := signVRankPreprepare(t, proposerCN.VRankModule, proposerCN.Key, blockNum, 0, block1.Hash())
@@ -292,7 +295,10 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 
 func TestHandleVRankPreprepare(t *testing.T) {
 	var (
-		block1  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		block1 = types.NewBlockWithHeader(&types.Header{
+			Number:     big.NewInt(1),
+			ParentHash: makeHeaderWithRound(0, 0).Hash(),
+		})
 		view1_0 = &bft.View{Sequence: big.NewInt(1), Round: common.Big0}
 	)
 
@@ -301,6 +307,124 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		cand.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		cand.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
 		mustNotPop(t, cand.sub)
+	})
+
+	t.Run("non-candidates skip authentication", func(t *testing.T) {
+		candidate := newCN(t, withGenesis())
+		candidate.Valset.EXPECT().GetCandTesting(uint64(1)).Return(nil, nil).Times(1)
+		require.NoError(t, candidate.VRankModule.HandleVRankPreprepare(
+			&vrank.VRankPreprepare{Block: block1, View: view1_0}))
+		mustNotPop(t, candidate.sub)
+	})
+
+	t.Run("candidates reject invalid signatures", func(t *testing.T) {
+		candidate := newCN(t, withGenesis())
+		candidate.Valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(1)
+		err := candidate.VRankModule.HandleVRankPreprepare(
+			&vrank.VRankPreprepare{Block: block1, View: view1_0})
+		assert.ErrorIs(t, err, vrank.ErrInvalidProposerSig)
+		mustNotPop(t, candidate.sub)
+	})
+
+	t.Run("block number must match the view sequence", func(t *testing.T) {
+		candidate := newCN(t, withGenesis())
+		err := candidate.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{
+			Block: block1,
+			View:  &bft.View{Sequence: big.NewInt(2), Round: common.Big0},
+		})
+		assert.ErrorIs(t, err, vrank.ErrViewMismatch)
+		mustNotPop(t, candidate.sub)
+	})
+
+	t.Run("block number must fit uint64", func(t *testing.T) {
+		candidate := newCN(t, withGenesis())
+		number := new(big.Int).Lsh(big.NewInt(1), 64)
+		err := candidate.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{
+			Block: types.NewBlockWithHeader(&types.Header{Number: number}),
+			View:  &bft.View{Sequence: new(big.Int).Set(number), Round: common.Big0},
+		})
+		assert.ErrorIs(t, err, vrank.ErrViewMismatch)
+		mustNotPop(t, candidate.sub)
+	})
+
+	t.Run("messages outside the canonical tip are ignored before authentication", func(t *testing.T) {
+		head := makeHeaderWithRound(2, 0)
+		candidate := newCN(t, withHeaders(map[uint64]*types.Header{2: head}))
+
+		for _, block := range []*types.Block{
+			types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)}),
+			types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)}),
+			types.NewBlockWithHeader(&types.Header{Number: big.NewInt(3)}),
+			types.NewBlockWithHeader(&types.Header{Number: big.NewInt(4), ParentHash: head.Hash()}),
+		} {
+			view := &bft.View{Sequence: block.Number(), Round: common.Big0}
+			require.NoError(t, candidate.VRankModule.HandleVRankPreprepare(
+				&vrank.VRankPreprepare{Block: block, View: view}))
+			mustNotPop(t, candidate.sub)
+		}
+	})
+
+	t.Run("a matching just-committed block remains valid", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		proposer := newCN(t, withValset(valset), withRandao(randao), withGenesis())
+		candidate := newCN(t, withValset(valset), withRandao(randao), withHeaders(map[uint64]*types.Header{
+			1: makeHeaderWithRound(1, 1),
+		}))
+		committed := types.NewBlockWithHeader(candidate.VRankModule.Chain.CurrentBlock().Header())
+		view := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(1)}
+		msg := &vrank.VRankPreprepare{
+			Block: committed,
+			View:  view,
+			Sig:   signVRankPreprepare(t, proposer.VRankModule, proposer.Key, 1, 1, committed.Hash()),
+		}
+
+		valset.EXPECT().GetProposer(uint64(1), uint64(1)).Return(proposer.Addr, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+
+		require.NoError(t, candidate.VRankModule.HandleVRankPreprepare(msg))
+		req := mustPop(t, candidate.sub)
+		assert.Equal(t, committed.Hash(), req.Msg.(*vrank.VRankCandidate).BlockHash)
+	})
+
+	t.Run("a committed block from another round is ignored", func(t *testing.T) {
+		head := makeHeaderWithRound(1, 1)
+		candidate := newCN(t, withHeaders(map[uint64]*types.Header{1: head}))
+		block := types.NewBlockWithHeader(head)
+		require.NoError(t, candidate.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{
+			Block: block,
+			View:  &bft.View{Sequence: big.NewInt(1), Round: common.Big0},
+		}))
+		mustNotPop(t, candidate.sub)
+	})
+
+	t.Run("a block committed during authentication remains valid", func(t *testing.T) {
+		genesis := makeHeaderWithRound(0, 0)
+		headers := map[uint64]*types.Header{0: genesis}
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		proposer := newCN(t, withValset(valset), withRandao(randao), withGenesis())
+		candidate := newCN(t, withValset(valset), withRandao(randao), withHeaders(headers))
+		header := makeHeaderWithRound(1, 0)
+		header.ParentHash = genesis.Hash()
+		block := types.NewBlockWithHeader(header)
+		msg := &vrank.VRankPreprepare{
+			Block: block,
+			View:  view1_0,
+			Sig:   signVRankPreprepare(t, proposer.VRankModule, proposer.Key, 1, 0, block.Hash()),
+		}
+
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).DoAndReturn(func(uint64, uint64) (common.Address, error) {
+			headers[1] = header
+			return proposer.Addr, nil
+		}).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+
+		require.NoError(t, candidate.VRankModule.HandleVRankPreprepare(msg))
+		req := mustPop(t, candidate.sub)
+		assert.Equal(t, block.Hash(), req.Msg.(*vrank.VRankCandidate).BlockHash)
 	})
 
 	t.Run("validators should not broadcast", func(t *testing.T) {

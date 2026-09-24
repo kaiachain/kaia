@@ -41,6 +41,7 @@ import (
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	mocks2 "github.com/kaiachain/kaia/node/cn/mocks"
 	"github.com/kaiachain/kaia/params"
@@ -962,6 +963,20 @@ func TestHandleBidMsgFromNonCNPeer(t *testing.T) {
 			assert.Equal(t, tc.wantErr, err != nil, "err: %v", err)
 		})
 	}
+}
+
+func TestHandleVRankPreprepareRejectsNonCN(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peer := NewMockPeer(mockCtrl)
+	peer.EXPECT().GetVersion().Return(kaia68).AnyTimes()
+	peer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+
+	msg := generateMsg(t, VRankPreprepareMsg, &vrank.VRankPreprepare{})
+	err := (&ProtocolManager{}).handleMsg(peer, common.Address{}, msg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errCode(ErrInvalidMsgCode).String())
 }
 
 func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
