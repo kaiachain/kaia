@@ -113,6 +113,77 @@ func TestEmptyTrieSync(t *testing.T) {
 	}
 }
 
+func TestTrieSyncExistCacheSeparatesNodesAndCode(t *testing.T) {
+	hash := common.HexToHash("0x01")
+
+	tests := []struct {
+		name        string
+		populate    func(*TrieSync)
+		schedule    func(*TrieSync)
+		wantPending int
+	}{
+		{
+			name: "code does not hide node",
+			populate: func(sync *TrieSync) {
+				sync.membatch.codes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddSubTrie(hash, nil, 0, common.Hash{}, nil)
+			},
+			wantPending: 1,
+		},
+		{
+			name: "node does not hide code",
+			populate: func(sync *TrieSync) {
+				sync.membatch.nodes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddCodeEntry(hash, nil, 0, common.Hash{})
+			},
+			wantPending: 1,
+		},
+		{
+			name: "cached node is not scheduled again",
+			populate: func(sync *TrieSync) {
+				sync.membatch.nodes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddSubTrie(hash, nil, 0, common.Hash{}, nil)
+			},
+			wantPending: 0,
+		},
+		{
+			name: "cached code is not scheduled again",
+			populate: func(sync *TrieSync) {
+				sync.membatch.codes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddCodeEntry(hash, nil, 0, common.Hash{})
+			},
+			wantPending: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dbm := database.NewMemoryDBManager()
+			cache, err := lru.New(10)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sync := NewTrieSync(types.EmptyRootHash, dbm, nil, nil, cache)
+			test.populate(sync)
+			if _, err := sync.Commit(dbm.GetMemDB().NewBatch()); err != nil {
+				t.Fatal(err)
+			}
+			test.schedule(sync)
+			if sync.Pending() != test.wantPending {
+				t.Fatalf("pending requests = %d, want %d", sync.Pending(), test.wantPending)
+			}
+		})
+	}
+}
+
 // Tests that given a root hash, a trie can sync iteratively on a single thread,
 // requesting retrieval tasks and returning all of them in one go.
 func TestIterativeSyncIndividual(t *testing.T)       { testIterativeTrieSync(t, 1, false) }

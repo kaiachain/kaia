@@ -128,6 +128,34 @@ func (batch *syncMemBatch) hasCode(hash common.Hash) bool {
 	return ok
 }
 
+type (
+	syncNodeExistKey common.Hash
+	syncCodeExistKey common.Hash
+)
+
+// syncExistCache keeps node and code cache keys separate.
+type syncExistCache struct {
+	cache *lru.Cache
+}
+
+func (c *syncExistCache) hasNode(hash common.Hash) bool {
+	_, ok := c.cache.Get(syncNodeExistKey(hash))
+	return ok
+}
+
+func (c *syncExistCache) hasCode(hash common.Hash) bool {
+	_, ok := c.cache.Get(syncCodeExistKey(hash))
+	return ok
+}
+
+func (c *syncExistCache) addNode(hash common.Hash) {
+	c.cache.Add(syncNodeExistKey(hash), nil)
+}
+
+func (c *syncExistCache) addCode(hash common.Hash) {
+	c.cache.Add(syncCodeExistKey(hash), nil)
+}
+
 type StateTrieReadDB interface {
 	ReadTrieNode(hash common.ExtHash) ([]byte, error)
 	HasTrieNode(hash common.ExtHash) (bool, error)
@@ -147,7 +175,7 @@ type TrieSync struct {
 	retrievedByDepth map[int]int              // Retrieved trie node number counted by depth
 	committedByDepth map[int]int              // Committed trie nodes number counted by depth
 	bloom            *SyncBloom               // Bloom filter for fast state existence checks
-	exist            *lru.Cache               // exist to check if the trie node is already written or not
+	exist            *syncExistCache          // Cache of nodes and code already written during migration
 }
 
 // NewTrieSync creates a new trie data download scheduler.
@@ -163,7 +191,9 @@ func NewTrieSync(root common.Hash, database StateTrieReadDB, callback LeafCallba
 		retrievedByDepth: make(map[int]int),
 		committedByDepth: make(map[int]int),
 		bloom:            bloom,
-		exist:            lruCache,
+	}
+	if lruCache != nil {
+		ts.exist = &syncExistCache{cache: lruCache}
 	}
 	ts.AddSubTrie(root, nil, 0, common.Hash{}, callback)
 	return ts
@@ -179,7 +209,7 @@ func (s *TrieSync) AddSubTrie(root common.Hash, path []byte, depth int, parent c
 		return
 	}
 	if s.exist != nil {
-		if _, ok := s.exist.Get(root); ok {
+		if s.exist.hasNode(root) {
 			// already written in migration, skip the node
 			return
 		}
@@ -225,7 +255,7 @@ func (s *TrieSync) AddCodeEntry(hash common.Hash, path []byte, depth int, parent
 		return
 	}
 	if s.exist != nil {
-		if _, ok := s.exist.Get(hash); ok {
+		if s.exist.hasCode(hash) {
 			// already written in migration, skip the node
 			return
 		}
@@ -356,7 +386,7 @@ func (s *TrieSync) Commit(dbw database.Batch) (int, error) {
 			s.bloom.Add(key[:])
 		}
 		if s.exist != nil {
-			s.exist.Add(key, nil)
+			s.exist.addNode(key)
 		}
 		written += 1
 	}
@@ -368,7 +398,7 @@ func (s *TrieSync) Commit(dbw database.Batch) (int, error) {
 			s.bloom.Add(key[:])
 		}
 		if s.exist != nil {
-			s.exist.Add(key, nil)
+			s.exist.addCode(key)
 		}
 		written += 1
 	}
@@ -475,7 +505,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 				continue
 			}
 			if s.exist != nil {
-				if _, ok := s.exist.Get(hash); ok {
+				if s.exist.hasNode(hash) {
 					// already written in migration, skip the node
 					continue
 				}
