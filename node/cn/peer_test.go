@@ -135,6 +135,26 @@ func TestBasePeer_ReSendTransactions(t *testing.T) {
 	assert.Equal(t, sendTxBinary, receivedTxBinary)
 }
 
+func TestSendTransactionBatches(t *testing.T) {
+	tests := []struct {
+		count int
+		want  []int
+	}{
+		{0, []int{0}},
+		{maxTxMsgItems, []int{maxTxMsgItems}},
+		{maxTxMsgItems + 1, []int{maxTxMsgItems, 1}},
+	}
+	for _, test := range tests {
+		var got []int
+		err := sendTransactionBatches(make(types.Transactions, test.count), func(batch types.Transactions) error {
+			got = append(got, len(batch))
+			return nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, test.want, got)
+	}
+}
+
 func TestBasePeer_AsyncSendTransactions(t *testing.T) {
 	sentTxs := types.Transactions{tx1}
 	lastTxs := types.Transactions{types.NewTransaction(333, addrs[0], big.NewInt(333), 333, big.NewInt(333), addrs[0][:])}

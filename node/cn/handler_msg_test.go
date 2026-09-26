@@ -348,6 +348,37 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 }
 
+func TestHandleTxMsg_ItemLimit(t *testing.T) {
+	txs := make(types.Transactions, maxTxMsgItems+1)
+	for i := range txs {
+		txs[i] = tx1
+	}
+
+	t.Run("at limit", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+
+		pm := &ProtocolManager{}
+		pm.acceptTxs.Store(1)
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().HandleTxMsg(gomock.Len(maxTxMsgItems)).Times(1)
+		pm.txpool = mockTxPool
+
+		peer := NewMockPeer(mockCtrl)
+		peer.EXPECT().AddToKnownTxs(gomock.Any()).Times(maxTxMsgItems)
+
+		require.NoError(t, handleTxMsg(pm, peer, generateMsg(t, TxMsg, txs[:maxTxMsgItems])))
+	})
+
+	t.Run("over limit", func(t *testing.T) {
+		pm := &ProtocolManager{}
+		pm.acceptTxs.Store(1)
+
+		err := handleTxMsg(pm, nil, generateMsg(t, TxMsg, txs))
+		require.ErrorContains(t, err, "Too many items")
+	})
+}
+
 // prepareBlobTxMsg returns a protocol manager, a peer and a signed blob transaction
 // with a valid v1 sidecar. Callers corrupt the sidecar via blobTx.BlobTxSidecar().
 func prepareBlobTxMsg(t *testing.T, mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *types.Transaction) {
