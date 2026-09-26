@@ -17,6 +17,7 @@
 package system
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
@@ -35,11 +36,20 @@ import (
 
 // makeTestPermissionlessConfig creates an AllocPermissionlessConfig with n validators.
 func makeTestPermissionlessConfig(n int) *AllocPermissionlessConfig {
+	config, _ := makeTestPermissionlessConfigWithKeys(n)
+	return config
+}
+
+// makeTestPermissionlessConfigWithKeys is makeTestPermissionlessConfig that also returns
+// each validator's node key, for tests that must sign as a node's manager.
+func makeTestPermissionlessConfigWithKeys(n int) (*AllocPermissionlessConfig, []*ecdsa.PrivateKey) {
 	ownerKey, _ := crypto.GenerateKey()
+	keys := make([]*ecdsa.PrivateKey, n)
 	specs := make([]ABv2NodeSpec, n)
 	for i := range specs {
 		key, _ := crypto.GenerateKey()
 		blsKey, _ := bls.DeriveFromECDSA(key)
+		keys[i] = key
 		specs[i] = ABv2NodeSpec{
 			NodeID: crypto.PubkeyToAddress(key.PublicKey),
 			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
@@ -48,7 +58,7 @@ func makeTestPermissionlessConfig(n int) *AllocPermissionlessConfig {
 			},
 		}
 	}
-	return MakeABv2AllocConfig(crypto.PubkeyToAddress(ownerKey.PublicKey), specs)
+	return MakeABv2AllocConfig(crypto.PubkeyToAddress(ownerKey.PublicKey), specs), keys
 }
 
 // verifyPermissionlessAlloc checks alloc-level properties and ABv2 contract state.

@@ -107,7 +107,7 @@ func TestABv2SnapshotTransitionParam(t *testing.T) {
 func TestSignCreateNodeProof_AcceptedByAddressBookV2(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	config, keys := MakeTestPermissionlessConfig(2)
+	config, keys := makeTestPermissionlessConfigWithKeys(2)
 	// deleteNode only accepts Registered; node 0 stays active.
 	config.NodeInfos[1].State = valset.Registered.ToUint8()
 	alloc, err := AllocPermissionless(config)
