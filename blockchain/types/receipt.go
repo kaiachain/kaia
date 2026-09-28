@@ -81,7 +81,8 @@ const (
 	ReceiptStatusErrDeprecated                           = uint(0x1c)
 	ReceiptStatusErrNotSupported                         = uint(0x1d)
 	ReceiptStatusErrInvalidCodeFormat                    = uint(0x1e)
-	ReceiptStatusLast                                    = uint(0x1f) // Last value which is not an actual ReceiptStatus
+	ReceiptStatusErrZeroThreshold                        = uint(0x1f)
+	ReceiptStatusLast                                    = uint(0x20) // Last value which is not an actual ReceiptStatus
 //	ReceiptStatusErrInvalidJumpDestination   // TODO-Klaytn-Issue615
 //	ReceiptStatusErrInvalidOpcode            // Default case, because no static message available
 //	ReceiptStatusErrStackUnderflow           // Default case, because no static message available
