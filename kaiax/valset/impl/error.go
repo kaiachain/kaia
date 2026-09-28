@@ -26,7 +26,6 @@ var (
 	errInvalidProposerPolicy  = errors.New("invalid proposer policy")
 	errNoNextDistinctProposer = errors.New("cannot determine next distinct proposer")
 	errNoHeader               = errors.New("no header found")
-	errNoBlock                = errors.New("no block found")
 	errNoLowestScannedNum     = errors.New("no lowest scanned validator vote num")
 	errNoVoteBlockNums        = errors.New("no validator vote block nums")
 	errMismatchedValidators   = errors.New("header extra validators do not match qualified validators")
@@ -34,17 +33,8 @@ var (
 	errVRankModuleNotSet      = errors.New("VRankModule is not set")
 
 	// rpc related errors
-	errPendingNotAllowed       = errors.New("pending is not allowed")
-	errInternalError           = errors.New("internal error")
-	errStartNotPositive        = errors.New("start block number should be positive")
-	errEndLargerThanLatest     = errors.New("end block number should be smaller than the latest block number")
-	errStartLargerThanEnd      = errors.New("start should be smaller than end")
-	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
-	errRangeNil                = errors.New("range values should not be nil")
-	errNoBlockNumber           = errors.New("block number is not assigned")
-	errUnknownBlock            = errors.New("unknown block")
-	errUnknownProposer         = errors.New("unknown proposer")
-	errNoChainReader           = errors.New("sb.chain is nil! --mine option might be missing")
+	errPendingNotAllowed = errors.New("pending is not allowed")
+	errUnknownBlock      = errors.New("unknown block")
 )
 
 func ErrNoIstanbulSnapshot(num uint64) error {
