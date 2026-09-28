@@ -1500,6 +1500,155 @@ func testHighTDStarvationAttack(t *testing.T, protocol int, mode SyncMode) {
 	}
 }
 
+func runDeliveryErrorFetcher(d *Downloader, deliveryCh chan dataPack, deliver func(dataPack) (int, error), setIdle func(*peerConnection, int, time.Time)) error {
+	return d.fetchParts(
+		deliveryCh,
+		deliver,
+		make(chan bool),
+		func() map[string]int { return nil },
+		func() int { return 0 },
+		func() bool { return false },
+		func(*peerConnection, int) (*fetchRequest, bool, bool) { return nil, false, false },
+		nil,
+		func(*peerConnection, *fetchRequest) error { return nil },
+		func(*fetchRequest) {},
+		func(*peerConnection) int { return 1 },
+		func() ([]*peerConnection, int) { return nil, d.peers.Len() },
+		setIdle,
+		"bodies",
+	)
+}
+
+func newDeliveryErrorDownloader(t *testing.T, master string, dropPeer peerDropFn) *Downloader {
+	t.Helper()
+
+	d := &Downloader{
+		peers:      newPeerSet(),
+		dropPeer:   dropPeer,
+		cancelCh:   make(chan struct{}),
+		cancelPeer: master,
+	}
+	for _, id := range []string{master, "helper"} {
+		if err := d.peers.Register(newPeerConnection(id, 68, nil, logger.NewWith("peer", id))); err != nil {
+			t.Fatalf("failed to register peer %s: %v", id, err)
+		}
+	}
+	return d
+}
+
+func TestFetchPartsHandlesInvalidBodyPeer(t *testing.T) {
+	deliveryErr := fmt.Errorf("partial failure: %w", errInvalidBody)
+
+	t.Run("helper", func(t *testing.T) {
+		dropped := make(chan string, 1)
+		var d *Downloader
+		d = newDeliveryErrorDownloader(t, "master", func(id string) {
+			dropped <- id
+			_ = d.peers.Unregister(id)
+		})
+		deliveryCh := make(chan dataPack, 1)
+		deliveryCh <- &bodyPack{peerId: "helper"}
+
+		result := make(chan error, 1)
+		go func() {
+			result <- runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+				return 0, deliveryErr
+			}, func(*peerConnection, int, time.Time) {
+				t.Error("dropped delivery peer must not be returned to idle")
+			})
+		}()
+
+		select {
+		case id := <-dropped:
+			if id != "helper" {
+				t.Fatalf("expected helper to be dropped, got %s", id)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("delivery peer was not dropped")
+		}
+		close(d.cancelCh)
+		if err := <-result; !errors.Is(err, errCanceled) {
+			t.Fatalf("expected fetcher cancellation, got %v", err)
+		}
+	})
+
+	t.Run("master", func(t *testing.T) {
+		d := newDeliveryErrorDownloader(t, "master", func(id string) {
+			t.Errorf("master must be dropped by Synchronise, not fetchParts: %s", id)
+		})
+		deliveryCh := make(chan dataPack, 1)
+		deliveryCh <- &bodyPack{peerId: "master"}
+
+		err := runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+			return 0, deliveryErr
+		}, func(*peerConnection, int, time.Time) {
+			t.Error("master delivery peer must not be returned to idle")
+		})
+		if !errors.Is(err, errInvalidBody) {
+			t.Fatalf("expected %v, got %v", errInvalidBody, err)
+		}
+	})
+}
+
+func TestFetchPartsIdlesPeerAfterPartialStaleDelivery(t *testing.T) {
+	d := newDeliveryErrorDownloader(t, "master", nil)
+	deliveryCh := make(chan dataPack, 1)
+	deliveryCh <- &bodyPack{peerId: "helper"}
+
+	type idleResult struct {
+		id       string
+		accepted int
+	}
+	idled := make(chan idleResult, 1)
+	result := make(chan error, 1)
+	go func() {
+		result <- runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+			return 1, fmt.Errorf("partial failure: %w", errStaleDelivery)
+		}, func(peer *peerConnection, accepted int, _ time.Time) {
+			idled <- idleResult{peer.id, accepted}
+		})
+	}()
+
+	select {
+	case got := <-idled:
+		if got.id != "helper" || got.accepted != 1 {
+			t.Fatalf("unexpected idle result: %+v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("peer was not returned to idle after partial stale delivery")
+	}
+	close(d.cancelCh)
+	if err := <-result; !errors.Is(err, errCanceled) {
+		t.Fatalf("expected fetcher cancellation, got %v", err)
+	}
+}
+
+func TestFetchPartsIgnoresLateDelivery(t *testing.T) {
+	var drops, idles, deliveries int
+	d := newDeliveryErrorDownloader(t, "master", func(string) { drops++ })
+	deliveryCh := make(chan dataPack, 2)
+	deliveryCh <- &bodyPack{peerId: "helper"}
+	deliveryCh <- &bodyPack{peerId: "helper"}
+
+	err := runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+		deliveries++
+		if deliveries == 1 {
+			return 0, errLateDelivery
+		}
+		return 0, errInvalidChain
+	}, func(*peerConnection, int, time.Time) { idles++ })
+
+	if !errors.Is(err, errInvalidChain) {
+		t.Fatalf("expected second delivery to stop the fetcher, got %v", err)
+	}
+	if deliveries != 2 {
+		t.Fatalf("late delivery stopped the fetcher after %d deliveries", deliveries)
+	}
+	if drops != 0 || idles != 0 {
+		t.Fatalf("late delivery changed peer state: drops=%d idles=%d", drops, idles)
+	}
+}
+
 // Tests that misbehaving peers are disconnected, whilst behaving ones are not.
 func TestBlockHeaderAttackerDropping62(t *testing.T) { testBlockHeaderAttackerDropping(t, 62) }
 func TestBlockHeaderAttackerDropping63(t *testing.T) { testBlockHeaderAttackerDropping(t, 63) }
@@ -1514,18 +1663,20 @@ func testBlockHeaderAttackerDropping(t *testing.T, protocol int) {
 		result error
 		drop   bool
 	}{
-		{nil, false},                        // Sync succeeded, all is well
-		{errBusy, false},                    // Sync is already in progress, no problem
-		{errUnknownPeer, false},             // Peer is unknown, was already dropped, don't double drop
-		{errBadPeer, true},                  // Peer was deemed bad for some reason, drop it
-		{errStallingPeer, true},             // Peer was detected to be stalling, drop it
-		{errNoPeers, false},                 // No peers to download from, soft race, no issue
-		{errTimeout, true},                  // No hashes received in due time, drop the peer
-		{errEmptyHeaderSet, true},           // No headers were returned as a response, drop as it's a dead end
-		{errPeersUnavailable, true},         // Nobody had the advertised blocks, drop the advertiser
-		{errInvalidAncestor, true},          // Agreed upon ancestor is not acceptable, drop the chain rewriter
-		{errInvalidChain, true},             // Hash chain was detected as invalid, definitely drop
-		{errInvalidBody, false},             // A bad peer was detected, but not the sync origin
+		{nil, false},                // Sync succeeded, all is well
+		{errBusy, false},            // Sync is already in progress, no problem
+		{errUnknownPeer, false},     // Peer is unknown, was already dropped, don't double drop
+		{errBadPeer, true},          // Peer was deemed bad for some reason, drop it
+		{errStallingPeer, true},     // Peer was detected to be stalling, drop it
+		{errNoPeers, false},         // No peers to download from, soft race, no issue
+		{errTimeout, true},          // No hashes received in due time, drop the peer
+		{errEmptyHeaderSet, true},   // No headers were returned as a response, drop as it's a dead end
+		{errPeersUnavailable, true}, // Nobody had the advertised blocks, drop the advertiser
+		{errInvalidAncestor, true},  // Agreed upon ancestor is not acceptable, drop the chain rewriter
+		{errInvalidChain, true},     // Hash chain was detected as invalid, definitely drop
+		{errInvalidBody, true},      // Invalid body delivered by the sync origin
+		{fmt.Errorf("wrapped: %w", errInvalidChain), true},
+		{fmt.Errorf("wrapped: %w", errInvalidBody), true},
 		{errInvalidReceipt, false},          // A bad peer was detected, but not the sync origin
 		{errCancelContentProcessing, false}, // Synchronisation was canceled, origin may be innocent, don't drop
 	}

@@ -358,25 +358,14 @@ func (d *Downloader) GetSnapSyncer() *snap.Syncer {
 // adding various sanity checks as well as wrapping it with various logger entries.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	err := d.synchronise(id, head, td, mode)
-	switch err {
-	case nil, errBusy, errCanceled:
+	switch {
+	case err == nil, err == errBusy, err == errCanceled:
 		return err
-	}
 
-	if errors.Is(err, errInvalidChain) {
-		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
-		if d.dropPeer == nil {
-			logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
-		} else {
-			d.dropPeer(id)
-		}
-		return err
-	}
-
-	switch err {
-	case errTimeout, errBadPeer, errStallingPeer,
-		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
-		errInvalidAncestor:
+	case errors.Is(err, errInvalidChain), errors.Is(err, errInvalidBody),
+		err == errTimeout, err == errBadPeer, err == errStallingPeer,
+		err == errEmptyHeaderSet, err == errPeersUnavailable, err == errTooOld,
+		err == errInvalidAncestor:
 		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
 		if d.dropPeer == nil {
 			logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
@@ -1336,30 +1325,48 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 			return errCanceled
 
 		case packet := <-deliveryCh:
+			pid := packet.PeerId()
+			peer := d.peers.Peer(pid)
+			if peer == nil {
+				// The peer may have been unregistered while this packet was queued.
+				// Ignore deliveries from peers no longer in the active peer set.
+				continue
+			}
 			deliveryTime := time.Now()
-			// If the peer was previously banned and failed to deliver its pack
-			// in a reasonable time frame, ignore its message.
-			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
-				// Deliver the received chunk of data and check chain validity
-				accepted, err := deliver(packet)
-				if errors.Is(err, errInvalidChain) {
+			// Deliver the received chunk of data and check chain validity
+			accepted, err := deliver(packet)
+			// Issue a log to the user to see what's going on
+			switch {
+			case err == nil && packet.Items() == 0:
+				peer.logger.Trace("Requested data not delivered", "type", kind)
+			case err == nil:
+				peer.logger.Trace("Delivered new batch of data", "type", kind, "count", packet.Stats())
+			default:
+				peer.logger.Trace("Failed to deliver retrieved data", "type", kind, "err", err)
+			}
+
+			switch {
+			case errors.Is(err, errLateDelivery):
+				// A newer request may already be in flight for this peer. Leave its
+				// state unchanged so the current response can still be delivered.
+
+			case errors.Is(err, errInvalidBody):
+				if pid == d.cancelPeer {
 					return err
 				}
-				// Unless a peer delivered something completely else than requested (usually
-				// caused by a timed out request which came through in the end), set it to
-				// idle. If the delivery's stale, the peer should have already been idled.
-				if !errors.Is(err, errStaleDelivery) {
-					setIdle(peer, accepted, deliveryTime)
+				peer.logger.Debug("Invalid data delivery, dropping peer", "type", kind, "err", err)
+				if d.dropPeer == nil {
+					logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", pid)
+					setIdle(peer, 0, deliveryTime)
+				} else {
+					d.dropPeer(pid)
 				}
-				// Issue a log to the user to see what's going on
-				switch {
-				case err == nil && packet.Items() == 0:
-					peer.logger.Trace("Requested data not delivered", "type", kind)
-				case err == nil:
-					peer.logger.Trace("Delivered new batch of data", "type", kind, "count", packet.Stats())
-				default:
-					peer.logger.Trace("Failed to deliver retrieved data", "type", kind, "err", err)
-				}
+
+			case errors.Is(err, errInvalidChain):
+				return err
+
+			default:
+				setIdle(peer, accepted, deliveryTime)
 			}
 			// Blocks assembled, try to update the progress
 			select {

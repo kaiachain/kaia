@@ -114,6 +114,201 @@ func dummyPeer(id string) *peerConnection {
 	return p
 }
 
+func newBodyDeliveryQueue(t *testing.T, id string) (*queue, *peerConnection, *fetchRequest) {
+	t.Helper()
+
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), params.TestChainConfig)
+	q.Prepare(1, FullSync)
+	q.Schedule(chain.headers()[:6], 1)
+
+	peer := dummyPeer(id)
+	request, _, _ := q.ReserveBodies(peer, 2)
+	if request == nil || len(request.Headers) != 2 {
+		t.Fatalf("expected two body requests, got %#v", request)
+	}
+	return q, peer, request
+}
+
+func bodyTransactions(request *fetchRequest) [][]*types.Transaction {
+	bodies := make([][]*types.Transaction, len(request.Headers))
+	for i, header := range request.Headers {
+		bodies[i] = chain.blocks[header.Number.Uint64()-1].Transactions()
+	}
+	return bodies
+}
+
+func TestDeliverBodiesRejectsInvalidDelivery(t *testing.T) {
+	q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+	pending := q.PendingBlocks()
+
+	first := request.Headers[0].Number.Uint64()
+	validPrefix := chain.blocks[first-1].Transactions()
+	accepted, err := q.DeliverBodies(peer.id, [][]*types.Transaction{validPrefix, nil})
+
+	if accepted != 1 {
+		t.Fatalf("expected one accepted body, got %d", accepted)
+	}
+	if !errors.Is(err, errInvalidBody) {
+		t.Fatalf("expected %v, got %v", errInvalidBody, err)
+	}
+	if got, want := q.PendingBlocks(), pending+1; got != want {
+		t.Fatalf("expected %d pending bodies after rejection, got %d", want, got)
+	}
+}
+
+func TestDeliverBodiesPreservesInvalidBodyOverResultSlotError(t *testing.T) {
+	q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+
+	// Make result slot lookup fail after validation has already identified the
+	// invalid suffix.
+	q.resultCache.lock.Lock()
+	q.resultCache.items = nil
+	q.resultCache.lock.Unlock()
+
+	first := request.Headers[0].Number.Uint64()
+	validPrefix := chain.blocks[first-1].Transactions()
+	accepted, err := q.DeliverBodies(peer.id, [][]*types.Transaction{validPrefix, nil})
+
+	if accepted != 1 {
+		t.Fatalf("expected one accepted body, got %d", accepted)
+	}
+	if !errors.Is(err, errInvalidBody) {
+		t.Fatalf("expected %v, got %v", errInvalidBody, err)
+	}
+	if errors.Is(err, errStaleDelivery) {
+		t.Fatalf("stale slot error replaced invalid body error: %v", err)
+	}
+}
+
+func TestDeliverBodiesEmptyResponseMarksBodiesLacking(t *testing.T) {
+	q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+	pending := q.PendingBlocks()
+
+	accepted, err := q.DeliverBodies(peer.id, nil)
+	if accepted != 0 || err != nil {
+		t.Fatalf("expected empty response to be accepted as missing, got accepted=%d err=%v", accepted, err)
+	}
+	if got, want := q.PendingBlocks(), pending+len(request.Headers); got != want {
+		t.Fatalf("expected %d pending bodies after empty response, got %d", want, got)
+	}
+	for _, header := range request.Headers {
+		if !peer.Lacks(header.Hash()) {
+			t.Fatalf("expected peer to be marked lacking body %s", header.Hash())
+		}
+	}
+}
+
+func TestDeliverBodiesIdentifiesLateResponse(t *testing.T) {
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), params.TestChainConfig)
+	q.Prepare(1, FullSync)
+	q.Schedule(chain.headers()[:12], 1)
+
+	peer := dummyPeer("peer-1")
+	expired, _, _ := q.ReserveBodies(peer, 2)
+	if expired == nil || len(expired.Headers) != 2 {
+		t.Fatalf("expected two body requests, got %#v", expired)
+	}
+	expired.Time = time.Now().Add(-time.Hour)
+	if got := q.ExpireBodies(time.Second)[peer.id]; got != len(expired.Headers) {
+		t.Fatalf("expected %d expired bodies, got %d", len(expired.Headers), got)
+	}
+
+	// Assign the expired work elsewhere, then give the original peer a newer
+	// request. The late response must not consume that newer request.
+	other := dummyPeer("peer-2")
+	if request, _, _ := q.ReserveBodies(other, 2); request == nil {
+		t.Fatal("expected expired bodies to be reassigned")
+	}
+	current, _, _ := q.ReserveBodies(peer, 2)
+	if current == nil || len(current.Headers) != 2 {
+		t.Fatalf("expected a newer body request, got %#v", current)
+	}
+
+	if accepted, err := q.DeliverBodies(peer.id, bodyTransactions(expired)); accepted != 0 || !errors.Is(err, errLateDelivery) {
+		t.Fatalf("expected late delivery, got accepted=%d err=%v", accepted, err)
+	}
+	if q.blockPendPool[peer.id] != current {
+		t.Fatal("late delivery consumed the current request")
+	}
+	if accepted, err := q.DeliverBodies(peer.id, bodyTransactions(current)); accepted != len(current.Headers) || err != nil {
+		t.Fatalf("current delivery failed: accepted=%d err=%v", accepted, err)
+	}
+}
+
+func TestDeliverBodiesPrefersCurrentResponse(t *testing.T) {
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), params.TestChainConfig)
+	q.Prepare(1, FullSync)
+	q.Schedule(chain.headers()[:12], 1)
+
+	peer := dummyPeer("peer-1")
+	expired, _, _ := q.ReserveBodies(peer, 2)
+	if expired == nil {
+		t.Fatal("expected an expiring body request")
+	}
+	expired.Time = time.Now().Add(-time.Hour)
+	q.ExpireBodies(time.Second)
+
+	other := dummyPeer("peer-2")
+	q.ReserveBodies(other, 2)
+	current, _, _ := q.ReserveBodies(peer, 2)
+	if current == nil {
+		t.Fatal("expected a current body request")
+	}
+
+	if accepted, err := q.DeliverBodies(peer.id, bodyTransactions(current)); accepted != len(current.Headers) || err != nil {
+		t.Fatalf("current delivery failed: accepted=%d err=%v", accepted, err)
+	}
+	if len(q.blockExpired[peer.id]) != 1 {
+		t.Fatal("current delivery consumed expired request history")
+	}
+	if accepted, err := q.DeliverBodies(peer.id, bodyTransactions(expired)); accepted != 0 || !errors.Is(err, errLateDelivery) {
+		t.Fatalf("expected late delivery without a current request, got accepted=%d err=%v", accepted, err)
+	}
+}
+
+func TestDeliverBodiesRejectsInvalidWithExpiredHistory(t *testing.T) {
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), params.TestChainConfig)
+	q.Prepare(1, FullSync)
+	q.Schedule(chain.headers()[:12], 1)
+
+	peer := dummyPeer("peer-1")
+	expired, _, _ := q.ReserveBodies(peer, 2)
+	if expired == nil {
+		t.Fatal("expected an expiring body request")
+	}
+	expired.Time = time.Now().Add(-time.Hour)
+	q.ExpireBodies(time.Second)
+
+	q.ReserveBodies(dummyPeer("peer-2"), 2)
+	if current, _, _ := q.ReserveBodies(peer, 2); current == nil {
+		t.Fatal("expected a current body request")
+	}
+	if accepted, err := q.DeliverBodies(peer.id, [][]*types.Transaction{nil}); accepted != 0 || !errors.Is(err, errInvalidBody) {
+		t.Fatalf("expected invalid body, got accepted=%d err=%v", accepted, err)
+	}
+}
+
+func TestExpiredBodyRequestsAcrossResetAndRevoke(t *testing.T) {
+	t.Run("reset retains pending request", func(t *testing.T) {
+		q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+		q.Reset(50, 50)
+
+		if accepted, err := q.DeliverBodies(peer.id, bodyTransactions(request)); accepted != 0 || !errors.Is(err, errLateDelivery) {
+			t.Fatalf("expected late delivery after reset, got accepted=%d err=%v", accepted, err)
+		}
+	})
+
+	t.Run("revoke clears history", func(t *testing.T) {
+		q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+		q.Reset(50, 50)
+		q.Revoke(peer.id)
+
+		if accepted, err := q.DeliverBodies(peer.id, bodyTransactions(request)); accepted != 0 || !errors.Is(err, errNoFetchesPending) {
+			t.Fatalf("expected unrequested delivery after revoke, got accepted=%d err=%v", accepted, err)
+		}
+	})
+}
+
 func TestBasics(t *testing.T) {
 	numOfBlocks := len(chain.blocks)
 	numOfReceipts := len(chain.blocks) / 2
