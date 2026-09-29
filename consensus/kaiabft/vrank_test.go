@@ -58,11 +58,13 @@ func TestDevParity_AcceptedPreprepareReachesVRank(t *testing.T) {
 	pp := &bft.Preprepare{View: &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(0)}, Proposal: block}
 	require.NoError(t, m.handlePreprepare(&bft.Message{Code: bft.MsgPreprepare, Msg: mustEncode(t, pp)}, proposer))
 
-	// The proposer accepts its own proposal without the self-loop.
+	// The proposer accepts its own proposal when it comes back through the
+	// self-loop (backend.broadcast posts every message to the local machine).
 	m2 := newTestMachine(b, 10, 1, nil, []common.Address{self, proposer})
 	m2.state = stateAcceptRequest
 	m2.proposer = self
-	m2.sendPreprepare(&bft.Request{Proposal: newEmptyBlock(10, parent.Hash())})
+	own := &bft.Preprepare{View: &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(1)}, Proposal: newEmptyBlock(10, parent.Hash())}
+	require.NoError(t, m2.handlePreprepare(&bft.Message{Code: bft.MsgPreprepare, Msg: mustEncode(t, own)}, self))
 
 	for _, want := range []int64{0, 1} {
 		select {
