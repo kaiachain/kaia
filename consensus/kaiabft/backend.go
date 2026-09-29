@@ -113,7 +113,7 @@ type backend struct {
 
 	// Core state machine
 	machine     *machine
-	coreStarted bool
+	coreStarted atomic.Bool
 	coreMu      sync.RWMutex
 
 	// Seal synchronization
@@ -161,7 +161,7 @@ func (b *backend) RegisterVRankModule(mVRank vrank.VRankModule) {
 func (b *backend) Start(chain consensus.ChainReader, executor consensus.Executor) error {
 	b.coreMu.Lock()
 	defer b.coreMu.Unlock()
-	if b.coreStarted {
+	if b.coreStarted.Load() {
 		return errStartedEngine
 	}
 
@@ -190,7 +190,7 @@ func (b *backend) Start(chain consensus.ChainReader, executor consensus.Executor
 		return err
 	}
 
-	b.coreStarted = true
+	b.coreStarted.Store(true)
 	return nil
 }
 
@@ -198,7 +198,7 @@ func (b *backend) Stop() error {
 	b.coreMu.Lock()
 	defer b.coreMu.Unlock()
 	b.signalPeerRegistrable()
-	if !b.coreStarted {
+	if !b.coreStarted.Load() {
 		return errStoppedEngine
 	}
 	b.sealMu.Lock()
@@ -210,7 +210,7 @@ func (b *backend) Stop() error {
 	b.machine.stop()
 	b.cancelSpeculativeExecution()
 	b.specWg.Wait()
-	b.coreStarted = false
+	b.coreStarted.Store(false)
 	return nil
 }
 
@@ -227,6 +227,12 @@ func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, sta
 
 		validators, err := b.valsetModule.GetQualifiedValidators(header.Number.Uint64())
 		if err != nil {
+			resultCh <- nil
+			return
+		}
+		// Only qualified validators produce a block. Others skip here instead
+		// of executing and then failing authorization at seal.
+		if !valset.NewAddressSet(validators).Contains(b.address) {
 			resultCh <- nil
 			return
 		}
@@ -304,20 +310,35 @@ func (b *backend) SubscribeNewSequence() *event.TypeMuxSubscription {
 // ---------------------------------------------------------------------------
 
 func (b *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
-	b.coreMu.Lock()
-	defer b.coreMu.Unlock()
-
 	if msg.Code != consensus.ConsensusMsgCode {
 		return false, nil
 	}
 
-	if !b.coreStarted {
-		return true, errStoppedEngine
+	ev, shouldPost, err := b.prepareMessageEvent(addr, msg)
+	if err != nil || !shouldPost {
+		return true, err
+	}
+
+	// Post outside coreMu and synchronously, as istanbul does: a stalled
+	// consumer then applies backpressure to this peer instead of piling up
+	// blocked goroutines, and cannot block Start or Stop.
+	return true, b.eventMux.Post(ev)
+}
+
+// prepareMessageEvent validates an incoming consensus envelope and records its
+// duplicate-cache state under coreMu. HandleMsg posts the event after coreMu
+// is released.
+func (b *backend) prepareMessageEvent(addr common.Address, msg p2p.Msg) (messageEvent, bool, error) {
+	b.coreMu.Lock()
+	defer b.coreMu.Unlock()
+
+	if !b.coreStarted.Load() {
+		return messageEvent{}, false, errStoppedEngine
 	}
 
 	var cmsg bft.ConsensusMsg
 	if err := msg.Decode(&cmsg); err != nil {
-		return true, errDecodeFailed
+		return messageEvent{}, false, errDecodeFailed
 	}
 	data := cmsg.Payload
 	hash := bft.RLPHash(data)
@@ -335,22 +356,21 @@ func (b *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 	// Deduplicate.
 	if _, ok := b.knownMessages.Get(hash); ok {
-		return true, nil
+		return messageEvent{}, false, nil
 	}
 	b.knownMessages.Add(hash, true)
 
-	go b.eventMux.Post(messageEvent{
+	return messageEvent{
 		Payload: data,
 		Hash:    cmsg.PrevHash,
-	})
-
-	return true, nil
+	}, true, nil
 }
 
 func (b *backend) NewChainHead() error {
-	b.coreMu.RLock()
-	defer b.coreMu.RUnlock()
-	if !b.coreStarted {
+	// Do not take coreMu here. NewChainHead runs on the worker loop, and a
+	// coreMu holder can block waiting on that loop (Start posts a new-sequence
+	// event the worker consumes), so locking risks a deadlock.
+	if !b.coreStarted.Load() {
 		return errStoppedEngine
 	}
 	go b.eventMux.Post(chainHeadEvent{})
@@ -380,11 +400,16 @@ func (b *backend) ValidatePeerType(addr common.Address) error {
 	if b.valsetModule == nil {
 		return errNoModule
 	}
-	council, err := b.valsetModule.GetCouncil(b.chain.CurrentHeader().Number.Uint64() + 1)
+	// Follow the CN peer allowlist, as istanbul does: after the permissionless
+	// fork it differs from the council. A nil list disables the filter.
+	cnPeers, err := b.valsetModule.GetCNPeers(b.chain.CurrentHeader().Number.Uint64() + 1)
 	if err != nil {
-		return err
+		return errInvalidPeer
 	}
-	if valset.NewAddressSet(council).Contains(addr) {
+	if cnPeers == nil {
+		return nil
+	}
+	if valset.NewAddressSet(cnPeers).Contains(addr) {
 		return nil
 	}
 	return errInvalidPeer
