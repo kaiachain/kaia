@@ -27,6 +27,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -47,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (
@@ -486,29 +488,61 @@ func (b *backend) verify(proposal bft.Proposal) (time.Duration, error) {
 	if b.chain.HasBadBlock(block.Hash()) {
 		return 0, blockchain.ErrBlacklistedHash
 	}
-	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
-	if txnHash != block.Header().TxHash {
-		return 0, errors.New("kaiabft: mismatch transaction hashes")
+	if err := b.verifyBody(block); err != nil {
+		return 0, err
 	}
-	for _, tx := range block.Transactions() {
-		if tx.Type() == types.TxTypeEthereumBlob {
-			sidecar := tx.BlobTxSidecar()
-			if sidecar == nil {
-				return 0, errors.New("kaiabft: no blob sidecar for blob tx")
-			}
-			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-				return 0, err
-			}
-		}
-	}
-	err := b.chain.ValidateHeader(block.Header())
-	if err == nil || err.Error() == "zero committed seals" {
+	// Verify the header of the proposed block. The proposal entry point skips the
+	// committed-seal rules by construction, so every other rule is enforced here and
+	// any failure rejects the proposal.
+	err := b.chain.ValidateProposalHeader(block.Header())
+	if err == nil {
 		return 0, nil
 	}
 	if err == consensus.ErrFutureBlock {
 		return time.Until(time.Unix(block.Header().Time.Int64(), 0)), consensus.ErrFutureBlock
 	}
 	return 0, err
+}
+
+// verifyBody mirrors BlockValidator.ValidateBody, as istanbul's Verify does, so a
+// bad proposal is rejected here instead of being PREPARE/COMMIT-ed and then refused
+// on the import path. It is cheap and stateless, so it can also run before
+// speculative execution.
+func (b *backend) verifyBody(block *types.Block) error {
+	// check EIP-7934 RLP-encoded block size cap
+	if b.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return blockchain.ErrBlockOversized
+	}
+	header := block.Header()
+	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
+	if txnHash != header.TxHash {
+		return errors.New("kaiabft: mismatch transaction hashes")
+	}
+	baseFee := header.BaseFee
+	var blobs int
+	for _, tx := range block.Transactions() {
+		if baseFee != nil && baseFee.Cmp(tx.GasPrice()) > 0 {
+			return fmt.Errorf("invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
+		}
+		blobs += len(tx.BlobHashes())
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sidecar := tx.BlobTxSidecar()
+			if sidecar == nil {
+				return errors.New("kaiabft: no blob sidecar for blob tx")
+			}
+			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+				return err
+			}
+		}
+	}
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want {
+			return fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
+		}
+	} else if blobs > 0 {
+		return errors.New("data blobs present in block body")
+	}
+	return nil
 }
 
 func (b *backend) commit(proposal bft.Proposal, seals [][]byte) error {
