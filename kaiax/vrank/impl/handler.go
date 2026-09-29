@@ -101,8 +101,14 @@ func (v *VRankModule) proposerOf(number uint64) (common.Address, uint64, error) 
 func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	block := msg.Block
 	view := msg.View
+	if !block.Number().IsUint64() {
+		return vrank.ErrViewMismatch
+	}
 	if !v.ChainConfig.IsPermissionlessForkEnabled(block.Number()) {
 		return nil
+	}
+	if !view.Sequence.IsUint64() || block.Number().Cmp(view.Sequence) != 0 {
+		return vrank.ErrViewMismatch
 	}
 	// Out-of-range rounds wrap to a valid proposer in GetProposer while truncating to a
 	// different uint8 round for the signed payload, the replay key and the response.
@@ -110,13 +116,19 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 		return vrank.ErrRoundOutOfRange
 	}
 	round := uint8(view.Round.Uint64())
-
+	if current, err := v.isCurrentVRankPreprepare(block, round); err != nil || !current {
+		return err
+	}
 	if v.isCandidate(block.NumberU64()) {
 		sender, err := v.recoverVRankPreprepareSender(msg, round)
 		if err != nil {
 			return err
 		}
 		if err := v.verifyVRankPreprepareSender(msg, round, sender); err != nil {
+			return err
+		}
+		// Import and VRank delivery are asynchronous. Recheck the canonical tip before replying.
+		if current, err := v.isCurrentVRankPreprepare(block, round); err != nil || !current {
 			return err
 		}
 		v.pruneSeenPreprepare(block.NumberU64())
@@ -149,6 +161,32 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 		}, sender)
 	}
 	return nil
+}
+
+// isCurrentVRankPreprepare accepts the next block and a matching just-committed block.
+func (v *VRankModule) isCurrentVRankPreprepare(block *types.Block, round uint8) (bool, error) {
+	head := v.Chain.CurrentBlock()
+	if head == nil || head.Number() == nil {
+		return false, nil
+	}
+
+	blockNum := block.NumberU64()
+	headNum := head.NumberU64()
+	switch {
+	case blockNum == headNum:
+		if blockNum == 0 || block.Hash() != head.Hash() {
+			return false, nil
+		}
+		committedRound, err := v.Sealer.Round(head.Header())
+		if err != nil {
+			return false, err
+		}
+		return round == committedRound, nil
+	case blockNum > headNum && blockNum-headNum == 1:
+		return block.ParentHash() == head.Hash(), nil
+	default:
+		return false, nil
+	}
 }
 
 // HandleVRankCandidate stores a VRankCandidate reply for a view this node proposed. Candidates
