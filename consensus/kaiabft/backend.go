@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -127,6 +128,7 @@ type backend struct {
 	// Kaiax modules
 	valsetModule valset.ValsetModule
 	govModule    gov.GovModule
+	vrankModule  vrank.VRankModule
 
 	// Peer registration gating
 	chainInitCh   chan struct{}
@@ -143,6 +145,10 @@ type backend struct {
 func (b *backend) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {
 	b.valsetModule = mValset
 	b.govModule = mGov
+}
+
+func (b *backend) RegisterVRankModule(mVRank vrank.VRankModule) {
+	b.vrankModule = mVRank
 }
 
 func (b *backend) Start(chain consensus.ChainReader, executor consensus.Executor) error {
@@ -200,7 +206,7 @@ func (b *backend) Stop() error {
 	return nil
 }
 
-func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*consensus.ExecutionResult)) <-chan *consensus.ExecutionResult {
+func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux) <-chan *consensus.ExecutionResult {
 	resultCh := make(chan *consensus.ExecutionResult, 1)
 
 	go func() {
@@ -243,9 +249,14 @@ func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, sta
 		result.FinalizeTime = time.Since(finalizeStart)
 		result.Block = block
 
-		if onPrepared != nil {
-			onPrepared(result)
-		}
+		// Log block preparation completion (all validators log this, before seal)
+		logger.Info("Prepared new block",
+			"number", result.Block.Number(),
+			"hash", result.Block.Hash(),
+			"txs", len(result.Txs),
+			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
+			"executeTime", common.PrettyDuration(result.ExecuteTime),
+			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
 
 		sealStart := time.Now()
 		sealedBlock, err := b.seal(block)
