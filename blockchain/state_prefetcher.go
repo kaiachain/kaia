@@ -52,7 +52,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, _
 		if interrupt != nil && atomic.LoadUint32(interrupt) == 1 {
 			return
 		}
-		prefetchTxState(stateDB, signer, tx, blockNumber)
+		prefetchTxState(stateDB, signer, copyTxForPrefetch(tx), blockNumber)
 	}
 }
 
