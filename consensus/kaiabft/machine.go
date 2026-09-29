@@ -1053,15 +1053,15 @@ func (m *machine) checkMessage(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
 		return bft.ErrInvalidMessage
 	}
+	// The round is consumed as a uint64 (round-change buckets, backlog
+	// priority, proposer lookup); reject out-of-range values for every message
+	// code, as istanbul's checkMessage does.
+	if !view.Round.IsUint64() {
+		return bft.ErrInvalidMessage
+	}
 	cv := m.currentView()
 
 	if msgCode == bft.MsgRoundChange {
-		// Round-change buckets are keyed by uint64 round in roundChangeSets;
-		// reject out-of-range rounds early to avoid truncation collisions and to
-		// match istanbul's checkMessage (mixed-engine wire compatibility).
-		if !view.Round.IsUint64() {
-			return bft.ErrInvalidMessage
-		}
 		if view.Sequence.Cmp(cv.Sequence) > 0 {
 			return errFutureMessage
 		}
