@@ -133,6 +133,11 @@ type backend struct {
 	govModule    gov.GovModule
 	vrankModule  vrank.VRankModule
 
+	// VRank relay of accepted PRE-PREPAREs (see vrank.go).
+	prepreparedSub    *event.TypeMuxSubscription
+	prepreparedStopCh chan struct{}
+	prepreparedWg     sync.WaitGroup
+
 	// Peer registration gating
 	chainInitCh   chan struct{}
 	chainInitOnce sync.Once
@@ -185,8 +190,10 @@ func (b *backend) Start(chain consensus.ChainReader, executor consensus.Executor
 		b.specCache = bc.SpeculativeCache()
 	}
 
+	b.startPrepreparedRelay()
 	b.machine = newMachine(b)
 	if err := b.machine.start(); err != nil {
+		b.stopPrepreparedRelay()
 		return err
 	}
 
@@ -207,6 +214,7 @@ func (b *backend) Stop() error {
 		b.commitCh = nil
 	}
 	b.sealMu.Unlock()
+	b.stopPrepreparedRelay()
 	b.machine.stop()
 	b.cancelSpeculativeExecution()
 	b.specWg.Wait()
