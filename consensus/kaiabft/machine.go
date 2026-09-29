@@ -54,6 +54,9 @@ var (
 	errNotFromCommittee     = errors.New("message does not come from committee")
 	errInconsistentSubject  = errors.New("inconsistent subjects")
 	errInvalidCommittedSeal = errors.New("invalid committed seal")
+	errRoundChangeTooFar    = errors.New("round change is too far in the future")
+	errRoundChangeLimit     = errors.New("round change message limit reached")
+	errMessageTooLarge      = errors.New("message is too large")
 	errUnauthorizedAddress  = errors.New("unauthorized address")
 	errIgnored              = errors.New("ignored")
 )
@@ -93,8 +96,10 @@ type machine struct {
 	waitingForRoundChange bool
 
 	// Backlog
-	backlogs   map[common.Address]*prque.Prque
-	backlogsMu sync.Mutex
+	backlogs           map[common.Address]*prque.Prque
+	backlogCounts      map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
+	backlogPreprepares map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
+	backlogsMu         sync.Mutex
 
 	// Round change
 	roundChangeSets map[uint64]*messageSet
@@ -114,10 +119,12 @@ type machine struct {
 
 func newMachine(b *backend) *machine {
 	return &machine{
-		b:               b,
-		backlogs:        make(map[common.Address]*prque.Prque),
-		roundChangeSets: make(map[uint64]*messageSet),
-		metrics:         bft.NewCoreMetrics("consensus/istanbul/core"),
+		b:                  b,
+		backlogs:           make(map[common.Address]*prque.Prque),
+		backlogCounts:      make(map[common.Address]int),
+		backlogPreprepares: make(map[common.Address]backlogPreprepare),
+		roundChangeSets:    make(map[uint64]*messageSet),
+		metrics:            bft.NewCoreMetrics("consensus/istanbul/core"),
 	}
 }
 
@@ -227,6 +234,10 @@ func (m *machine) handleMsg(payload []byte) error {
 }
 
 func (m *machine) handleCheckedMsg(msg *bft.Message, src common.Address) error {
+	if err := checkMessageSize(msg); err != nil {
+		return err
+	}
+
 	testBacklog := func(err error) error {
 		if err == errFutureMessage {
 			m.storeBacklog(msg, src)
@@ -474,7 +485,9 @@ func (m *machine) handleRoundChange(msg *bft.Message, src common.Address) error 
 	cv := m.currentView()
 	num, err := m.addRoundChange(rc.View.Round, msg)
 	if err != nil {
-		logger.Warn("Failed to add round change message", "from", msg.Address, "err", err)
+		// Rejections are expected under load (round window, per-round limit),
+		// so they are not logged above Trace, as in istanbul.
+		logger.Trace("Discarding ROUND CHANGE", "from", msg.Address, "round", rc.View.Round, "err", err)
 		return err
 	}
 
@@ -1169,6 +1182,56 @@ var msgPriority = map[uint64]int{
 	bft.MsgPrepare:    3,
 }
 
+// Retention limits, the same as istanbul core. Future messages are kept per
+// sender only, so no sender can take another's budget. A retained PREPARE,
+// COMMIT or ROUND CHANGE is bounded by checkMessageSize; the one retained
+// PREPREPARE per sender is stored before verify, so it is bounded by the p2p
+// message size limit rather than by the block size cap.
+const (
+	// maxBacklogSequencesAhead keeps only a small future-sequence window; a node
+	// further behind catches up through block synchronization.
+	maxBacklogSequencesAhead = 8
+	// maxBacklogMessagesPerSender bounds queued PREPARE, COMMIT and ROUND
+	// CHANGE per sender. A PREPREPARE takes the sender's single slot instead.
+	maxBacklogMessagesPerSender = 128
+	// maxRoundChangeRoundsAhead retains the current round plus this many
+	// future rounds of ROUND CHANGE while a sequence is stalled.
+	maxRoundChangeRoundsAhead = 128
+	// maxSubjectMessageBytes bounds a PREPARE, COMMIT or ROUND CHANGE, whose
+	// well-formed size is a few hundred bytes.
+	maxSubjectMessageBytes = 1024
+)
+
+// checkMessageSize rejects an oversized PREPARE, COMMIT or ROUND CHANGE before
+// any retention path. A PREPREPARE carries a block and is exempt; the single
+// backlog slot per sender bounds how many of them are retained.
+func checkMessageSize(msg *bft.Message) error {
+	if msg.Code == bft.MsgPreprepare {
+		return nil
+	}
+	if retainedMessageBytes(msg) > maxSubjectMessageBytes {
+		return errMessageTooLarge
+	}
+	return nil
+}
+
+// retainedMessageBytes reports the memory a retained message occupies.
+func retainedMessageBytes(msg *bft.Message) uint64 {
+	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal))
+}
+
+// backlogPreprepare is the one PREPREPARE retained per sender, with its view
+// and parent hash decoded once at retention.
+type backlogPreprepare struct {
+	msg      *bft.Message
+	view     *bft.View
+	prevHash common.Hash
+}
+
+// storeBacklog retains a future message for processBacklog. PREPARE, COMMIT
+// and ROUND CHANGE queue per sender up to maxBacklogMessagesPerSender. A
+// PREPREPARE takes the sender's single slot, replacing a retained one only when
+// its view is higher.
 func (m *machine) storeBacklog(msg *bft.Message, src common.Address) {
 	if src == m.b.address {
 		return
@@ -1176,65 +1239,115 @@ func (m *machine) storeBacklog(msg *bft.Message, src common.Address) {
 	m.backlogsMu.Lock()
 	defer m.backlogsMu.Unlock()
 
+	view, prevHash := backlogMessageView(msg)
+	if view == nil || m.isBacklogSequenceTooFar(view.Sequence) {
+		return
+	}
+
+	if msg.Code == bft.MsgPreprepare {
+		if held, ok := m.backlogPreprepares[src]; ok && view.Cmp(held.view) <= 0 {
+			return
+		}
+		m.backlogPreprepares[src] = backlogPreprepare{msg: msg, view: view, prevHash: prevHash}
+		return
+	}
+
+	if m.backlogCounts[src] >= maxBacklogMessagesPerSender {
+		return
+	}
 	backlog := m.backlogs[src]
 	if backlog == nil {
 		backlog = prque.New()
+		m.backlogs[src] = backlog
 	}
-	switch msg.Code {
-	case bft.MsgPreprepare:
+	// toPriority truncates the sequence, so it runs only after
+	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
+	backlog.Push(msg, toPriority(msg.Code, view))
+	m.backlogCounts[src]++
+}
+
+func (m *machine) isBacklogSequenceTooFar(sequence *big.Int) bool {
+	if !sequence.IsUint64() {
+		return true
+	}
+	maxSequence := new(big.Int).Add(m.sequence, big.NewInt(maxBacklogSequencesAhead))
+	return sequence.Cmp(maxSequence) > 0
+}
+
+// removeBacklogMessage releases one queued message of a sender while
+// backlogsMu is held.
+func (m *machine) removeBacklogMessage(src common.Address) {
+	if m.backlogCounts[src] <= 1 {
+		delete(m.backlogCounts, src)
+		return
+	}
+	m.backlogCounts[src]--
+}
+
+// backlogMessageView decodes the view a message belongs to and the parent hash
+// to post it under. The view is nil when the message cannot be retained.
+func backlogMessageView(msg *bft.Message) (view *bft.View, prevHash common.Hash) {
+	if msg.Code == bft.MsgPreprepare {
 		var p *bft.Preprepare
-		if err := msg.Decode(&p); err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
+		if err := msg.Decode(&p); err != nil || p == nil || p.Proposal == nil {
+			return nil, common.Hash{}
 		}
-	default:
-		var p *bft.Subject
-		if err := msg.Decode(&p); err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
+		view, prevHash = p.View, p.Proposal.ParentHash()
+	} else {
+		var sub *bft.Subject
+		if err := msg.Decode(&sub); err != nil || sub == nil {
+			return nil, common.Hash{}
 		}
+		view, prevHash = sub.View, sub.PrevHash
 	}
-	m.backlogs[src] = backlog
+	if view == nil || view.Sequence == nil || view.Round == nil {
+		return nil, common.Hash{}
+	}
+	return view, prevHash
+}
+
+// postBacklogMessage posts a retained message once its view is current, or
+// discards it once its view has passed. It reports whether the message is
+// still in the future and must stay retained.
+func (m *machine) postBacklogMessage(src common.Address, msg *bft.Message, view *bft.View, prevHash common.Hash) (future bool) {
+	if view == nil {
+		return false
+	}
+	err := m.checkMessage(msg.Code, view)
+	if err == errFutureMessage {
+		return true
+	}
+	if err != nil {
+		return false
+	}
+	go m.b.eventMux.Post(backlogEvent{src: src, msg: msg, Hash: prevHash})
+	return false
 }
 
 func (m *machine) processBacklog() {
 	m.backlogsMu.Lock()
 	defer m.backlogsMu.Unlock()
 
-	for src, backlog := range m.backlogs {
-		if backlog == nil {
-			continue
+	for src, held := range m.backlogPreprepares {
+		if !m.postBacklogMessage(src, held.msg, held.view, held.prevHash) {
+			delete(m.backlogPreprepares, src)
 		}
-		isFuture := false
-		for !(backlog.Empty() || isFuture) {
+	}
+
+	for src, backlog := range m.backlogs {
+		// The queue is ordered by view, so stop at the first future message.
+		for !backlog.Empty() {
 			item, prio := backlog.Pop()
 			msg := item.(*bft.Message)
-			var view *bft.View
-			var prevHash common.Hash
-			switch msg.Code {
-			case bft.MsgPreprepare:
-				var pp *bft.Preprepare
-				if err := msg.Decode(&pp); err == nil {
-					view = pp.View
-					prevHash = pp.Proposal.ParentHash()
-				}
-			default:
-				var sub *bft.Subject
-				if err := msg.Decode(&sub); err == nil {
-					view = sub.View
-					prevHash = sub.PrevHash
-				}
+			view, prevHash := backlogMessageView(msg)
+			if m.postBacklogMessage(src, msg, view, prevHash) {
+				backlog.Push(msg, prio)
+				break
 			}
-			if view == nil {
-				continue
-			}
-			if err := m.checkMessage(msg.Code, view); err != nil {
-				if err == errFutureMessage {
-					backlog.Push(msg, prio)
-					isFuture = true
-					break
-				}
-				continue
-			}
-			go m.b.eventMux.Post(backlogEvent{src: src, msg: msg, Hash: prevHash})
+			m.removeBacklogMessage(src)
+		}
+		if backlog.Empty() {
+			delete(m.backlogs, src)
 		}
 	}
 }
@@ -1268,17 +1381,34 @@ func toPriority(msgCode uint64, view *bft.View) int64 {
 // Round change set
 // ---------------------------------------------------------------------------
 
+// addRoundChange retains a ROUND CHANGE only when its round is within
+// maxRoundChangeRoundsAhead of the current round, and keeps at most a quorum's
+// worth of senders per round: a further distinct sender cannot change the
+// outcome. A rejected message never leaves an empty bucket behind.
 func (m *machine) addRoundChange(round *big.Int, msg *bft.Message) (int, error) {
+	if !round.IsUint64() {
+		return 0, bft.ErrInvalidMessage
+	}
 	m.roundChangesMu.Lock()
 	defer m.roundChangesMu.Unlock()
-	r := round.Uint64()
-	if m.roundChangeSets[r] == nil {
-		m.roundChangeSets[r] = newMessageSet(m.qualified)
+
+	maxRound := new(big.Int).Add(m.round, big.NewInt(maxRoundChangeRoundsAhead))
+	if round.Cmp(maxRound) > 0 {
+		return 0, errRoundChangeTooFar
 	}
-	if err := m.roundChangeSets[r].Add(msg); err != nil {
+	r := round.Uint64()
+	messages := m.roundChangeSets[r]
+	if messages == nil {
+		messages = newMessageSet(m.qualified)
+	}
+	if messages.Get(msg.Address) == nil && messages.Size() >= m.requiredMessageCount {
+		return 0, errRoundChangeLimit
+	}
+	if err := messages.Add(msg); err != nil {
 		return 0, err
 	}
-	return m.roundChangeSets[r].Size(), nil
+	m.roundChangeSets[r] = messages
+	return messages.Size(), nil
 }
 
 // resetRoundChangeSets creates a fresh (empty) round change set, matching
