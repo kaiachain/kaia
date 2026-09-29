@@ -964,6 +964,7 @@ func proposalNumberMatchesView(pp *bft.Preprepare) bool {
 func (m *machine) acceptPreprepare(pp *bft.Preprepare) {
 	m.consensusTimestamp = time.Now()
 	m.preprepare = pp
+	m.postPrepreparedEvent(pp)
 }
 
 func (m *machine) setState(s uint64) {
