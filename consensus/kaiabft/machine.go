@@ -280,6 +280,12 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 		return bft.ErrInvalidMessage
 	}
 
+	// The proposal number must equal the view sequence, else the proposal
+	// could be aliased to another height.
+	if !proposalNumberMatchesView(pp) {
+		return bft.ErrInvalidMessage
+	}
+
 	if err := m.checkMessage(bft.MsgPreprepare, pp.View); err != nil {
 		if err == errOldMessage {
 			// This PRE-PREPARE targets an already-finalized height. Reply with a
@@ -449,13 +455,20 @@ func (m *machine) handleCommit(msg *bft.Message, src common.Address) error {
 	return nil
 }
 
-func (m *machine) handleRoundChange(msg *bft.Message, _ common.Address) error {
+func (m *machine) handleRoundChange(msg *bft.Message, src common.Address) error {
 	var rc *bft.Subject
 	if err := msg.Decode(&rc); err != nil {
 		return bft.ErrInvalidMessage
 	}
 	if err := m.checkMessage(bft.MsgRoundChange, rc.View); err != nil {
 		return err
+	}
+	// Restrict round-change admission to committee members, mirroring
+	// handleCommit. The thresholds (requiredMessageCount, f) are
+	// committee-sized, so gating on the committee keeps admission consistent
+	// with the thresholds.
+	if !m.committee.Contains(src) {
+		return errNotFromCommittee
 	}
 
 	cv := m.currentView()
@@ -925,6 +938,16 @@ func (m *machine) proposal() bft.Proposal {
 	return nil
 }
 
+// proposalNumberMatchesView reports whether the proposal's block number equals
+// the view sequence.
+func proposalNumberMatchesView(pp *bft.Preprepare) bool {
+	if pp == nil || pp.Proposal == nil || pp.Proposal.Number() == nil ||
+		pp.View == nil || pp.View.Sequence == nil {
+		return false
+	}
+	return pp.Proposal.Number().Cmp(pp.View.Sequence) == 0
+}
+
 func (m *machine) acceptPreprepare(pp *bft.Preprepare) {
 	m.consensusTimestamp = time.Now()
 	m.preprepare = pp
@@ -1030,6 +1053,9 @@ func (m *machine) getRoundCommitteeState(seq, r uint64) (
 	fNum int,
 	err error,
 ) {
+	if m.b.valsetModule == nil || m.b.govModule == nil {
+		return nil, nil, common.Address{}, 0, 0, 0, errNoModule
+	}
 	council, err := m.b.valsetModule.GetCouncil(seq)
 	if err != nil {
 		return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err
@@ -1050,7 +1076,10 @@ func (m *machine) getRoundCommitteeState(seq, r uint64) (
 	}
 
 	committeeSet = valset.NewAddressSet(committeeAddrs)
-	committeeSize = m.b.govModule.GetParamSet(seq).CommitteeSize
+	// Size the quorum by the committee actually selected. Post-permissionless
+	// the committee is the qualified set and the governance CommitteeSize no
+	// longer bounds it.
+	committeeSize = uint64(committeeSet.Len())
 
 	qLen := qualified.Len()
 	requiredMsgCnt = calcQuorumSize(qLen, committeeSize)
