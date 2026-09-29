@@ -80,17 +80,23 @@ func TestDevParity_HandleCommitVerifiesSeal(t *testing.T) {
 	m := newTestMachine(b, 10, 1, block, []common.Address{self})
 	sub := m.subject()
 
-	bad := &bft.Message{Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
-		CommittedSeal: sealOver(t, otherKey, istanbul.PrepareCommittedSealWithRound(sub.Digest, 1))}
+	bad := &bft.Message{
+		Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
+		CommittedSeal: sealOver(t, otherKey, istanbul.PrepareCommittedSealWithRound(sub.Digest, 1)),
+	}
 	assert.ErrorIs(t, m.handleCommit(bad, self), errInvalidCommittedSeal)
 	assert.Equal(t, 0, m.commits.Size())
 
-	legacySeal := &bft.Message{Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
-		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSeal(sub.Digest))}
+	legacySeal := &bft.Message{
+		Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
+		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSeal(sub.Digest)),
+	}
 	assert.ErrorIs(t, m.handleCommit(legacySeal, self), errInvalidCommittedSeal, "post-fork seals must bind the round")
 
-	good := &bft.Message{Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
-		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSealWithRound(sub.Digest, 1))}
+	good := &bft.Message{
+		Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
+		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSealWithRound(sub.Digest, 1)),
+	}
 	assert.NoError(t, m.handleCommit(good, self))
 	assert.Equal(t, 1, m.commits.Size())
 }
@@ -234,12 +240,16 @@ func TestDevParity_HandleCommitUsesLegacySealBeforeFork(t *testing.T) {
 	m := newTestMachine(b, 10, 1, newEmptyBlock(10, common.Hash{1}), []common.Address{self})
 	sub := m.subject()
 
-	roundBound := &bft.Message{Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
-		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSealWithRound(sub.Digest, 1))}
+	roundBound := &bft.Message{
+		Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
+		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSealWithRound(sub.Digest, 1)),
+	}
 	assert.ErrorIs(t, m.handleCommit(roundBound, self), errInvalidCommittedSeal)
 
-	legacy := &bft.Message{Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
-		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSeal(sub.Digest))}
+	legacy := &bft.Message{
+		Code: bft.MsgCommit, Msg: mustEncode(t, sub), Address: self,
+		CommittedSeal: sealOver(t, key, istanbul.PrepareCommittedSeal(sub.Digest)),
+	}
 	assert.NoError(t, m.handleCommit(legacy, self))
 	assert.Equal(t, 1, m.commits.Size())
 }
