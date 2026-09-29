@@ -54,6 +54,7 @@ var (
 
 func init() {
 	testBaseConfig = &params.ChainConfig{
+		ChainID:    big.NewInt(1),
 		Istanbul:   params.GetDefaultIstanbulConfig(),
 		Governance: params.GetDefaultGovernanceConfig(),
 	}
