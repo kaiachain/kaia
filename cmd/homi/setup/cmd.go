@@ -144,6 +144,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(osakaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(permissionlessCompatibleBlockNumberFlag),
 	altsrc.NewUint64Flag(vrankEpochFlag),
+	altsrc.NewBoolFlag(publicDelegationFlag),
 	altsrc.NewInt64Flag(pfsThresholdFlag),
 	altsrc.NewInt64Flag(cfsThresholdFlag),
 	altsrc.NewStringFlag(permissionlessGenesisDeployerFlag),
@@ -599,6 +600,7 @@ func makePermissionlessConfig(ctx *cli.Context, validatorAddrs []common.Address,
 	config.EpochBlockInterval = int64(ctx.Uint64(vrankEpochFlag.Name))
 	config.DataConfig.PfsThreshold = big.NewInt(ctx.Int64(pfsThresholdFlag.Name))
 	config.DataConfig.CfsThreshold = big.NewInt(ctx.Int64(cfsThresholdFlag.Name))
+	config.UsePD = ctx.Bool(publicDelegationFlag.Name)
 	return config
 }
 
