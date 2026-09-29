@@ -48,13 +48,14 @@ var stateNames = map[uint64]string{
 }
 
 var (
-	errFutureMessage       = errors.New("future message")
-	errOldMessage          = errors.New("old message")
-	errNotFromProposer     = errors.New("message does not come from proposer")
-	errNotFromCommittee    = errors.New("message does not come from committee")
-	errInconsistentSubject = errors.New("inconsistent subjects")
-	errUnauthorizedAddress = errors.New("unauthorized address")
-	errIgnored             = errors.New("ignored")
+	errFutureMessage        = errors.New("future message")
+	errOldMessage           = errors.New("old message")
+	errNotFromProposer      = errors.New("message does not come from proposer")
+	errNotFromCommittee     = errors.New("message does not come from committee")
+	errInconsistentSubject  = errors.New("inconsistent subjects")
+	errInvalidCommittedSeal = errors.New("invalid committed seal")
+	errUnauthorizedAddress  = errors.New("unauthorized address")
+	errIgnored              = errors.New("ignored")
 )
 
 // machine implements the single-runloop BFT state machine.
@@ -281,11 +282,23 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 
 	if err := m.checkMessage(bft.MsgPreprepare, pp.View); err != nil {
 		if err == errOldMessage {
+			// This PRE-PREPARE targets an already-finalized height. Reply with a
+			// COMMIT to help the sender finish that block, only if:
+			// 1. The sender is the scheduled proposer of the given (sequence, round).
+			// 2. This node has the given block in its chain.
+			// 3. Post-permissionless: the given round equals the round this node
+			//    stored. The committed seal signs (hash, round), so answering
+			//    another round would sign a commit at a round this node never
+			//    committed at; callers could collect such seals into a quorum
+			//    certificate for a round that never reached quorum.
 			proposer, getErr := m.b.valsetModule.GetProposer(pp.View.Sequence.Uint64(), pp.View.Round.Uint64())
 			if getErr != nil {
 				return getErr
 			}
-			if proposer == src && m.b.hasProposal(pp.Proposal.Hash(), pp.Proposal.Number()) {
+			storedRound, hasProposal := m.b.proposalRound(pp.Proposal.Hash(), pp.Proposal.Number())
+			roundMatches := !m.b.isPermissionlessAt(pp.View.Sequence.Uint64()) ||
+				uint64(storedRound) == pp.View.Round.Uint64()
+			if proposer == src && hasProposal && roundMatches {
 				m.sendCommitForOldBlock(pp.View, pp.Proposal.Hash(), pp.Proposal.ParentHash())
 				return nil
 			}
@@ -394,6 +407,16 @@ func (m *machine) handleCommit(msg *bft.Message, src common.Address) error {
 	}
 	if !m.committee.Contains(src) {
 		return errNotFromCommittee
+	}
+
+	// Verify msg.CommittedSeal is the sender's signature over the proposal's
+	// committed-seal preimage. Without this, an arbitrary seal would be copied
+	// verbatim into the sealed block. commit.Digest is the proposal hash, already
+	// validated by verifySubject above.
+	committer, err := bft.GetSignatureAddress(m.b.committedSealPreimage(commit.View, commit.Digest), msg.CommittedSeal)
+	if err != nil || committer != src {
+		logger.Warn("Invalid committed seal in commit message", "sender", src, "recovered", committer, "err", err)
+		return errInvalidCommittedSeal
 	}
 
 	m.commits.Add(msg)
@@ -810,12 +833,20 @@ func (m *machine) sendRoundChange(round *big.Int) {
 func (m *machine) broadcastMsg(msg *bft.Message) {
 	msg.Address = m.b.address
 	msg.CommittedSeal = []byte{}
-	if msg.Code == bft.MsgCommit && m.preprepare != nil {
-		var err error
-		msg.CommittedSeal, err = m.b.sealer.MakeCommittedSeal(m.preprepare.Proposal.Header())
+	// A COMMIT seal signs the digest carried in the message's own subject (the
+	// block this COMMIT votes for) rather than the current proposal, so a COMMIT
+	// re-sent for an old block (sendCommitForOldBlock) attests that block. After
+	// the permissionless fork the preimage also binds the round.
+	if msg.Code == bft.MsgCommit {
+		var sub *bft.Subject
+		if err := msg.Decode(&sub); err != nil {
+			return
+		}
+		seal, err := m.b.sign(m.b.committedSealPreimage(sub.View, sub.Digest))
 		if err != nil {
 			return
 		}
+		msg.CommittedSeal = seal
 	}
 
 	data, err := msg.PayloadNoSig()

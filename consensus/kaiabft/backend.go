@@ -671,8 +671,36 @@ func (b *backend) hasBadProposal(hash common.Hash) bool {
 	return b.chain.HasBadBlock(hash)
 }
 
-func (b *backend) hasProposal(hash common.Hash, number *big.Int) bool {
-	return b.chain.GetHeader(hash, number.Uint64()) != nil
+// proposalRound returns the round stored in the matching block, and whether
+// the block exists.
+func (b *backend) proposalRound(hash common.Hash, number *big.Int) (byte, bool) {
+	header := b.chain.GetHeader(hash, number.Uint64())
+	if header == nil {
+		return 0, false
+	}
+	round, err := b.sealer.Round(header)
+	if err != nil {
+		return 0, false
+	}
+	return round, true
+}
+
+// isPermissionlessAt reports whether the permissionless fork is enabled at num.
+func (b *backend) isPermissionlessAt(num uint64) bool {
+	return b.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num))
+}
+
+// committedSealPreimage returns what a COMMIT seal for (view, digest) signs:
+// the digest and the COMMIT code, followed by the round after the
+// permissionless fork. The layout is istanbul's PrepareCommittedSeal and
+// PrepareCommittedSealWithRound; kaiabft does not import istanbul, so
+// TestDevParity_CommittedSealPreimageMatchesIstanbul pins the two together.
+func (b *backend) committedSealPreimage(view *bft.View, digest common.Hash) []byte {
+	preimage := append(digest.Bytes(), byte(bft.MsgCommit))
+	if b.isPermissionlessAt(view.Sequence.Uint64()) {
+		preimage = append(preimage, byte(view.Round.Uint64()))
+	}
+	return preimage
 }
 
 // ---------------------------------------------------------------------------
