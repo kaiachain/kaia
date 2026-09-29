@@ -370,6 +370,33 @@ func TestTxPoolRejectsOversizedSignatureLists(t *testing.T) {
 	require.Zero(t, pool.all.Count())
 }
 
+// TestTxPoolRejectsOversizedSignatureListsBatch covers the batch ingress path
+// (AddRemotes -> addTxs -> recoverSenders), which must apply the same
+// signature-list bound as the single-tx path.
+func TestTxPoolRejectsOversizedSignatureListsBatch(t *testing.T) {
+	pool, senderKey := setupTxPool()
+	defer pool.Stop()
+
+	feePayerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	maxSignatures := int(accountkey.MaxNumKeysForMultiSig)
+
+	senderTx := feeDelegatedTx(0, 21000, big.NewInt(1), big.NewInt(0), senderKey, feePayerKey)
+	senderTx.SetSignature(signaturesWithLength(senderTx.RawSignatureValues()[0], maxSignatures+1))
+
+	feePayerTx := feeDelegatedTx(1, 21000, big.NewInt(1), big.NewInt(0), senderKey, feePayerKey)
+	feePayerSignatures, err := feePayerTx.GetFeePayerSignatures()
+	require.NoError(t, err)
+	require.NoError(t, feePayerTx.SetFeePayerSignatures(signaturesWithLength(feePayerSignatures[0], maxSignatures+1)))
+
+	errs := pool.AddRemotes([]*types.Transaction{senderTx, feePayerTx})
+	require.Len(t, errs, 2)
+	for _, err := range errs {
+		require.ErrorIs(t, err, kerrors.ErrMaxKeysExceed)
+	}
+	require.Zero(t, pool.all.Count())
+}
+
 func setupTxPoolWithBlobStorage(t *testing.T) (*TxPool, *testBlockChain, *ecdsa.PrivateKey, string) {
 	tmpDir := t.TempDir()
 	config := testTxPoolConfig

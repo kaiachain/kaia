@@ -1545,7 +1545,8 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	// RPC latency path: recover sender synchronously, skipping the async queue.
-	if !pool.warmFromKnownTx(tx) {
+	// Keep the ingress bound (#1009): never ecrecover an oversized signature list.
+	if !pool.warmFromKnownTx(tx) && tx.ValidateSignatureListLength() == nil {
 		cacheSender(pool.signer, tx)
 	}
 
@@ -1573,7 +1574,7 @@ func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 			toRecover = append(toRecover, tx)
 		}
 	}
-	senderCacher.recover(pool.signer, toRecover)
+	pool.recoverSenders(toRecover)
 
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
