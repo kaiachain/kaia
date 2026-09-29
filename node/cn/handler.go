@@ -988,10 +988,8 @@ func handleBlockHeadersRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 	return p.SendBlockHeaders(headers)
 }
 
-// decodeResponseList decodes a response list one element at a time, refusing a list
-// longer than limit. Decoding the whole list at once lets a peer turn a message-sized
-// packet into an arbitrarily larger object graph, and we never request more than limit.
-func decodeResponseList[T any](msg p2p.Msg, limit int) ([]T, error) {
+// decodeList decodes one item at a time and refuses lists longer than limit.
+func decodeList[T any](msg p2p.Msg, limit int) ([]T, error) {
 	stream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 	if _, err := stream.List(); err != nil {
 		return nil, errResp(ErrDecode, "msg %v: %v", msg, err)
@@ -1014,7 +1012,7 @@ func decodeResponseList[T any](msg p2p.Msg, limit int) ([]T, error) {
 // handleBlockHeadersMsg handles block header response message.
 func handleBlockHeadersMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of headers arrived to one of our previous requests
-	headers, err := decodeResponseList[*types.Header](msg, downloader.MaxHeaderFetch)
+	headers, err := decodeList[*types.Header](msg, downloader.MaxHeaderFetch)
 	if err != nil {
 		return err
 	}
@@ -1071,7 +1069,7 @@ func handleBlockBodiesRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 // handleGetBlockBodiesMsg handles block body response message.
 func handleBlockBodiesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of block bodies arrived to one of our previous requests
-	request, err := decodeResponseList[*blockBody](msg, downloader.MaxBlockFetch)
+	request, err := decodeList[*blockBody](msg, downloader.MaxBlockFetch)
 	if err != nil {
 		return err
 	}
@@ -1130,7 +1128,7 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 // handleNodeDataMsg handles node data response message.
 func handleNodeDataMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of node state data arrived to one of our previous requests
-	data, err := decodeResponseList[[]byte](msg, downloader.MaxStateFetch)
+	data, err := decodeList[[]byte](msg, downloader.MaxStateFetch)
 	if err != nil {
 		return err
 	}
@@ -1185,7 +1183,7 @@ func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 // handleReceiptsMsg handles receipt response message.
 func handleReceiptsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of receipts arrived to one of our previous requests
-	receipts, err := decodeResponseList[[]*types.Receipt](msg, downloader.MaxReceiptFetch)
+	receipts, err := decodeList[[]*types.Receipt](msg, downloader.MaxReceiptFetch)
 	if err != nil {
 		return err
 	}
@@ -1263,7 +1261,7 @@ func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 
 	// A batch of stakingInfos arrived to one of our previous requests
-	stakingInfos, err := decodeResponseList[*staking.P2PStakingInfo](msg, downloader.MaxStakingInfoFetch)
+	stakingInfos, err := decodeList[*staking.P2PStakingInfo](msg, downloader.MaxStakingInfoFetch)
 	if err != nil {
 		return err
 	}
@@ -1405,7 +1403,7 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errors.New("blob sidecar request manager is not initialized")
 	}
 
-	sidecars, err := decodeResponseList[*blobSidecarsData](msg, downloader.MaxBlobSidecarsFetch)
+	sidecars, err := decodeList[*blobSidecarsData](msg, downloader.MaxBlobSidecarsFetch)
 	if err != nil {
 		return err
 	}
@@ -1554,7 +1552,7 @@ func handleBlockBodiesFetchRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) 
 // handleBlockBodiesFetchResponseMsg handles block bodies fetch response message.
 func handleBlockBodiesFetchResponseMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of block bodies arrived to one of our previous requests
-	request, err := decodeResponseList[*blockBody](msg, downloader.MaxBlockFetch)
+	request, err := decodeList[*blockBody](msg, downloader.MaxBlockFetch)
 	if err != nil {
 		return err
 	}
@@ -1617,18 +1615,18 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if pm.acceptTxs.Load() == 0 {
 		return nil
 	}
-	// Transactions can be processed, parse all of them and deliver to the pool
-	var txs types.Transactions
-	if err := msg.Decode(&txs); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	// Transactions can be processed, parse them and deliver to the pool
+	txs, err := decodeList[*types.Transaction](msg, maxTxMsgItems)
+	if err != nil {
+		return err
 	}
 	// Only valid txs should be pushed into the pool.
 	validTxs := make(types.Transactions, 0, len(txs))
-	var err error
+	var lastErr error
 	for i, tx := range txs {
 		// Validate and mark the remote transaction
 		if tx == nil {
-			err = errResp(ErrDecode, "transaction %d is nil", i)
+			lastErr = errResp(ErrDecode, "transaction %d is nil", i)
 			continue
 		}
 		// Validate blob transactions to detect KZG verification errors early
@@ -1663,7 +1661,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		txReceiveCounter.Inc(1)
 	}
 	pm.txpool.HandleTxMsg(validTxs)
-	return err
+	return lastErr
 }
 
 // sampleSize calculates the number of peers to send block.

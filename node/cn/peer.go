@@ -562,12 +562,30 @@ func (p *basePeer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.AddToKnownTxs(tx.Hash())
 	}
-	return p2p.Send(p.rw, TxMsg, txs)
+	return sendTransactionBatches(txs, func(batch types.Transactions) error {
+		return p2p.Send(p.rw, TxMsg, batch)
+	})
 }
 
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
-	return p2p.Send(p.rw, TxMsg, txs)
+	return sendTransactionBatches(txs, func(batch types.Transactions) error {
+		return p2p.Send(p.rw, TxMsg, batch)
+	})
+}
+
+func sendTransactionBatches(txs types.Transactions, send func(types.Transactions) error) error {
+	if len(txs) == 0 {
+		return send(txs)
+	}
+	for len(txs) > 0 {
+		count := min(len(txs), maxTxMsgItems)
+		if err := send(txs[:count]); err != nil {
+			return err
+		}
+		txs = txs[count:]
+	}
+	return nil
 }
 
 func (p *basePeer) AsyncSendTransactions(txs types.Transactions) {
@@ -1034,12 +1052,16 @@ func (p *multiChannelPeer) SendTransactions(txs types.Transactions) error {
 	for _, tx := range txs {
 		p.AddToKnownTxs(tx.Hash())
 	}
-	return p.msgSender(TxMsg, txs)
+	return sendTransactionBatches(txs, func(batch types.Transactions) error {
+		return p.msgSender(TxMsg, batch)
+	})
 }
 
 // ReSendTransactions sends txs to a peer in order to prevent the txs from missing.
 func (p *multiChannelPeer) ReSendTransactions(txs types.Transactions) error {
-	return p.msgSender(TxMsg, txs)
+	return sendTransactionBatches(txs, func(batch types.Transactions) error {
+		return p.msgSender(TxMsg, batch)
+	})
 }
 
 // SendNewBlockHashes announces the availability of a number of blocks through

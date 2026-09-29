@@ -65,7 +65,10 @@ var ConsensusProtocol = Protocol{
 	Lengths:  []uint64{28, 26, 24, 23, 21},
 }
 
-const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
+const (
+	ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
+	maxTxMsgItems      = 4096             // Maximum transactions in one TxMsg
+)
 
 // Kaia protocol message codes
 // TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
