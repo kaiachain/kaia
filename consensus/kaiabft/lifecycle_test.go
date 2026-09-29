@@ -34,6 +34,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// node/cn wires a non-mining engine (non-CN node type or --worker.disable)
+// through chainAwareConsensusEngine instead of Start.
+var _ interface {
+	SetChain(consensus.ChainReader)
+	SignalPeerRegistrable()
+} = (*backend)(nil)
+
+// node/cn calls SetChain then SignalPeerRegistrable. SetChain must only assign
+// the chain (istanbul parity); peers become registrable on the explicit signal.
+func TestDevParity_SetChainThenSignalPeerRegistrable(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	b, _ := newTestBackend(t, nil)
+	require.Nil(t, b.chain)
+
+	head := newEmptyBlock(5, common.Hash{})
+	chain := &fakeChain{cfg: permissionlessConfig(), current: head}
+	b.SetChain(chain)
+	assert.Same(t, chain, b.chain, "SetChain assigns the chain reader")
+	select {
+	case <-b.chainInitCh:
+		t.Fatal("SetChain must not make peers registrable on its own")
+	default:
+	}
+
+	b.SignalPeerRegistrable()
+	b.SignalPeerRegistrable() // idempotent
+	select {
+	case <-b.chainInitCh:
+	default:
+		t.Fatal("SignalPeerRegistrable must unblock ValidatePeerType")
+	}
+
+	member := common.HexToAddress("0x00000000000000000000000000000000000000a1")
+	mValset := valset_mock.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCNPeers(uint64(6)).Return([]common.Address{member}, nil)
+	b.valsetModule = mValset
+	assert.NoError(t, b.ValidatePeerType(member), "ValidatePeerType uses the injected chain without Start")
+}
+
 // dev #912: peer type validation follows the CN peer allowlist, not the council.
 func TestDevParity_ValidatePeerTypeUsesCNPeers(t *testing.T) {
 	ctrl := gomock.NewController(t)

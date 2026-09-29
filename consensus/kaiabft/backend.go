@@ -427,6 +427,22 @@ func (b *backend) signalPeerRegistrable() {
 	b.chainInitOnce.Do(func() { close(b.chainInitCh) })
 }
 
+// SetChain injects the chain reader for nodes that never call Start (a
+// non-CN node type or --worker.disable). node/cn asserts
+// chainAwareConsensusEngine (SetChain + SignalPeerRegistrable) on the engine
+// in that path and calls SetChain first, then SignalPeerRegistrable. Like the
+// istanbul backend, SetChain only assigns the chain; it does not unblock
+// ValidatePeerType, so the caller decides when peers may be registered.
+func (b *backend) SetChain(chain consensus.ChainReader) {
+	b.chain = chain
+}
+
+// SignalPeerRegistrable unblocks ValidatePeerType so that peers can be
+// registered. Safe to call multiple times; only the first call has effect.
+func (b *backend) SignalPeerRegistrable() {
+	b.signalPeerRegistrable()
+}
+
 // ---------------------------------------------------------------------------
 // Seal — triggers BFT consensus on a proposed block
 // ---------------------------------------------------------------------------
