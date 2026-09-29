@@ -61,6 +61,17 @@ func TestDevParity_RoundChangeRequiresCommittee(t *testing.T) {
 	assert.Nil(t, m.maxRoundChangeRound(1), "a rejected ROUND CHANGE must not be retained")
 }
 
+// dev #1032: a view whose round does not fit in uint64 is invalid for every
+// message code.
+func TestDevParity_CheckMessageRejectsOversizedRound(t *testing.T) {
+	b, key := newTestBackend(t, &fakeChain{cfg: legacyConfig()})
+	m := newTestMachine(b, 10, 0, nil, []common.Address{crypto.PubkeyToAddress(key.PublicKey)})
+	huge := new(big.Int).Lsh(big.NewInt(1), 64)
+	for _, code := range []uint64{bft.MsgPreprepare, bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
+		assert.ErrorIs(t, m.checkMessage(code, &bft.View{Sequence: big.NewInt(10), Round: huge}), bft.ErrInvalidMessage, "code %d", code)
+	}
+}
+
 // dev #905: the quorum is computed over the committee actually selected, not
 // the governance CommitteeSize parameter.
 func TestDevParity_QuorumUsesSelectedCommittee(t *testing.T) {
