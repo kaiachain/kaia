@@ -21,12 +21,16 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,4 +94,51 @@ func TestCopyTxForPrefetchDoesNotOverwriteOriginalValidatedGas(t *testing.T) {
 
 	require.Equal(t, params.TxValidationGasPerKey, originalGas-prefetchTx.ValidatedGas().IntrinsicGas)
 	require.Equal(t, originalGas, tx.ValidatedGas().IntrinsicGas)
+}
+
+type prefetchTestChain struct {
+	cfg *params.ChainConfig
+}
+
+func (c prefetchTestChain) CurrentBlock() *types.Block                  { return nil }
+func (c prefetchTestChain) GetHeader(common.Hash, uint64) *types.Header { return nil }
+func (c prefetchTestChain) Config() *params.ChainConfig                 { return c.cfg }
+func (c prefetchTestChain) Sealer() consensus.Sealer                    { return nil }
+
+// TestPrefetchDoesNotCacheSenderOnOriginalTx verifies that the state-warming
+// Prefetch validates a throwaway copy, so the sender cached during prefetch
+// never lands on the transaction the block will execute.
+func TestPrefetchDoesNotCacheSenderOnOriginalTx(t *testing.T) {
+	cfg := params.TestChainConfig.Copy()
+	require.NoError(t, fork.SetHardForkBlockNumberConfig(cfg))
+
+	senderKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	from := crypto.PubkeyToAddress(senderKey.PublicKey)
+	txData, err := types.NewTxInternalDataWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    uint64(0),
+		types.TxValueKeyTo:       common.HexToAddress("0x0000000000000000000000000000000000000100"),
+		types.TxValueKeyAmount:   big.NewInt(1),
+		types.TxValueKeyGasLimit: uint64(100000),
+		types.TxValueKeyGasPrice: big.NewInt(1),
+		types.TxValueKeyFrom:     from,
+	})
+	require.NoError(t, err)
+	tx := types.NewTx(txData)
+	require.NoError(t, tx.SignWithKeys(types.LatestSignerForChainID(cfg.ChainID), []*ecdsa.PrivateKey{senderKey}))
+	require.Equal(t, common.Address{}, tx.ValidatedSender())
+
+	header := &types.Header{Number: big.NewInt(1)}
+	block := types.NewBlock(header, []*types.Transaction{tx}, nil)
+	stateDB, err := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	require.NoError(t, err)
+
+	// The copy must validate against the same state; otherwise the wrap
+	// would be hiding a prefetch failure instead of isolating the cache.
+	_, err = copyTxForPrefetch(tx).ValidateSender(types.MakeSigner(cfg, header.Number), stateDB, header.Number.Uint64())
+	require.NoError(t, err)
+
+	newStatePrefetcher(prefetchTestChain{cfg: cfg}).Prefetch(block, stateDB, vm.Config{}, nil)
+
+	require.Equal(t, common.Address{}, tx.ValidatedSender())
 }
