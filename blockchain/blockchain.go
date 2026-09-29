@@ -2729,6 +2729,11 @@ func (bc *BlockChain) ValidateHeader(header *types.Header) error {
 	return bc.validator.ValidateHeader(header)
 }
 
+// ValidateProposalHeader validates a consensus proposal. See BlockValidator.
+func (bc *BlockChain) ValidateProposalHeader(header *types.Header) error {
+	return bc.validator.ValidateProposalHeader(header)
+}
+
 // Snapshots returns the blockchain snapshot tree.
 func (bc *BlockChain) Snapshots() *snapshot.Tree {
 	return bc.snaps
