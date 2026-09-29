@@ -113,11 +113,38 @@ func TestDialSched_StaticNode_Retry(t *testing.T) {
 	}
 	assert.True(t, ds.static.contains(staticNode.ID), "static node must not be removed by disconnection events only")
 
-	// But Failure does remove the static node.
+	// Neither does repeated dial failure; the node only backs off.
 	for i := 0; i < dialMaxRetries+2; i++ {
 		ds.markDialFailure(staticNode.ID)
+		ds.markDialEnd(staticNode.ID)
 	}
-	assert.False(t, ds.static.contains(staticNode.ID), "static node must be removed by failure events")
+	assert.True(t, ds.static.contains(staticNode.ID), "static node must not be removed by failure events")
+	assert.False(t, ds.shouldDial(staticNode), "a repeatedly failing static node must be backed off")
+	assert.Greater(t, time.Until(ds.dialBackoff[staticNode.ID]), dialBackoff,
+		"the backoff must grow past the flat interval")
+}
+
+// The grown backoff is bounded, and a reachable node starts over.
+func TestDialSched_StaticNode_BackoffCapAndReset(t *testing.T) {
+	staticNode := testNode(2, "10.0.0.2", discover.NodeTypeEN)
+	ds := NewDialSched(DialConfig{
+		staticNodes: []*discover.Node{staticNode},
+	}, nil, nil)
+
+	assert.Equal(t, dialBackoff, staticDialBackoff(dialMaxRetries), "up to the threshold the interval is flat")
+	assert.Equal(t, 2*dialBackoff, staticDialBackoff(dialMaxRetries+1), "past it the interval grows")
+	assert.Equal(t, maxDialBackoff, staticDialBackoff(dialMaxRetries+100), "growth is capped")
+
+	for i := 0; i < 50; i++ {
+		ds.markDialFailure(staticNode.ID)
+		ds.markDialEnd(staticNode.ID)
+	}
+	assert.LessOrEqual(t, time.Until(ds.dialBackoff[staticNode.ID]), maxDialBackoff)
+
+	ds.markPeerConnected(staticNode.ID, staticNode.NType, false)
+	assert.Zero(t, ds.connFails[staticNode.ID], "connecting resets the failure count")
+	_, hasBackoff := ds.dialBackoff[staticNode.ID]
+	assert.False(t, hasBackoff, "connecting clears the backoff")
 }
 
 // Special feature: Removing and re-adding a static node re-dials immediately.
