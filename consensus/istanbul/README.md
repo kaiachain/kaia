@@ -10,7 +10,7 @@ The implementation is split into three layers.
 
 - Top-level `consensus/istanbul`
   - Shared protocol types such as `View`, `Preprepare`, `Subject`, and `ConsensusMsg`
-  - Shared events such as `RequestEvent`, `MessageEvent`, `ChainHeadEvent`, and `NewSequenceEvent`
+  - Shared events such as `RequestEvent`, `MessageEvent`, and `ChainHeadEvent`; the new-sequence signal is the engine-neutral `consensus.NewSequenceEvent`
   - Shared `IstanbulSealer` implementation for header encoding, hashing, and signatures
 - `consensus/istanbul/core`
   - Consensus state machine for `PREPREPARE`, `PREPARE`, `COMMIT`, and round change
@@ -238,7 +238,7 @@ When the core gathers quorum `COMMIT` messages:
 
 #### New sequence
 
-When a new sequence starts, the core posts `NewSequenceEvent` so the worker can prepare the next block.
+When a new sequence starts, the core posts `consensus.NewSequenceEvent` so the worker can prepare the next block.
 
 ## APIs
 
