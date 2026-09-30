@@ -694,6 +694,7 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrDeprecated:                           types.ReceiptStatusErrDeprecated,
 	kerrors.ErrNotSupported:                         types.ReceiptStatusErrNotSupported,
 	kerrors.ErrInvalidCodeFormat:                    types.ReceiptStatusErrInvalidCodeFormat,
+	kerrors.ErrZeroThreshold:                        types.ReceiptStatusErrZeroThreshold,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -727,6 +728,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrDeprecated:                           kerrors.ErrDeprecated,
 	types.ReceiptStatusErrNotSupported:                         kerrors.ErrNotSupported,
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
+	types.ReceiptStatusErrZeroThreshold:                        kerrors.ErrZeroThreshold,
 }
 
 func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, err error) {

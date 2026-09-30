@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -51,6 +52,7 @@ func TestGetVMerrFromReceiptStatus(t *testing.T) {
 		{types.ReceiptStatusLast, ErrInvalidReceiptStatus},
 		{types.ReceiptStatusSuccessful, nil},
 		{types.ReceiptStatusErrDefault, ErrVMDefault},
+		{types.ReceiptStatusErrZeroThreshold, kerrors.ErrZeroThreshold},
 	}
 
 	for _, tc := range testData {
@@ -77,6 +79,45 @@ func TestGetReceiptStatusFromVMerr(t *testing.T) {
 	expectedStatus = types.ReceiptStatusErrDefault
 	if status != expectedStatus {
 		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
+	}
+
+	// Account key installation error. It must not fall back to ReceiptStatusErrDefault.
+	status = getReceiptStatusFromErrTxFailed(kerrors.ErrZeroThreshold)
+	expectedStatus = types.ReceiptStatusErrZeroThreshold
+	if status != expectedStatus {
+		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
+	}
+}
+
+// TestReceiptStatusTablesAreConsistent checks that every value in
+// [ReceiptStatusSuccessful, ReceiptStatusLast) is a real receipt status and that
+// errTxFailed2receiptstatus and receiptstatus2errTxFailed are inverses of each other,
+// so an error cannot be given a status without being decodable, or vice versa.
+func TestReceiptStatusTablesAreConsistent(t *testing.T) {
+	// Receipt statuses must be consecutive (see the NOTE in blockchain/types/receipt.go).
+	for status := types.ReceiptStatusSuccessful; status < types.ReceiptStatusLast; status++ {
+		if _, ok := receiptstatus2errTxFailed[status]; !ok {
+			t.Errorf("receipt status 0x%02x has no error", status)
+		}
+	}
+	if got, want := len(receiptstatus2errTxFailed), int(types.ReceiptStatusLast-types.ReceiptStatusSuccessful); got != want {
+		t.Errorf("receiptstatus2errTxFailed has %d entries, want %d", got, want)
+	}
+
+	// ReceiptStatusErrDefault is the only one-way entry: unknown errors map to it,
+	// but ErrVMDefault itself is never raised by execution.
+	for err, status := range errTxFailed2receiptstatus {
+		if got := receiptstatus2errTxFailed[status]; got != err {
+			t.Errorf("status 0x%02x decodes to %v, want %v", status, got, err)
+		}
+	}
+	for status, err := range receiptstatus2errTxFailed {
+		if status == types.ReceiptStatusErrDefault {
+			continue
+		}
+		if got := errTxFailed2receiptstatus[err]; got != status {
+			t.Errorf("error %v encodes to 0x%02x, want 0x%02x", err, got, status)
+		}
 	}
 }
 
