@@ -196,7 +196,7 @@ func (m *IstanbulSealer) RecoverCommitters(_ uint64, hash common.Hash, round byt
 		}
 		addr, err := cacheSignatureAddress(proposalSeal, seal)
 		if err != nil {
-			return nil, ErrInvalidSignature
+			return nil, ErrInvalidCommittedSeals
 		}
 		committers = append(committers, addr)
 	}
@@ -216,7 +216,7 @@ func (m *IstanbulSealer) committers(header *types.Header, proposalSeal []byte) (
 	for _, seal := range extra.CommittedSeal {
 		addr, err := cacheSignatureAddress(proposalSeal, seal)
 		if err != nil {
-			return nil, ErrInvalidSignature
+			return nil, ErrInvalidCommittedSeals
 		}
 		committers = append(committers, addr)
 	}
