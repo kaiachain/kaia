@@ -86,6 +86,14 @@ type PrecompiledContract interface {
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) (ret []byte, computationCost uint64, err error) {
 	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
 	if contract.UseGas(gas) {
+		// A precompile's cost scales with its input, so a single call can exceed the
+		// whole per-tx budget. Check before running, as the opcode loop does, so an
+		// over-budget call costs no CPU. Written to avoid overflowing the sum.
+		if evm.chainRules.IsPermissionless && evm.Config.ComputationCostLimit != params.OpcodeComputationCostLimitInfinite &&
+			(computationCost > evm.Config.ComputationCostLimit ||
+				evm.opcodeComputationCostSum > evm.Config.ComputationCostLimit-computationCost) {
+			return nil, computationCost, ErrOpcodeComputationCostLimitReached
+		}
 		ret, err = p.Run(input, contract, evm)
 		return ret, computationCost, err
 	}
