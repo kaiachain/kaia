@@ -31,6 +31,7 @@ import (
 	"sort"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	kaiaapi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
@@ -714,6 +715,34 @@ func TestTraceCallStructLoggerHonorsTimeout(t *testing.T) {
 		GasPrice: &gasPrice,
 	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
 	assert.ErrorContains(t, err, "tracing aborted")
+}
+
+func TestResolveTraceTimeout(t *testing.T) {
+	short := "1s"
+	long := "30s"
+	invalid := "invalid"
+	for _, tc := range []struct {
+		name    string
+		config  *TraceConfig
+		want    time.Duration
+		wantErr bool
+	}{
+		{name: "default", want: defaultTraceTimeout},
+		{name: "no timeout", config: &TraceConfig{}, want: defaultTraceTimeout},
+		{name: "shorter", config: &TraceConfig{Timeout: &short}, want: time.Second},
+		{name: "longer", config: &TraceConfig{Timeout: &long}, want: 30 * time.Second},
+		{name: "invalid", config: &TraceConfig{Timeout: &invalid}, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := resolveTraceTimeout(tc.config)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func TestTraceCallStructLoggerMemoryConfig(t *testing.T) {

@@ -1008,11 +1008,9 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 	switch {
 	case config != nil && config.Tracer != nil:
 		// Define a meaningful timeout of a single transaction trace
-		timeout := defaultTraceTimeout
-		if config.Timeout != nil {
-			if timeout, err = time.ParseDuration(*config.Timeout); err != nil {
-				return nil, err
-			}
+		timeout, timeoutErr := resolveTraceTimeout(config)
+		if timeoutErr != nil {
+			return nil, timeoutErr
 		}
 
 		if *config.Tracer == "fastCallTracer" || *config.Tracer == "callTracer" {
@@ -1057,13 +1055,9 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		defer cancel()
 
 	default:
-		timeout := defaultTraceTimeout
-		if config != nil && config.Timeout != nil {
-			requested, err := time.ParseDuration(*config.Timeout)
-			if err != nil {
-				return nil, err
-			}
-			timeout = min(timeout, requested)
+		timeout, timeoutErr := resolveTraceTimeout(config)
+		if timeoutErr != nil {
+			return nil, timeoutErr
 		}
 		var cancel context.CancelFunc
 		traceCtx, cancel = context.WithTimeout(ctx, timeout)
@@ -1142,3 +1136,10 @@ func acquireStructTraceSlot(ctx context.Context) error {
 }
 
 func releaseStructTraceSlot() { <-structTraceSlots }
+
+func resolveTraceTimeout(config *TraceConfig) (time.Duration, error) {
+	if config == nil || config.Timeout == nil {
+		return defaultTraceTimeout, nil
+	}
+	return time.ParseDuration(*config.Timeout)
+}
