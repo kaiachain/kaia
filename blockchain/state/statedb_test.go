@@ -871,3 +871,56 @@ func TestStateDBTransientStorage(t *testing.T) {
 		t.Fatalf("transient storage mismatch: have %x, want %x", got, value)
 	}
 }
+
+var pragueRules = params.Rules{IsIstanbul: true, IsLondon: true, IsShanghai: true, IsCancun: true, IsPrague: true}
+
+// delegationCode returns an EIP-7702 delegation designator (0xef0100 || address).
+func delegationCode(target common.Address) []byte {
+	return append([]byte{0xef, 0x01, 0x00}, target.Bytes()...)
+}
+
+// TestSetCodeToEOARevertRestoresCodeInfo checks that CodeInfo (not just code/hash) is restored on revert.
+func TestSetCodeToEOARevertRestoresCodeInfo(t *testing.T) {
+	state, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	authority := common.HexToAddress("0xa11ce")
+	state.AddBalance(authority, common.Big1) // materialize the EOA before the snapshot
+
+	snap := state.Snapshot()
+	if err := state.SetCodeToEOA(authority, delegationCode(common.HexToAddress("0xde1")), pragueRules); err != nil {
+		t.Fatal(err)
+	}
+	if vm, _ := state.GetVmVersion(authority); vm != params.VmVersion1 {
+		t.Fatalf("SetCodeToEOA should install vmVersion1, got %v", vm)
+	}
+
+	state.RevertToSnapshot(snap)
+	if vm, _ := state.GetVmVersion(authority); vm != params.VmVersion0 {
+		t.Fatalf("CodeInfo not restored on revert: got vmVersion %v", vm)
+	}
+	assert.Empty(t, state.GetCode(authority))
+}
+
+// TestSetCodeToEOARevertMatchesRoot checks a reverted SetCode tx commits the same root as if it never ran.
+func TestSetCodeToEOARevertMatchesRoot(t *testing.T) {
+	authority := common.HexToAddress("0xa11ce")
+	target := common.HexToAddress("0xde1")
+	commitRoot := func(setCode bool) common.Hash {
+		s, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+		s.AddBalance(authority, common.Big1)
+		s.Finalise(true, false)
+		if setCode {
+			snap := s.Snapshot()
+			s.IncNonce(authority)
+			if err := s.SetCodeToEOA(authority, delegationCode(target), pragueRules); err != nil {
+				t.Fatal(err)
+			}
+			s.RevertToSnapshot(snap)
+		}
+		root, err := s.Commit(false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return root
+	}
+	assert.Equal(t, commitRoot(false), commitRoot(true))
+}
