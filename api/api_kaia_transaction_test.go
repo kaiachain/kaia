@@ -98,6 +98,61 @@ func TestSendTxArgsUnmarshalSignatures(t *testing.T) {
 	}
 }
 
+func TestValidateSenderSignatures(t *testing.T) {
+	two := append(types.TxSignaturesJSON{}, testSig...)
+	two = append(two, testSig...)
+	malformed := []types.TxSignaturesJSON{
+		{nil},
+		{{}},
+		{{V: (*hexutil.Big)(big.NewInt(1))}},
+	}
+	for _, txType := range []types.TxType{
+		types.TxTypeLegacyTransaction,
+		types.TxTypeEthereumAccessList,
+		types.TxTypeEthereumDynamicFee,
+		types.TxTypeEthereumBlob,
+		types.TxTypeEthereumSetCode,
+	} {
+		t.Run(txType.String(), func(t *testing.T) {
+			assert.ErrorIs(t, validateSenderSignatures(txType, types.TxSignaturesJSON{}), errTxArgInvalidSignatures)
+			assert.ErrorIs(t, validateSenderSignatures(txType, two), errTxArgInvalidSignatures)
+			assert.NoError(t, validateSenderSignatures(txType, testSig))
+			assert.NoError(t, validateSenderSignatures(txType, nil))
+		})
+	}
+	for txType := range internalDataTypes {
+		if txType.IsFeeDelegatedTransaction() {
+			t.Run(txType.String(), func(t *testing.T) {
+				// Preserve native multisignatures and signing before the sender.
+				assert.NoError(t, validateSenderSignatures(txType, two))
+				assert.NoError(t, validateSenderSignatures(txType, testSig))
+				assert.NoError(t, validateSenderSignatures(txType, types.TxSignaturesJSON{}))
+				assert.NoError(t, validateSenderSignatures(txType, nil))
+				for _, signatures := range malformed {
+					assert.ErrorIs(t, validateSenderSignatures(txType, signatures), errTxArgInvalidSignatures)
+				}
+			})
+		}
+	}
+}
+
+func TestSendTransactionAsFeePayerRejectsEmptySenderSignatures(t *testing.T) {
+	txType := types.TxTypeFeeDelegatedValueTransfer
+	args := SendTxArgs{
+		TypeInt:      &txType,
+		AccountNonce: &testNonce,
+		GasLimit:     &testGas,
+		Price:        testGasPrice,
+		TxSignatures: types.TxSignaturesJSON{},
+	}
+
+	_, err := new(KaiaTransactionAPI).SendTransactionAsFeePayer(context.Background(), args)
+	assert.ErrorIs(t, err, errTxArgNilSenderSig)
+
+	_, err = new(PersonalAPI).SendTransactionAsFeePayer(context.Background(), args, "")
+	assert.ErrorIs(t, err, errTxArgNilSenderSig)
+}
+
 // TestTxTypeSupport tests tx type support of APIs in KaiaTransactionAPI.
 func TestTxTypeSupport(t *testing.T) {
 	var ctx context.Context

@@ -367,7 +367,7 @@ func (s *KaiaTransactionAPI) SendTransactionAsFeePayer(ctx context.Context, args
 		return common.Hash{}, errTxArgNilGasPrice
 	}
 
-	if args.TxSignatures == nil {
+	if len(args.TxSignatures) == 0 {
 		return common.Hash{}, errTxArgNilSenderSig
 	}
 
@@ -497,6 +497,9 @@ func (s *KaiaTransactionAPI) SignTransactionAsFeePayer(ctx context.Context, args
 	}
 	tx, err := args.toTransaction()
 	if err != nil {
+		return nil, err
+	}
+	if err := validateSenderSignatures(tx.Type(), args.TxSignatures); err != nil {
 		return nil, err
 	}
 	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
