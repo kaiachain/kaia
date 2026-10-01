@@ -22,8 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 type Service struct{}
@@ -373,5 +376,46 @@ func TestServerShortLivedConn(t *testing.T) {
 		if !bytes.Equal(buf[:n], []byte(wantResp)) {
 			t.Fatalf("wrong response: %s", buf[:n])
 		}
+	}
+}
+
+// rewardsService returns result, or, when result is nil, the missing trie node
+// error of a node that does not have the requested state.
+type rewardsService struct{ result json.RawMessage }
+
+func (s *rewardsService) GetRewards() (json.RawMessage, error) {
+	if s.result == nil {
+		return nil, &statedb.MissingNodeError{}
+	}
+	return s.result, nil
+}
+
+// This test checks that a call relayed to UpstreamArchiveEN returns the upstream
+// result unchanged: integers above 2^53 keep every digit and object keys keep
+// their order.
+func TestServerUpstreamResultUnchanged(t *testing.T) {
+	// 3839999999999999985 is not a float64; it would round to 3840000000000000000.
+	want := `{"stakers":3839999999999999985,"kif":2400000000000000000}`
+
+	upstream := newTestServer("test", &rewardsService{result: json.RawMessage(want)})
+	defer upstream.Stop()
+	hs := httptest.NewServer(upstream)
+	defer hs.Close()
+
+	orig := UpstreamArchiveEN
+	UpstreamArchiveEN = hs.URL
+	t.Cleanup(func() { UpstreamArchiveEN = orig })
+
+	server := newTestServer("test", new(rewardsService))
+	defer server.Stop()
+	client := DialInProc(server)
+	defer client.Close()
+
+	var got json.RawMessage
+	if err := client.Call(&got, "test_getRewards"); err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != want {
+		t.Fatalf("wrong result: got %s, want %s", got, want)
 	}
 }
