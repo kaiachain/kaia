@@ -228,7 +228,7 @@ func (c *core) verifyPreparedCertificate(cert *bft.PreparedCertificate, target *
 		}
 		signer, err := c.validateFn(unsigned, vote.Signature)
 		if err != nil || signer != vote.Address {
-			return fmt.Errorf("prepared certificate contains invalid signature")
+			return errors.New("prepared certificate contains invalid signature")
 		}
 		var subject *bft.Subject
 		if err := vote.Decode(&subject); err != nil {
@@ -236,7 +236,7 @@ func (c *core) verifyPreparedCertificate(cert *bft.PreparedCertificate, target *
 		}
 		expected := &bft.Subject{View: cert.View, Digest: cert.Proposal.Hash(), PrevHash: cert.Proposal.ParentHash()}
 		if !subject.Equal(expected) {
-			return fmt.Errorf("prepared certificate vote has inconsistent subject")
+			return errors.New("prepared certificate vote has inconsistent subject")
 		}
 		if vote.Code == bft.MsgCommit {
 			preimage := istanbul.PrepareCommittedSeal(subject.Digest)
@@ -245,7 +245,7 @@ func (c *core) verifyPreparedCertificate(cert *bft.PreparedCertificate, target *
 			}
 			committer, err := istanbul.GetSignatureAddress(preimage, vote.CommittedSeal)
 			if err != nil || committer != vote.Address {
-				return fmt.Errorf("prepared certificate contains invalid committed seal")
+				return errors.New("prepared certificate contains invalid committed seal")
 			}
 		}
 		seen[vote.Address] = struct{}{}
@@ -272,11 +272,11 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 	var highest *bft.PreparedCertificate
 	lastProposal, _ := c.backend.LastProposal()
 	if lastProposal == nil {
-		return nil, fmt.Errorf("last proposal unavailable")
+		return nil, errors.New("last proposal unavailable")
 	}
 	for _, message := range messages {
 		if message == nil || message.Code != bft.MsgRoundChange || !committee.Contains(message.Address) {
-			return nil, fmt.Errorf("round-change certificate contains an ineligible message")
+			return nil, errors.New("round-change certificate contains an ineligible message")
 		}
 		if _, duplicate := seen[message.Address]; duplicate {
 			return nil, fmt.Errorf("round-change certificate contains duplicate sender %s", message.Address)
@@ -287,7 +287,7 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 		}
 		signer, err := c.validateFn(unsigned, message.Signature)
 		if err != nil || signer != message.Address {
-			return nil, fmt.Errorf("round-change certificate contains invalid signature")
+			return nil, errors.New("round-change certificate contains invalid signature")
 		}
 		var roundChange *bft.RoundChange
 		if err := message.Decode(&roundChange); err != nil {
@@ -295,7 +295,7 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 		}
 		if roundChange.View == nil || roundChange.View.Cmp(target) != 0 || !common.EmptyHash(roundChange.Digest) ||
 			roundChange.PrevHash != lastProposal.Hash() {
-			return nil, fmt.Errorf("round-change certificate has inconsistent view")
+			return nil, errors.New("round-change certificate has inconsistent view")
 		}
 		if roundChange.PreparedCertificate != nil {
 			if err := c.verifyPreparedCertificate(roundChange.PreparedCertificate, target); err != nil {
