@@ -17,6 +17,7 @@
 package discover
 
 import (
+	"container/list"
 	"net"
 	"sync"
 	"time"
@@ -46,16 +47,25 @@ const (
 //
 // Source IPs in UDP are spoofable, so this is a partial, application-level
 // defense intended to be complemented by network-layer (L3/L4) protections.
+//
+// Entries are kept in a recency list so that eviction under source-IP rotation
+// costs O(1) per new IP rather than a scan of the whole map while holding mu.
 type ipRateLimiter struct {
 	mu      sync.Mutex
 	limit   rate.Limit
 	burst   int
 	maxIPs  int
 	idleTTL time.Duration
-	ips     map[string]*ipLimiterEntry
+	// entries maps a source IP (as a string) to its element in lru. The
+	// element value is the *ipLimiterEntry.
+	entries map[string]*list.Element
+	// lru orders entries by lastSeen: front is the most recently seen IP,
+	// back is the least recently seen one.
+	lru *list.List
 }
 
 type ipLimiterEntry struct {
+	key      string
 	limiter  *rate.Limiter
 	lastSeen time.Time
 }
@@ -66,7 +76,8 @@ func newIPRateLimiter(limit rate.Limit, burst, maxIPs int, idleTTL time.Duration
 		burst:   burst,
 		maxIPs:  maxIPs,
 		idleTTL: idleTTL,
-		ips:     make(map[string]*ipLimiterEntry),
+		entries: make(map[string]*list.Element),
+		lru:     list.New(),
 	}
 }
 
@@ -87,55 +98,68 @@ func (l *ipRateLimiter) allow(ip net.IP, now time.Time) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	e, ok := l.ips[key]
-	if !ok {
-		// Keep the map bounded: drop idle entries first, then evict the
-		// least-recently-seen one if still at capacity.
-		if len(l.ips) >= l.maxIPs {
-			l.evictIdle(now)
-		}
-		if len(l.ips) >= l.maxIPs {
-			l.evictOldest()
-		}
-		e = &ipLimiterEntry{limiter: rate.NewLimiter(l.limit, l.burst)}
-		l.ips[key] = e
+	if el, ok := l.entries[key]; ok {
+		e := el.Value.(*ipLimiterEntry)
+		e.lastSeen = now
+		l.lru.MoveToFront(el)
+		return e.limiter.AllowN(now, 1)
 	}
-	e.lastSeen = now
+
+	// Keep the map bounded: drop idle entries first, then evict the
+	// least-recently-seen one if still at capacity.
+	if l.lru.Len() >= l.maxIPs {
+		l.evictIdle(now)
+	}
+	if l.lru.Len() >= l.maxIPs {
+		l.evictOldest()
+	}
+	e := &ipLimiterEntry{key: key, limiter: rate.NewLimiter(l.limit, l.burst), lastSeen: now}
+	l.entries[key] = l.lru.PushFront(e)
 	return e.limiter.AllowN(now, 1)
 }
 
 // evictIdle removes entries idle for longer than idleTTL. An idle entry's token
 // bucket is necessarily full, so dropping it loses no rate-limit state.
+// Entries are visited from the least recently seen end and the walk stops at
+// the first active one, so the cost is proportional to the number evicted.
 // The caller must hold l.mu.
 func (l *ipRateLimiter) evictIdle(now time.Time) {
-	for k, e := range l.ips {
-		if now.Sub(e.lastSeen) > l.idleTTL {
-			delete(l.ips, k)
+	for el := l.lru.Back(); el != nil; el = l.lru.Back() {
+		e := el.Value.(*ipLimiterEntry)
+		if now.Sub(e.lastSeen) <= l.idleTTL {
+			return
 		}
+		l.remove(el)
 	}
 }
 
 // evictOldest removes the single least-recently-seen entry to make room for a
 // new IP when the map is at capacity. The caller must hold l.mu.
 func (l *ipRateLimiter) evictOldest() {
-	var (
-		oldestKey  string
-		oldestTime time.Time
-		found      bool
-	)
-	for k, e := range l.ips {
-		if !found || e.lastSeen.Before(oldestTime) {
-			oldestKey, oldestTime, found = k, e.lastSeen, true
-		}
+	if el := l.lru.Back(); el != nil {
+		l.remove(el)
 	}
-	if found {
-		delete(l.ips, oldestKey)
-	}
+}
+
+// remove deletes el from both the map and the recency list. The caller must
+// hold l.mu.
+func (l *ipRateLimiter) remove(el *list.Element) {
+	e := el.Value.(*ipLimiterEntry)
+	delete(l.entries, e.key)
+	l.lru.Remove(el)
 }
 
 // len returns the number of tracked IPs.
 func (l *ipRateLimiter) len() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return len(l.ips)
+	return len(l.entries)
+}
+
+// has reports whether ip is currently tracked.
+func (l *ipRateLimiter) has(ip net.IP) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	_, ok := l.entries[ip.String()]
+	return ok
 }
