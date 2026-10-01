@@ -362,7 +362,7 @@ func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode 
 	case err == nil, err == errBusy, err == errCanceled:
 		return err
 
-	case errors.Is(err, errInvalidChain), errors.Is(err, errInvalidBody),
+	case errors.Is(err, errInvalidChain), errors.Is(err, errInvalidBody), errors.Is(err, errInvalidReceipt),
 		err == errTimeout, err == errBadPeer, err == errStallingPeer,
 		err == errEmptyHeaderSet, err == errPeersUnavailable, err == errTooOld,
 		err == errInvalidAncestor:
@@ -718,6 +718,13 @@ func (d *Downloader) cancel() {
 		}
 	}
 	d.cancelLock.Unlock()
+}
+
+func (d *Downloader) isMasterPeer(id string) bool {
+	d.cancelLock.RLock()
+	defer d.cancelLock.RUnlock()
+
+	return id == d.cancelPeer
 }
 
 // Cancel aborts all of the operations and waits for all download goroutines to
@@ -1350,8 +1357,8 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 				// A newer request may already be in flight for this peer. Leave its
 				// state unchanged so the current response can still be delivered.
 
-			case errors.Is(err, errInvalidBody):
-				if pid == d.cancelPeer {
+			case errors.Is(err, errInvalidBody), errors.Is(err, errInvalidReceipt):
+				if d.isMasterPeer(pid) {
 					return err
 				}
 				peer.logger.Debug("Invalid data delivery, dropping peer", "type", kind, "err", err)
@@ -1419,11 +1426,7 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 							d.dropPeer(pid)
 
 							// If this peer was the master peer, abort sync immediately
-							d.cancelLock.RLock()
-							master := pid == d.cancelPeer
-							d.cancelLock.RUnlock()
-
-							if master {
+							if d.isMasterPeer(pid) {
 								d.cancel()
 								return errTimeout
 							}

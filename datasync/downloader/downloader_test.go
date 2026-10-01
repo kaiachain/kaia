@@ -1537,8 +1537,15 @@ func newDeliveryErrorDownloader(t *testing.T, master string, dropPeer peerDropFn
 }
 
 func TestFetchPartsHandlesInvalidBodyPeer(t *testing.T) {
-	deliveryErr := fmt.Errorf("partial failure: %w", errInvalidBody)
+	testFetchPartsHandlesInvalidDataPeer(t, fmt.Errorf("partial failure: %w", errInvalidBody), errInvalidBody)
+}
 
+func TestFetchPartsHandlesInvalidReceiptPeer(t *testing.T) {
+	testFetchPartsHandlesInvalidDataPeer(t, fmt.Errorf("partial failure: %w", errInvalidReceipt), errInvalidReceipt)
+}
+
+func testFetchPartsHandlesInvalidDataPeer(t *testing.T, deliveryErr, want error) {
+	t.Helper()
 	t.Run("helper", func(t *testing.T) {
 		dropped := make(chan string, 1)
 		var d *Downloader
@@ -1584,8 +1591,8 @@ func TestFetchPartsHandlesInvalidBodyPeer(t *testing.T) {
 		}, func(*peerConnection, int, time.Time) {
 			t.Error("master delivery peer must not be returned to idle")
 		})
-		if !errors.Is(err, errInvalidBody) {
-			t.Fatalf("expected %v, got %v", errInvalidBody, err)
+		if !errors.Is(err, want) {
+			t.Fatalf("expected %v, got %v", want, err)
 		}
 	})
 }
@@ -1675,9 +1682,10 @@ func testBlockHeaderAttackerDropping(t *testing.T, protocol int) {
 		{errInvalidAncestor, true},  // Agreed upon ancestor is not acceptable, drop the chain rewriter
 		{errInvalidChain, true},     // Hash chain was detected as invalid, definitely drop
 		{errInvalidBody, true},      // Invalid body delivered by the sync origin
+		{errInvalidReceipt, true},   // Invalid receipts delivered by the sync origin
 		{fmt.Errorf("wrapped: %w", errInvalidChain), true},
 		{fmt.Errorf("wrapped: %w", errInvalidBody), true},
-		{errInvalidReceipt, false},          // A bad peer was detected, but not the sync origin
+		{fmt.Errorf("wrapped: %w", errInvalidReceipt), true},
 		{errCancelContentProcessing, false}, // Synchronisation was canceled, origin may be innocent, don't drop
 	}
 	// Run the tests and check disconnection status
