@@ -45,6 +45,12 @@ var ErrInvalidSigner = errors.New("message not signed by the sender")
 var ErrInvalidMessage = errors.New("invalid message")
 
 // Message is the envelope transmitted between BFT validators.
+//
+// Justification is an optional, unsigned attachment. Only a post-Permissionless
+// ROUND CHANGE uses it, to carry the RLP-encoded PreparedCertificate behind the
+// PreparedClaim it signs. Keeping the evidence outside the signature lets a
+// proposer embed the small signed ROUND CHANGE in a certificate without the
+// prepared block; receivers bind the attachment to the signed claim instead.
 type Message struct {
 	Hash          common.Hash
 	Code          uint64
@@ -52,11 +58,26 @@ type Message struct {
 	Address       common.Address
 	Signature     []byte
 	CommittedSeal []byte
+	Justification []byte
 }
 
-// EncodeRLP serializes m into the Kaia RLP format.
+// EncodeRLP serializes m into the Kaia RLP format. An empty Justification is
+// omitted, so ordinary messages keep their legacy encoding. rlp omits only a
+// nil optional field, so a non-nil empty slice is normalized to nil first.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	justification := m.Justification
+	if len(justification) == 0 {
+		justification = nil
+	}
+	return rlp.Encode(w, struct {
+		Hash          common.Hash
+		Code          uint64
+		Msg           []byte
+		Address       common.Address
+		Signature     []byte
+		CommittedSeal []byte
+		Justification []byte `rlp:"optional"`
+	}{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal, justification})
 }
 
 // DecodeRLP loads the consensus fields from a Kaia RLP stream.
@@ -68,11 +89,13 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 		Address       common.Address
 		Signature     []byte
 		CommittedSeal []byte
+		Justification []byte `rlp:"optional"`
 	}
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
 	m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Hash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Justification = msg.Justification
 	return nil
 }
 
@@ -82,7 +105,7 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 	if err := rlp.DecodeBytes(b, &m); err != nil {
 		return err
 	}
-	if err := m.validateCommittedSealLength(); err != nil {
+	if err := m.validateEnvelope(); err != nil {
 		return err
 	}
 	if validateFn != nil {
@@ -101,8 +124,8 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 	return nil
 }
 
-// validateCommittedSealLength checks the envelope shape before signature recovery.
-func (m *Message) validateCommittedSealLength() error {
+// validateEnvelope checks the envelope shape before signature recovery.
+func (m *Message) validateEnvelope() error {
 	switch m.Code {
 	case MsgCommit:
 		if len(m.CommittedSeal) != crypto.SignatureLength {
@@ -113,6 +136,9 @@ func (m *Message) validateCommittedSealLength() error {
 			return fmt.Errorf("%w: unexpected committed seal on message code %d", ErrInvalidMessage, m.Code)
 		}
 	}
+	if len(m.Justification) != 0 && m.Code != MsgRoundChange {
+		return fmt.Errorf("%w: unexpected justification on message code %d", ErrInvalidMessage, m.Code)
+	}
 	return nil
 }
 
@@ -122,7 +148,8 @@ func (m *Message) Payload() ([]byte, error) {
 }
 
 // PayloadNoSig returns the RLP-encoded message with Signature zeroed, used for
-// recovering the signer address from the attached Signature.
+// recovering the signer address from the attached Signature. Justification is
+// deliberately excluded: it is unsigned evidence checked against the payload.
 func (m *Message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&Message{
 		Hash:          m.Hash,
@@ -137,6 +164,14 @@ func (m *Message) PayloadNoSig() ([]byte, error) {
 // Decode unmarshals m.Msg into val.
 func (m *Message) Decode(val any) error {
 	return rlp.DecodeBytes(m.Msg, val)
+}
+
+// WithoutJustification returns a shallow copy of m without its unsigned
+// attachment. The copy keeps the original signature.
+func (m *Message) WithoutJustification() *Message {
+	stripped := *m
+	stripped.Justification = nil
+	return &stripped
 }
 
 func (m *Message) String() string {

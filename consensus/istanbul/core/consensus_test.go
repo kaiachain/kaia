@@ -548,6 +548,217 @@ func TestConsensusSplitLockReproposalRefreshesPreparedCertificate(t *testing.T) 
 	})
 }
 
+// splitLock reproduces the round-0 split lock used by the tests above: C/D
+// lock X, B (the round-1 proposer) saw only Y, and A's COMMIT is withheld.
+func splitLock(t *testing.T) (s *scenarioNet, x *types.Block) {
+	s = newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+	attacker := s.validators[0]
+	x = attacker.proposal(1)
+	s.modify(bft.MsgPreprepare, attacker, s.nodes(1), attacker.alternative(x))
+	s.drop(bft.MsgPrepare, s.nodes(0), s.nodes(1))
+	s.drop(bft.MsgCommit, s.nodes(0), s.nodes(0, 1, 2, 3))
+	s.advanceConsensus(1, s.nodes(0, 1, 2, 3))
+	for _, n := range s.nodes(2, 3) {
+		n.assertHashLocked(x.Hash())
+	}
+	return s, x
+}
+
+// sentPreprepare decodes the PRE-PREPARE a node actually broadcast.
+func sentPreprepare(t *testing.T, s *scenarioNet, from *validator, height, round uint64) *bft.Preprepare {
+	var msg bft.Message
+	require.NoError(t, msg.FromPayload(s.message(from, bft.MsgPreprepare, height, round).Payload, nil))
+	var preprepare *bft.Preprepare
+	require.NoError(t, msg.Decode(&preprepare))
+	return preprepare
+}
+
+// signedRoundChange signs a ROUND CHANGE for the sender's head with an
+// arbitrary claim and attached certificate.
+func signedRoundChange(t *testing.T, sender *validator, round uint64, claim *bft.PreparedClaim, cert *bft.PreparedCertificate) istanbul.MessageEvent {
+	var justification []byte
+	if cert != nil {
+		var err error
+		justification, err = bft.Encode(cert)
+		require.NoError(t, err)
+	}
+	return signedRoundChangeAt(t, sender, sender.head().NumberU64()+1, round, claim, justification)
+}
+
+// signedRoundChangeAt signs a ROUND CHANGE for an arbitrary sequence with raw
+// Justification bytes, which the sender's signature does not cover.
+func signedRoundChangeAt(t *testing.T, sender *validator, sequence, round uint64, claim *bft.PreparedClaim, justification []byte) istanbul.MessageEvent {
+	head := sender.head()
+	encoded, err := bft.Encode(&bft.RoundChange{
+		View:     &bft.View{Sequence: new(big.Int).SetUint64(sequence), Round: new(big.Int).SetUint64(round)},
+		PrevHash: head.Hash(),
+		Prepared: claim,
+	})
+	require.NoError(t, err)
+	payload, err := sender.core.finalizeMessage(&bft.Message{
+		Hash: head.Hash(), Code: bft.MsgRoundChange, Msg: encoded, Justification: justification,
+	})
+	require.NoError(t, err)
+	return istanbul.MessageEvent{Hash: head.Hash(), Payload: payload}
+}
+
+// TestConsensusRecoveryPreprepareCarriesProposalOnce checks the QBFT-style
+// justification: the recovery PRE-PREPARE embeds signed ROUND CHANGE claims
+// stripped of their certificates, plus only the winning certificate's votes.
+// The prepared block travels once, as the proposal, however many senders
+// hold it.
+func TestConsensusRecoveryPreprepareCarriesProposalOnce(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		nextProposer := s.validators[1]
+		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(0, 1, 2, 3))
+		s.timeout(s.nodes(1, 2, 3))
+		s.advanceConsensus(1, s.nodes(0))
+
+		preprepare := sentPreprepare(t, s, nextProposer, 1, 1)
+		require.Equal(t, x.Hash(), preprepare.Proposal.Hash())
+		require.Len(t, preprepare.RoundChangeCertificate, nextProposer.core.current.requiredMessageCount)
+		claims := 0
+		for _, rc := range preprepare.RoundChangeCertificate {
+			require.Empty(t, rc.Justification, "embedded ROUND CHANGE must not repeat the prepared block")
+			require.LessOrEqual(t, retainedMessageBytes(rc), uint64(maxSubjectMessageBytes))
+			var roundChange *bft.RoundChange
+			require.NoError(t, rc.Decode(&roundChange))
+			if roundChange.Prepared != nil {
+				claims++
+				require.Equal(t, x.Hash(), roundChange.Prepared.Digest)
+				require.Zero(t, roundChange.Prepared.Round.Sign())
+			}
+		}
+		require.Equal(t, 2, claims, "C and D both claim X")
+		require.GreaterOrEqual(t, len(preprepare.PreparedMessages), nextProposer.core.current.requiredMessageCount)
+	})
+}
+
+// TestConsensusPreprepareJustificationValidation mutates a real recovery
+// PRE-PREPARE and checks that a receiver rejects every unjustified variant.
+func TestConsensusPreprepareJustificationValidation(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		nextProposer, receiver := s.validators[1], s.validators[2]
+		// Keep the receivers at (1, 1) so the captured PRE-PREPARE stays current.
+		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(0, 1, 2, 3))
+		s.drop(bft.MsgPreprepare, s.nodes(1), s.nodes(0, 2, 3), 1)
+		s.timeout(s.nodes(1, 2, 3))
+		s.drain()
+		receiver.assertView(1, 1, false)
+		quorum := receiver.core.current.requiredMessageCount
+
+		cert, err := receiver.core.verifyPreprepareJustification(sentPreprepare(t, s, nextProposer, 1, 1))
+		require.NoError(t, err)
+		require.Equal(t, x.Hash(), cert.Proposal.Hash())
+		require.Zero(t, cert.View.Round.Sign())
+
+		for _, tc := range []struct {
+			name   string
+			mutate func(*bft.Preprepare)
+		}{
+			{"proposal is not the highest prepared value", func(pp *bft.Preprepare) { pp.Proposal = nextProposer.alternative(x) }},
+			{"missing prepared votes", func(pp *bft.Preprepare) { pp.PreparedMessages = nil }},
+			{"prepared votes below quorum", func(pp *bft.Preprepare) { pp.PreparedMessages = pp.PreparedMessages[:quorum-1] }},
+			{"round-change certificate below quorum", func(pp *bft.Preprepare) {
+				pp.RoundChangeCertificate = pp.RoundChangeCertificate[:quorum-1]
+			}},
+			{"duplicate round-change sender", func(pp *bft.Preprepare) {
+				pp.RoundChangeCertificate[len(pp.RoundChangeCertificate)-1] = pp.RoundChangeCertificate[0]
+			}},
+			{"embedded round change keeps its justification", func(pp *bft.Preprepare) {
+				embedded := *pp.RoundChangeCertificate[0]
+				embedded.Justification = []byte{0xc0}
+				pp.RoundChangeCertificate[0] = &embedded
+			}},
+		} {
+			pp := sentPreprepare(t, s, nextProposer, 1, 1)
+			tc.mutate(pp)
+			_, err := receiver.core.verifyPreprepareJustification(pp)
+			require.Error(t, err, tc.name)
+		}
+	})
+}
+
+// TestConsensusRoundChangeRejectsUnboundJustification checks that a ROUND
+// CHANGE certificate must prove exactly the signed claim, including the
+// prepared block's body, which the votes alone do not bind.
+func TestConsensusRoundChangeRejectsUnboundJustification(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		attacker, receiver := s.validators[0], s.validators[1]
+		cert := s.validators[2].core.current.PreparedCertificate()
+		require.NotNil(t, cert)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
+
+		// Same header and votes, different transactions: the block hash is
+		// unchanged, so only the body check can catch it.
+		tx := types.NewTransaction(0, common.Address{}, big.NewInt(0), 21000, big.NewInt(0), nil)
+		forged := &bft.PreparedCertificate{View: cert.View, Proposal: cert.Proposal.WithBody(types.Transactions{tx}), Messages: cert.Messages}
+		require.Equal(t, x.Hash(), forged.Proposal.Hash())
+
+		for _, tc := range []struct {
+			name  string
+			claim *bft.PreparedClaim
+			cert  *bft.PreparedCertificate
+		}{
+			{"forged proposal body", claim, forged},
+			{"claim without justification", claim, nil},
+			{"justification without claim", nil, cert},
+			{"claim for another value", &bft.PreparedClaim{Round: big.NewInt(0), Digest: attacker.alternative(x).Hash()}, cert},
+			{"claim for another round", &bft.PreparedClaim{Round: big.NewInt(1), Digest: x.Hash()}, cert},
+		} {
+			t.Log(tc.name)
+			receiver.reject(signedRoundChange(t, attacker, 2, tc.claim, tc.cert), bft.ErrInvalidMessage)
+		}
+		// The same construction with a matching claim and certificate is admitted;
+		// a lone future-round message is counted but reported as ignored.
+		receiver.receive(signedRoundChange(t, attacker, 2, claim, cert), errIgnored)
+		receiver.assertRoundChangeCount(2, 1)
+	})
+}
+
+// TestConsensusRoundChangeRejectsJustificationBeforeFork checks that before
+// Permissionless a ROUND CHANGE keeps the legacy shape. Neither a signed
+// PreparedClaim nor an unsigned Justification, which any relay could attach
+// to a valid message, may enter the round-change set or the backlog. From the
+// activation height the gate no longer applies; the attachment is verified
+// when the message is processed.
+func TestConsensusRoundChangeRejectsJustificationBeforeFork(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		config := params.TestKaiaConfig("permissionless")
+		config.PermissionlessCompatibleBlock = big.NewInt(3)
+		s := newScenarioNet(t, 4, 4, config)
+		sender, receiver := s.validators[0], s.validators[1]
+		require.False(t, receiver.backend.IsPermissionlessAt(1))
+
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: common.HexToHash("0x01")}
+		junk := []byte{0xc0}
+		for _, tc := range []struct {
+			name          string
+			sequence      uint64
+			claim         *bft.PreparedClaim
+			justification []byte
+		}{
+			{"justification without claim", 1, nil, junk},
+			{"claim without justification", 1, claim, nil},
+			{"claim with justification", 1, claim, junk},
+			{"future-height justification", 2, nil, junk},
+		} {
+			t.Log(tc.name)
+			receiver.reject(signedRoundChangeAt(t, sender, tc.sequence, 1, tc.claim, tc.justification), bft.ErrInvalidMessage)
+		}
+		// The legacy ROUND CHANGE from the same sender is still admitted.
+		receiver.receive(signedRoundChangeAt(t, sender, 1, 1, nil, nil), errIgnored)
+		receiver.assertRoundChangeCount(1, 1)
+		// At the activation height the same envelope passes the gate and is
+		// deferred like any future message.
+		require.True(t, receiver.backend.IsPermissionlessAt(3))
+		receiver.receive(signedRoundChangeAt(t, sender, 3, 1, nil, junk), errFutureMessage)
+	})
+}
+
 // TestConsensusInputValidation checks malformed messages, sender eligibility, proposal validity and commit seals.
 // Pure rejection must leave node state unchanged; invalid proposals may instead trigger a round change.
 // Valid traffic must still progress after the faulty input, using the seal rules active at the block height.

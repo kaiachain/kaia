@@ -48,7 +48,15 @@ func (c *core) sendPreprepare(request *bft.Request) {
 			Proposal: request.Proposal,
 		}
 		if c.backend.IsPermissionlessAt(curView.Sequence.Uint64()) && curView.Round.Sign() > 0 {
-			message.RoundChangeCertificate = c.roundChangeCertificate
+			certificate, prepared, err := c.roundChangeJustification(c.roundChangeCertificate, curView)
+			if err != nil {
+				logger.Error("Failed to justify PRE-PREPARE", "view", curView, "err", err)
+				return
+			}
+			message.RoundChangeCertificate = certificate
+			if prepared != nil {
+				message.PreparedMessages = prepared.Messages
+			}
 		}
 		preprepare, err := bft.Encode(message)
 		if err != nil {
@@ -118,18 +126,13 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	var highestPrepared *bft.PreparedCertificate
 	if c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) {
 		if preprepare.View.Round.Sign() == 0 {
-			if len(preprepare.RoundChangeCertificate) != 0 {
+			if len(preprepare.RoundChangeCertificate) != 0 || len(preprepare.PreparedMessages) != 0 {
 				return bft.ErrInvalidMessage
 			}
 		} else {
-			highestPrepared, err = c.verifyRoundChangeCertificate(preprepare.RoundChangeCertificate, preprepare.View)
+			highestPrepared, err = c.verifyPreprepareJustification(preprepare)
 			if err != nil {
-				logger.Warn("Invalid round-change certificate in PRE-PREPARE", "err", err)
-				return bft.ErrInvalidMessage
-			}
-			if highestPrepared != nil && highestPrepared.Proposal.Hash() != preprepare.Proposal.Hash() {
-				logger.Warn("PRE-PREPARE does not carry the highest prepared proposal",
-					"expected", highestPrepared.Proposal.Hash(), "got", preprepare.Proposal.Hash())
+				logger.Warn("Invalid round-change justification in PRE-PREPARE", "err", err)
 				return bft.ErrInvalidMessage
 			}
 		}

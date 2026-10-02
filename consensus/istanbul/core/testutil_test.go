@@ -28,6 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/derivesha"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -69,6 +70,7 @@ func newScenarioNet(t *testing.T, count, committee int, chain *params.ChainConfi
 	config.ProposerPolicy = istanbul.RoundRobin
 	s := &scenarioNet{t: t, config: scenarioConfig{committee, chain, config}}
 	previousHash := types.HeaderHashFn
+	previousDeriveSha, previousEmptyRoot := types.DeriveShaImpl, types.GetEmptyRootHash
 	t.Cleanup(func() {
 		for _, n := range s.validators {
 			require.NoError(t, n.core.Stop())
@@ -76,7 +78,10 @@ func newScenarioNet(t *testing.T, count, committee int, chain *params.ChainConfi
 		}
 		fork.ClearHardForkBlockNumberConfig()
 		types.SetHeaderHashFn(previousHash)
+		types.DeriveShaImpl, types.GetEmptyRootHash = previousDeriveSha, previousEmptyRoot
 	})
+	// Prepared certificates bind a proposal's body to its TxHash.
+	derivesha.InitDeriveSha(chain, nil)
 	fork.ClearHardForkBlockNumberConfig()
 	require.NoError(t, fork.SetHardForkBlockNumberConfig(chain))
 	keys := make([]*ecdsa.PrivateKey, count)
@@ -537,6 +542,7 @@ func (node *validator) proposal(variant int64) *types.Block {
 		ParentHash: node.backend.head.Hash(), Number: new(big.Int).Add(node.backend.head.Number(), common.Big1),
 		Time: new(big.Int).Add(node.backend.head.Time(), big.NewInt(variant)), BlockScore: big.NewInt(1),
 	}
+	header.TxHash = types.DeriveTransactionsRoot(nil, header.Number)
 	require.NoError(net.t, node.backend.sealer.WriteValidators(header, net.validatorAddresses()))
 	seal, err := node.backend.sealer.MakeAuthorSeal(header)
 	require.NoError(net.t, err)
