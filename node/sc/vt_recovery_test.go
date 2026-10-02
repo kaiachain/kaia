@@ -253,12 +253,6 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 }
 
 func TestRecoveryScenarios(t *testing.T) {
-	info := prepareRecoveryWithOptions(t, nil, recoveryFixtureOptions{
-		withToken: true,
-		withNFT:   true,
-		mintNFT:   true,
-	})
-
 	testCases := []simpleRecoveryCase{
 		{
 			name:          "basic_token_transfer_recovery",
@@ -299,10 +293,18 @@ func TestRecoveryScenarios(t *testing.T) {
 
 	for idx, tc := range testCases {
 		t.Run(fmt.Sprintf("%02d_%s", idx, tc.name), func(t *testing.T) {
-			requestBridge := tc.requestBridge(info)
-			for i := 0; i < testTxCount; i++ {
-				ops[tc.tokenType].request(info, requestBridge)
-			}
+			// Event delivery is asynchronous, so sharing a fixture between cases can
+			// leak in-flight request and handle events into the next scenario.
+			info := prepareRecoveryWithOptions(t, func(info *testInfo) {
+				requestBridge := tc.requestBridge(info)
+				for i := 0; i < testTxCount; i++ {
+					ops[tc.tokenType].request(info, requestBridge)
+				}
+			}, recoveryFixtureOptions{
+				withToken: tc.tokenType == ERC20,
+				withNFT:   tc.tokenType == ERC721,
+				mintNFT:   tc.tokenType == ERC721,
+			})
 
 			vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 			err := vtr.updateRecoveryHint()

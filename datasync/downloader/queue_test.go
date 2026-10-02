@@ -114,6 +114,367 @@ func dummyPeer(id string) *peerConnection {
 	return p
 }
 
+func newBodyDeliveryQueue(t *testing.T, id string) (*queue, *peerConnection, *fetchRequest) {
+	t.Helper()
+
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), params.TestChainConfig)
+	q.Prepare(1, FullSync)
+	q.Schedule(chain.headers()[:12], 1)
+
+	peer := dummyPeer(id)
+	request, _, _ := q.ReserveBodies(peer, 2)
+	if request == nil || len(request.Headers) != 2 {
+		t.Fatalf("expected two body requests, got %#v", request)
+	}
+	return q, peer, request
+}
+
+func bodyTransactions(request *fetchRequest) [][]*types.Transaction {
+	bodies := make([][]*types.Transaction, len(request.Headers))
+	for i, header := range request.Headers {
+		bodies[i] = chain.blocks[header.Number.Uint64()-1].Transactions()
+	}
+	return bodies
+}
+
+func newReceiptDeliveryQueue(t *testing.T, id string) (*queue, *peerConnection, *fetchRequest) {
+	t.Helper()
+
+	q := newQueue(50, 50, uint64(istanbul.WeightedRandom), params.TestChainConfig)
+	q.Prepare(1, FastSync)
+	headers := make([]*types.Header, 12)
+	for i, header := range chain.headers()[:12] {
+		headers[i] = types.CopyHeader(header)
+		headers[i].ReceiptHash = types.DeriveReceiptsRoot(receiptsForHeader(headers[i]), headers[i].Number)
+		if i > 0 {
+			headers[i].ParentHash = headers[i-1].Hash()
+		}
+	}
+	q.Schedule(headers, 1)
+
+	peer := dummyPeer(id)
+	request, _, _ := q.ReserveReceipts(peer, 2)
+	if request == nil || len(request.Headers) != 2 {
+		t.Fatalf("expected two receipt requests, got %#v", request)
+	}
+	return q, peer, request
+}
+
+func receiptsForHeader(header *types.Header) []*types.Receipt {
+	return []*types.Receipt{types.NewReceipt(types.ReceiptStatusSuccessful, common.Hash{}, header.Number.Uint64())}
+}
+
+func receiptLists(request *fetchRequest) [][]*types.Receipt {
+	receipts := make([][]*types.Receipt, len(request.Headers))
+	for i, header := range request.Headers {
+		receipts[i] = receiptsForHeader(header)
+	}
+	return receipts
+}
+
+type deliveryQueueTest struct {
+	name            string
+	item            string
+	newQueue        func(*testing.T, string) (*queue, *peerConnection, *fetchRequest)
+	reserve         func(*queue, *peerConnection, int) (*fetchRequest, bool, bool)
+	expire          func(*queue, time.Duration) map[string]int
+	deliver         func(*queue, string, *fetchRequest) (int, error)
+	deliverInvalid  func(*queue, string) (int, error)
+	deliverEmpty    func(*queue, string) (int, error)
+	pendingRequest  func(*queue, string) *fetchRequest
+	expiredRequests func(*queue, string) int
+	invalidErr      error
+}
+
+func deliveryQueueTests() []deliveryQueueTest {
+	return []deliveryQueueTest{
+		{
+			name:     "bodies",
+			item:     "body",
+			newQueue: newBodyDeliveryQueue,
+			reserve:  (*queue).ReserveBodies,
+			expire:   (*queue).ExpireBodies,
+			deliver: func(q *queue, id string, request *fetchRequest) (int, error) {
+				return q.DeliverBodies(id, bodyTransactions(request))
+			},
+			deliverInvalid: func(q *queue, id string) (int, error) {
+				return q.DeliverBodies(id, [][]*types.Transaction{nil})
+			},
+			deliverEmpty:    func(q *queue, id string) (int, error) { return q.DeliverBodies(id, nil) },
+			pendingRequest:  func(q *queue, id string) *fetchRequest { return q.blockPendPool[id] },
+			expiredRequests: func(q *queue, id string) int { return len(q.blockExpired[id]) },
+			invalidErr:      errInvalidBody,
+		},
+		{
+			name:     "receipts",
+			item:     "receipt",
+			newQueue: newReceiptDeliveryQueue,
+			reserve:  (*queue).ReserveReceipts,
+			expire:   (*queue).ExpireReceipts,
+			deliver: func(q *queue, id string, request *fetchRequest) (int, error) {
+				return q.DeliverReceipts(id, receiptLists(request))
+			},
+			deliverInvalid: func(q *queue, id string) (int, error) {
+				return q.DeliverReceipts(id, [][]*types.Receipt{nil})
+			},
+			deliverEmpty:    func(q *queue, id string) (int, error) { return q.DeliverReceipts(id, nil) },
+			pendingRequest:  func(q *queue, id string) *fetchRequest { return q.receiptPendPool[id] },
+			expiredRequests: func(q *queue, id string) int { return len(q.receiptExpired[id]) },
+			invalidErr:      errInvalidReceipt,
+		},
+	}
+}
+
+func TestTrackExpiredRequestEvictsOldest(t *testing.T) {
+	expired := make(map[string][][]*types.Header)
+	headers := chain.headers()[:maxExpiredRequests+1]
+
+	for _, header := range headers {
+		trackExpiredRequest(expired, "peer-1", &fetchRequest{Headers: []*types.Header{header}})
+	}
+	if got := len(expired["peer-1"]); got != maxExpiredRequests {
+		t.Fatalf("expected %d retained requests, got %d", maxExpiredRequests, got)
+	}
+	if got := expired["peer-1"][0][0]; got != headers[1] {
+		t.Fatalf("expected oldest retained header %s, got %s", headers[1].Hash(), got.Hash())
+	}
+}
+
+func TestDeliverBodiesRejectsInvalidDelivery(t *testing.T) {
+	q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+	pending := q.PendingBlocks()
+
+	first := request.Headers[0].Number.Uint64()
+	validPrefix := chain.blocks[first-1].Transactions()
+	accepted, err := q.DeliverBodies(peer.id, [][]*types.Transaction{validPrefix, nil})
+
+	if accepted != 1 {
+		t.Fatalf("expected one accepted body, got %d", accepted)
+	}
+	if !errors.Is(err, errInvalidBody) {
+		t.Fatalf("expected %v, got %v", errInvalidBody, err)
+	}
+	if got, want := q.PendingBlocks(), pending+1; got != want {
+		t.Fatalf("expected %d pending bodies after rejection, got %d", want, got)
+	}
+}
+
+func TestDeliverBodiesPreservesInvalidBodyOverResultSlotError(t *testing.T) {
+	q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+
+	// Make result slot lookup fail after validation has already identified the
+	// invalid suffix.
+	q.resultCache.lock.Lock()
+	q.resultCache.items = nil
+	q.resultCache.lock.Unlock()
+
+	first := request.Headers[0].Number.Uint64()
+	validPrefix := chain.blocks[first-1].Transactions()
+	accepted, err := q.DeliverBodies(peer.id, [][]*types.Transaction{validPrefix, nil})
+
+	if accepted != 1 {
+		t.Fatalf("expected one accepted body, got %d", accepted)
+	}
+	if !errors.Is(err, errInvalidBody) {
+		t.Fatalf("expected %v, got %v", errInvalidBody, err)
+	}
+	if errors.Is(err, errStaleDelivery) {
+		t.Fatalf("stale slot error replaced invalid body error: %v", err)
+	}
+}
+
+func TestDeliverBodiesEmptyResponseMarksBodiesLacking(t *testing.T) {
+	q, peer, request := newBodyDeliveryQueue(t, "peer-1")
+	pending := q.PendingBlocks()
+
+	accepted, err := q.DeliverBodies(peer.id, nil)
+	if accepted != 0 || err != nil {
+		t.Fatalf("expected empty response to be accepted as missing, got accepted=%d err=%v", accepted, err)
+	}
+	if got, want := q.PendingBlocks(), pending+len(request.Headers); got != want {
+		t.Fatalf("expected %d pending bodies after empty response, got %d", want, got)
+	}
+	for _, header := range request.Headers {
+		if !peer.Lacks(header.Hash()) {
+			t.Fatalf("expected peer to be marked lacking body %s", header.Hash())
+		}
+	}
+}
+
+func TestDeliveriesIdentifyLateResponse(t *testing.T) {
+	for _, tt := range deliveryQueueTests() {
+		t.Run(tt.name, func(t *testing.T) {
+			q, peer, expired := tt.newQueue(t, "peer-1")
+			expired.Time = time.Now().Add(-time.Hour)
+			if got := tt.expire(q, time.Second)[peer.id]; got != len(expired.Headers) {
+				t.Fatalf("expected %d expired %s requests, got %d", len(expired.Headers), tt.item, got)
+			}
+
+			// Assign the expired work elsewhere, then give the original peer a newer
+			// request. The late response must not consume that newer request.
+			if request, _, _ := tt.reserve(q, dummyPeer("peer-2"), 2); request == nil {
+				t.Fatalf("expected expired %s requests to be reassigned", tt.item)
+			}
+			current, _, _ := tt.reserve(q, peer, 2)
+			if current == nil {
+				t.Fatalf("expected a newer %s request", tt.item)
+			}
+
+			if accepted, err := tt.deliver(q, peer.id, expired); accepted != 0 || !errors.Is(err, errLateDelivery) {
+				t.Fatalf("expected late delivery, got accepted=%d err=%v", accepted, err)
+			}
+			if tt.pendingRequest(q, peer.id) != current {
+				t.Fatalf("late delivery consumed the current %s request", tt.item)
+			}
+			if accepted, err := tt.deliver(q, peer.id, current); accepted != len(current.Headers) || err != nil {
+				t.Fatalf("current %s delivery failed: accepted=%d err=%v", tt.item, accepted, err)
+			}
+		})
+	}
+}
+
+func TestDeliveriesPreferCurrentResponse(t *testing.T) {
+	for _, tt := range deliveryQueueTests() {
+		t.Run(tt.name, func(t *testing.T) {
+			q, peer, expired := tt.newQueue(t, "peer-1")
+			expired.Time = time.Now().Add(-time.Hour)
+			tt.expire(q, time.Second)
+
+			tt.reserve(q, dummyPeer("peer-2"), 2)
+			current, _, _ := tt.reserve(q, peer, 2)
+			if current == nil {
+				t.Fatalf("expected a current %s request", tt.item)
+			}
+
+			if accepted, err := tt.deliver(q, peer.id, current); accepted != len(current.Headers) || err != nil {
+				t.Fatalf("current %s delivery failed: accepted=%d err=%v", tt.item, accepted, err)
+			}
+			if tt.expiredRequests(q, peer.id) != 1 {
+				t.Fatalf("current %s delivery consumed expired request history", tt.item)
+			}
+			if accepted, err := tt.deliver(q, peer.id, expired); accepted != 0 || !errors.Is(err, errLateDelivery) {
+				t.Fatalf("expected late %s delivery without a current request, got accepted=%d err=%v", tt.item, accepted, err)
+			}
+		})
+	}
+}
+
+func TestDeliveriesRejectInvalidWithExpiredHistory(t *testing.T) {
+	for _, tt := range deliveryQueueTests() {
+		t.Run(tt.name, func(t *testing.T) {
+			q, peer, expired := tt.newQueue(t, "peer-1")
+			expired.Time = time.Now().Add(-time.Hour)
+			tt.expire(q, time.Second)
+
+			tt.reserve(q, dummyPeer("peer-2"), 2)
+			if current, _, _ := tt.reserve(q, peer, 2); current == nil {
+				t.Fatalf("expected a current %s request", tt.item)
+			}
+			if accepted, err := tt.deliverInvalid(q, peer.id); accepted != 0 || !errors.Is(err, tt.invalidErr) {
+				t.Fatalf("expected %v, got accepted=%d err=%v", tt.invalidErr, accepted, err)
+			}
+		})
+	}
+}
+
+func TestExpiredRequestsAcrossResetAndRevoke(t *testing.T) {
+	for _, tt := range deliveryQueueTests() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Run("reset retains pending request", func(t *testing.T) {
+				q, peer, request := tt.newQueue(t, "peer-1")
+				q.Reset(50, 50)
+
+				if accepted, err := tt.deliver(q, peer.id, request); accepted != 0 || !errors.Is(err, errLateDelivery) {
+					t.Fatalf("expected late %s delivery after reset, got accepted=%d err=%v", tt.item, accepted, err)
+				}
+			})
+
+			t.Run("revoke clears history", func(t *testing.T) {
+				q, peer, request := tt.newQueue(t, "peer-1")
+				q.Reset(50, 50)
+				q.Revoke(peer.id)
+
+				if accepted, err := tt.deliver(q, peer.id, request); accepted != 0 || !errors.Is(err, errNoFetchesPending) {
+					t.Fatalf("expected unrequested %s delivery after revoke, got accepted=%d err=%v", tt.item, accepted, err)
+				}
+			})
+		})
+	}
+}
+
+func TestEmptyDeliveriesDoNotConsumeExpiredHistory(t *testing.T) {
+	for _, tt := range deliveryQueueTests() {
+		t.Run(tt.name, func(t *testing.T) {
+			q, peer, _ := tt.newQueue(t, "peer-1")
+			q.Reset(50, 50)
+			before := tt.expiredRequests(q, peer.id)
+
+			if accepted, err := tt.deliverEmpty(q, peer.id); accepted != 0 || !errors.Is(err, errLateDelivery) {
+				t.Fatalf("expected empty %s response to be late, got accepted=%d err=%v", tt.item, accepted, err)
+			}
+			if got := tt.expiredRequests(q, peer.id); got != before {
+				t.Fatalf("empty %s response consumed expired history: have=%d want=%d", tt.item, got, before)
+			}
+		})
+	}
+}
+
+func TestEmptyDeliveriesTrackCurrentRequest(t *testing.T) {
+	for _, tt := range deliveryQueueTests() {
+		t.Run(tt.name, func(t *testing.T) {
+			q, peer, expired := tt.newQueue(t, "peer-1")
+			expired.Time = time.Now().Add(-time.Hour)
+			tt.expire(q, time.Second)
+
+			tt.reserve(q, dummyPeer("peer-2"), 2)
+			current, _, _ := tt.reserve(q, peer, 2)
+			if current == nil {
+				t.Fatalf("expected a current %s request", tt.item)
+			}
+			before := tt.expiredRequests(q, peer.id)
+
+			if accepted, err := tt.deliverEmpty(q, peer.id); accepted != 0 || err != nil {
+				t.Fatalf("expected empty current %s response to be accepted, got accepted=%d err=%v", tt.item, accepted, err)
+			}
+			if pending := tt.pendingRequest(q, peer.id); pending != nil {
+				t.Fatalf("empty current %s response left request pending", tt.item)
+			}
+			if got, want := tt.expiredRequests(q, peer.id), before+1; got != want {
+				t.Fatalf("empty current %s response was not tracked: have=%d want=%d", tt.item, got, want)
+			}
+
+			next, _, _ := tt.reserve(q, peer, 2)
+			if next == nil {
+				t.Fatalf("expected a newer %s request", tt.item)
+			}
+			if accepted, err := tt.deliver(q, peer.id, current); accepted != 0 || !errors.Is(err, errLateDelivery) {
+				t.Fatalf("expected delayed current %s response to be late, got accepted=%d err=%v", tt.item, accepted, err)
+			}
+			if pending := tt.pendingRequest(q, peer.id); pending != next {
+				t.Fatalf("late %s delivery consumed newer request", tt.item)
+			}
+		})
+	}
+}
+
+func TestDeliverReceiptsRejectsInvalidDelivery(t *testing.T) {
+	q, peer, request := newReceiptDeliveryQueue(t, "peer-1")
+	pending := q.PendingReceipts()
+
+	validPrefix := receiptLists(request)[0]
+	accepted, err := q.DeliverReceipts(peer.id, [][]*types.Receipt{validPrefix, nil})
+
+	if accepted != 1 {
+		t.Fatalf("expected one accepted receipt list, got %d", accepted)
+	}
+	if !errors.Is(err, errInvalidReceipt) {
+		t.Fatalf("expected %v, got %v", errInvalidReceipt, err)
+	}
+	if got, want := q.PendingReceipts(), pending+1; got != want {
+		t.Fatalf("expected %d pending receipts after rejection, got %d", want, got)
+	}
+}
+
 func TestBasics(t *testing.T) {
 	numOfBlocks := len(chain.blocks)
 	numOfReceipts := len(chain.blocks) / 2

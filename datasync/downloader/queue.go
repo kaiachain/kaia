@@ -57,7 +57,15 @@ var (
 var (
 	errNoFetchesPending = errors.New("no fetches pending")
 	errStaleDelivery    = errors.New("stale delivery")
+	errLateDelivery     = errors.New("late delivery")
 )
+
+// Body and receipt responses carry no request ID, so retain a small bounded
+// history to distinguish late responses from invalid responses to the current
+// request. Requests older than this window are deliberately forgotten; a very
+// late response may therefore be rejected as invalid rather than letting the
+// history grow without bound.
+const maxExpiredRequests = 2
 
 // fetchRequest is a currently running data retrieval operation.
 type fetchRequest struct {
@@ -150,10 +158,12 @@ type queue struct {
 	blockTaskPool  map[common.Hash]*types.Header // [kaia/62] Pending block (body) retrieval tasks, mapping hashes to headers
 	blockTaskQueue *prque.Prque                  // [kaia/62] Priority queue of the headers to fetch the blocks (bodies) for
 	blockPendPool  map[string]*fetchRequest      // [kaia/62] Currently pending block (body) retrieval operations
+	blockExpired   map[string][][]*types.Header  // [kaia/62] Recently expired body requests, retained to identify late deliveries
 
 	receiptTaskPool  map[common.Hash]*types.Header // [kaia/63] Pending receipt retrieval tasks, mapping hashes to headers
 	receiptTaskQueue *prque.Prque                  // [kaia/63] Priority queue of the headers to fetch the receipts for
 	receiptPendPool  map[string]*fetchRequest      // [kaia/63] Currently pending receipt retrieval operations
+	receiptExpired   map[string][][]*types.Header  // [kaia/63] Recently expired receipt requests, retained to identify late deliveries
 
 	stakingInfoTaskPool  map[common.Hash]*types.Header // [kaia/65] Pending staking info retrieval tasks, mapping hashes to headers
 	stakingInfoTaskQueue *prque.Prque                  // [kaia/65] Priority queue of the headers to fetch the staking infos for
@@ -184,7 +194,9 @@ func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint
 	q := &queue{
 		headerContCh:          make(chan bool),
 		blockTaskQueue:        prque.New(),
+		blockExpired:          make(map[string][][]*types.Header),
 		receiptTaskQueue:      prque.New(),
+		receiptExpired:        make(map[string][][]*types.Header),
 		stakingInfoTaskQueue:  prque.New(),
 		active:                sync.NewCond(lock),
 		lock:                  lock,
@@ -203,6 +215,12 @@ func (q *queue) Reset(blockCacheLimit int, thresholdInitialSize int) {
 
 	q.closed = false
 	q.mode = FullSync
+	for id, request := range q.blockPendPool {
+		trackExpiredRequest(q.blockExpired, id, request)
+	}
+	for id, request := range q.receiptPendPool {
+		trackExpiredRequest(q.receiptExpired, id, request)
+	}
 
 	q.headerHead = common.Hash{}
 	q.headerPendPool = make(map[string]*fetchRequest)
@@ -702,12 +720,14 @@ func (q *queue) Revoke(peerId string) {
 		}
 		delete(q.blockPendPool, peerId)
 	}
+	delete(q.blockExpired, peerId)
 	if request, ok := q.receiptPendPool[peerId]; ok {
 		for _, header := range request.Headers {
 			q.receiptTaskQueue.Push(header, -int64(header.Number.Uint64()))
 		}
 		delete(q.receiptPendPool, peerId)
 	}
+	delete(q.receiptExpired, peerId)
 	if request, ok := q.stakingInfoPendPool[peerId]; ok {
 		for _, header := range request.Headers {
 			q.stakingInfoTaskQueue.Push(header, -int64(header.Number.Uint64()))
@@ -722,7 +742,7 @@ func (q *queue) ExpireHeaders(timeout time.Duration) map[string]int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	return q.expire(timeout, q.headerPendPool, q.headerTaskQueue, headerTimeoutMeter)
+	return q.expire(timeout, q.headerPendPool, q.headerTaskQueue, headerTimeoutMeter, nil)
 }
 
 // ExpireBodies checks for in flight block body requests that exceeded a timeout
@@ -731,7 +751,7 @@ func (q *queue) ExpireBodies(timeout time.Duration) map[string]int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	return q.expire(timeout, q.blockPendPool, q.blockTaskQueue, bodyTimeoutMeter)
+	return q.expire(timeout, q.blockPendPool, q.blockTaskQueue, bodyTimeoutMeter, q.blockExpired)
 }
 
 // ExpireReceipts checks for in flight receipt requests that exceeded a timeout
@@ -740,7 +760,7 @@ func (q *queue) ExpireReceipts(timeout time.Duration) map[string]int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	return q.expire(timeout, q.receiptPendPool, q.receiptTaskQueue, receiptTimeoutMeter)
+	return q.expire(timeout, q.receiptPendPool, q.receiptTaskQueue, receiptTimeoutMeter, q.receiptExpired)
 }
 
 // ExpireStakingInfos checks for in flight staking info requests that exceeded a timeout
@@ -749,7 +769,7 @@ func (q *queue) ExpireStakingInfos(timeout time.Duration) map[string]int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	return q.expire(timeout, q.stakingInfoPendPool, q.stakingInfoTaskQueue, stakingInfoTimeoutMeter)
+	return q.expire(timeout, q.stakingInfoPendPool, q.stakingInfoTaskQueue, stakingInfoTimeoutMeter, nil)
 }
 
 // expire is the generic check that move expired tasks from a pending pool back
@@ -758,7 +778,9 @@ func (q *queue) ExpireStakingInfos(timeout time.Duration) map[string]int {
 // Note, this method expects the queue lock to be already held. The
 // reason the lock is not obtained in here is because the parameters already need
 // to access the queue, so they already need a lock anyway.
-func (q *queue) expire(timeout time.Duration, pendPool map[string]*fetchRequest, taskQueue *prque.Prque, timeoutMeter metrics.Meter) map[string]int {
+func (q *queue) expire(timeout time.Duration, pendPool map[string]*fetchRequest, taskQueue *prque.Prque, timeoutMeter metrics.Meter,
+	expired map[string][][]*types.Header,
+) map[string]int {
 	// Iterate over the expired requests and return each to the queue
 	expiries := make(map[string]int)
 	for id, request := range pendPool {
@@ -775,6 +797,9 @@ func (q *queue) expire(timeout time.Duration, pendPool map[string]*fetchRequest,
 			}
 			// Add the peer to the expiry report along the number of failed requests
 			expiries[id] = len(request.Headers)
+			if expired != nil {
+				trackExpiredRequest(expired, id, request)
+			}
 
 			// Remove the expired requests from the pending pool
 			delete(pendPool, id)
@@ -874,6 +899,62 @@ func (q *queue) DeliverHeaders(id string, headers []*types.Header, headerProcCh 
 	return len(headers), nil
 }
 
+func deliveryMatches(headers []*types.Header, results int, validate func(int, *types.Header) error) bool {
+	if results == 0 || results > len(headers) {
+		return false
+	}
+	for i := 0; i < results; i++ {
+		if validate(i, headers[i]) != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func trackExpiredRequest(expired map[string][][]*types.Header, id string, request *fetchRequest) {
+	if request == nil || len(request.Headers) == 0 {
+		return
+	}
+	headers := append([]*types.Header(nil), request.Headers...)
+	requests := append(expired[id], headers)
+	if len(requests) > maxExpiredRequests {
+		requests = requests[len(requests)-maxExpiredRequests:]
+	}
+	expired[id] = requests
+}
+
+// checkExpiredDelivery distinguishes responses to the current request from
+// responses to recently expired requests. A non-empty current response is also
+// validated here, so the caller can skip validating it again.
+func checkExpiredDelivery(id string, results int, pendPool map[string]*fetchRequest,
+	expired map[string][][]*types.Header, validate func(int, *types.Header) error,
+) (bool, error) {
+	requests := expired[id]
+	if len(requests) == 0 {
+		return false, nil
+	}
+	if request := pendPool[id]; request != nil && (results == 0 || deliveryMatches(request.Headers, results, validate)) {
+		return true, nil
+	}
+	// An empty response cannot be attributed to a specific expired request.
+	if results == 0 {
+		return false, errLateDelivery
+	}
+	for i, headers := range requests {
+		if !deliveryMatches(headers, results, validate) {
+			continue
+		}
+		requests = append(requests[:i], requests[i+1:]...)
+		if len(requests) == 0 {
+			delete(expired, id)
+		} else {
+			expired[id] = requests
+		}
+		return false, errLateDelivery
+	}
+	return false, nil
+}
+
 // DeliverBodies injects a block body retrieval response into the results queue.
 // The method returns the number of blocks bodies accepted from the delivery and
 // also wakes any threads waiting for data delivery.
@@ -912,19 +993,16 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 			if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want { // div because the header is surely good vs the body might be bloated
 				return errInvalidBody
 			}
-		} else {
-			if blobs != 0 {
-				return errInvalidBody
-			}
+		} else if blobs != 0 {
+			return errInvalidBody
 		}
 		return nil
 	}
-
 	reconstruct := func(index int, result *fetchResult) {
 		result.Transactions = txLists[index]
 		result.SetBodyDone()
 	}
-	return q.deliver(id, q.blockTaskPool, q.blockTaskQueue, q.blockPendPool, bodyReqTimer, len(txLists), validate, reconstruct)
+	return q.deliver(id, q.blockTaskPool, q.blockTaskQueue, q.blockPendPool, q.blockExpired, bodyReqTimer, len(txLists), validate, reconstruct)
 }
 
 // DeliverReceipts injects a receipt retrieval response into the results queue.
@@ -933,18 +1011,18 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int, error) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
+
 	validate := func(index int, header *types.Header) error {
 		if types.DeriveReceiptsRoot(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
 			return errInvalidReceipt
 		}
 		return nil
 	}
-
 	reconstruct := func(index int, result *fetchResult) {
 		result.Receipts = receiptList[index]
 		result.SetReceiptsDone()
 	}
-	return q.deliver(id, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool, receiptReqTimer, len(receiptList), validate, reconstruct)
+	return q.deliver(id, q.receiptTaskPool, q.receiptTaskQueue, q.receiptPendPool, q.receiptExpired, receiptReqTimer, len(receiptList), validate, reconstruct)
 }
 
 // DeliverStakingInfos injects a stakinginfo retrieval response into the results queue.
@@ -967,7 +1045,7 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*staking.P2PSta
 		result.StakingInfo = stakingInfoList[index]
 		result.SetStakingInfoDone()
 	}
-	return q.deliver(id, q.stakingInfoTaskPool, q.stakingInfoTaskQueue, q.stakingInfoPendPool, stakingInfoReqTimer, len(stakingInfoList), validate, reconstruct)
+	return q.deliver(id, q.stakingInfoTaskPool, q.stakingInfoTaskQueue, q.stakingInfoPendPool, nil, stakingInfoReqTimer, len(stakingInfoList), validate, reconstruct)
 }
 
 // deliver injects a data retrieval response into the results queue.
@@ -976,10 +1054,14 @@ func (q *queue) DeliverStakingInfos(id string, stakingInfoList []*staking.P2PSta
 // reason this lock is not obtained in here is because the parameters already need
 // to access the queue, so they already need a lock anyway.
 func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQueue *prque.Prque,
-	pendPool map[string]*fetchRequest, reqTimer kaiametrics.HybridTimer,
+	pendPool map[string]*fetchRequest, expired map[string][][]*types.Header, reqTimer kaiametrics.HybridTimer,
 	results int, validate func(index int, header *types.Header) error,
 	reconstruct func(index int, result *fetchResult),
 ) (int, error) {
+	currentDelivery, err := checkExpiredDelivery(id, results, pendPool, expired, validate)
+	if err != nil {
+		return 0, err
+	}
 	// Short circuit if the data was never requested
 	request := pendPool[id]
 	if request == nil {
@@ -990,6 +1072,11 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 
 	// If no data items were retrieved, mark them as unavailable for the origin peer
 	if results == 0 {
+		// The response could belong to an expired request. Preserve the current
+		// request so a later non-empty response can still be identified as late.
+		if currentDelivery {
+			trackExpiredRequest(expired, id, request)
+		}
 		for _, header := range request.Headers {
 			request.Peer.MarkLacking(header.Hash())
 		}
@@ -1007,9 +1094,11 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 			break
 		}
 		// Validate the fields
-		if err := validate(i, header); err != nil {
-			failure = err
-			break
+		if !currentDelivery {
+			if err := validate(i, header); err != nil {
+				failure = err
+				break
+			}
 		}
 		hashes = append(hashes, header.Hash())
 		i++
@@ -1023,7 +1112,11 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 			// or it was indeed a no-op. This should not happen, but if it does it's
 			// not something to panic about
 			logger.Error("Delivery stale", "stale", stale, "number", header.Number.Uint64(), "err", err)
-			failure = errStaleDelivery
+			// Preserve validation failures so the peer responsible for invalid data
+			// can still be identified by the caller.
+			if failure == nil {
+				failure = errStaleDelivery
+			}
 		}
 		// Clean up a successful fetch
 		delete(taskPool, hashes[accepted])
@@ -1043,7 +1136,7 @@ func (q *queue) deliver(id string, taskPool map[common.Hash]*types.Header, taskQ
 		return accepted, nil
 	}
 	if accepted > 0 {
-		return accepted, fmt.Errorf("partial failure: %v", failure)
+		return accepted, fmt.Errorf("partial failure: %w", failure)
 	}
 	return accepted, fmt.Errorf("%w: %v", failure, errStaleDelivery)
 }
