@@ -736,3 +736,25 @@ func TestCheckMessageSizeFitsWellFormedMessages(t *testing.T) {
 		Msg:  make([]byte, maxSubjectMessageBytes+1),
 	}))
 }
+
+func TestCheckMessageSizeIncludesConsensusP2PWrapper(t *testing.T) {
+	msg := &bft.Message{
+		Code:          bft.MsgRoundChange,
+		Msg:           make([]byte, 100),
+		Signature:     make([]byte, crypto.SignatureLength),
+		Justification: make([]byte, maxConsensusP2PMessageBytes-100),
+	}
+	// The attachment alone is below 12 MiB, but the signed message and its
+	// ConsensusMsg wrapper push the wire message over the protocol cap.
+	require.LessOrEqual(t, len(msg.Justification), maxConsensusP2PMessageBytes)
+	payload, err := msg.Payload()
+	require.NoError(t, err)
+	wire, err := bft.Encode(&bft.ConsensusMsg{Payload: payload})
+	require.NoError(t, err)
+	require.Equal(t, uint64(len(wire)), consensusP2PMessageSize(payload))
+	require.Greater(t, consensusP2PMessageSize(payload), uint64(maxConsensusP2PMessageBytes))
+	require.ErrorIs(t, checkMessageSize(msg), errMessageTooLarge)
+
+	msg.Justification = msg.Justification[:len(msg.Justification)-2048]
+	require.NoError(t, checkMessageSize(msg))
+}

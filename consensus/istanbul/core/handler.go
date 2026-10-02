@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // Start implements core.Engine.Start
@@ -186,35 +187,49 @@ func (c *core) handleMsg(payload []byte) error {
 	return c.handleCheckedMsg(msg, msg.Address)
 }
 
-// maxSubjectMessageBytes bounds legacy ROUND CHANGE, PREPARE and COMMIT. These
-// carry a fixed-shape subject, but the envelope is not otherwise bounded:
-// CommittedSeal is only validated for COMMIT, and rlp does not cap the length
-// of a big.Int view field. The limit is far above a well-formed message, whose
-// subject, signature and committed seal take a few hundred bytes.
+// maxSubjectMessageBytes bounds the signed part of ROUND CHANGE, PREPARE and
+// COMMIT. These carry a fixed-shape subject (plus an optional prepared claim),
+// but the envelope is not otherwise bounded: CommittedSeal is only validated
+// for COMMIT, and rlp does not cap the length of a big.Int view field. The
+// limit is far above a well-formed message, whose subject, signature and
+// committed seal take a few hundred bytes.
 const maxSubjectMessageBytes = 1024
 
-// maxCertificateRoundChangeBytes matches the P2P protocol-message cap. A
-// post-Permissionless ROUND CHANGE can carry a prepared certificate, including
-// the prepared block, so it cannot use the legacy subject-only limit. It is
-// still bounded before it can enter any retained message set.
-const maxCertificateRoundChangeBytes = 12 * 1024 * 1024
+// maxConsensusP2PMessageBytes matches node/cn.ProtocolMaxMsgSize. The P2P
+// message wraps the signed consensus payload in ConsensusMsg, so the payload
+// itself must be smaller than this cap.
+const maxConsensusP2PMessageBytes = 12 * 1024 * 1024
+
+// maxCertificateRoundChangeBytes is a coarse cap for the attachment. A
+// post-Permissionless ROUND CHANGE can attach a prepared certificate, including
+// the prepared block, as its unsigned Justification, so that attachment cannot
+// use the subject-only limit. The exact wrapped wire size is checked below.
+const maxCertificateRoundChangeBytes = maxConsensusP2PMessageBytes
+
+// consensusP2PMessageSize is the RLP size of ConsensusMsg{PrevHash, Payload}.
+// A 32-byte PrevHash always occupies 33 RLP bytes.
+func consensusP2PMessageSize(payload []byte) uint64 {
+	return rlp.ListSize(33 + rlp.BytesSize(payload))
+}
 
 // checkMessageSize rejects an oversized consensus message before the retention
 // paths diverge (backlog, roundChangeSet, messageSet), so every retained copy
-// is bounded. Only an extended ROUND CHANGE may use the larger certificate cap.
+// is bounded. Only a ROUND CHANGE Justification may use the larger cap; the
+// envelope decoder rejects a Justification on any other message.
 func checkMessageSize(msg *bft.Message) error {
-	if msg.Code == bft.MsgPreprepare {
-		return nil
-	}
-	limit := uint64(maxSubjectMessageBytes)
-	if msg.Code == bft.MsgRoundChange {
-		var roundChange bft.RoundChange
-		if msg.Decode(&roundChange) == nil && roundChange.PreparedCertificate != nil {
-			limit = maxCertificateRoundChangeBytes
-		}
-	}
-	if retainedMessageBytes(msg) > limit {
+	justification := uint64(len(msg.Justification))
+	retained := retainedMessageBytes(msg)
+	if msg.Code != bft.MsgPreprepare && retained-justification > maxSubjectMessageBytes ||
+		justification > maxCertificateRoundChangeBytes {
 		return errMessageTooLarge
+	}
+	// Most messages are far below the P2P limit. Only encode near the boundary,
+	// where RLP headers and the ConsensusMsg wrapper can push a message over it.
+	if retained >= maxConsensusP2PMessageBytes-2048 {
+		payload, err := msg.Payload()
+		if err != nil || consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+			return errMessageTooLarge
+		}
 	}
 	return nil
 }
