@@ -80,6 +80,89 @@ func TestIPRateLimiterBounded(t *testing.T) {
 	}
 }
 
+// TestIPRateLimiterEvictsLeastRecentlySeen verifies that, at capacity, the key
+// seen least recently is evicted and a recently touched key survives.
+func TestIPRateLimiterEvictsLeastRecentlySeen(t *testing.T) {
+	const max = 4
+	l := newIPRateLimiter(rate.Limit(1), 1, max, time.Hour)
+	now := time.Unix(0, 0)
+	ips := make([]net.IP, max)
+	for i := range ips {
+		ips[i] = net.IPv4(10, 0, 0, byte(i+1))
+		l.allow(ips[i], now)
+		now = now.Add(time.Millisecond)
+	}
+	// Touch the oldest key so it becomes the most recent.
+	l.allow(ips[0], now)
+	now = now.Add(time.Millisecond)
+
+	// Inserting a new key at capacity evicts ips[1], now the least recent.
+	l.allow(net.IPv4(10, 0, 0, 100), now)
+	if got := l.len(); got != max {
+		t.Fatalf("tracked keys = %d, want %d", got, max)
+	}
+	if !l.has(ips[0]) {
+		t.Fatal("recently touched key must not be evicted")
+	}
+	if l.has(ips[1]) {
+		t.Fatal("least recently seen key should have been evicted")
+	}
+	for _, ip := range ips[2:] {
+		if !l.has(ip) {
+			t.Fatalf("key %s should still be tracked", ip)
+		}
+	}
+}
+
+// TestIPRateLimiterEvictIdle verifies that, at capacity, every idle key is
+// dropped before any active key is considered for eviction.
+func TestIPRateLimiterEvictIdle(t *testing.T) {
+	const max = 4
+	const ttl = time.Minute
+	l := newIPRateLimiter(rate.Limit(1), 1, max, ttl)
+	now := time.Unix(0, 0)
+	idle := []net.IP{net.IPv4(10, 0, 0, 1), net.IPv4(10, 0, 0, 2)}
+	active := []net.IP{net.IPv4(10, 0, 0, 3), net.IPv4(10, 0, 0, 4)}
+	for _, ip := range idle {
+		l.allow(ip, now)
+	}
+	now = now.Add(ttl + time.Second)
+	for _, ip := range active {
+		l.allow(ip, now)
+	}
+
+	l.allow(net.IPv4(10, 0, 0, 100), now)
+	for _, ip := range idle {
+		if l.has(ip) {
+			t.Fatalf("idle key %s should have been evicted", ip)
+		}
+	}
+	for _, ip := range active {
+		if !l.has(ip) {
+			t.Fatalf("active key %s must survive idle eviction", ip)
+		}
+	}
+	if got := l.len(); got != len(active)+1 {
+		t.Fatalf("tracked keys = %d, want %d", got, len(active)+1)
+	}
+}
+
+// BenchmarkIPRateLimiterRotation measures the per-packet cost when every packet
+// comes from a new source and the map is at capacity, which is the eviction
+// path an attacker rotating source IPs drives.
+func BenchmarkIPRateLimiterRotation(b *testing.B) {
+	l := newIPRateLimiter(rate.Limit(1), 1, maxLimitedIPs, time.Hour)
+	now := time.Unix(0, 0)
+	ip := make(net.IP, 4)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Vary the address so each packet is a new source IP.
+		ip[0], ip[1], ip[2], ip[3] = byte(i>>24), byte(i>>16), byte(i>>8), byte(i)
+		l.allow(ip, now)
+		now = now.Add(time.Microsecond)
+	}
+}
+
 const (
 	testPingRate  = 3  // pings/sec for ping.preverify tests
 	testPingBurst = 10 // token-bucket burst for ping.preverify tests
