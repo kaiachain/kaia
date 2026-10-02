@@ -1107,8 +1107,7 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 
 	if setStorageRoot && len(stateDB.stateObjectsDirtyStorage) > 0 {
 		for addr := range stateDB.stateObjectsDirtyStorage {
-			so, exist := stateDB.stateObjects[addr]
-			if exist {
+			if so := stateDB.getStateObject(addr); so != nil {
 				so.updateStorageRoot(stateDB.db)
 				stateDB.updateStateObject(so)
 			}
