@@ -237,13 +237,15 @@ func (v *BlockValidator) validateFutureCommittedSealCount(header *types.Header) 
 		}
 		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
 		if err != nil {
-			return err
+			// Keep future blocks queued until validator context is available.
+			return nil
 		}
 		return v.validateCommittedSealCount(header, len(committee))
 	}
 	council, err := v.mValset.GetCouncil(blockNum)
 	if err != nil {
-		return err
+		// Keep future blocks queued until validator context is available.
+		return nil
 	}
 	return v.validateCommittedSealCount(header, len(council))
 }

@@ -948,29 +948,55 @@ func TestVerifySealsRejectsExcessCommittedSealsBeforePermissionless(t *testing.T
 	assert.Zero(t, sealer.committerCalls)
 }
 
-func TestFutureHeaderRejectsExcessCommittedSeals(t *testing.T) {
+func TestFutureHeaderCommittedSealCount(t *testing.T) {
 	var (
 		author   = common.HexToAddress("0x0001")
 		blockNum = uint64(7)
-		header   = &types.Header{
-			Number: new(big.Int).SetUint64(blockNum),
-			Time:   big.NewInt(time.Now().Add(time.Minute).Unix()),
-		}
-		sealer = &verifySealsTestSealer{sealCount: 2}
 	)
 
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author}, nil)
-	validator := &BlockValidator{
-		config:  params.TestKaiaConfig("permissionless"),
-		sealer:  sealer,
-		mValset: mValset,
-	}
+	for _, permissionless := range []bool{false, true} {
+		name := "pre-permissionless"
+		if permissionless {
+			name = "post-permissionless"
+		}
+		for _, tc := range []struct {
+			name        string
+			signers     []common.Address
+			lookupErr   error
+			sealCount   int
+			expectedErr error
+		}{
+			{"unavailable set", nil, fmt.Errorf("no parent header for block %d", blockNum), 1, consensus.ErrFutureBlock},
+			{"at limit", []common.Address{author}, nil, 1, consensus.ErrFutureBlock},
+			{"over limit", []common.Address{author}, nil, 2, istanbul.ErrInvalidCommittedSeals},
+			{"empty set", nil, nil, 1, istanbul.ErrInvalidCommittedSeals},
+		} {
+			t.Run(name+"/"+tc.name, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				t.Cleanup(ctrl.Finish)
 
-	assert.ErrorIs(t, validator.ValidateHeader(header), istanbul.ErrInvalidCommittedSeals)
-	assert.Zero(t, sealer.committerCalls)
+				header := &types.Header{
+					Number: new(big.Int).SetUint64(blockNum),
+					Time:   big.NewInt(time.Now().Add(time.Minute).Unix()),
+				}
+				sealer := &verifySealsTestSealer{sealCount: tc.sealCount}
+				mValset := mock_valset.NewMockValsetModule(ctrl)
+				if permissionless {
+					mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(tc.signers, tc.lookupErr)
+				} else {
+					mValset.EXPECT().GetCouncil(blockNum).Return(tc.signers, tc.lookupErr)
+				}
+				validator := &BlockValidator{
+					config:  permissionlessConfig(t, permissionless, blockNum),
+					sealer:  sealer,
+					mValset: mValset,
+				}
+
+				assert.ErrorIs(t, validator.ValidateHeader(header), tc.expectedErr)
+				assert.Zero(t, sealer.committerCalls)
+			})
+		}
+	}
 }
 
 func TestFutureProposalSkipsCommittedSealValidation(t *testing.T) {
