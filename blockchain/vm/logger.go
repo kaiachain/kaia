@@ -24,10 +24,12 @@ package vm
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
 	"math/big"
+	"sync/atomic"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -73,6 +75,30 @@ type StructLog struct {
 	Computation     uint64                      `json:"computation"`
 	ComputationCost uint64                      `json:"computationCost"`
 	Err             error                       `json:"-"`
+}
+
+// structLogResult is the JSON representation returned by the tracing RPCs.
+// Keeping it in the VM package lets the logger encode each entry immediately
+// instead of retaining a second set of memory, stack and storage snapshots.
+type structLogResult struct {
+	Pc              uint64             `json:"pc"`
+	Op              string             `json:"op"`
+	Gas             uint64             `json:"gas"`
+	GasCost         uint64             `json:"gasCost"`
+	Depth           int                `json:"depth"`
+	Error           error              `json:"error,omitempty"`
+	Stack           *[]string          `json:"stack,omitempty"`
+	Memory          *[]string          `json:"memory,omitempty"`
+	Storage         *map[string]string `json:"storage,omitempty"`
+	Computation     uint64             `json:"computation"`
+	ComputationCost uint64             `json:"computationCost"`
+}
+
+type structLogExecutionResult struct {
+	Gas         uint64            `json:"gas"`
+	Failed      bool              `json:"failed"`
+	ReturnValue string            `json:"returnValue"`
+	StructLogs  []json.RawMessage `json:"structLogs"`
 }
 
 // overrides for gencodec
@@ -135,20 +161,166 @@ type StructLogger struct {
 	cfg LogConfig
 
 	logs          []StructLog
+	jsonLogs      []json.RawMessage
 	changedValues map[common.Address]Storage
 	output        []byte
 	err           error
+	encodeJSON    bool
+	maxLogs       int
+	maxBytes      uint64
+	resultBytes   uint64
+	limitReached  bool
+	encodeErr     error
+	interrupt     atomic.Bool
 }
 
 // NewStructLogger returns a new logger
 func NewStructLogger(cfg *LogConfig) *StructLogger {
+	logger := &StructLogger{changedValues: make(map[common.Address]Storage)}
+	if cfg != nil {
+		logger.cfg = *cfg
+	}
+	return logger
+}
+
+// NewStructLoggerWithLimits creates a logger with server-owned capture limits.
+func NewStructLoggerWithLimits(cfg *LogConfig, maxLogs int, maxBytes uint64) *StructLogger {
 	logger := &StructLogger{
 		changedValues: make(map[common.Address]Storage),
+		jsonLogs:      make([]json.RawMessage, 0),
+		encodeJSON:    true,
+		maxLogs:       maxLogs,
+		maxBytes:      maxBytes,
 	}
 	if cfg != nil {
 		logger.cfg = *cfg
 	}
 	return logger
+}
+
+func (l *StructLogger) stopAtLimit(env *EVM) {
+	l.limitReached = true
+	l.interrupt.Store(true)
+	if env != nil {
+		env.Cancel(CancelByCtxDone)
+	}
+}
+
+func (l *StructLogger) logCount() int {
+	if l.encodeJSON {
+		return len(l.jsonLogs)
+	}
+	return len(l.logs)
+}
+
+// encodedEntryMayExceedLimit rejects an entry before allocating its formatted
+// strings. The exact encoded length is checked again after marshaling.
+func (l *StructLogger) encodedEntryMayExceedLimit(memoryBytes, stackItems, storageItems int) bool {
+	if l.maxBytes == 0 {
+		return false
+	}
+	if l.resultBytes >= l.maxBytes {
+		return true
+	}
+	remaining := l.maxBytes - l.resultBytes
+	const baseUpperBound uint64 = 512
+	if remaining < baseUpperBound {
+		return true
+	}
+	remaining -= baseUpperBound
+	for _, field := range []struct {
+		count int
+		size  uint64
+	}{
+		{memoryBytes / 32, 67}, // 64 hex digits plus JSON delimiters
+		{stackItems, 67},
+		{storageItems, 134}, // key and value plus JSON delimiters
+	} {
+		if field.count > 0 && uint64(field.count) > remaining/field.size {
+			return true
+		}
+		remaining -= uint64(field.count) * field.size
+	}
+	return false
+}
+
+func (l *StructLogger) captureJSON(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, memory *Memory, stack *Stack, contract *Contract, depth int, traceErr error) {
+	memoryBytes, stackItems, storageItems := 0, 0, 0
+	if !l.cfg.DisableMemory {
+		memoryBytes = len(memory.Data())
+	}
+	if !l.cfg.DisableStack {
+		stackItems = len(stack.Data())
+	}
+	if !l.cfg.DisableStorage {
+		storageItems = len(l.changedValues[contract.Address()])
+	}
+	if l.encodedEntryMayExceedLimit(memoryBytes, stackItems, storageItems) {
+		l.stopAtLimit(env)
+		return
+	}
+
+	result := structLogResult{
+		Pc:              pc,
+		Op:              op.String(),
+		Gas:             gas,
+		GasCost:         cost,
+		Depth:           depth,
+		Error:           traceErr,
+		Computation:     ccLeft,
+		ComputationCost: ccOpcode,
+	}
+	if !l.cfg.DisableStack {
+		formatted := make([]string, len(stack.Data()))
+		for i, item := range stack.Data() {
+			if i%256 == 0 && l.interrupt.Load() {
+				return
+			}
+			word := item.Bytes32()
+			formatted[i] = hex.EncodeToString(word[:])
+		}
+		result.Stack = &formatted
+	}
+	if !l.cfg.DisableMemory {
+		data := memory.Data()
+		formatted := make([]string, 0, len(data)/32)
+		for i := 0; i+32 <= len(data); i += 32 {
+			if i%(256*32) == 0 && l.interrupt.Load() {
+				return
+			}
+			formatted = append(formatted, hex.EncodeToString(data[i:i+32]))
+		}
+		result.Memory = &formatted
+	}
+	if !l.cfg.DisableStorage {
+		formatted := make(map[string]string, len(l.changedValues[contract.Address()]))
+		i := 0
+		for key, value := range l.changedValues[contract.Address()] {
+			if i%256 == 0 && l.interrupt.Load() {
+				return
+			}
+			formatted[hex.EncodeToString(key[:])] = hex.EncodeToString(value[:])
+			i++
+		}
+		result.Storage = &formatted
+	}
+	entry, err := json.Marshal(&result)
+	if err != nil {
+		l.encodeErr = err
+		l.interrupt.Store(true)
+		env.Cancel(CancelByCtxDone)
+		return
+	}
+	entryBytes := uint64(len(entry))
+	if len(l.jsonLogs) > 0 {
+		entryBytes++ // JSON array separator
+	}
+	if l.maxBytes > 0 && entryBytes > l.maxBytes-l.resultBytes {
+		l.stopAtLimit(env)
+		return
+	}
+	l.jsonLogs = append(l.jsonLogs, entry)
+	l.resultBytes += entryBytes
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
@@ -162,8 +334,15 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, c
 	memory := scope.Memory
 	stack := scope.Stack
 	contract := scope.Contract
+	if l.limitReached || l.interrupt.Load() {
+		return
+	}
+	if l.maxLogs > 0 && l.logCount() >= l.maxLogs {
+		l.stopAtLimit(env)
+		return
+	}
 	// check if already accumulated the specified number of logs
-	if l.cfg.Limit != 0 && l.cfg.Limit <= len(l.logs) {
+	if l.cfg.Limit != 0 && l.cfg.Limit <= l.logCount() {
 		return
 	}
 
@@ -181,6 +360,10 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost, c
 			address = common.Hash(stack.data[stack.len()-1].Bytes32())
 		)
 		l.changedValues[contract.Address()][address] = value
+	}
+	if l.encodeJSON {
+		l.captureJSON(env, pc, op, gas, cost, ccLeft, ccOpcode, memory, stack, contract, depth, err)
+		return
 	}
 	// Copy a snapshot of the current memory state to a new buffer
 	var mem []byte
@@ -235,6 +418,42 @@ func (l *StructLogger) CaptureTxEnd(restGas uint64) {}
 
 // StructLogs returns the captured log entries.
 func (l *StructLogger) StructLogs() []StructLog { return l.logs }
+
+// JSONLogs returns entries encoded in their final RPC representation.
+func (l *StructLogger) JSONLogs() []json.RawMessage { return l.jsonLogs }
+
+// GetResult encodes the complete structured trace result.
+func (l *StructLogger) GetResult(gas uint64, failed bool, returnValue []byte) (json.RawMessage, error) {
+	if l.maxBytes > 0 {
+		const envelopeUpperBound uint64 = 512
+		returnBytes := uint64(len(returnValue)) * 2
+		if l.resultBytes > l.maxBytes || returnBytes > l.maxBytes-l.resultBytes || envelopeUpperBound > l.maxBytes-l.resultBytes-returnBytes {
+			return nil, ErrTraceResultLimitReached
+		}
+	}
+	result, err := json.Marshal(&structLogExecutionResult{
+		Gas:         gas,
+		Failed:      failed,
+		ReturnValue: hex.EncodeToString(returnValue),
+		StructLogs:  l.jsonLogs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if l.maxBytes > 0 && uint64(len(result)) > l.maxBytes {
+		return nil, ErrTraceResultLimitReached
+	}
+	return result, nil
+}
+
+// LimitReached reports whether a server-owned capture limit stopped the trace.
+func (l *StructLogger) LimitReached() bool { return l.limitReached }
+
+// EncodingError reports an error encountered while encoding a trace entry.
+func (l *StructLogger) EncodingError() error { return l.encodeErr }
+
+// Stop interrupts trace collection.
+func (l *StructLogger) Stop() { l.interrupt.Store(true) }
 
 // Error returns the VM error captured by the trace.
 func (l *StructLogger) Error() error { return l.err }
