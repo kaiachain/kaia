@@ -509,7 +509,7 @@ func requestUpstream(ctx context.Context, msg *jsonrpcMessage, args []reflect.Va
 	ctx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeouts.ExecutionTimeout)
 	defer cancel()
 
-	var result interface{}
+	var result json.RawMessage
 	c, err := DialContext(ctx, UpstreamArchiveEN)
 	if err == nil {
 		defer c.Close()
