@@ -110,12 +110,13 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 
 	c.acceptCommit(msg, src)
 
-	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
-	// and we are in earlier state before Prepared state.
-	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in
-	// the previous round skip sending PREPARE messages.
+	// Change to Prepared state once this view has quorum evidence. Before
+	// Permissionless activation, legacy hash-locked nodes retain their direct
+	// COMMIT shortcut. After activation, they must also contribute a PREPARE and
+	// establish a certificate for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
-		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
+		if !c.backend.IsPermissionlessAt(commit.View.Sequence.Uint64()) &&
+			c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", bft.MsgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()

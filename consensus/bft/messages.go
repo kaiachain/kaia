@@ -107,14 +107,28 @@ func (v *View) Cmp(y *View) int {
 }
 
 // Preprepare is the message sent by the proposer to propose a new block.
+//
+// A post-Permissionless PRE-PREPARE above round 0 is justified by
+// RoundChangeCertificate, a quorum of signed ROUND CHANGE messages for its view
+// stripped of their Justification attachments. When any of them claims a
+// prepared value, PreparedMessages are the PREPARE/COMMIT votes proving the
+// highest claim for Proposal. The prepared block is therefore sent once, as the
+// Proposal itself, instead of once per ROUND CHANGE.
 type Preprepare struct {
-	View     *View
-	Proposal Proposal
+	View                   *View
+	Proposal               Proposal
+	RoundChangeCertificate []*Message
+	PreparedMessages       []*Message
 }
 
 // EncodeRLP serializes a Preprepare into the Kaia RLP format.
 func (b *Preprepare) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{b.View, b.Proposal})
+	return rlp.Encode(w, struct {
+		View                   *View
+		Proposal               Proposal
+		RoundChangeCertificate []*Message `rlp:"optional"`
+		PreparedMessages       []*Message `rlp:"optional"`
+	}{b.View, b.Proposal, b.RoundChangeCertificate, b.PreparedMessages})
 }
 
 // DecodeRLP deserializes a Preprepare from a Kaia RLP stream.
@@ -122,14 +136,46 @@ func (b *Preprepare) EncodeRLP(w io.Writer) error {
 // implementation exchanged on the wire.
 func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 	var preprepare struct {
-		View     *View
-		Proposal *types.Block
+		View                   *View
+		Proposal               *types.Block
+		RoundChangeCertificate []*Message `rlp:"optional"`
+		PreparedMessages       []*Message `rlp:"optional"`
 	}
 	if err := s.Decode(&preprepare); err != nil {
 		return err
 	}
 	b.View, b.Proposal = preprepare.View, preprepare.Proposal
+	b.RoundChangeCertificate, b.PreparedMessages = preprepare.RoundChangeCertificate, preprepare.PreparedMessages
 	return nil
+}
+
+// PreparedCertificate proves that a proposal reached the prepared state in a
+// prior round. Messages are the signed PREPARE/COMMIT envelopes that form the
+// quorum; carrying the complete envelopes lets receivers authenticate every
+// voter without persisting the certificate in the block header. It travels as
+// a ROUND CHANGE Justification and is never signed by the ROUND CHANGE sender.
+type PreparedCertificate struct {
+	View     *View
+	Proposal *types.Block
+	Messages []*Message
+}
+
+// PreparedClaim is the signed summary of the PreparedCertificate a ROUND
+// CHANGE sender holds: the round in which it prepared and the proposal hash.
+type PreparedClaim struct {
+	Round  *big.Int
+	Digest common.Hash
+}
+
+// RoundChange is the ROUND-CHANGE wire payload. Its first three fields match
+// Subject exactly, so a message without a PreparedClaim retains the legacy
+// wire encoding. The optional fourth field is enabled by the permissionless
+// consensus fork; the certificate proving it is the message's Justification.
+type RoundChange struct {
+	View     *View
+	Digest   common.Hash
+	PrevHash common.Hash
+	Prepared *PreparedClaim `rlp:"optional,nilList"`
 }
 
 // Subject is the common payload of prepare/commit/round-change messages.

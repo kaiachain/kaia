@@ -184,7 +184,7 @@ func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
 // retainedMessageBytes reports the memory a retained message occupies, so that
 // every size limit measures a message the same way.
 func retainedMessageBytes(msg *bft.Message) uint64 {
-	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal))
+	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal)) + uint64(len(msg.Justification))
 }
 
 // removeBacklogMessage releases one queued message of a sender while backlogsMu
