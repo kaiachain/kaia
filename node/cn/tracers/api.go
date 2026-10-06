@@ -1059,13 +1059,15 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		if timeoutErr != nil {
 			return nil, timeoutErr
 		}
-		var cancel context.CancelFunc
-		traceCtx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-		if err := acquireStructTraceSlot(traceCtx); err != nil {
+		if err := acquireStructTraceSlot(ctx); err != nil {
 			return nil, fmt.Errorf("tracing aborted: %w", err)
 		}
 		defer releaseStructTraceSlot()
+
+		// Queueing does not consume the execution timeout.
+		var cancel context.CancelFunc
+		traceCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
 
 		var logConfig *vm.LogConfig
 		if config != nil {

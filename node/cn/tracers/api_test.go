@@ -31,6 +31,7 @@ import (
 	"sort"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	kaiaapi "github.com/kaiachain/kaia/api"
@@ -715,6 +716,100 @@ func TestTraceCallStructLoggerHonorsTimeout(t *testing.T) {
 		GasPrice: &gasPrice,
 	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
 	assert.ErrorContains(t, err, "tracing aborted")
+}
+
+func TestTraceCallStructLoggerSlotWait(t *testing.T) {
+	from := common.HexToAddress("0xa666")
+	to := common.HexToAddress("0xb666")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	backend := newTestBackend(t, 1, genesis, nil)
+	t.Cleanup(backend.chain.Stop)
+	api := NewAPI(backend)
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	blockNumber := rpc.LatestBlockNumber
+	timeout := "1s"
+
+	for _, tc := range []struct {
+		name           string
+		cancel         bool
+		requestTimeout time.Duration
+		wantErr        error
+	}{
+		{name: "execution timeout excludes queueing"},
+		{name: "request cancellation", cancel: true, wantErr: context.Canceled},
+		{name: "request deadline", requestTimeout: time.Second, wantErr: context.DeadlineExceeded},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Keep the slot channel inside the fake-clock bubble. Do not run in parallel.
+			slots := structTraceSlots
+			defer func() { structTraceSlots = slots }()
+			synctest.Test(t, func(t *testing.T) {
+				structTraceSlots = make(chan struct{}, maxConcurrentStructTraces)
+				acquired := 0
+				defer func() {
+					for range acquired {
+						releaseStructTraceSlot()
+					}
+				}()
+				for range maxConcurrentStructTraces {
+					structTraceSlots <- struct{}{}
+					acquired++
+				}
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				if tc.requestTimeout > 0 {
+					var cancelDeadline context.CancelFunc
+					ctx, cancelDeadline = context.WithTimeout(ctx, tc.requestTimeout)
+					defer cancelDeadline()
+				}
+				var (
+					result interface{}
+					err    error
+				)
+				done := make(chan struct{})
+				go func() {
+					result, err = api.TraceCall(ctx, kaiaapi.CallArgs{
+						From: from, To: &to, Gas: &gas, GasPrice: &gasPrice,
+					}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, &TraceConfig{Timeout: &timeout})
+					close(done)
+				}()
+
+				synctest.Wait()
+				time.Sleep(2 * time.Second)
+				if tc.cancel {
+					cancel()
+				}
+				synctest.Wait()
+				if tc.wantErr == nil {
+					select {
+					case <-done:
+						t.Fatalf("trace finished before acquiring a slot: %v", err)
+					default:
+					}
+					releaseStructTraceSlot()
+					acquired--
+					synctest.Wait()
+				}
+				select {
+				case <-done:
+				default:
+					t.Fatal("trace did not finish")
+				}
+				if tc.wantErr != nil {
+					assert.ErrorIs(t, err, tc.wantErr)
+					assert.ErrorContains(t, err, "tracing aborted")
+				} else {
+					assert.NoError(t, err)
+					assert.NotNil(t, result)
+				}
+				assert.Len(t, structTraceSlots, acquired)
+			})
+		})
+	}
 }
 
 func TestResolveTraceTimeout(t *testing.T) {
