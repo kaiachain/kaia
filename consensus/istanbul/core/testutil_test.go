@@ -17,6 +17,8 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"errors"
+	"fmt"
 	"math/big"
 	"slices"
 	"sync"
@@ -51,6 +53,7 @@ type scenarioNet struct {
 	rules             []*messageRule
 	sent              []scenarioEvent
 	proposal          *types.Block // last PREPREPARE broadcast by any node
+	failures          []error      // callback failures surfaced by the scenario-driving goroutine
 }
 type scenarioConfig struct {
 	committeeSize  int
@@ -92,7 +95,24 @@ func newScenarioNet(t *testing.T, count, committee int, chain *params.ChainConfi
 		s.validators = append(s.validators, newValidator(s, i, key, types.NewBlockWithHeader(header), addresses))
 	}
 	synctest.Wait()
+	s.checkFailures()
 	return s
+}
+
+func (s *scenarioNet) recordFailure(err error) {
+	if err == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.failures = append(s.failures, err)
+}
+
+func (s *scenarioNet) checkFailures() {
+	s.mu.Lock()
+	failures := append([]error(nil), s.failures...)
+	s.mu.Unlock()
+	require.NoError(s.t, errors.Join(failures...), "scenario backend invariant")
 }
 
 func (s *scenarioNet) nodes(ids ...int) []*validator {
@@ -217,6 +237,7 @@ func (s *scenarioNet) timeout(nodes []*validator) {
 	}
 	time.Sleep(time.Nanosecond)
 	synctest.Wait()
+	s.checkFailures()
 }
 
 // delay holds directed routes, optionally for one round; holding self-delivery also postpones peer forwarding.
@@ -305,7 +326,7 @@ func newValidator(net *scenarioNet, id int, key *ecdsa.PrivateKey, genesis *type
 	backend := &scenarioBackend{
 		net: net, id: id, key: key, sealer: istanbul.NewSealerImpl(key),
 		mux: new(event.TypeMux), head: genesis, blocks: map[uint64]*types.Block{0: genesis},
-		chainConfig: net.config.chainConfig,
+		chainConfig: net.config.chainConfig, badProposals: make(map[common.Hash]bool),
 	}
 
 	c := New(backend, net.config.istanbulConfig.Copy()).(*core)
@@ -371,6 +392,13 @@ func (n *validator) assertHashLocked(hash common.Hash) {
 	require.Equal(t, hash != (common.Hash{}), n.core.current.IsHashLocked())
 }
 
+func (n *validator) assertBadHashLocked(hash common.Hash) {
+	t := n.backend.net.t
+	t.Helper()
+	require.Equal(t, hash, n.core.current.GetLockedHash(), "node %d lock", n.id)
+	require.False(t, n.core.current.IsHashLocked(), "node %d bad proposal must invalidate the lock", n.id)
+}
+
 // assertVoteCounts checks PREPAREs, COMMITs and distinct signers across both sets in the current view.
 func (n *validator) assertVoteCounts(prepares, commits, distinct int) {
 	t := n.backend.net.t
@@ -394,9 +422,11 @@ func (n *validator) assertRoundChangeCount(round uint64, count int) {
 
 // post delivers through the production event loop and waits until its work is blocked again.
 func (n *validator) post(ev interface{}) {
-	n.backend.net.t.Helper()
-	require.NoError(n.backend.net.t, n.backend.mux.Post(ev))
+	net := n.backend.net
+	net.t.Helper()
+	require.NoError(net.t, n.backend.mux.Post(ev))
 	synctest.Wait()
+	net.checkFailures()
 }
 
 // receive checks the message handler's return value while the event loop is idle.
@@ -406,6 +436,7 @@ func (n *validator) receive(ev istanbul.MessageEvent, want error) {
 	synctest.Wait()
 	err := n.core.handleMsg(ev.Payload)
 	synctest.Wait()
+	n.backend.net.checkFailures()
 	require.ErrorIs(t, err, want)
 }
 
@@ -505,6 +536,12 @@ func (node *validator) proposal(variant int64) *types.Block {
 func (node *validator) message(code uint64, proposal *types.Block, round uint64) istanbul.MessageEvent {
 	net := node.backend.net
 	net.t.Helper()
+	event, err := node.makeMessage(code, proposal, round)
+	require.NoError(net.t, err)
+	return event
+}
+
+func (node *validator) makeMessage(code uint64, proposal *types.Block, round uint64) (istanbul.MessageEvent, error) {
 	view := &bft.View{Sequence: proposal.Number(), Round: new(big.Int).SetUint64(round)}
 	var subject interface{}
 	switch code {
@@ -515,13 +552,17 @@ func (node *validator) message(code uint64, proposal *types.Block, round uint64)
 	case bft.MsgRoundChange:
 		subject = &bft.Subject{View: view, PrevHash: proposal.ParentHash()}
 	default:
-		net.t.Fatalf("unknown consensus message code %d", code)
+		return istanbul.MessageEvent{}, fmt.Errorf("unknown consensus message code %d", code)
 	}
 	encoded, err := bft.Encode(subject)
-	require.NoError(net.t, err)
+	if err != nil {
+		return istanbul.MessageEvent{}, err
+	}
 	payload, err := node.core.finalizeMessage(&bft.Message{Hash: proposal.ParentHash(), Code: code, Msg: encoded})
-	require.NoError(net.t, err)
-	return istanbul.MessageEvent{Hash: proposal.ParentHash(), Payload: payload}
+	if err != nil {
+		return istanbul.MessageEvent{}, err
+	}
+	return istanbul.MessageEvent{Hash: proposal.ParentHash(), Payload: payload}, nil
 }
 
 // timeout expires this node's real timer early; other nodes retain their own deadlines.
@@ -539,6 +580,7 @@ type scenarioBackend struct {
 	blocks       map[uint64]*types.Block
 	committed    []*types.Block
 	chainConfig  *params.ChainConfig
+	badProposals map[common.Hash]bool
 	commitErrors []error
 	commitCalls  int
 }
@@ -549,7 +591,9 @@ func (b *scenarioBackend) Address() common.Address          { return crypto.Pubk
 func (b *scenarioBackend) Sealer() *istanbul.IstanbulSealer { return b.sealer }
 func (b *scenarioBackend) EventMux() *event.TypeMux         { return b.mux }
 func (b *scenarioBackend) NodeType() common.ConnType        { return common.CONSENSUSNODE }
-func (b *scenarioBackend) HasBadProposal(common.Hash) bool  { return false }
+func (b *scenarioBackend) HasBadProposal(hash common.Hash) bool {
+	return b.badProposals[hash]
+}
 
 func (b *scenarioBackend) IsPermissionlessAt(number uint64) bool {
 	return b.chainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(number))
@@ -564,20 +608,26 @@ func (b *scenarioBackend) SetCurrentView(view *bft.View) {
 }
 
 func (b *scenarioBackend) Broadcast(hash common.Hash, payload []byte) error {
-	return b.fanout(hash, payload, true)
+	err := b.fanout(hash, payload, true)
+	b.net.recordFailure(err)
+	return err
 }
 
 func (b *scenarioBackend) Gossip([]byte) error {
-	b.net.t.Fatal("unexpected Gossip: core broadcasts must pass through self-delivery")
-	return nil
+	err := errors.New("unexpected Gossip: core broadcasts must pass through self-delivery")
+	b.net.recordFailure(err)
+	return err
 }
 
 // Only successful self-processing forwards to direct peers; peer relays and P2P caches are not modeled.
 func (b *scenarioBackend) GossipSubPeer(hash common.Hash, payload []byte) {
 	var msg bft.Message
-	require.NoError(b.net.t, msg.FromPayload(payload, nil))
+	if err := msg.FromPayload(payload, nil); err != nil {
+		b.net.recordFailure(fmt.Errorf("node %d decode relayed message: %w", b.id, err))
+		return
+	}
 	if msg.Address == b.Address() {
-		require.NoError(b.net.t, b.fanout(hash, payload, false))
+		b.net.recordFailure(b.fanout(hash, payload, false))
 	}
 }
 
@@ -586,26 +636,42 @@ func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) er
 	b.net.mu.Lock()
 	defer b.net.mu.Unlock()
 	var msg bft.Message
-	require.NoError(b.net.t, msg.FromPayload(payload, nil))
+	if err := msg.FromPayload(payload, nil); err != nil {
+		return fmt.Errorf("node %d decode broadcast message: %w", b.id, err)
+	}
 	if self {
 		b.net.sent = append(b.net.sent, scenarioEvent{b.id, b.id, istanbul.MessageEvent{Hash: hash, Payload: slices.Clone(payload)}})
 		if msg.Code == bft.MsgPreprepare {
 			var pp bft.Preprepare
-			require.NoError(b.net.t, msg.Decode(&pp))
-			b.net.proposal = pp.Proposal.(*types.Block)
+			if err := msg.Decode(&pp); err != nil {
+				return fmt.Errorf("node %d decode PREPREPARE: %w", b.id, err)
+			}
+			proposal, ok := pp.Proposal.(*types.Block)
+			if !ok {
+				return fmt.Errorf("node %d broadcast non-block PREPREPARE", b.id)
+			}
+			b.net.proposal = proposal
 		}
 	}
 	if self && msg.Code == bft.MsgCommit {
 		var subject bft.Subject
-		require.NoError(b.net.t, msg.Decode(&subject))
+		if err := msg.Decode(&subject); err != nil {
+			return fmt.Errorf("node %d decode COMMIT: %w", b.id, err)
+		}
 		current := b.net.validators[b.id].core.current
 		if subject.View.Sequence.Cmp(current.Sequence()) == 0 {
-			require.True(b.net.t, current.IsHashLocked(), "node %d: honest COMMIT without a lock", b.id)
-			require.Equal(b.net.t, current.GetLockedHash(), subject.Digest, "node %d: COMMIT conflicts with lock", b.id)
+			if !current.IsHashLocked() {
+				return fmt.Errorf("node %d: honest COMMIT without a lock", b.id)
+			}
+			if current.GetLockedHash() != subject.Digest {
+				return fmt.Errorf("node %d: COMMIT conflicts with lock: have %s, want %s", b.id, subject.Digest, current.GetLockedHash())
+			}
 		}
 	}
 	view, err := msg.GetView()
-	require.NoError(b.net.t, err)
+	if err != nil {
+		return fmt.Errorf("node %d read message view: %w", b.id, err)
+	}
 	for to, recipient := range b.net.validators {
 		if (self && to != b.id) || (!self && to == b.id) {
 			continue
@@ -628,15 +694,25 @@ func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) er
 				var view *bft.View
 				if msg.Code == bft.MsgPreprepare {
 					var pp *bft.Preprepare
-					require.NoError(b.net.t, msg.Decode(&pp))
+					if err := msg.Decode(&pp); err != nil {
+						return fmt.Errorf("node %d decode modified PREPREPARE: %w", b.id, err)
+					}
 					view = pp.View
 				} else {
 					var subject *bft.Subject
-					require.NoError(b.net.t, msg.Decode(&subject))
+					if err := msg.Decode(&subject); err != nil {
+						return fmt.Errorf("node %d decode modified message: %w", b.id, err)
+					}
 					view = subject.View
 				}
-				require.Equal(b.net.t, view.Sequence, rule.proposal.Number(), "modified proposal must keep the message's sequence")
-				ev.data = rule.from.message(msg.Code, rule.proposal, view.Round.Uint64())
+				if view.Sequence.Cmp(rule.proposal.Number()) != 0 {
+					return fmt.Errorf("modified proposal must keep the message's sequence: have %s, want %s", rule.proposal.Number(), view.Sequence)
+				}
+				modified, err := rule.from.makeMessage(msg.Code, rule.proposal, view.Round.Uint64())
+				if err != nil {
+					return fmt.Errorf("node %d create modified message: %w", b.id, err)
+				}
+				ev.data = modified
 			}
 		}
 		if deliver {
@@ -703,8 +779,11 @@ func (b *scenarioBackend) Commit(proposal bft.Proposal, seals [][]byte) error {
 		return err
 	}
 	block = block.WithSeal(header)
+	if err := b.net.validators[b.id].checkCommit(block); err != nil {
+		b.net.failures = append(b.net.failures, err)
+		return err
+	}
 	b.committed = append(b.committed, block)
-	b.net.validators[b.id].checkCommit()
 	b.head = block
 	b.blocks[block.NumberU64()] = block
 	b.net.pendingDeliveries = append(b.net.pendingDeliveries, scenarioEvent{b.id, b.id, istanbul.ChainHeadEvent{}})
@@ -757,16 +836,16 @@ func newMessageRule(net *scenarioNet, code uint64, from *validator, recipients [
 
 // Snapshot is used only around targeted rejected/ignored inputs, not every event.
 type scenarioSnapshot struct {
-	pending              common.Hash
-	futureRequests       int
-	sequence, round      uint64
-	state                State
-	waiting              bool
-	lock, proposal, head common.Hash
-	prepares, commits    map[common.Address]common.Hash
-	roundChanges         map[uint64]map[common.Address]common.Hash
-	sent                 int
-	backlogs             map[common.Address]int
+	Pending              common.Hash
+	FutureRequests       int
+	Sequence, Round      uint64
+	State                State
+	Waiting              bool
+	Lock, Proposal, Head common.Hash
+	Prepares, Commits    map[common.Address]common.Hash
+	RoundChanges         map[uint64]map[common.Address]common.Hash
+	Sent                 int
+	Backlogs             map[common.Address]int
 }
 
 func (node *validator) snapshot() scenarioSnapshot {
@@ -782,49 +861,59 @@ func (node *validator) snapshot() scenarioSnapshot {
 		return result
 	}
 	s := scenarioSnapshot{
-		sequence: c.current.Sequence().Uint64(), round: c.current.Round().Uint64(),
-		state: c.state, waiting: c.waitingForRoundChange, lock: c.current.GetLockedHash(), head: node.backend.head.Hash(),
-		prepares: messages(c.current.Prepares), commits: messages(c.current.Commits),
-		roundChanges: make(map[uint64]map[common.Address]common.Hash),
+		Sequence: c.current.Sequence().Uint64(), Round: c.current.Round().Uint64(),
+		State: c.state, Waiting: c.waitingForRoundChange, Lock: c.current.GetLockedHash(), Head: node.backend.head.Hash(),
+		Prepares: messages(c.current.Prepares), Commits: messages(c.current.Commits),
+		RoundChanges: make(map[uint64]map[common.Address]common.Hash),
 	}
-	s.backlogs = make(map[common.Address]int)
+	s.Backlogs = make(map[common.Address]int)
 	for from, q := range c.backlogs {
-		s.backlogs[from] = q.Size()
+		s.Backlogs[from] = q.Size()
 	}
 	for from := range c.backlogPreprepares {
-		s.backlogs[from]++
+		s.Backlogs[from]++
 	}
-	s.futureRequests = c.pendingRequests.Size()
+	s.FutureRequests = c.pendingRequests.Size()
 	if c.current.pendingRequest != nil {
-		s.pending = c.current.pendingRequest.Proposal.Hash()
+		s.Pending = c.current.pendingRequest.Proposal.Hash()
 	}
 	if proposal := c.current.Proposal(); proposal != nil {
-		s.proposal = proposal.Hash()
+		s.Proposal = proposal.Hash()
 	}
 	for round, set := range c.roundChangeSet.roundChanges {
-		s.roundChanges[round] = messages(set)
+		s.RoundChanges[round] = messages(set)
 	}
 	for _, sent := range net.sent {
 		if sent.from == node.id {
-			s.sent++
+			s.Sent++
 		}
 	}
 	return s
 }
 
-func (node *validator) checkCommit() {
+func (node *validator) checkCommit(block *types.Block) error {
 	net, id := node.backend.net, node.id
-	net.t.Helper()
 	backend := node.backend
-	block := backend.committed[len(backend.committed)-1]
 	height := block.NumberU64()
-	require.Equal(net.t, backend.head.NumberU64()+1, height, "node %d: non-consecutive commit", id)
-	require.Equal(net.t, backend.head.Hash(), block.ParentHash(), "node %d: wrong committed parent", id)
-	require.Len(net.t, backend.committed, int(height), "node %d: exactly one commit per height", id)
-	node.assertCommittedSeals(block)
+	if want := backend.head.NumberU64() + 1; height != want {
+		return fmt.Errorf("node %d: non-consecutive commit: have height %d, want %d", id, height, want)
+	}
+	if want := backend.head.Hash(); block.ParentHash() != want {
+		return fmt.Errorf("node %d: wrong committed parent: have %s, want %s", id, block.ParentHash(), want)
+	}
+	if want := int(height); len(backend.committed)+1 != want {
+		return fmt.Errorf("node %d: commit count %d, want %d", id, len(backend.committed)+1, want)
+	}
+	if err := node.validateCommittedSeals(block); err != nil {
+		return err
+	}
 	author, err := backend.sealer.Author(block.Header())
-	require.NoError(net.t, err)
-	require.Contains(net.t, net.validatorAddresses(), author, "unauthorized block author")
+	if err != nil {
+		return fmt.Errorf("node %d: recover committed block author: %w", id, err)
+	}
+	if !slices.Contains(net.validatorAddresses(), author) {
+		return fmt.Errorf("node %d: unauthorized block author %s", id, author)
+	}
 
 	// All equivocation scenarios stay within f faulty signers, preserving the agreement assumption.
 	for _, other := range net.validators {
@@ -832,10 +921,13 @@ func (node *validator) checkCommit() {
 			continue
 		}
 		if committed := other.backend.blocks[height]; committed != nil {
-			require.Equal(net.t, committed.Hash(), block.Hash(),
-				"nodes %d and %d committed different blocks at height %d", other.id, id, height)
+			if committed.Hash() != block.Hash() {
+				return fmt.Errorf("nodes %d and %d committed different blocks at height %d: %s != %s",
+					other.id, id, height, committed.Hash(), block.Hash())
+			}
 		}
 	}
+	return nil
 }
 
 type scenarioSealFormat struct {
@@ -844,25 +936,38 @@ type scenarioSealFormat struct {
 }
 
 func (node *validator) assertCommittedSeals(block *types.Block, expected ...scenarioSealFormat) {
-	net, id, backend := node.backend.net, node.id, node.backend
+	net := node.backend.net
 	net.t.Helper()
+	require.NoError(net.t, node.validateCommittedSeals(block, expected...))
+}
+
+func (node *validator) validateCommittedSeals(block *types.Block, expected ...scenarioSealFormat) error {
+	net, id, backend := node.backend.net, node.id, node.backend
 	var (
 		committers []common.Address
 		err        error
 	)
 	if len(expected) != 0 {
-		require.Len(net.t, expected, 1)
+		if len(expected) != 1 {
+			return fmt.Errorf("node %d: got %d expected seal formats, want at most one", id, len(expected))
+		}
 		format := expected[0]
-		require.LessOrEqual(net.t, format.round, uint64(255))
+		if format.round > 255 {
+			return fmt.Errorf("node %d: seal round %d overflows byte", id, format.round)
+		}
 		preimage := append(block.Hash().Bytes(), byte(bft.MsgCommit))
 		if format.roundBound {
 			preimage = append(preimage, byte(format.round))
 		}
 		_, seals, err := backend.sealer.RawSeals(block.Header())
-		require.NoError(net.t, err)
+		if err != nil {
+			return fmt.Errorf("node %d: read committed seals: %w", id, err)
+		}
 		for _, seal := range seals {
 			signer, err := istanbul.GetSignatureAddress(preimage, seal)
-			require.NoError(net.t, err)
+			if err != nil {
+				return fmt.Errorf("node %d: recover committed seal: %w", id, err)
+			}
 			committers = append(committers, signer)
 		}
 	} else if backend.IsPermissionlessAt(block.NumberU64()) {
@@ -870,13 +975,19 @@ func (node *validator) assertCommittedSeals(block *types.Block, expected ...scen
 	} else {
 		committers, err = backend.sealer.Committers(block.Header())
 	}
-	require.NoError(net.t, err)
+	if err != nil {
+		return fmt.Errorf("node %d: recover committers: %w", id, err)
+	}
 
 	committee := net.validatorAddresses()[:net.config.committeeSize]
 	unique := make(map[common.Address]struct{}, len(committers))
 	for _, committer := range committers {
-		require.NotContains(net.t, unique, committer, "node %d: duplicate committed seals", id)
-		require.Contains(net.t, committee, committer, "node %d: sealer outside the committee", id)
+		if _, ok := unique[committer]; ok {
+			return fmt.Errorf("node %d: duplicate committed seal from %s", id, committer)
+		}
+		if !slices.Contains(committee, committer) {
+			return fmt.Errorf("node %d: sealer %s outside the committee", id, committer)
+		}
 		unique[committer] = struct{}{}
 	}
 	// Restate the tiny-committee exception independently of calcQuorumSize.
@@ -884,7 +995,10 @@ func (node *validator) assertCommittedSeals(block *types.Block, expected ...scen
 	if quorum >= 4 {
 		quorum = (2*quorum + 2) / 3
 	}
-	require.GreaterOrEqual(net.t, len(unique), quorum, "node %d: seals below quorum", id)
+	if len(unique) < quorum {
+		return fmt.Errorf("node %d: %d committed seals below quorum %d", id, len(unique), quorum)
+	}
+	return nil
 }
 
 // follow models a head notification only; this scenario ends before further local commits.
@@ -987,7 +1101,7 @@ func (sender *validator) corruptCommit(corruption consensusSealMutation) istanbu
 			s.t.Fatalf("unknown corruption %s", corruption)
 		}
 		preimage := append(digest.Bytes(), byte(bft.MsgCommit))
-		if sender.backend.IsPermissionlessAt(subject.View.Sequence.Uint64()) {
+		if sender.backend.IsPermissionlessAt(subject.View.Sequence.Uint64()) || corruption == consensusOtherRound {
 			preimage = append(preimage, round)
 		}
 		var err error

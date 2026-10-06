@@ -131,6 +131,17 @@ func TestConsensusNetworkAndVoting(t *testing.T) {
 			s.release(bft.MsgCommit, s.nodes(2), s.nodes(0))
 			target.assertCommitted(1)
 		}},
+		{"BadProposalInvalidatesExistingLock", 4, 4, func(s *scenarioNet) {
+			// Hold V0 below the commit quorum after it has locked the proposal.
+			s.delay(bft.MsgCommit, s.nodes(2, 3), s.nodes(0))
+			s.advanceConsensus(1, s.nodes(0))
+			target := s.validators[0]
+			locked := s.proposal.Hash()
+			target.assertHashLocked(locked)
+			// A backend-reported bad proposal keeps the hash for diagnostics but invalidates the lock.
+			target.backend.badProposals[locked] = true
+			target.assertBadHashLocked(locked)
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
@@ -655,10 +666,9 @@ func TestConsensusForkBoundary(t *testing.T) {
 	for _, tc := range []struct {
 		name             string
 		activationHeight int64
-		want             error
 	}{
-		{"OtherRoundSealBeforeActivation", 2, nil},
-		{"OtherRoundSealAfterActivation", 1, errInvalidCommittedSeal},
+		{"OtherRoundSealBeforeActivation", 2},
+		{"OtherRoundSealAfterActivation", 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
@@ -669,15 +679,9 @@ func TestConsensusForkBoundary(t *testing.T) {
 				s.delay(bft.MsgCommit, s.nodes(2, 3), s.nodes(0))
 				s.advanceConsensus(1, s.nodes(0))
 				ev := s.validators[3].corruptCommit(consensusOtherRound)
-				// Before activation the seal omits the round; afterward the same mutation must be rejected.
-				if tc.want == nil {
-					target.receive(ev, nil)
-					s.drain()
-					target.assertCommitted(1)
-				} else {
-					target.reject(ev, tc.want)
-					target.assertUncommitted(1)
-				}
+				// A post-fork round-bound seal is invalid before activation, and a seal for another round is invalid after it.
+				target.reject(ev, errInvalidCommittedSeal)
+				target.assertUncommitted(1)
 				s.release(bft.MsgCommit, s.nodes(2, 3), s.nodes(0))
 				target.assertCommitted(1)
 			})
