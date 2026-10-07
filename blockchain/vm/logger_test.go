@@ -79,3 +79,74 @@ func TestStoreCapture(t *testing.T) {
 		t.Errorf("expected %x, got %x", exp, logger.changedValues[contract.Address()][index])
 	}
 }
+
+func TestStructLoggerStopsAtServerLimit(t *testing.T) {
+	var (
+		env      = NewEVM(BlockContext{}, TxContext{}, &dummyStatedb{}, params.TestChainConfig, &Config{})
+		logger   = NewStructLoggerWithLimits(nil, 10, 255)
+		mem      = NewMemory()
+		stack    = newstack()
+		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0, nil)
+	)
+
+	logger.CaptureState(env, 0, STOP, 0, 0, 0, 0, &ScopeContext{Memory: mem, Stack: stack, Contract: contract}, 0, nil)
+	if !logger.LimitReached() {
+		t.Fatal("expected capture limit to be reached")
+	}
+	if !env.Cancelled() {
+		t.Fatal("expected capture limit to cancel the EVM")
+	}
+	if len(logger.StructLogs()) != 0 {
+		t.Fatal("over-limit log was retained")
+	}
+}
+
+func TestStructLoggerEncodesRPCLogsImmediately(t *testing.T) {
+	var (
+		env      = NewEVM(BlockContext{}, TxContext{}, &dummyStatedb{}, params.TestChainConfig, &Config{})
+		logger   = NewStructLoggerWithLimits(&LogConfig{DisableMemory: true}, 10, 4096)
+		mem      = NewMemory()
+		stack    = newstack()
+		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0, nil)
+	)
+
+	logger.CaptureState(env, 1, STOP, 2, 3, 4, 5, &ScopeContext{Memory: mem, Stack: stack, Contract: contract}, 6, nil)
+	if logger.LimitReached() {
+		t.Fatal("unexpected capture limit")
+	}
+	if len(logger.StructLogs()) != 0 {
+		t.Fatal("RPC logger retained an unencoded snapshot")
+	}
+	if len(logger.JSONLogs()) != 1 {
+		t.Fatalf("expected one encoded log, got %d", len(logger.JSONLogs()))
+	}
+	want := `{"pc":1,"op":"STOP","gas":2,"gasCost":3,"depth":6,"stack":[],"storage":{},"computation":4,"computationCost":5}`
+	if got := string(logger.JSONLogs()[0]); got != want {
+		t.Fatalf("encoded log mismatch\nwant: %s\n got: %s", want, got)
+	}
+}
+
+func TestStructLoggerKeepsLegacySnapshots(t *testing.T) {
+	var (
+		env      = NewEVM(BlockContext{}, TxContext{}, &dummyStatedb{}, params.TestChainConfig, &Config{})
+		logger   = NewStructLogger(&LogConfig{DisableMemory: true, DisableStack: true, DisableStorage: true})
+		mem      = NewMemory()
+		stack    = newstack()
+		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0, nil)
+	)
+
+	logger.CaptureState(env, 0, STOP, 0, 0, 0, 0, &ScopeContext{Memory: mem, Stack: stack, Contract: contract}, 0, nil)
+	if len(logger.StructLogs()) != 1 {
+		t.Fatalf("expected one legacy snapshot, got %d", len(logger.StructLogs()))
+	}
+	if len(logger.JSONLogs()) != 0 {
+		t.Fatal("legacy logger unexpectedly encoded an RPC log")
+	}
+}
+
+func TestStructLoggerBoundsCompleteResult(t *testing.T) {
+	logger := NewStructLoggerWithLimits(nil, 10, 1024)
+	if _, err := logger.GetResult(0, false, make([]byte, 512)); err == nil {
+		t.Fatal("expected return data to count toward the result limit")
+	}
+}
