@@ -96,19 +96,20 @@ func calcFaultTolerance(qualifiedLen int, committeeSize uint64) int {
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 	c := &core{
-		config:             config,
-		address:            backend.Address(),
-		state:              StateAcceptRequest,
-		handlerWg:          new(sync.WaitGroup),
-		logger:             logger.NewWith("address", backend.Address()),
-		backend:            backend,
-		backlogs:           make(map[common.Address]*prque.Prque),
-		backlogsMu:         new(sync.Mutex),
-		backlogCounts:      make(map[common.Address]int),
-		backlogPreprepares: make(map[common.Address]backlogPreprepare),
-		pendingRequests:    prque.New(),
-		pendingRequestsMu:  new(sync.Mutex),
-		consensusTimestamp: time.Time{},
+		config:                    config,
+		address:                   backend.Address(),
+		state:                     StateAcceptRequest,
+		handlerWg:                 new(sync.WaitGroup),
+		logger:                    logger.NewWith("address", backend.Address()),
+		backend:                   backend,
+		backlogs:                  make(map[common.Address]*prque.Prque),
+		backlogsMu:                new(sync.Mutex),
+		backlogCounts:             make(map[common.Address]int),
+		backlogJustificationBytes: make(map[common.Address]uint64),
+		backlogPreprepares:        make(map[common.Address]backlogPreprepare),
+		pendingRequests:           prque.New(),
+		pendingRequestsMu:         new(sync.Mutex),
+		consensusTimestamp:        time.Time{},
 
 		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
 		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
@@ -142,10 +143,12 @@ type core struct {
 	waitingForRoundChange bool
 	validateFn            func([]byte, []byte) (common.Address, error)
 
-	backlogs           map[common.Address]*prque.Prque
-	backlogsMu         *sync.Mutex
-	backlogCounts      map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
-	backlogPreprepares map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
+	backlogs                       map[common.Address]*prque.Prque
+	backlogsMu                     *sync.Mutex
+	backlogCounts                  map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
+	backlogJustificationBytes      map[common.Address]uint64            // retained unsigned ROUND CHANGE attachment bytes per sender
+	backlogTotalJustificationBytes uint64                               // retained unsigned ROUND CHANGE attachment bytes across all senders
+	backlogPreprepares             map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
 
 	current   *roundState
 	handlerWg *sync.WaitGroup

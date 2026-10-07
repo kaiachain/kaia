@@ -123,11 +123,21 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
 		return bft.ErrInvalidMessage
 	}
+	if rc == nil || rc.View == nil || rc.View.Sequence == nil {
+		return bft.ErrInvalidMessage
+	}
+	permissionless := c.backend != nil && c.backend.IsPermissionlessAt(rc.View.Sequence.Uint64())
 	// Before Permissionless, a ROUND CHANGE has the legacy shape only. The
 	// Justification is unsigned, so any relay could otherwise attach one to a
 	// valid message; reject it before the message can be backlogged or retained.
-	if c.backend != nil && !c.backend.IsPermissionlessAt(rc.View.Sequence.Uint64()) &&
-		(len(msg.Justification) != 0 || rc.Prepared != nil) {
+	if c.backend != nil && !permissionless && (len(msg.Justification) != 0 || rc.Prepared != nil) {
+		return bft.ErrInvalidMessage
+	}
+	// The full prepared certificate is expensive to verify, but its presence
+	// must match the signed claim before checkMessage can return errFutureMessage
+	// and retain the envelope. This rejects a large, unsigned attachment with no
+	// claim without doing certificate decoding or signature recovery.
+	if permissionless && !roundChangeJustificationShapeValid(msg, rc) {
 		return bft.ErrInvalidMessage
 	}
 
@@ -137,7 +147,7 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 	// Some focused unit tests exercise round-change-set admission with a bare
 	// core and no backend. Production cores always have one; the extension
 	// validation itself requires it and therefore applies only when present.
-	if c.backend != nil && c.backend.IsPermissionlessAt(rc.View.Sequence.Uint64()) {
+	if permissionless {
 		if !common.EmptyHash(rc.Digest) {
 			return bft.ErrInvalidMessage
 		}
@@ -216,14 +226,11 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 // verifyRoundChangeJustification checks that a ROUND CHANGE's unsigned
 // Justification proves exactly the PreparedClaim its sender signed.
 func (c *core) verifyRoundChangeJustification(msg *bft.Message, rc *bft.RoundChange) error {
-	if rc.Prepared == nil {
-		if len(msg.Justification) != 0 {
-			return errors.New("justification without a prepared claim")
-		}
-		return nil
+	if !roundChangeJustificationShapeValid(msg, rc) {
+		return errors.New("prepared claim and justification must appear together")
 	}
-	if len(msg.Justification) == 0 {
-		return errors.New("prepared claim without a justification")
+	if rc.Prepared == nil {
+		return nil
 	}
 	var cert *bft.PreparedCertificate
 	if err := rlp.DecodeBytes(msg.Justification, &cert); err != nil {
@@ -235,6 +242,10 @@ func (c *core) verifyRoundChangeJustification(msg *bft.Message, rc *bft.RoundCha
 		return errors.New("justification does not match the prepared claim")
 	}
 	return c.verifyPreparedCertificate(cert, rc.View)
+}
+
+func roundChangeJustificationShapeValid(msg *bft.Message, rc *bft.RoundChange) bool {
+	return (rc.Prepared == nil) == (len(msg.Justification) == 0)
 }
 
 // verifyPreparedCertificate authenticates a quorum of votes for one proposal

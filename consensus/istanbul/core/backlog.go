@@ -39,24 +39,31 @@ var msgPriority = map[uint64]int{
 }
 
 const (
-	// The backlog retains future messages per sender only, with no budget shared
-	// between senders: a shared budget lets a few senders fill it ahead of an
-	// honest one, and during a round change the message dropped that way is the
-	// next round's PREPREPARE. The per-sender limits bound the total on their
-	// own, since handleMsg admits only the qualified council, the council is
-	// bounded by ABv2 (DefaultMaxValActivePausedCount), and every message is
-	// bounded by checkMessageSize or the block size.
-
 	// Keep only a small future-sequence window so far-future messages cannot
 	// occupy a sender's budget until the node catches up. A node further behind
 	// than this window catches up through block synchronization rather than
 	// through retained consensus messages.
 	maxBacklogSequencesAhead = 8
 
-	// PREPARE, COMMIT and ROUND CHANGE are bounded by checkMessageSize, so a
-	// count limit bounds the memory they occupy. A PREPREPARE carries an entire
-	// block and takes the sender's single PREPREPARE slot instead.
+	// Limit small-message churn independently from retained bytes. A PREPREPARE
+	// carries an entire block and takes the sender's single protected slot
+	// instead.
 	maxBacklogMessagesPerSender = 128
+
+	// A single sender may retain at most one transport-sized allocation across
+	// its unsigned ROUND CHANGE attachments. Small signed messages do not consume
+	// this budget, so a relayed attachment cannot crowd out the sender's future
+	// PREPARE or COMMIT messages. Because the attachment is unsigned, a relay can
+	// consume this evidence allowance; the consequence is intentionally limited
+	// to opportunistic future-height certificate retention.
+	maxBacklogJustificationBytesPerSender uint64 = maxConsensusP2PMessageBytes
+
+	// Bound aggregate attachment memory even when many qualified validators send
+	// maximum-sized future ROUND CHANGEs. Only Justification bytes consume this
+	// budget: ordinary votes and ROUND CHANGEs without prepared evidence remain
+	// admissible when it is full. PREPREPAREs likewise remain in their separate
+	// one-per-sender slots.
+	maxBacklogJustificationBytes uint64 = 64 * 1024 * 1024
 )
 
 // checkMessage checks the message state
@@ -162,6 +169,19 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 		logger.Trace("Discarding future message: sender backlog limit reached")
 		return
 	}
+	justificationBytes := uint64(len(msg.Justification))
+	if justificationBytes != 0 {
+		if justificationBytes > maxBacklogJustificationBytesPerSender ||
+			c.backlogJustificationBytes[src] > maxBacklogJustificationBytesPerSender-justificationBytes {
+			logger.Trace("Discarding future message: sender backlog attachment limit reached", "bytes", justificationBytes)
+			return
+		}
+		if justificationBytes > maxBacklogJustificationBytes ||
+			c.backlogTotalJustificationBytes > maxBacklogJustificationBytes-justificationBytes {
+			logger.Trace("Discarding future message: total backlog attachment limit reached", "bytes", justificationBytes)
+			return
+		}
+	}
 	backlog := c.backlogs[src]
 	if backlog == nil {
 		backlog = prque.New()
@@ -171,6 +191,10 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
 	backlog.Push(msg, toPriority(msg.Code, view))
 	c.backlogCounts[src]++
+	if justificationBytes != 0 {
+		c.backlogJustificationBytes[src] += justificationBytes
+		c.backlogTotalJustificationBytes += justificationBytes
+	}
 }
 
 func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
@@ -188,14 +212,36 @@ func retainedMessageBytes(msg *bft.Message) uint64 {
 }
 
 // removeBacklogMessage releases one queued message of a sender while backlogsMu
-// is held. It drops the sender's counter at zero, so no explicit cleanup is
+// is held. It drops the sender's accounting at zero, so no explicit cleanup is
 // needed when the sender's queue becomes empty.
-func (c *core) removeBacklogMessage(src common.Address) {
+func (c *core) removeBacklogMessage(src common.Address, msg *bft.Message) {
 	if c.backlogCounts[src] <= 1 {
 		delete(c.backlogCounts, src)
+	} else {
+		c.backlogCounts[src]--
+	}
+
+	justificationBytes := uint64(len(msg.Justification))
+	if justificationBytes == 0 {
 		return
 	}
-	c.backlogCounts[src]--
+	senderBytes := c.backlogJustificationBytes[src]
+	if senderBytes < justificationBytes || c.backlogTotalJustificationBytes < justificationBytes {
+		// This is an internal invariant violation, not peer input. Preserve the
+		// conservative accounting instead of silently clamping it and hiding the
+		// mismatch or wrapping an unsigned subtraction.
+		c.logger.Error("Inconsistent backlog attachment accounting", "from", src,
+			"messageBytes", justificationBytes, "senderBytes", senderBytes,
+			"totalBytes", c.backlogTotalJustificationBytes)
+		return
+	}
+	senderBytes -= justificationBytes
+	if senderBytes == 0 {
+		delete(c.backlogJustificationBytes, src)
+	} else {
+		c.backlogJustificationBytes[src] = senderBytes
+	}
+	c.backlogTotalJustificationBytes -= justificationBytes
 }
 
 // backlogMessageView decodes the view a message belongs to and the parent hash
@@ -269,7 +315,7 @@ func (c *core) processBacklog() {
 				backlog.Push(msg, prio)
 				break
 			}
-			c.removeBacklogMessage(src)
+			c.removeBacklogMessage(src, msg)
 		}
 
 		// Do not retain prque's backing storage after all messages from this

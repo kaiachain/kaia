@@ -35,14 +35,15 @@ import (
 func newTestBacklogCore() *core {
 	qualified := valset.NewAddressSet(nil)
 	return &core{
-		address:            common.HexToAddress("0xdead"),
-		state:              StateAcceptRequest,
-		logger:             logger.NewWith(),
-		backlogs:           make(map[common.Address]*prque.Prque),
-		backlogsMu:         new(sync.Mutex),
-		backlogCounts:      make(map[common.Address]int),
-		backlogPreprepares: make(map[common.Address]backlogPreprepare),
-		current:            newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil),
+		address:                   common.HexToAddress("0xdead"),
+		state:                     StateAcceptRequest,
+		logger:                    logger.NewWith(),
+		backlogs:                  make(map[common.Address]*prque.Prque),
+		backlogsMu:                new(sync.Mutex),
+		backlogCounts:             make(map[common.Address]int),
+		backlogJustificationBytes: make(map[common.Address]uint64),
+		backlogPreprepares:        make(map[common.Address]backlogPreprepare),
+		current:                   newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil),
 	}
 }
 
@@ -60,6 +61,16 @@ func newTestBacklogMessage(t *testing.T, sequence int64) *bft.Message {
 	}})
 	require.NoError(t, err)
 	return &bft.Message{Code: bft.MsgPrepare, Msg: payload}
+}
+
+func newTestBacklogRoundChange(t *testing.T, sequence int64) *bft.Message {
+	t.Helper()
+	payload, err := bft.Encode(&bft.RoundChange{View: &bft.View{
+		Sequence: big.NewInt(sequence),
+		Round:    big.NewInt(0),
+	}})
+	require.NoError(t, err)
+	return &bft.Message{Code: bft.MsgRoundChange, Msg: payload}
 }
 
 func newTestBacklogPreprepare(t *testing.T, sequence, round int64) *bft.Message {
@@ -88,6 +99,46 @@ func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
 
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogs[src].Size())
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogCounts[src])
+}
+
+func TestStoreBacklogBoundsJustificationBytesPerSenderWithoutBlockingSmallMessages(t *testing.T) {
+	src := backlogSender(1)
+	c := newTestBacklogCore()
+	msg := newTestBacklogRoundChange(t, 2)
+	msg.Justification = make([]byte, maxBacklogJustificationBytesPerSender/2+1)
+	justificationBytes := uint64(len(msg.Justification))
+
+	c.storeBacklog(msg, src)
+	c.storeBacklog(msg, src)
+	c.storeBacklog(newTestBacklogMessage(t, 2), src)
+
+	assert.Equal(t, 2, c.backlogs[src].Size())
+	assert.Equal(t, 2, c.backlogCounts[src])
+	assert.Equal(t, justificationBytes, c.backlogJustificationBytes[src])
+	assert.Equal(t, justificationBytes, c.backlogTotalJustificationBytes)
+}
+
+func TestStoreBacklogBoundsTotalJustificationBytesWithoutBlockingSmallMessages(t *testing.T) {
+	c := newTestBacklogCore()
+	msg := newTestBacklogRoundChange(t, 2)
+	msg.Justification = make([]byte, maxBacklogJustificationBytesPerSender)
+
+	for sender := 1; sender <= int(maxBacklogJustificationBytes/maxBacklogJustificationBytesPerSender)+1; sender++ {
+		c.storeBacklog(msg, backlogSender(sender))
+	}
+
+	accepted := int(maxBacklogJustificationBytes / maxBacklogJustificationBytesPerSender)
+	assert.Len(t, c.backlogs, accepted)
+	assert.Equal(t, uint64(accepted)*maxBacklogJustificationBytesPerSender, c.backlogTotalJustificationBytes)
+	assert.NotContains(t, c.backlogs, backlogSender(accepted+1))
+
+	// A full attachment budget must not block ordinary consensus messages,
+	// including from a sender whose own attachment budget is also full.
+	c.storeBacklog(newTestBacklogMessage(t, 2), backlogSender(1))
+	c.storeBacklog(newTestBacklogMessage(t, 2), backlogSender(accepted+1))
+	assert.Equal(t, 2, c.backlogs[backlogSender(1)].Size())
+	assert.Equal(t, 1, c.backlogs[backlogSender(accepted+1)].Size())
+	assert.Equal(t, uint64(accepted)*maxBacklogJustificationBytesPerSender, c.backlogTotalJustificationBytes)
 }
 
 // The message budget is per sender, so a sender that has filled its own budget
@@ -144,7 +195,8 @@ func TestStoreBacklogSkipsUndecodableMessage(t *testing.T) {
 func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	msg := newTestBacklogMessage(t, 2)
+	msg := newTestBacklogRoundChange(t, 2)
+	msg.Justification = make([]byte, 1024)
 
 	for range maxBacklogMessagesPerSender {
 		c.storeBacklog(msg, src)
@@ -154,10 +206,35 @@ func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
+	assert.Empty(t, c.backlogJustificationBytes)
+	assert.Zero(t, c.backlogTotalJustificationBytes)
 
 	c.storeBacklog(msg, src)
 	assert.Equal(t, 1, c.backlogs[src].Size())
 	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Equal(t, uint64(len(msg.Justification)), c.backlogJustificationBytes[src])
+	assert.Equal(t, uint64(len(msg.Justification)), c.backlogTotalJustificationBytes)
+}
+
+func TestProcessBacklogKeepsExactJustificationAccountingForRemainingMessages(t *testing.T) {
+	src := backlogSender(1)
+	c := newTestBacklogCore()
+	old := newTestBacklogRoundChange(t, 2)
+	old.Justification = make([]byte, 100)
+	future := newTestBacklogRoundChange(t, 4)
+	future.Justification = make([]byte, 200)
+	c.storeBacklog(old, src)
+	c.storeBacklog(future, src)
+
+	// The sequence-2 message becomes old, while sequence 4 is still future and
+	// is pushed back into the queue with its accounting intact.
+	setTestBacklogView(c, 3, 0)
+	c.processBacklog()
+
+	assert.Equal(t, 1, c.backlogs[src].Size())
+	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Equal(t, uint64(len(future.Justification)), c.backlogJustificationBytes[src])
+	assert.Equal(t, uint64(len(future.Justification)), c.backlogTotalJustificationBytes)
 }
 
 func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
@@ -174,6 +251,8 @@ func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
+	assert.Empty(t, c.backlogJustificationBytes)
+	assert.Zero(t, c.backlogTotalJustificationBytes)
 }
 
 // A sender's slot keeps the PREPREPARE for the highest view: a higher view

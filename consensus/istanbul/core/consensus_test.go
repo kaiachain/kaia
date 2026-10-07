@@ -723,8 +723,8 @@ func TestConsensusRoundChangeRejectsUnboundJustification(t *testing.T) {
 // Permissionless a ROUND CHANGE keeps the legacy shape. Neither a signed
 // PreparedClaim nor an unsigned Justification, which any relay could attach
 // to a valid message, may enter the round-change set or the backlog. From the
-// activation height the gate no longer applies; the attachment is verified
-// when the message is processed.
+// activation height a signed PreparedClaim and its attachment must appear
+// together before a future message can enter the backlog.
 func TestConsensusRoundChangeRejectsJustificationBeforeFork(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		config := params.TestKaiaConfig("permissionless")
@@ -752,10 +752,13 @@ func TestConsensusRoundChangeRejectsJustificationBeforeFork(t *testing.T) {
 		// The legacy ROUND CHANGE from the same sender is still admitted.
 		receiver.receive(signedRoundChangeAt(t, sender, 1, 1, nil, nil), errIgnored)
 		receiver.assertRoundChangeCount(1, 1)
-		// At the activation height the same envelope passes the gate and is
-		// deferred like any future message.
+		// At the activation height the malformed envelope is rejected before the
+		// future-message path can retain its unsigned attachment. A claim-less
+		// ROUND CHANGE without an attachment remains compatible and deferrable.
 		require.True(t, receiver.backend.IsPermissionlessAt(3))
-		receiver.receive(signedRoundChangeAt(t, sender, 3, 1, nil, junk), errFutureMessage)
+		receiver.reject(signedRoundChangeAt(t, sender, 3, 1, nil, junk), bft.ErrInvalidMessage)
+		receiver.receive(signedRoundChangeAt(t, sender, 3, 1, nil, nil), errFutureMessage)
+		receiver.assertBacklogCount(1)
 	})
 }
 
