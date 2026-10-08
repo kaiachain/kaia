@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
@@ -120,6 +121,11 @@ func (m *Message) FromPayloadForFork(b []byte, isPermissionlessAt func(uint64) b
 	if err := legacy.validateEnvelope(); err != nil {
 		return err
 	}
+	// Normalize before authenticating, as FromPayload does, so a caller that
+	// gets ErrUnauthorizedAddress can still read the sender and view.
+	if err := m.fromPrePermissionless(&legacy); err != nil {
+		return err
+	}
 	if validateFn != nil {
 		payload, err := legacy.payloadNoSig()
 		if err != nil {
@@ -133,7 +139,7 @@ func (m *Message) FromPayloadForFork(b []byte, isPermissionlessAt func(uint64) b
 			return ErrInvalidSigner
 		}
 	}
-	return m.fromPrePermissionless(&legacy)
+	return nil
 }
 
 // PayloadForFork returns the wire encoding selected by the message sequence,
@@ -208,6 +214,16 @@ func (m *Message) fromPrePermissionless(legacy *PrePermissionlessMessage) error 
 	m.PrevHash, m.Code, m.Address, m.Signature = legacy.Hash, legacy.Code, legacy.Address, legacy.Signature
 	m.Evidence = nil
 	if legacy.Code == MsgPreprepare {
+		// The legacy codec decodes exactly {View, Proposal}. Preprepare also
+		// accepts the post-Permissionless justification fields, so reject them
+		// here or a legacy PRE-PREPARE could carry fields deployed nodes refuse.
+		var preprepare struct {
+			View     *View
+			Proposal *types.Block
+		}
+		if err := rlp.DecodeBytes(legacy.Msg, &preprepare); err != nil {
+			return fmt.Errorf("%w: legacy preprepare: %v", ErrInvalidMessage, err)
+		}
 		m.Msg = legacy.Msg
 		return nil
 	}

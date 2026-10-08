@@ -80,17 +80,14 @@ func (c *core) checkMessage(msg *bft.Message, view *bft.View) error {
 }
 
 // checkPrevHash binds a vote or ROUND CHANGE of the current sequence to the
-// chain it extends: each carries the parent of its height as PrevHash. Future
-// messages are checked when they become current. A PRE-PREPARE is exempt: its
-// parent is the proposal's, which Verify checks and whose failure starts a
-// round change instead of silently dropping the proposal.
+// chain it extends: each carries the parent of its height as PrevHash. The
+// parent is recorded when the round starts, so a late vote for this height is
+// still accepted after the block is inserted but before the next height starts.
+// Future messages are checked when they become current. A PRE-PREPARE is
+// exempt: its parent is the proposal's, which Verify checks and whose failure
+// starts a round change instead of silently dropping the proposal.
 func (c *core) checkPrevHash(msg *bft.Message) error {
-	// Some focused unit tests run a bare core without a backend.
-	if msg.Code == bft.MsgPreprepare || c.backend == nil {
-		return nil
-	}
-	lastProposal, _ := c.backend.LastProposal()
-	if lastProposal == nil || msg.PrevHash != lastProposal.Hash() {
+	if msg.Code != bft.MsgPreprepare && msg.PrevHash != c.current.parentHash {
 		return errInconsistentPrevHash
 	}
 	return nil

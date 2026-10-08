@@ -216,6 +216,70 @@ func TestPrePermissionlessGoldenPayloads(t *testing.T) {
 	}
 }
 
+// TestPrePermissionlessPreprepareRejectsJustificationFields checks that a
+// legacy PRE-PREPARE is decoded as strictly as the deployed codec, which reads
+// exactly {View, Proposal}. Accepting the post-Permissionless justification
+// fields before the fork would let upgraded and deployed nodes disagree on the
+// same signed proposal.
+func TestPrePermissionlessPreprepareRejectsJustificationFields(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := testView(7)
+	prevHash := common.HexToHash("0xfeed")
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(7), ParentHash: prevHash})
+	sign := func(msg []byte) []byte {
+		legacy := &bft.PrePermissionlessMessage{
+			Hash:          prevHash,
+			Code:          bft.MsgPreprepare,
+			Msg:           msg,
+			Address:       crypto.PubkeyToAddress(key.PublicKey),
+			CommittedSeal: []byte{},
+		}
+		preimage := mustEncode(t, &bft.PrePermissionlessMessage{Hash: legacy.Hash, Code: legacy.Code, Msg: legacy.Msg, Address: legacy.Address, CommittedSeal: []byte{}})
+		if legacy.Signature, err = crypto.Sign(crypto.Keccak256(preimage), key); err != nil {
+			t.Fatal(err)
+		}
+		return mustEncode(t, legacy)
+	}
+
+	var plain bft.Message
+	if err := plain.FromPayloadForFork(sign(mustEncode(t, []any{view, block})), neverPermissionless, recoverSigner); err != nil {
+		t.Fatalf("two-field legacy PRE-PREPARE rejected: %v", err)
+	}
+	var extended bft.Message
+	err = extended.FromPayloadForFork(sign(mustEncode(t, []any{view, block, []any{}, []any{}})), neverPermissionless, recoverSigner)
+	if !errors.Is(err, bft.ErrInvalidMessage) {
+		t.Fatalf("legacy PRE-PREPARE with justification fields: got %v, want ErrInvalidMessage", err)
+	}
+}
+
+// TestPrePermissionlessUnauthorizedSignerKeepsEnvelope checks that a legacy
+// message is normalized before its signer is authorized, like FromPayload, so
+// the caller can still report the sender and view of an unauthorized message.
+func TestPrePermissionlessUnauthorizedSignerKeepsEnvelope(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := testView(7)
+	prevHash := common.HexToHash("0xfeed")
+	payload := legacyMessage(t, key, bft.MsgPrepare, &bft.Subject{View: view, Digest: common.HexToHash("0xd1"), PrevHash: prevHash}, prevHash, []byte{})
+	errUnauthorized := errors.New("unauthorized")
+	var msg bft.Message
+	err = msg.FromPayloadForFork(payload, neverPermissionless, func([]byte, []byte) (common.Address, error) {
+		return common.Address{}, errUnauthorized
+	})
+	if !errors.Is(err, errUnauthorized) {
+		t.Fatalf("got %v, want the validator's error", err)
+	}
+	got, viewErr := msg.GetView()
+	if viewErr != nil || got.Cmp(view) != 0 || msg.Address != crypto.PubkeyToAddress(key.PublicKey) || msg.Code != bft.MsgPrepare {
+		t.Fatalf("envelope not populated: view %v (%v), address %s, code %d", got, viewErr, msg.Address, msg.Code)
+	}
+}
+
 // TestPrePermissionlessMessageRejectsLossyShapes verifies that legacy
 // messages which the normalized representation cannot reproduce exactly are
 // rejected. Honest legacy senders never produce them.

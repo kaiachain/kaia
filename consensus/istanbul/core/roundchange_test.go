@@ -71,7 +71,47 @@ func TestRoundChangeSetCheckIgnoresChangedUnsignedAttachment(t *testing.T) {
 	duplicate.Evidence = []byte{0x06, 0x07}
 
 	require.ErrorIs(t, rcs.Check(big.NewInt(0), round, &duplicate), errIgnored)
-	assert.Empty(t, rcs.Values(round)[0].Evidence)
+}
+
+// TestRoundChangeSetReplacesOnlyWithHigherClaim checks that a sender's ROUND
+// CHANGE for a round is replaced only by one with a strictly higher prepared
+// claim. Otherwise a sender could alternate signed messages, each new to the
+// set, to have its Evidence verified and relayed again on every switch.
+func TestRoundChangeSetReplacesOnlyWithHigherClaim(t *testing.T) {
+	addr := common.HexToAddress("0x1")
+	rcs := newRoundChangeSet(valset.NewAddressSet([]common.Address{addr}), 1)
+	round := big.NewInt(3)
+	roundChange := func(claimRound int64) *bft.Message {
+		payload := &bft.RoundChange{View: &bft.View{Sequence: big.NewInt(1), Round: round}}
+		if claimRound >= 0 {
+			payload.Prepared = &bft.PreparedClaim{Round: big.NewInt(claimRound), Digest: common.HexToHash("0xd1")}
+		}
+		encoded, err := bft.Encode(payload)
+		require.NoError(t, err)
+		return &bft.Message{Code: bft.MsgRoundChange, Address: addr, Msg: encoded}
+	}
+	_, err := rcs.Add(big.NewInt(0), round, roundChange(1))
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		name string
+		msg  *bft.Message
+		want error
+	}{
+		{"no claim", roundChange(-1), errIgnored},
+		{"lower claim", roundChange(0), errIgnored},
+		{"same claim", roundChange(1), errIgnored},
+		{"higher claim", roundChange(2), nil},
+	} {
+		require.ErrorIs(t, rcs.Check(big.NewInt(0), round, tc.msg), tc.want, tc.name)
+	}
+
+	// Add, the only writer, enforces the same rule.
+	_, err = rcs.Add(big.NewInt(0), round, roundChange(0))
+	require.ErrorIs(t, err, errIgnored)
+	_, err = rcs.Add(big.NewInt(0), round, roundChange(2))
+	require.NoError(t, err)
+	assert.Equal(t, roundChange(2).Msg, rcs.Values(round)[0].Msg)
 }
 
 // A zero quorum means no ROUND CHANGE can contribute to progress, so not even a

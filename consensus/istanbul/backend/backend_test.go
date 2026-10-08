@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -379,6 +380,34 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		_, err = engine.Verify(lying)
 		assert.ErrorContains(t, err, "blob gas used mismatch")
 		assert.ErrorContains(t, chain.Validator().ValidateBody(lying), "blob gas used mismatch")
+	})
+
+	// TxHash excludes blob sidecars, so a block whose blob transaction lost its
+	// sidecar keeps the hash its votes were cast for. Prepared-certificate
+	// admission relies on this check.
+	t.Run("blobSidecar", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		header := makeBlockWithSeal(chain, engine, chain.CurrentBlock()).Header()
+		stripped := types.NewTx(&types.TxInternalDataEthereumBlob{
+			ChainID:    uint256.MustFromBig(chain.Config().ChainID),
+			GasTipCap:  uint256.NewInt(params.Gkei),
+			GasFeeCap:  uint256.NewInt(1000 * params.Gkei),
+			GasLimit:   21000,
+			BlobFeeCap: uint256.NewInt(params.Gkei),
+			BlobHashes: []common.Hash{{0x01}},
+			V:          big.NewInt(0),
+			R:          big.NewInt(1),
+			S:          big.NewInt(1),
+		})
+		require.Nil(t, stripped.BlobTxSidecar())
+		block := sealBlock(engine, types.NewBlock(header, []*types.Transaction{stripped}, nil))
+
+		assert.ErrorIs(t, engine.VerifyProposalBody(block), istanbul.ErrNoBlobSidecarForBlobTx)
+		_, err := engine.Verify(block)
+		assert.ErrorIs(t, err, istanbul.ErrNoBlobSidecarForBlobTx)
 	})
 }
 

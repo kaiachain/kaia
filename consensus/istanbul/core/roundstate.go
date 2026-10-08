@@ -71,6 +71,7 @@ type roundState struct {
 	// Ignore RLP ----------------------------------------------------------------------------
 	qualified            *valset.AddressSet
 	committee            *valset.AddressSet
+	parentHash           common.Hash // chain head when this round started; the parent of the height being decided
 	proposer             common.Address
 	committeeSize        uint64
 	requiredMessageCount int

@@ -396,9 +396,9 @@ func (c *core) startNewRound(round *big.Int) {
 	// Update logger
 	logger = logger.NewWith("old_proposer", oldProposer)
 	// New snapshot for new round
-	c.updateRoundState(newView, roundChange, qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum)
+	c.updateRoundState(newView, roundChange, lastProposal.Hash(), qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum)
 	// Clear invalid ROUND CHANGE messages
-	c.roundChangeSet = newRoundChangeSet(c.current.qualified, c.current.requiredMessageCount)
+	c.roundChangeSet = newRoundChangeSet(c.current.qualified, c.current.committee.Len())
 	// Calculate new proposer
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
@@ -447,7 +447,7 @@ func (c *core) catchUpRound(view *bft.View) {
 	c.waitingForRoundChange = true
 
 	// Need to keep block locked for round catching up
-	c.updateRoundState(view, true, c.current.qualified, c.current.committee, c.current.proposer, c.current.committeeSize, c.current.requiredMessageCount, c.current.f)
+	c.updateRoundState(view, true, c.current.parentHash, c.current.qualified, c.current.committee, c.current.proposer, c.current.committeeSize, c.current.requiredMessageCount, c.current.f)
 	c.roundChangeSet.Clear(view.Round)
 
 	newProposer, err := c.valsetModule.GetProposer(view.Sequence.Uint64(), view.Round.Uint64())
@@ -462,7 +462,10 @@ func (c *core) catchUpRound(view *bft.View) {
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
-func (c *core) updateRoundState(view *bft.View, roundChange bool,
+// parentHash is the parent of the height being decided. It is fixed for all
+// rounds of the height, so messages are compared against it rather than
+// against the live chain head.
+func (c *core) updateRoundState(view *bft.View, roundChange bool, parentHash common.Hash,
 	qualified *valset.AddressSet, committee *valset.AddressSet, proposer common.Address,
 	committeeSize uint64, requiredMessageCount, f int,
 ) {
@@ -487,6 +490,7 @@ func (c *core) updateRoundState(view *bft.View, roundChange bool,
 			c.verifiedEvidence = make(map[verifiedEvidenceKey]struct{})
 		}
 	}
+	c.current.parentHash = parentHash
 	// Update new committee state
 	c.current.qualified = qualified
 	c.current.committee = committee

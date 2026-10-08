@@ -927,6 +927,12 @@ type scenarioSnapshot struct {
 	RoundChanges         map[uint64]map[common.Address]common.Hash
 	Sent                 int
 	Backlogs             map[common.Address]int
+	// Round-change recovery state: a rejected input must not move the lock or
+	// populate the prepared-evidence caches.
+	LockedRound                          int64
+	RoundChangeCertificate               int
+	PreparedBlocks, PreparedCertificates int
+	VerifiedEvidence                     int
 }
 
 func (node *validator) snapshot() scenarioSnapshot {
@@ -969,6 +975,13 @@ func (node *validator) snapshot() scenarioSnapshot {
 			s.Sent++
 		}
 	}
+	s.LockedRound = -1
+	if round := c.current.LockedRound(); round != nil {
+		s.LockedRound = round.Int64()
+	}
+	s.RoundChangeCertificate = len(c.roundChangeCertificate)
+	s.PreparedBlocks, s.PreparedCertificates = len(c.preparedBlocks), len(c.preparedCertificates)
+	s.VerifiedEvidence = len(c.verifiedEvidence)
 	return s
 }
 

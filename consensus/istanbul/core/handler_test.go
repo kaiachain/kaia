@@ -761,19 +761,25 @@ func TestCheckMessageSizeIncludesConsensusP2PWrapper(t *testing.T) {
 		Code:      bft.MsgRoundChange,
 		Msg:       encoded,
 		Signature: make([]byte, crypto.SignatureLength),
-		Evidence:  make([]byte, maxConsensusP2PMessageBytes-64),
 	}
-	// The attachment alone is below 12 MiB, but the signed message and its
-	// ConsensusMsg wrapper push the wire message over the protocol cap.
-	require.LessOrEqual(t, len(msg.Evidence), maxConsensusP2PMessageBytes)
+	payloadSize := func() int {
+		payload, err := msg.Payload()
+		require.NoError(t, err)
+		return len(payload)
+	}
+	// Size the attachment so the signed message itself fits the protocol cap
+	// and only its ConsensusMsg wrapper pushes the wire message over it.
+	msg.Evidence = make([]byte, maxConsensusP2PMessageBytes-256)
+	msg.Evidence = make([]byte, len(msg.Evidence)+maxConsensusP2PMessageBytes-10-payloadSize())
 	payload, err := msg.Payload()
 	require.NoError(t, err)
+	require.LessOrEqual(t, len(payload), maxConsensusP2PMessageBytes)
 	wire, err := bft.Encode(&bft.ConsensusMsg{Payload: payload})
 	require.NoError(t, err)
 	require.Equal(t, uint64(len(wire)), consensusP2PMessageSize(payload))
 	require.Greater(t, consensusP2PMessageSize(payload), uint64(maxConsensusP2PMessageBytes))
 	require.ErrorIs(t, checkMessageSize(msg, alwaysPermissionless), errMessageTooLarge)
 
-	msg.Evidence = msg.Evidence[:len(msg.Evidence)-2048]
+	msg.Evidence = msg.Evidence[:len(msg.Evidence)-64]
 	require.NoError(t, checkMessageSize(msg, alwaysPermissionless))
 }

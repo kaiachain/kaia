@@ -122,12 +122,12 @@ func TestStoreBacklogRetainsRoundChangeWithPreparedClaim(t *testing.T) {
 	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogEvidenceBytes[src])
 }
 
-func TestStoreBacklogBoundsJustificationBytesPerSenderWithoutBlockingSmallMessages(t *testing.T) {
+func TestStoreBacklogBoundsEvidenceBytesPerSenderWithoutBlockingSmallMessages(t *testing.T) {
 	src := backlogSender(1)
 	c := newTestBacklogCore()
 	msg := newTestBacklogRoundChange(t, 2)
 	msg.Evidence = make([]byte, maxBacklogEvidenceBytesPerSender/2+1)
-	justificationBytes := uint64(len(msg.Evidence))
+	evidenceBytes := uint64(len(msg.Evidence))
 
 	c.storeBacklog(msg, src)
 	c.storeBacklog(msg, src)
@@ -135,11 +135,11 @@ func TestStoreBacklogBoundsJustificationBytesPerSenderWithoutBlockingSmallMessag
 
 	assert.Equal(t, 2, c.backlogs[src].Size())
 	assert.Equal(t, 2, c.backlogCounts[src])
-	assert.Equal(t, justificationBytes, c.backlogEvidenceBytes[src])
-	assert.Equal(t, justificationBytes, c.backlogTotalEvidenceBytes)
+	assert.Equal(t, evidenceBytes, c.backlogEvidenceBytes[src])
+	assert.Equal(t, evidenceBytes, c.backlogTotalEvidenceBytes)
 }
 
-func TestStoreBacklogBoundsTotalJustificationBytesWithoutBlockingSmallMessages(t *testing.T) {
+func TestStoreBacklogBoundsTotalEvidenceBytesWithoutBlockingSmallMessages(t *testing.T) {
 	c := newTestBacklogCore()
 	msg := newTestBacklogRoundChange(t, 2)
 	msg.Evidence = make([]byte, maxBacklogEvidenceBytesPerSender)
@@ -237,7 +237,7 @@ func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogTotalEvidenceBytes)
 }
 
-func TestProcessBacklogKeepsExactJustificationAccountingForRemainingMessages(t *testing.T) {
+func TestProcessBacklogKeepsExactEvidenceAccountingForRemainingMessages(t *testing.T) {
 	src := backlogSender(1)
 	c := newTestBacklogCore()
 	old := newTestBacklogRoundChange(t, 2)
@@ -379,4 +379,20 @@ func TestProcessBacklogDropsStalePreprepare(t *testing.T) {
 	c.processBacklog()
 
 	assert.Empty(t, c.backlogPreprepares)
+}
+
+// TestCheckPrevHashUsesRoundParent checks that votes and ROUND CHANGEs are bound
+// to the parent recorded when the height started, not to the live chain head:
+// a late vote for this height stays valid after its block is inserted and
+// before the next height starts. A PRE-PREPARE is left to Verify.
+func TestCheckPrevHashUsesRoundParent(t *testing.T) {
+	c := newTestBacklogCore()
+	parent, other := common.HexToHash("0xaa"), common.HexToHash("0xbb")
+	c.current.parentHash = parent
+
+	for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
+		require.NoError(t, c.checkPrevHash(&bft.Message{Code: code, PrevHash: parent}))
+		require.ErrorIs(t, c.checkPrevHash(&bft.Message{Code: code, PrevHash: other}), errInconsistentPrevHash)
+	}
+	require.NoError(t, c.checkPrevHash(&bft.Message{Code: bft.MsgPreprepare, PrevHash: other}))
 }

@@ -900,37 +900,51 @@ func TestConsensusPreprepareJustificationValidation(t *testing.T) {
 		require.Equal(t, x.Hash(), cert.Proposal.Hash())
 		require.Zero(t, cert.View.Round.Sign())
 
+		// Each case asserts its own error, so that a check that is removed but
+		// masked by a later one still fails the test.
 		for _, tc := range []struct {
 			name   string
 			mutate func(*bft.Preprepare)
+			want   string
 		}{
-			{"proposal is not the highest prepared value", func(pp *bft.Preprepare) { pp.Proposal = nextProposer.alternative(x) }},
-			{"missing prepared votes", func(pp *bft.Preprepare) { pp.PreparedMessages = nil }},
-			{"prepared votes below quorum", func(pp *bft.Preprepare) { pp.PreparedMessages = pp.PreparedMessages[:quorum-1] }},
+			{
+				"proposal is not the highest prepared value", func(pp *bft.Preprepare) { pp.Proposal = nextProposer.alternative(x) },
+				"proposal is not the highest prepared value",
+			},
+			{
+				"missing prepared votes", func(pp *bft.Preprepare) { pp.PreparedMessages = nil },
+				"prepared certificate has 0 votes",
+			},
+			{
+				"prepared votes below quorum", func(pp *bft.Preprepare) { pp.PreparedMessages = pp.PreparedMessages[:quorum-1] },
+				"prepared certificate has",
+			},
 			{"round-change certificate below quorum", func(pp *bft.Preprepare) {
 				pp.RoundChangeCertificate = pp.RoundChangeCertificate[:quorum-1]
-			}},
+			}, "round-change certificate has"},
+			// Appending keeps a quorum of distinct senders, so only the duplicate
+			// check can reject it.
 			{"duplicate round-change sender", func(pp *bft.Preprepare) {
-				pp.RoundChangeCertificate[len(pp.RoundChangeCertificate)-1] = pp.RoundChangeCertificate[0]
-			}},
-			{"embedded round change keeps its justification", func(pp *bft.Preprepare) {
+				pp.RoundChangeCertificate = append(pp.RoundChangeCertificate, pp.RoundChangeCertificate[0])
+			}, "duplicate sender"},
+			{"embedded round change keeps its evidence", func(pp *bft.Preprepare) {
 				embedded := *pp.RoundChangeCertificate[0]
 				embedded.Evidence = []byte{0xc0}
 				pp.RoundChangeCertificate[0] = &embedded
-			}},
+			}, "ineligible message"},
 		} {
 			pp := sentPreprepare(t, s, nextProposer, 1, 1)
 			tc.mutate(pp)
 			_, err := receiver.core.verifyPreprepareJustification(pp)
-			require.Error(t, err, tc.name)
+			require.ErrorContains(t, err, tc.want, tc.name)
 		}
 	})
 }
 
-// TestConsensusRoundChangeRejectsUnboundJustification checks that a ROUND
+// TestConsensusRoundChangeRejectsUnboundEvidence checks that a ROUND
 // CHANGE certificate must prove exactly the signed claim, including the
 // prepared block's body, which the votes alone do not bind.
-func TestConsensusRoundChangeRejectsUnboundJustification(t *testing.T) {
+func TestConsensusRoundChangeRejectsUnboundEvidence(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		s, x := splitLock(t)
 		attacker, receiver := s.validators[0], s.validators[1]
@@ -950,8 +964,8 @@ func TestConsensusRoundChangeRejectsUnboundJustification(t *testing.T) {
 			cert  *bft.PreparedCertificate
 		}{
 			{"forged proposal body", claim, forged},
-			{"claim without justification", claim, nil},
-			{"justification without claim", nil, cert},
+			{"claim without evidence", claim, nil},
+			{"evidence without claim", nil, cert},
 			{"claim for another value", &bft.PreparedClaim{Round: big.NewInt(0), Digest: attacker.alternative(x).Hash()}, cert},
 			{"claim for another round", &bft.PreparedClaim{Round: big.NewInt(1), Digest: x.Hash()}, cert},
 		} {
@@ -988,7 +1002,16 @@ func TestConsensusRoundChangeCachesPreparedEvidenceOnce(t *testing.T) {
 		require.Len(t, receiver.core.roundChangeSet.Values(big.NewInt(2)), 1)
 		require.Empty(t, receiver.core.roundChangeSet.Values(big.NewInt(2))[0].Evidence)
 
-		// Justification is excluded from the ROUND CHANGE signature. A relay may
+		// Count signature recoveries from here on: a cached claim must cost only
+		// the envelope signature, not the certificate's votes.
+		recoveries := 0
+		validate := receiver.core.validateFn
+		receiver.core.validateFn = func(data, sig []byte) (common.Address, error) {
+			recoveries++
+			return validate(data, sig)
+		}
+
+		// Evidence is excluded from the ROUND CHANGE signature. A relay may
 		// replace it, but the already admitted signed message must be ignored
 		// before the replacement is decoded or cryptographically verified.
 		var duplicate bft.Message
@@ -1001,7 +1024,9 @@ func TestConsensusRoundChangeCachesPreparedEvidenceOnce(t *testing.T) {
 		// New target rounds may carry the same prepared claim, but must reuse its
 		// single cached block and vote set rather than multiplying the evidence.
 		for round := uint64(3); round <= 5; round++ {
+			before := recoveries
 			receiver.receive(signedRoundChange(t, sender, round, claim, cert), errIgnored)
+			require.Equal(t, before+1, recoveries, "round %d: only the envelope signature is recovered", round)
 			stored := receiver.core.roundChangeSet.Values(new(big.Int).SetUint64(round))
 			require.Len(t, stored, 1)
 			require.Empty(t, stored[0].Evidence)
@@ -1020,12 +1045,14 @@ func TestConsensusRoundChangeRejectsCachedClaimNotBeforeItsRound(t *testing.T) {
 		x := s.validators[0].proposal(1)
 		receiver := s.validators[3]
 		claim := &bft.PreparedClaim{Round: big.NewInt(1), Digest: x.Hash()}
-		receiver.receive(signedRoundChange(t, s.validators[0], 2, claim, preparedCertificate(t, s.nodes(0, 1, 2), x, 1)), errIgnored)
+		cert := preparedCertificate(t, s.nodes(0, 1, 2), x, 1)
+		receiver.receive(signedRoundChange(t, s.validators[0], 2, claim, cert), errIgnored)
 		require.Len(t, receiver.core.preparedCertificates, 1)
 
-		// The claim hits the cache, so the junk attachment is never decoded.
+		// The same verified Evidence bytes hit the cache and skip certificate
+		// verification, so only the claim rules can reject these.
 		for _, round := range []uint64{0, 1} {
-			receiver.reject(signedRoundChangeAt(t, s.validators[1], 1, round, claim, []byte{0xc0}), bft.ErrInvalidMessage)
+			receiver.reject(signedRoundChange(t, s.validators[1], round, claim, cert), bft.ErrInvalidMessage)
 		}
 	})
 }
@@ -1122,6 +1149,94 @@ func TestConsensusRecoveryUsesHighestRoundVotesForSameDigest(t *testing.T) {
 	})
 }
 
+// TestConsensusProposerReproposesNewerOwnLock checks a proposer locked at a
+// newer round than every claim in its round-change quorum. Late or dropped
+// ROUND CHANGEs can leave only a lower claim in the quorum; proposing that value
+// would be refused by the proposer itself and by every node locked at the newer
+// round. The proposer must add its own signed claim and re-propose its lock,
+// and must not send a later request with that justification.
+func TestConsensusProposerReproposesNewerOwnLock(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		proposer, receiver := s.validators[2], s.validators[3] // validators[2] proposes height 1, round 2
+		x := s.validators[0].proposal(1)
+		y := s.validators[0].alternative(x)
+		voters := s.nodes(0, 1, 3)
+		lower := preparedCertificate(t, voters, y, 0)
+		newer := preparedCertificate(t, voters, x, 1)
+		proposer.core.current.AdoptPreparedCertificate(newer)
+		require.Equal(t, int64(1), proposer.core.current.LockedRound().Int64())
+
+		// The quorum for round 2 carries only the lower claim y@0.
+		for _, ev := range []istanbul.MessageEvent{
+			signedRoundChange(t, s.validators[0], 2, &bft.PreparedClaim{Round: big.NewInt(0), Digest: y.Hash()}, lower),
+			signedRoundChange(t, s.validators[1], 2, nil, nil),
+			signedRoundChange(t, s.validators[3], 2, nil, nil),
+		} {
+			err := proposer.core.handleMsg(ev.Payload)
+			synctest.Wait()
+			s.checkFailures()
+			if err != nil {
+				require.ErrorIs(t, err, errIgnored)
+			}
+		}
+		proposer.assertView(1, 2, false)
+		require.Equal(t, proposer.backend.Address(), proposer.core.current.proposer)
+
+		preprepare := sentPreprepare(t, s, proposer, 1, 2)
+		require.Equal(t, x.Hash(), preprepare.Proposal.Hash(), "the proposer re-proposes its newer lock")
+		ownClaim := false
+		for _, rc := range preprepare.RoundChangeCertificate {
+			var roundChange *bft.RoundChange
+			require.NoError(t, rc.Decode(&roundChange))
+			if rc.Address == proposer.backend.Address() {
+				require.NotNil(t, roundChange.Prepared)
+				require.Equal(t, int64(1), roundChange.Prepared.Round.Int64())
+				require.Equal(t, x.Hash(), roundChange.Prepared.Digest)
+				ownClaim = true
+			}
+		}
+		require.True(t, ownClaim, "the justification carries the proposer's own claim")
+		cert, err := receiver.core.verifyPreprepareJustification(preprepare)
+		require.NoError(t, err, "other validators accept the justification")
+		require.Equal(t, x.Hash(), cert.Proposal.Hash())
+		require.Equal(t, int64(1), cert.View.Round.Int64())
+
+		// A late request for another block must not go out with this justification.
+		sentPreprepares := func() int {
+			count := 0
+			for _, sent := range s.sent {
+				if sent.from != proposer.id {
+					continue
+				}
+				msg, err := proposer.backend.decodeMessage(sent.data.(istanbul.MessageEvent).Payload, nil)
+				require.NoError(t, err)
+				if msg.Code == bft.MsgPreprepare {
+					count++
+				}
+			}
+			return count
+		}
+		before := sentPreprepares()
+		proposer.core.sendPreprepare(&bft.Request{Proposal: y})
+		synctest.Wait()
+		require.Equal(t, before, sentPreprepares())
+	})
+}
+
+// TestRoundChangeSetKeepsOneMessagePerCommitteeMember checks that a round keeps
+// up to one ROUND CHANGE per committee member rather than a quorum. Claims carry
+// block-sized Evidence and tend to arrive last, so a quorum-sized limit could
+// drop the highest prepared claim.
+func TestRoundChangeSetKeepsOneMessagePerCommitteeMember(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		c := s.validators[0].core
+		require.Equal(t, 3, c.current.requiredMessageCount)
+		require.Equal(t, c.current.committee.Len(), c.roundChangeSet.maxMessagesPerRound)
+	})
+}
+
 // preparedCertificate builds a certificate for proposal at round from PREPARE
 // votes signed by voters.
 func preparedCertificate(t *testing.T, voters []*validator, proposal *types.Block, round uint64) *bft.PreparedCertificate {
@@ -1178,14 +1293,14 @@ func TestPreparedCertificateAcceptsCommitVotes(t *testing.T) {
 	})
 }
 
-// TestConsensusRoundChangeRejectsJustificationBeforeFork checks that before
+// TestConsensusRoundChangeRejectsEvidenceBeforeFork checks that before
 // Permissionless a ROUND CHANGE keeps the legacy shape. The legacy codec cannot
 // express a PreparedClaim or Evidence, so local senders cannot produce one, and
 // a peer's post-Permissionless envelope for a pre-fork height is rejected
 // before it can enter the round-change set or the backlog. From the
 // activation height a signed PreparedClaim and its attachment must appear
 // together before a future message can enter the backlog.
-func TestConsensusRoundChangeRejectsJustificationBeforeFork(t *testing.T) {
+func TestConsensusRoundChangeRejectsEvidenceBeforeFork(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		config := params.TestKaiaConfig("permissionless")
 		config.PermissionlessCompatibleBlock = big.NewInt(3)

@@ -53,6 +53,13 @@ func (c *core) sendPreprepare(request *bft.Request) {
 				logger.Error("Failed to justify PRE-PREPARE", "view", curView, "err", err)
 				return
 			}
+			if prepared != nil && prepared.Proposal.Hash() != request.Proposal.Hash() {
+				// A late request must not be proposed with a justification that
+				// proves another value; receivers would reject it.
+				logger.Debug("Skip PRE-PREPARE that differs from the justified value", "view", curView,
+					"justified", prepared.Proposal.Hash(), "requested", request.Proposal.Hash())
+				return
+			}
 			message.RoundChangeCertificate = certificate
 			if prepared != nil {
 				message.PreparedMessages = prepared.Messages
