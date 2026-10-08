@@ -23,6 +23,7 @@
 package core
 
 import (
+	"fmt"
 	"io"
 	"math/big"
 	"sync"
@@ -91,7 +92,25 @@ func (s *roundState) GetPrepareOrCommitSize() int {
 	return result
 }
 
-func (s *roundState) Subject() *bft.Subject {
+// proposalSubject identifies the proposal a PREPARE or COMMIT votes for. It is
+// a local view of the round state, not a wire type.
+type proposalSubject struct {
+	View     *bft.View
+	Digest   common.Hash
+	PrevHash common.Hash
+}
+
+// matches reports whether a vote for view and digest is for s. The vote's
+// PrevHash is checked against the chain head by checkMessage.
+func (s *proposalSubject) matches(view *bft.View, digest common.Hash) bool {
+	return view != nil && view.Cmp(s.View) == 0 && digest == s.Digest
+}
+
+func (s *proposalSubject) String() string {
+	return fmt.Sprintf("{View: %v, Digest: %v, ParentHash: %v}", s.View, s.Digest.String(), s.PrevHash.Hex())
+}
+
+func (s *roundState) Subject() *proposalSubject {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -99,7 +118,7 @@ func (s *roundState) Subject() *bft.Subject {
 		return nil
 	}
 
-	return &bft.Subject{
+	return &proposalSubject{
 		View: &bft.View{
 			Round:    new(big.Int).Set(s.round),
 			Sequence: new(big.Int).Set(s.sequence),

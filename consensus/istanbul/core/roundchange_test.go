@@ -128,7 +128,7 @@ func TestHandleRoundChangeEnforcesFutureRoundWindow(t *testing.T) {
 
 func roundChangeMessage(t *testing.T, src common.Address, round uint64) *bft.Message {
 	t.Helper()
-	payload, err := bft.Encode(&bft.Subject{View: &bft.View{
+	payload, err := bft.Encode(&bft.RoundChange{View: &bft.View{
 		Sequence: big.NewInt(1),
 		Round:    new(big.Int).SetUint64(round),
 	}})

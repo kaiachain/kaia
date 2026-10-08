@@ -35,15 +35,15 @@ import (
 func newTestBacklogCore() *core {
 	qualified := valset.NewAddressSet(nil)
 	return &core{
-		address:                   common.HexToAddress("0xdead"),
-		state:                     StateAcceptRequest,
-		logger:                    logger.NewWith(),
-		backlogs:                  make(map[common.Address]*prque.Prque),
-		backlogsMu:                new(sync.Mutex),
-		backlogCounts:             make(map[common.Address]int),
-		backlogJustificationBytes: make(map[common.Address]uint64),
-		backlogPreprepares:        make(map[common.Address]backlogPreprepare),
-		current:                   newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil),
+		address:              common.HexToAddress("0xdead"),
+		state:                StateAcceptRequest,
+		logger:               logger.NewWith(),
+		backlogs:             make(map[common.Address]*prque.Prque),
+		backlogsMu:           new(sync.Mutex),
+		backlogCounts:        make(map[common.Address]int),
+		backlogEvidenceBytes: make(map[common.Address]uint64),
+		backlogPreprepares:   make(map[common.Address]backlogPreprepare),
+		current:              newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil),
 	}
 }
 
@@ -55,7 +55,7 @@ func backlogSender(i int) common.Address {
 
 func newTestBacklogMessage(t *testing.T, sequence int64) *bft.Message {
 	t.Helper()
-	payload, err := bft.Encode(&bft.Subject{View: &bft.View{
+	payload, err := bft.Encode(&bft.Prepare{View: &bft.View{
 		Sequence: big.NewInt(sequence),
 		Round:    big.NewInt(0),
 	}})
@@ -105,8 +105,8 @@ func TestStoreBacklogBoundsJustificationBytesPerSenderWithoutBlockingSmallMessag
 	src := backlogSender(1)
 	c := newTestBacklogCore()
 	msg := newTestBacklogRoundChange(t, 2)
-	msg.Justification = make([]byte, maxBacklogJustificationBytesPerSender/2+1)
-	justificationBytes := uint64(len(msg.Justification))
+	msg.Evidence = make([]byte, maxBacklogEvidenceBytesPerSender/2+1)
+	justificationBytes := uint64(len(msg.Evidence))
 
 	c.storeBacklog(msg, src)
 	c.storeBacklog(msg, src)
@@ -114,22 +114,22 @@ func TestStoreBacklogBoundsJustificationBytesPerSenderWithoutBlockingSmallMessag
 
 	assert.Equal(t, 2, c.backlogs[src].Size())
 	assert.Equal(t, 2, c.backlogCounts[src])
-	assert.Equal(t, justificationBytes, c.backlogJustificationBytes[src])
-	assert.Equal(t, justificationBytes, c.backlogTotalJustificationBytes)
+	assert.Equal(t, justificationBytes, c.backlogEvidenceBytes[src])
+	assert.Equal(t, justificationBytes, c.backlogTotalEvidenceBytes)
 }
 
 func TestStoreBacklogBoundsTotalJustificationBytesWithoutBlockingSmallMessages(t *testing.T) {
 	c := newTestBacklogCore()
 	msg := newTestBacklogRoundChange(t, 2)
-	msg.Justification = make([]byte, maxBacklogJustificationBytesPerSender)
+	msg.Evidence = make([]byte, maxBacklogEvidenceBytesPerSender)
 
-	for sender := 1; sender <= int(maxBacklogJustificationBytes/maxBacklogJustificationBytesPerSender)+1; sender++ {
+	for sender := 1; sender <= int(maxBacklogEvidenceBytes/maxBacklogEvidenceBytesPerSender)+1; sender++ {
 		c.storeBacklog(msg, backlogSender(sender))
 	}
 
-	accepted := int(maxBacklogJustificationBytes / maxBacklogJustificationBytesPerSender)
+	accepted := int(maxBacklogEvidenceBytes / maxBacklogEvidenceBytesPerSender)
 	assert.Len(t, c.backlogs, accepted)
-	assert.Equal(t, uint64(accepted)*maxBacklogJustificationBytesPerSender, c.backlogTotalJustificationBytes)
+	assert.Equal(t, uint64(accepted)*maxBacklogEvidenceBytesPerSender, c.backlogTotalEvidenceBytes)
 	assert.NotContains(t, c.backlogs, backlogSender(accepted+1))
 
 	// A full attachment budget must not block ordinary consensus messages,
@@ -138,7 +138,7 @@ func TestStoreBacklogBoundsTotalJustificationBytesWithoutBlockingSmallMessages(t
 	c.storeBacklog(newTestBacklogMessage(t, 2), backlogSender(accepted+1))
 	assert.Equal(t, 2, c.backlogs[backlogSender(1)].Size())
 	assert.Equal(t, 1, c.backlogs[backlogSender(accepted+1)].Size())
-	assert.Equal(t, uint64(accepted)*maxBacklogJustificationBytesPerSender, c.backlogTotalJustificationBytes)
+	assert.Equal(t, uint64(accepted)*maxBacklogEvidenceBytesPerSender, c.backlogTotalEvidenceBytes)
 }
 
 // The message budget is per sender, so a sender that has filled its own budget
@@ -196,7 +196,7 @@ func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
 	msg := newTestBacklogRoundChange(t, 2)
-	msg.Justification = make([]byte, 1024)
+	msg.Evidence = make([]byte, 1024)
 
 	for range maxBacklogMessagesPerSender {
 		c.storeBacklog(msg, src)
@@ -206,23 +206,23 @@ func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
-	assert.Empty(t, c.backlogJustificationBytes)
-	assert.Zero(t, c.backlogTotalJustificationBytes)
+	assert.Empty(t, c.backlogEvidenceBytes)
+	assert.Zero(t, c.backlogTotalEvidenceBytes)
 
 	c.storeBacklog(msg, src)
 	assert.Equal(t, 1, c.backlogs[src].Size())
 	assert.Equal(t, 1, c.backlogCounts[src])
-	assert.Equal(t, uint64(len(msg.Justification)), c.backlogJustificationBytes[src])
-	assert.Equal(t, uint64(len(msg.Justification)), c.backlogTotalJustificationBytes)
+	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogEvidenceBytes[src])
+	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogTotalEvidenceBytes)
 }
 
 func TestProcessBacklogKeepsExactJustificationAccountingForRemainingMessages(t *testing.T) {
 	src := backlogSender(1)
 	c := newTestBacklogCore()
 	old := newTestBacklogRoundChange(t, 2)
-	old.Justification = make([]byte, 100)
+	old.Evidence = make([]byte, 100)
 	future := newTestBacklogRoundChange(t, 4)
-	future.Justification = make([]byte, 200)
+	future.Evidence = make([]byte, 200)
 	c.storeBacklog(old, src)
 	c.storeBacklog(future, src)
 
@@ -233,14 +233,14 @@ func TestProcessBacklogKeepsExactJustificationAccountingForRemainingMessages(t *
 
 	assert.Equal(t, 1, c.backlogs[src].Size())
 	assert.Equal(t, 1, c.backlogCounts[src])
-	assert.Equal(t, uint64(len(future.Justification)), c.backlogJustificationBytes[src])
-	assert.Equal(t, uint64(len(future.Justification)), c.backlogTotalJustificationBytes)
+	assert.Equal(t, uint64(len(future.Evidence)), c.backlogEvidenceBytes[src])
+	assert.Equal(t, uint64(len(future.Evidence)), c.backlogTotalEvidenceBytes)
 }
 
 func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	payload, err := bft.Encode(&bft.Subject{})
+	payload, err := bft.Encode(&bft.Prepare{})
 	require.NoError(t, err)
 	msg := &bft.Message{Code: bft.MsgPrepare, Msg: payload}
 
@@ -251,8 +251,8 @@ func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
-	assert.Empty(t, c.backlogJustificationBytes)
-	assert.Zero(t, c.backlogTotalJustificationBytes)
+	assert.Empty(t, c.backlogEvidenceBytes)
+	assert.Zero(t, c.backlogTotalEvidenceBytes)
 }
 
 // A sender's slot keeps the PREPREPARE for the highest view: a higher view

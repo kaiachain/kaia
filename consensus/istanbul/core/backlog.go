@@ -56,21 +56,47 @@ const (
 	// PREPARE or COMMIT messages. Because the attachment is unsigned, a relay can
 	// consume this evidence allowance; the consequence is intentionally limited
 	// to opportunistic future-height certificate retention.
-	maxBacklogJustificationBytesPerSender uint64 = maxConsensusP2PMessageBytes
+	maxBacklogEvidenceBytesPerSender uint64 = maxConsensusP2PMessageBytes
 
 	// Bound aggregate attachment memory even when many qualified validators send
-	// maximum-sized future ROUND CHANGEs. Only Justification bytes consume this
+	// maximum-sized future ROUND CHANGEs. Only Evidence bytes consume this
 	// budget: ordinary votes and ROUND CHANGEs without prepared evidence remain
 	// admissible when it is full. PREPREPAREs likewise remain in their separate
 	// one-per-sender slots.
-	maxBacklogJustificationBytes uint64 = 64 * 1024 * 1024
+	maxBacklogEvidenceBytes uint64 = 64 * 1024 * 1024
 )
 
-// checkMessage checks the message state
+// checkMessage checks that msg, whose decoded view is view, belongs to the
+// current height and round state, and that it extends the current chain.
 // return bft.ErrInvalidMessage if the message is invalid
 // return errFutureMessage if the message view is larger than current view
 // return errOldMessage if the message view is smaller than current view
-func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
+// return errInconsistentPrevHash if a current vote or ROUND CHANGE has another parent
+func (c *core) checkMessage(msg *bft.Message, view *bft.View) error {
+	if err := c.checkMessageView(msg.Code, view); err != nil {
+		return err
+	}
+	return c.checkPrevHash(msg)
+}
+
+// checkPrevHash binds a vote or ROUND CHANGE of the current sequence to the
+// chain it extends: each carries the parent of its height as PrevHash. Future
+// messages are checked when they become current. A PRE-PREPARE is exempt: its
+// parent is the proposal's, which Verify checks and whose failure starts a
+// round change instead of silently dropping the proposal.
+func (c *core) checkPrevHash(msg *bft.Message) error {
+	// Some focused unit tests run a bare core without a backend.
+	if msg.Code == bft.MsgPreprepare || c.backend == nil {
+		return nil
+	}
+	lastProposal, _ := c.backend.LastProposal()
+	if lastProposal == nil || msg.PrevHash != lastProposal.Hash() {
+		return errInconsistentPrevHash
+	}
+	return nil
+}
+
+func (c *core) checkMessageView(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
 		return bft.ErrInvalidMessage
 	}
@@ -169,16 +195,16 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 		logger.Trace("Discarding future message: sender backlog limit reached")
 		return
 	}
-	justificationBytes := uint64(len(msg.Justification))
-	if justificationBytes != 0 {
-		if justificationBytes > maxBacklogJustificationBytesPerSender ||
-			c.backlogJustificationBytes[src] > maxBacklogJustificationBytesPerSender-justificationBytes {
-			logger.Trace("Discarding future message: sender backlog attachment limit reached", "bytes", justificationBytes)
+	evidenceBytes := uint64(len(msg.Evidence))
+	if evidenceBytes != 0 {
+		if evidenceBytes > maxBacklogEvidenceBytesPerSender ||
+			c.backlogEvidenceBytes[src] > maxBacklogEvidenceBytesPerSender-evidenceBytes {
+			logger.Trace("Discarding future message: sender backlog attachment limit reached", "bytes", evidenceBytes)
 			return
 		}
-		if justificationBytes > maxBacklogJustificationBytes ||
-			c.backlogTotalJustificationBytes > maxBacklogJustificationBytes-justificationBytes {
-			logger.Trace("Discarding future message: total backlog attachment limit reached", "bytes", justificationBytes)
+		if evidenceBytes > maxBacklogEvidenceBytes ||
+			c.backlogTotalEvidenceBytes > maxBacklogEvidenceBytes-evidenceBytes {
+			logger.Trace("Discarding future message: total backlog attachment limit reached", "bytes", evidenceBytes)
 			return
 		}
 	}
@@ -191,9 +217,9 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
 	backlog.Push(msg, toPriority(msg.Code, view))
 	c.backlogCounts[src]++
-	if justificationBytes != 0 {
-		c.backlogJustificationBytes[src] += justificationBytes
-		c.backlogTotalJustificationBytes += justificationBytes
+	if evidenceBytes != 0 {
+		c.backlogEvidenceBytes[src] += evidenceBytes
+		c.backlogTotalEvidenceBytes += evidenceBytes
 	}
 }
 
@@ -208,7 +234,7 @@ func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
 // retainedMessageBytes reports the memory a retained message occupies, so that
 // every size limit measures a message the same way.
 func retainedMessageBytes(msg *bft.Message) uint64 {
-	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal)) + uint64(len(msg.Justification))
+	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.Evidence))
 }
 
 // removeBacklogMessage releases one queued message of a sender while backlogsMu
@@ -221,27 +247,27 @@ func (c *core) removeBacklogMessage(src common.Address, msg *bft.Message) {
 		c.backlogCounts[src]--
 	}
 
-	justificationBytes := uint64(len(msg.Justification))
-	if justificationBytes == 0 {
+	evidenceBytes := uint64(len(msg.Evidence))
+	if evidenceBytes == 0 {
 		return
 	}
-	senderBytes := c.backlogJustificationBytes[src]
-	if senderBytes < justificationBytes || c.backlogTotalJustificationBytes < justificationBytes {
+	senderBytes := c.backlogEvidenceBytes[src]
+	if senderBytes < evidenceBytes || c.backlogTotalEvidenceBytes < evidenceBytes {
 		// This is an internal invariant violation, not peer input. Preserve the
 		// conservative accounting instead of silently clamping it and hiding the
 		// mismatch or wrapping an unsigned subtraction.
 		c.logger.Error("Inconsistent backlog attachment accounting", "from", src,
-			"messageBytes", justificationBytes, "senderBytes", senderBytes,
-			"totalBytes", c.backlogTotalJustificationBytes)
+			"messageBytes", evidenceBytes, "senderBytes", senderBytes,
+			"totalBytes", c.backlogTotalEvidenceBytes)
 		return
 	}
-	senderBytes -= justificationBytes
+	senderBytes -= evidenceBytes
 	if senderBytes == 0 {
-		delete(c.backlogJustificationBytes, src)
+		delete(c.backlogEvidenceBytes, src)
 	} else {
-		c.backlogJustificationBytes[src] = senderBytes
+		c.backlogEvidenceBytes[src] = senderBytes
 	}
-	c.backlogTotalJustificationBytes -= justificationBytes
+	c.backlogTotalEvidenceBytes -= evidenceBytes
 }
 
 // backlogMessageView decodes the view a message belongs to and the parent hash
@@ -254,11 +280,11 @@ func backlogMessageView(msg *bft.Message) (view *bft.View, prevHash common.Hash)
 		}
 		view, prevHash = p.View, p.Proposal.ParentHash()
 	} else {
-		var sub *bft.Subject
-		if err := msg.Decode(&sub); err != nil || sub == nil {
+		var err error
+		if view, err = msg.GetView(); err != nil {
 			return nil, common.Hash{}
 		}
-		view, prevHash = sub.View, sub.PrevHash
+		prevHash = msg.PrevHash
 	}
 	if view == nil || view.Sequence == nil || view.Round == nil {
 		return nil, common.Hash{}
@@ -276,7 +302,7 @@ func (c *core) postBacklogMessage(src common.Address, msg *bft.Message, view *bf
 		logger.Debug("Nil view", "msg", msg)
 		return false
 	}
-	err := c.checkMessage(msg.Code, view)
+	err := c.checkMessage(msg, view)
 	if err == errFutureMessage {
 		return true
 	}

@@ -548,6 +548,49 @@ func TestConsensusSplitLockReproposalRefreshesPreparedCertificate(t *testing.T) 
 	})
 }
 
+// TestConsensusRejectsVotesForAnotherParent checks that PREPARE, COMMIT and
+// ROUND CHANGE messages of the current sequence must name the current chain
+// head as PrevHash, in both wire formats. The legacy format signs it twice, in
+// the envelope and the Subject, and normalization keeps them equal.
+func TestConsensusRejectsVotesForAnotherParent(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		config *params.ChainConfig
+	}{
+		{"PrePermissionless", params.TestChainConfig.Copy()},
+		{"Permissionless", params.TestKaiaConfig("permissionless")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				s := newScenarioNet(t, 4, 4, tc.config)
+				target, sender := s.validators[0], s.validators[1]
+				// Hold the target below the commit quorum so the current view stays open.
+				s.delay(bft.MsgCommit, s.nodes(1, 2, 3), s.nodes(0))
+				s.advanceConsensus(1, s.nodes(0))
+				target.assertUncommitted(1)
+
+				view := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}
+				digest := s.proposal.Hash()
+				for code, payload := range map[uint64]any{
+					bft.MsgPrepare:     &bft.Prepare{View: view, Digest: digest},
+					bft.MsgCommit:      &bft.Commit{View: view, Digest: digest},
+					bft.MsgRoundChange: &bft.RoundChange{View: view},
+				} {
+					encoded, err := bft.Encode(payload)
+					require.NoError(t, err)
+					wrongParent := common.HexToHash("0xbad")
+					signed, err := sender.core.finalizeMessage(&bft.Message{PrevHash: wrongParent, Code: code, Msg: encoded})
+					require.NoError(t, err)
+					target.reject(istanbul.MessageEvent{Hash: wrongParent, Payload: signed}, errInconsistentPrevHash)
+				}
+
+				s.release(bft.MsgCommit, s.nodes(1, 2, 3), s.nodes(0))
+				target.assertCommitted(1)
+			})
+		})
+	}
+}
+
 // splitLock reproduces the round-0 split lock used by the tests above: C/D
 // lock X, B (the round-1 proposer) saw only Y, and A's COMMIT is withheld.
 func splitLock(t *testing.T) (s *scenarioNet, x *types.Block) {
@@ -566,8 +609,8 @@ func splitLock(t *testing.T) (s *scenarioNet, x *types.Block) {
 
 // sentPreprepare decodes the PRE-PREPARE a node actually broadcast.
 func sentPreprepare(t *testing.T, s *scenarioNet, from *validator, height, round uint64) *bft.Preprepare {
-	var msg bft.Message
-	require.NoError(t, msg.FromPayload(s.message(from, bft.MsgPreprepare, height, round).Payload, nil))
+	msg, err := from.backend.decodeMessage(s.message(from, bft.MsgPreprepare, height, round).Payload, nil)
+	require.NoError(t, err)
 	var preprepare *bft.Preprepare
 	require.NoError(t, msg.Decode(&preprepare))
 	return preprepare
@@ -576,30 +619,44 @@ func sentPreprepare(t *testing.T, s *scenarioNet, from *validator, height, round
 // signedRoundChange signs a ROUND CHANGE for the sender's head with an
 // arbitrary claim and attached certificate.
 func signedRoundChange(t *testing.T, sender *validator, round uint64, claim *bft.PreparedClaim, cert *bft.PreparedCertificate) istanbul.MessageEvent {
-	var justification []byte
+	var evidence []byte
 	if cert != nil {
 		var err error
-		justification, err = bft.Encode(cert)
+		evidence, err = bft.Encode(cert)
 		require.NoError(t, err)
 	}
-	return signedRoundChangeAt(t, sender, sender.head().NumberU64()+1, round, claim, justification)
+	return signedRoundChangeAt(t, sender, sender.head().NumberU64()+1, round, claim, evidence)
 }
 
 // signedRoundChangeAt signs a ROUND CHANGE for an arbitrary sequence with raw
-// Justification bytes, which the sender's signature does not cover.
-func signedRoundChangeAt(t *testing.T, sender *validator, sequence, round uint64, claim *bft.PreparedClaim, justification []byte) istanbul.MessageEvent {
-	head := sender.head()
+// Evidence bytes, which the sender's signature does not cover.
+func signedRoundChangeAt(t *testing.T, sender *validator, sequence, round uint64, claim *bft.PreparedClaim, evidence []byte) istanbul.MessageEvent {
+	payload, err := sender.core.finalizeMessage(roundChangeMessageAt(t, sender, sequence, round, claim, evidence))
+	require.NoError(t, err)
+	return istanbul.MessageEvent{Hash: sender.head().Hash(), Payload: payload}
+}
+
+// postPermissionlessRoundChange signs a ROUND CHANGE in the post-Permissionless
+// wire format regardless of the fork active at sequence, as a peer could.
+func postPermissionlessRoundChange(t *testing.T, sender *validator, sequence, round uint64, claim *bft.PreparedClaim, evidence []byte) istanbul.MessageEvent {
+	msg := roundChangeMessageAt(t, sender, sequence, round, claim, evidence)
+	msg.Address = sender.backend.Address()
+	unsigned, err := msg.PayloadNoSig()
+	require.NoError(t, err)
+	msg.Signature, err = sender.backend.Sign(unsigned)
+	require.NoError(t, err)
+	payload, err := msg.Payload()
+	require.NoError(t, err)
+	return istanbul.MessageEvent{Hash: msg.PrevHash, Payload: payload}
+}
+
+func roundChangeMessageAt(t *testing.T, sender *validator, sequence, round uint64, claim *bft.PreparedClaim, evidence []byte) *bft.Message {
 	encoded, err := bft.Encode(&bft.RoundChange{
 		View:     &bft.View{Sequence: new(big.Int).SetUint64(sequence), Round: new(big.Int).SetUint64(round)},
-		PrevHash: head.Hash(),
 		Prepared: claim,
 	})
 	require.NoError(t, err)
-	payload, err := sender.core.finalizeMessage(&bft.Message{
-		Hash: head.Hash(), Code: bft.MsgRoundChange, Msg: encoded, Justification: justification,
-	})
-	require.NoError(t, err)
-	return istanbul.MessageEvent{Hash: head.Hash(), Payload: payload}
+	return &bft.Message{PrevHash: sender.head().Hash(), Code: bft.MsgRoundChange, Msg: encoded, Evidence: evidence}
 }
 
 // TestConsensusRecoveryPreprepareCarriesProposalOnce checks the QBFT-style
@@ -620,7 +677,7 @@ func TestConsensusRecoveryPreprepareCarriesProposalOnce(t *testing.T) {
 		require.Len(t, preprepare.RoundChangeCertificate, nextProposer.core.current.requiredMessageCount)
 		claims := 0
 		for _, rc := range preprepare.RoundChangeCertificate {
-			require.Empty(t, rc.Justification, "embedded ROUND CHANGE must not repeat the prepared block")
+			require.Empty(t, rc.Evidence, "embedded ROUND CHANGE must not repeat the prepared block")
 			require.LessOrEqual(t, retainedMessageBytes(rc), uint64(maxSubjectMessageBytes))
 			var roundChange *bft.RoundChange
 			require.NoError(t, rc.Decode(&roundChange))
@@ -669,7 +726,7 @@ func TestConsensusPreprepareJustificationValidation(t *testing.T) {
 			}},
 			{"embedded round change keeps its justification", func(pp *bft.Preprepare) {
 				embedded := *pp.RoundChangeCertificate[0]
-				embedded.Justification = []byte{0xc0}
+				embedded.Evidence = []byte{0xc0}
 				pp.RoundChangeCertificate[0] = &embedded
 			}},
 		} {
@@ -720,9 +777,10 @@ func TestConsensusRoundChangeRejectsUnboundJustification(t *testing.T) {
 }
 
 // TestConsensusRoundChangeRejectsJustificationBeforeFork checks that before
-// Permissionless a ROUND CHANGE keeps the legacy shape. Neither a signed
-// PreparedClaim nor an unsigned Justification, which any relay could attach
-// to a valid message, may enter the round-change set or the backlog. From the
+// Permissionless a ROUND CHANGE keeps the legacy shape. The legacy codec cannot
+// express a PreparedClaim or Evidence, so local senders cannot produce one, and
+// a peer's post-Permissionless envelope for a pre-fork height is rejected
+// before it can enter the round-change set or the backlog. From the
 // activation height a signed PreparedClaim and its attachment must appear
 // together before a future message can enter the backlog.
 func TestConsensusRoundChangeRejectsJustificationBeforeFork(t *testing.T) {
@@ -736,18 +794,23 @@ func TestConsensusRoundChangeRejectsJustificationBeforeFork(t *testing.T) {
 		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: common.HexToHash("0x01")}
 		junk := []byte{0xc0}
 		for _, tc := range []struct {
-			name          string
-			sequence      uint64
-			claim         *bft.PreparedClaim
-			justification []byte
+			name     string
+			sequence uint64
+			claim    *bft.PreparedClaim
+			evidence []byte
 		}{
-			{"justification without claim", 1, nil, junk},
-			{"claim without justification", 1, claim, nil},
-			{"claim with justification", 1, claim, junk},
-			{"future-height justification", 2, nil, junk},
+			{"plain", 1, nil, nil},
+			{"evidence without claim", 1, nil, junk},
+			{"claim without evidence", 1, claim, nil},
+			{"claim with evidence", 1, claim, junk},
+			{"future-height evidence", 2, nil, junk},
 		} {
 			t.Log(tc.name)
-			receiver.reject(signedRoundChangeAt(t, sender, tc.sequence, 1, tc.claim, tc.justification), bft.ErrInvalidMessage)
+			if tc.claim != nil || tc.evidence != nil {
+				_, err := sender.core.finalizeMessage(roundChangeMessageAt(t, sender, tc.sequence, 1, tc.claim, tc.evidence))
+				require.ErrorIs(t, err, bft.ErrInvalidMessage, "legacy codec must not drop a claim or evidence")
+			}
+			receiver.reject(postPermissionlessRoundChange(t, sender, tc.sequence, 1, tc.claim, tc.evidence))
 		}
 		// The legacy ROUND CHANGE from the same sender is still admitted.
 		receiver.receive(signedRoundChangeAt(t, sender, 1, 1, nil, nil), errIgnored)

@@ -18,6 +18,7 @@ package bft_test
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"math/big"
@@ -30,9 +31,9 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// TestOptionalCertificateWireCompatibility ensures ordinary round-0 and
-// legacy ROUND-CHANGE messages keep their pre-certificate RLP bytes. The new
-// fields appear only when the permissionless fork actually supplies evidence.
+// TestOptionalCertificateWireCompatibility ensures an ordinary round-0
+// PRE-PREPARE keeps its pre-certificate RLP bytes. The certificate fields
+// appear only when the permissionless fork actually supplies evidence.
 func TestOptionalCertificateWireCompatibility(t *testing.T) {
 	view := &bft.View{Round: big.NewInt(0), Sequence: big.NewInt(1)}
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
@@ -47,19 +48,6 @@ func TestOptionalCertificateWireCompatibility(t *testing.T) {
 	}
 	if !bytes.Equal(legacyPreprepare, newPreprepare) {
 		t.Fatalf("preprepare wire drift: got %x want %x", newPreprepare, legacyPreprepare)
-	}
-
-	subject := &bft.Subject{View: view, PrevHash: common.HexToHash("0x01")}
-	legacyRoundChange, err := rlp.EncodeToBytes(subject)
-	if err != nil {
-		t.Fatal(err)
-	}
-	newRoundChange, err := rlp.EncodeToBytes(&bft.RoundChange{View: view, PrevHash: subject.PrevHash})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(legacyRoundChange, newRoundChange) {
-		t.Fatalf("round-change wire drift: got %x want %x", newRoundChange, legacyRoundChange)
 	}
 }
 
@@ -100,26 +88,6 @@ func TestViewRoundTrip(t *testing.T) {
 	}
 }
 
-// TestSubjectRoundTrip verifies Subject encode→decode preserves all fields.
-func TestSubjectRoundTrip(t *testing.T) {
-	s := &bft.Subject{
-		View:     &bft.View{Round: big.NewInt(1), Sequence: big.NewInt(2)},
-		Digest:   common.HexToHash("0xdeadbeef"),
-		PrevHash: common.HexToHash("0xfeedface"),
-	}
-	b, err := rlp.EncodeToBytes(s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var decoded bft.Subject
-	if err := rlp.DecodeBytes(b, &decoded); err != nil {
-		t.Fatal(err)
-	}
-	if !s.Equal(&decoded) {
-		t.Fatalf("round-trip mismatch")
-	}
-}
-
 // TestMessageCodes pins msg code integer values to their historical values.
 // The original unexported istanbul/core consts were: preprepare=0, prepare=1,
 // commit=2, round-change=3, all=4. These MUST remain stable because existing
@@ -146,12 +114,12 @@ func TestMessageCodes(t *testing.T) {
 // TestMessageRoundTrip verifies Message encode→decode preserves all fields.
 func TestMessageRoundTrip(t *testing.T) {
 	orig := &bft.Message{
-		Hash:          common.HexToHash("0x01"),
-		Code:          bft.MsgPrepare,
-		Msg:           []byte{0xaa, 0xbb, 0xcc},
-		Address:       common.HexToAddress("0xcafe"),
-		Signature:     []byte{0x11, 0x22},
-		CommittedSeal: []byte{0x33, 0x44},
+		PrevHash:  common.HexToHash("0x01"),
+		Code:      bft.MsgRoundChange,
+		Msg:       []byte{0xaa, 0xbb, 0xcc},
+		Address:   common.HexToAddress("0xcafe"),
+		Signature: []byte{0x11, 0x22},
+		Evidence:  []byte{0x33, 0x44},
 	}
 	b, err := rlp.EncodeToBytes(orig)
 	if err != nil {
@@ -161,78 +129,204 @@ func TestMessageRoundTrip(t *testing.T) {
 	if err := rlp.DecodeBytes(b, &decoded); err != nil {
 		t.Fatal(err)
 	}
-	if decoded.Hash != orig.Hash ||
+	if decoded.PrevHash != orig.PrevHash ||
 		decoded.Code != orig.Code ||
 		!equalBytes(decoded.Msg, orig.Msg) ||
 		decoded.Address != orig.Address ||
 		!equalBytes(decoded.Signature, orig.Signature) ||
-		!equalBytes(decoded.CommittedSeal, orig.CommittedSeal) {
+		!equalBytes(decoded.Evidence, orig.Evidence) {
 		t.Fatalf("round-trip mismatch: got %+v want %+v", &decoded, orig)
 	}
 }
 
-func TestMessageFromPayloadRejectsUnexpectedCommittedSealLengthBeforeSignatureRecovery(t *testing.T) {
-	tests := []struct {
-		name string
-		msg  *bft.Message
-	}{
-		{
-			name: "prepare with committed seal",
-			msg: &bft.Message{
-				Code: bft.MsgPrepare, Signature: make([]byte, crypto.SignatureLength),
-				CommittedSeal: []byte{1},
-			},
-		},
-		{
-			name: "round change with committed seal",
-			msg: &bft.Message{
-				Code: bft.MsgRoundChange, Signature: make([]byte, crypto.SignatureLength),
-				CommittedSeal: []byte{1},
-			},
-		},
-		{
-			name: "commit without committed seal",
-			msg:  &bft.Message{Code: bft.MsgCommit, Signature: make([]byte, crypto.SignatureLength)},
-		},
-		{
-			name: "commit with oversized committed seal",
-			msg: &bft.Message{
-				Code: bft.MsgCommit, Signature: make([]byte, crypto.SignatureLength),
-				CommittedSeal: make([]byte, crypto.SignatureLength+1),
-			},
-		},
+// TestMessageEmptyEvidenceIsOmitted pins the envelope of a Message without
+// Evidence to five fields, so that ordinary messages carry no attachment slot.
+func TestMessageEmptyEvidenceIsOmitted(t *testing.T) {
+	base := bft.Message{
+		PrevHash:  common.HexToHash("0x01"),
+		Code:      bft.MsgRoundChange,
+		Msg:       []byte{0xaa, 0xbb, 0xcc},
+		Address:   common.HexToAddress("0xcafe"),
+		Signature: make([]byte, crypto.SignatureLength),
 	}
-
-	for _, tc := range tests {
+	want, err := rlp.EncodeToBytes([]any{base.PrevHash, base.Code, base.Msg, base.Address, base.Signature})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name     string
+		evidence []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
-			payload, err := tc.msg.Payload()
+			msg := base
+			msg.Evidence = tc.evidence
+			payload, err := msg.Payload()
 			if err != nil {
 				t.Fatal(err)
 			}
-			called := false
-			var decoded bft.Message
-			err = decoded.FromPayload(payload, func([]byte, []byte) (common.Address, error) {
-				called = true
-				return tc.msg.Address, nil
-			})
-			if !errors.Is(err, bft.ErrInvalidMessage) {
-				t.Fatalf("got %v, want ErrInvalidMessage", err)
-			}
-			if called {
-				t.Fatal("signature recovery ran for an invalid committed seal")
+			if !bytes.Equal(payload, want) {
+				t.Fatalf("envelope wire drift: got %x want %x", payload, want)
 			}
 		})
 	}
 }
 
-func TestMessageFromPayloadAcceptsValidEnvelopeShapes(t *testing.T) {
-	tests := []*bft.Message{
-		{Code: bft.MsgPreprepare, Signature: make([]byte, crypto.SignatureLength)},
-		{Code: bft.MsgPrepare, Signature: make([]byte, crypto.SignatureLength)},
-		{Code: bft.MsgCommit, Signature: make([]byte, crypto.SignatureLength), CommittedSeal: make([]byte, crypto.SignatureLength)},
-		{Code: bft.MsgRoundChange, Signature: make([]byte, crypto.SignatureLength)},
+// TestMessageEvidenceRoundTrip verifies a non-empty Evidence survives
+// encode→decode and is appended as a sixth envelope field.
+func TestMessageEvidenceRoundTrip(t *testing.T) {
+	orig := &bft.Message{
+		Code:      bft.MsgRoundChange,
+		Msg:       []byte{0xaa},
+		Signature: make([]byte, crypto.SignatureLength),
+		Evidence:  []byte{0xde, 0xad, 0xbe, 0xef},
+	}
+	b, err := orig.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded bft.Message
+	if err := rlp.DecodeBytes(b, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decoded.Evidence, orig.Evidence) {
+		t.Fatalf("evidence mismatch: got %x want %x", decoded.Evidence, orig.Evidence)
+	}
+	stripped, err := orig.WithoutEvidence().Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(b) <= len(stripped) {
+		t.Fatalf("evidence not encoded: %d <= %d bytes", len(b), len(stripped))
+	}
+}
+
+// TestMessageEvidenceIsNotSigned verifies Evidence is outside the signed
+// preimage: replacing or stripping the attachment of a signed ROUND CHANGE
+// keeps the original signature valid, while changing a signed field does not.
+func TestMessageEvidenceIsNotSigned(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed := &bft.Message{
+		Code:    bft.MsgRoundChange,
+		Msg:     []byte{0xaa, 0xbb},
+		Address: crypto.PubkeyToAddress(key.PublicKey),
+	}
+	sign(t, signed, key)
+	preimage, err := signed.PayloadNoSig()
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	attached := *signed
+	attached.Evidence = []byte{0x01, 0x02, 0x03}
+	attachedPreimage, err := attached.PayloadNoSig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(attachedPreimage, preimage) {
+		t.Fatalf("evidence leaked into the signed preimage: got %x want %x", attachedPreimage, preimage)
+	}
+
+	replaced := attached
+	replaced.Evidence = []byte{0xff}
+	signedField := attached
+	signedField.Msg = []byte{0xaa, 0xbc}
+	prevHashChanged := attached
+	prevHashChanged.PrevHash = common.HexToHash("0x02")
+
+	for _, tc := range []struct {
+		name    string
+		msg     *bft.Message
+		wantErr error
+	}{
+		{"signed without evidence", signed, nil},
+		{"evidence attached after signing", &attached, nil},
+		{"evidence replaced", &replaced, nil},
+		{"evidence stripped", attached.WithoutEvidence(), nil},
+		{"signed field changed", &signedField, bft.ErrInvalidSigner},
+		{"prev hash changed", &prevHashChanged, bft.ErrInvalidSigner},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, err := tc.msg.Payload()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded bft.Message
+			err = decoded.FromPayload(payload, recoverSigner)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("got %v, want %v", err, tc.wantErr)
+			}
+			if err == nil && !bytes.Equal(decoded.Evidence, tc.msg.Evidence) {
+				t.Fatalf("evidence mismatch: got %x want %x", decoded.Evidence, tc.msg.Evidence)
+			}
+		})
+	}
+}
+
+// TestMessageFromPayloadRejectsEvidenceOutsideRoundChange verifies only a
+// ROUND CHANGE may carry Evidence, and that the envelope is rejected before
+// signature recovery.
+func TestMessageFromPayloadRejectsEvidenceOutsideRoundChange(t *testing.T) {
+	sig := make([]byte, crypto.SignatureLength)
+	evidence := []byte{0x01}
+	commit := mustEncode(t, &bft.Commit{View: testView(1), CommittedSeal: make([]byte, crypto.SignatureLength)})
+	tests := []struct {
+		name string
+		msg  *bft.Message
+	}{
+		{"preprepare", &bft.Message{Code: bft.MsgPreprepare, Signature: sig, Evidence: evidence}},
+		{"prepare", &bft.Message{Code: bft.MsgPrepare, Signature: sig, Evidence: evidence}},
+		{"commit", &bft.Message{Code: bft.MsgCommit, Msg: commit, Signature: sig, Evidence: evidence}},
+		{"unknown code", &bft.Message{Code: bft.MsgAll, Signature: sig, Evidence: evidence}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expectRejectedBeforeRecovery(t, tc.msg)
+		})
+	}
+}
+
+// TestMessageFromPayloadValidatesCommitSealBeforeSignatureRecovery verifies
+// the committed seal inside a post-Permissionless COMMIT payload is
+// shape-checked before signature recovery.
+func TestMessageFromPayloadValidatesCommitSealBeforeSignatureRecovery(t *testing.T) {
+	sig := make([]byte, crypto.SignatureLength)
+	for _, tc := range []struct {
+		name string
+		seal []byte
+	}{
+		{"missing", nil},
+		{"short", []byte{1}},
+		{"oversized", make([]byte, crypto.SignatureLength+1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			msg := &bft.Message{
+				Code:      bft.MsgCommit,
+				Msg:       mustEncode(t, &bft.Commit{View: testView(1), CommittedSeal: tc.seal}),
+				Signature: sig,
+			}
+			expectRejectedBeforeRecovery(t, msg)
+		})
+	}
+	t.Run("undecodable payload", func(t *testing.T) {
+		expectRejectedBeforeRecovery(t, &bft.Message{Code: bft.MsgCommit, Signature: sig})
+	})
+}
+
+func TestMessageFromPayloadAcceptsValidEnvelopeShapes(t *testing.T) {
+	sig := make([]byte, crypto.SignatureLength)
+	tests := []*bft.Message{
+		{Code: bft.MsgPreprepare, Signature: sig},
+		{Code: bft.MsgPrepare, Signature: sig},
+		{Code: bft.MsgCommit, Signature: sig, Msg: mustEncode(t, &bft.Commit{View: testView(1), CommittedSeal: make([]byte, crypto.SignatureLength)})},
+		{Code: bft.MsgRoundChange, Signature: sig},
+		{Code: bft.MsgRoundChange, Signature: sig, Evidence: []byte{0x01}},
+	}
 	for _, msg := range tests {
 		payload, err := msg.Payload()
 		if err != nil {
@@ -247,194 +341,59 @@ func TestMessageFromPayloadAcceptsValidEnvelopeShapes(t *testing.T) {
 	}
 }
 
-// TestMessageEmptyJustificationKeepsLegacyEncoding pins the envelope bytes of
-// a Message without a Justification to the pre-Justification six-field
-// encoding, so that every ordinary message stays readable by deployed nodes.
-func TestMessageEmptyJustificationKeepsLegacyEncoding(t *testing.T) {
-	base := bft.Message{
-		Hash:          common.HexToHash("0x01"),
-		Code:          bft.MsgRoundChange,
-		Msg:           []byte{0xaa, 0xbb, 0xcc},
-		Address:       common.HexToAddress("0xcafe"),
-		Signature:     make([]byte, crypto.SignatureLength),
-		CommittedSeal: []byte{},
-	}
-	legacy, err := rlp.EncodeToBytes([]any{base.Hash, base.Code, base.Msg, base.Address, base.Signature, base.CommittedSeal})
+func expectPayload(t *testing.T, msg *bft.Message, isPermissionlessAt func(uint64) bool, want []byte) {
+	t.Helper()
+	got, err := msg.PayloadForFork(isPermissionlessAt)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	for _, tc := range []struct {
-		name          string
-		justification []byte
-	}{
-		{"nil", nil},
-		{"empty", []byte{}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			msg := base
-			msg.Justification = tc.justification
-			payload, err := msg.Payload()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(payload, legacy) {
-				t.Fatalf("envelope wire drift: got %x want %x", payload, legacy)
-			}
-		})
+	if !bytes.Equal(got, want) {
+		t.Fatalf("payload drift: got %x want %x", got, want)
 	}
+}
 
-	// Legacy bytes decode to an empty Justification and re-encode unchanged.
+func expectRejectedBeforeRecovery(t *testing.T, msg *bft.Message) {
+	t.Helper()
+	payload, err := msg.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	called := false
 	var decoded bft.Message
-	if err := rlp.DecodeBytes(legacy, &decoded); err != nil {
-		t.Fatal(err)
+	err = decoded.FromPayload(payload, func([]byte, []byte) (common.Address, error) {
+		called = true
+		return msg.Address, nil
+	})
+	if !errors.Is(err, bft.ErrInvalidMessage) {
+		t.Fatalf("got %v, want ErrInvalidMessage", err)
 	}
-	if len(decoded.Justification) != 0 {
-		t.Fatalf("legacy envelope decoded a justification: %x", decoded.Justification)
-	}
-	reencoded, err := decoded.Payload()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(reencoded, legacy) {
-		t.Fatalf("legacy envelope re-encode drift: got %x want %x", reencoded, legacy)
+	if called {
+		t.Fatal("signature recovery ran for an invalid envelope")
 	}
 }
 
-// TestMessageJustificationRoundTrip verifies a non-empty Justification survives
-// encode→decode and is appended as a seventh envelope field.
-func TestMessageJustificationRoundTrip(t *testing.T) {
-	orig := &bft.Message{
-		Code:          bft.MsgRoundChange,
-		Msg:           []byte{0xaa},
-		Signature:     make([]byte, crypto.SignatureLength),
-		Justification: []byte{0xde, 0xad, 0xbe, 0xef},
-	}
-	b, err := orig.Payload()
+func sign(t *testing.T, msg *bft.Message, key *ecdsa.PrivateKey) {
+	t.Helper()
+	preimage, err := msg.PayloadNoSig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var decoded bft.Message
-	if err := rlp.DecodeBytes(b, &decoded); err != nil {
+	if msg.Signature, err = crypto.Sign(crypto.Keccak256(preimage), key); err != nil {
 		t.Fatal(err)
-	}
-	if !bytes.Equal(decoded.Justification, orig.Justification) {
-		t.Fatalf("justification mismatch: got %x want %x", decoded.Justification, orig.Justification)
-	}
-	stripped, err := orig.WithoutJustification().Payload()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(b) <= len(stripped) {
-		t.Fatalf("justification not encoded: %d <= %d bytes", len(b), len(stripped))
 	}
 }
 
-// TestMessageJustificationIsNotSigned verifies Justification is outside the
-// signed preimage: replacing or stripping the attachment of a signed ROUND
-// CHANGE keeps the original signature valid, while changing a signed field
-// does not.
-func TestMessageJustificationIsNotSigned(t *testing.T) {
-	key, err := crypto.GenerateKey()
+func mustEncode(t *testing.T, val any) []byte {
+	t.Helper()
+	b, err := rlp.EncodeToBytes(val)
 	if err != nil {
 		t.Fatal(err)
 	}
-	signed := &bft.Message{
-		Code:    bft.MsgRoundChange,
-		Msg:     []byte{0xaa, 0xbb},
-		Address: crypto.PubkeyToAddress(key.PublicKey),
-	}
-	preimage, err := signed.PayloadNoSig()
-	if err != nil {
-		t.Fatal(err)
-	}
-	signed.Signature, err = crypto.Sign(crypto.Keccak256(preimage), key)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	justified := *signed
-	justified.Justification = []byte{0x01, 0x02, 0x03}
-	justifiedPreimage, err := justified.PayloadNoSig()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(justifiedPreimage, preimage) {
-		t.Fatalf("justification leaked into the signed preimage: got %x want %x", justifiedPreimage, preimage)
-	}
-
-	replaced := justified
-	replaced.Justification = []byte{0xff}
-	signedField := justified
-	signedField.Msg = []byte{0xaa, 0xbc}
-
-	for _, tc := range []struct {
-		name    string
-		msg     *bft.Message
-		wantErr error
-	}{
-		{"signed without justification", signed, nil},
-		{"justification attached after signing", &justified, nil},
-		{"justification replaced", &replaced, nil},
-		{"justification stripped", justified.WithoutJustification(), nil},
-		{"signed field changed", &signedField, bft.ErrInvalidSigner},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			payload, err := tc.msg.Payload()
-			if err != nil {
-				t.Fatal(err)
-			}
-			var decoded bft.Message
-			err = decoded.FromPayload(payload, recoverSigner)
-			if !errors.Is(err, tc.wantErr) {
-				t.Fatalf("got %v, want %v", err, tc.wantErr)
-			}
-			if err == nil && !bytes.Equal(decoded.Justification, tc.msg.Justification) {
-				t.Fatalf("justification mismatch: got %x want %x", decoded.Justification, tc.msg.Justification)
-			}
-		})
-	}
+	return b
 }
 
-// TestMessageFromPayloadRejectsJustificationOutsideRoundChange verifies only a
-// ROUND CHANGE may carry a Justification, and that the envelope is rejected
-// before signature recovery.
-func TestMessageFromPayloadRejectsJustificationOutsideRoundChange(t *testing.T) {
-	sig := make([]byte, crypto.SignatureLength)
-	justification := []byte{0x01}
-	tests := []struct {
-		name string
-		msg  *bft.Message
-	}{
-		{"preprepare", &bft.Message{Code: bft.MsgPreprepare, Signature: sig, Justification: justification}},
-		{"prepare", &bft.Message{Code: bft.MsgPrepare, Signature: sig, Justification: justification}},
-		{"commit", &bft.Message{
-			Code: bft.MsgCommit, Signature: sig,
-			CommittedSeal: make([]byte, crypto.SignatureLength), Justification: justification,
-		}},
-		{"unknown code", &bft.Message{Code: bft.MsgAll, Signature: sig, Justification: justification}},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			payload, err := tc.msg.Payload()
-			if err != nil {
-				t.Fatal(err)
-			}
-			called := false
-			var decoded bft.Message
-			err = decoded.FromPayload(payload, func([]byte, []byte) (common.Address, error) {
-				called = true
-				return tc.msg.Address, nil
-			})
-			if !errors.Is(err, bft.ErrInvalidMessage) {
-				t.Fatalf("got %v, want ErrInvalidMessage", err)
-			}
-			if called {
-				t.Fatal("signature recovery ran for a misplaced justification")
-			}
-		})
-	}
+func testView(sequence int64) *bft.View {
+	return &bft.View{Round: big.NewInt(0), Sequence: big.NewInt(sequence)}
 }
 
 // recoverSigner mirrors istanbul.GetSignatureAddress without importing the

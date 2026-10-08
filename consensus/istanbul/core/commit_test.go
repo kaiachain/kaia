@@ -112,7 +112,9 @@ func TestSendCommitForOldBlockSealMatchesDigest(t *testing.T) {
 	istCore.sendCommitForOldBlock(view, oldBlockHash, common.HexToHash("0xc33d"))
 
 	require.NotNil(t, payload, "a COMMIT must have been broadcast")
-	var msg bft.Message
+	// Before Permissionless the COMMIT uses the legacy envelope, whose
+	// CommittedSeal sits beside the signed Subject.
+	var msg bft.PrePermissionlessMessage
 	require.NoError(t, rlp.DecodeBytes(payload, &msg))
 
 	// The committed seal must recover to the sealer over the message's own
@@ -156,8 +158,11 @@ func TestFinalizeMessagePermissionlessBindsRound(t *testing.T) {
 	istCore.sendCommitForOldBlock(view, blockHash, common.HexToHash("0xc33d"))
 
 	require.NotNil(t, payload, "a COMMIT must have been broadcast")
-	var msg bft.Message
-	require.NoError(t, rlp.DecodeBytes(payload, &msg))
+	var envelope bft.Message
+	require.NoError(t, rlp.DecodeBytes(payload, &envelope))
+	// Post-Permissionless, the seal is part of the signed COMMIT payload.
+	var msg bft.Commit
+	require.NoError(t, envelope.Decode(&msg))
 
 	// The committed seal must recover to the sealer over the round-bound preimage...
 	got, err := istanbul.GetSignatureAddress(istanbul.PrepareCommittedSealWithRound(blockHash, byte(round)), msg.CommittedSeal)

@@ -44,67 +44,61 @@ var ErrInvalidSigner = errors.New("message not signed by the sender")
 // ErrInvalidMessage indicates the message code is not recognized.
 var ErrInvalidMessage = errors.New("invalid message")
 
-// Message is the envelope transmitted between BFT validators.
-//
-// Justification is an optional, unsigned attachment. Only a post-Permissionless
-// ROUND CHANGE uses it, to carry the RLP-encoded PreparedCertificate behind the
-// PreparedClaim it signs. Keeping the evidence outside the signature lets a
-// proposer embed the small signed ROUND CHANGE in a certificate without the
-// prepared block; receivers bind the attachment to the signed claim instead.
+// Message is the envelope transmitted between BFT validators. PrevHash, Code,
+// Msg and Address, in that order, are authenticated by Signature. Evidence is deliberately excluded from that
+// signature and must be independently bound to the signed claim carried by Msg.
 type Message struct {
-	Hash          common.Hash
-	Code          uint64
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
-	Justification []byte
+	PrevHash  common.Hash
+	Code      uint64
+	Msg       []byte
+	Address   common.Address
+	Signature []byte
+	Evidence  []byte
 }
 
-// EncodeRLP serializes m into the Kaia RLP format. An empty Justification is
-// omitted, so ordinary messages keep their legacy encoding. rlp omits only a
-// nil optional field, so a non-nil empty slice is normalized to nil first.
+// EncodeRLP serializes m into the Kaia RLP format. An empty Evidence is
+// omitted because rlp omits only a nil optional field.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	justification := m.Justification
-	if len(justification) == 0 {
-		justification = nil
+	evidence := m.Evidence
+	if len(evidence) == 0 {
+		evidence = nil
 	}
 	return rlp.Encode(w, struct {
-		Hash          common.Hash
-		Code          uint64
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
-		Justification []byte `rlp:"optional"`
-	}{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal, justification})
+		PrevHash  common.Hash
+		Code      uint64
+		Msg       []byte
+		Address   common.Address
+		Signature []byte
+		Evidence  []byte `rlp:"optional"`
+	}{m.PrevHash, m.Code, m.Msg, m.Address, m.Signature, evidence})
 }
 
 // DecodeRLP loads the consensus fields from a Kaia RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Hash          common.Hash
-		Code          uint64
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
-		Justification []byte `rlp:"optional"`
+		PrevHash  common.Hash
+		Code      uint64
+		Msg       []byte
+		Address   common.Address
+		Signature []byte
+		Evidence  []byte `rlp:"optional"`
 	}
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Hash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
-	m.Justification = msg.Justification
+	m.PrevHash, m.Code, m.Msg, m.Address, m.Signature, m.Evidence = msg.PrevHash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.Evidence
 	return nil
 }
 
-// FromPayload decodes b into m and, when validateFn is non-nil, verifies the
-// signer matches m.Address.
+// FromPayload decodes b into m and verifies its signer.
 func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
 	if err := rlp.DecodeBytes(b, &m); err != nil {
 		return err
 	}
+	return m.validateAndRecover(validateFn)
+}
+
+func (m *Message) validateAndRecover(validateFn func([]byte, []byte) (common.Address, error)) error {
 	if err := m.validateEnvelope(); err != nil {
 		return err
 	}
@@ -128,16 +122,17 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 func (m *Message) validateEnvelope() error {
 	switch m.Code {
 	case MsgCommit:
-		if len(m.CommittedSeal) != crypto.SignatureLength {
-			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, len(m.CommittedSeal))
-		}
-	case MsgPreprepare, MsgPrepare, MsgRoundChange:
-		if len(m.CommittedSeal) != 0 {
-			return fmt.Errorf("%w: unexpected committed seal on message code %d", ErrInvalidMessage, m.Code)
+		var commit *Commit
+		if err := m.Decode(&commit); err != nil || commit == nil || len(commit.CommittedSeal) != crypto.SignatureLength {
+			sealLen := 0
+			if commit != nil {
+				sealLen = len(commit.CommittedSeal)
+			}
+			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, sealLen)
 		}
 	}
-	if len(m.Justification) != 0 && m.Code != MsgRoundChange {
-		return fmt.Errorf("%w: unexpected justification on message code %d", ErrInvalidMessage, m.Code)
+	if len(m.Evidence) != 0 && m.Code != MsgRoundChange {
+		return fmt.Errorf("%w: unexpected evidence on message code %d", ErrInvalidMessage, m.Code)
 	}
 	return nil
 }
@@ -147,17 +142,20 @@ func (m *Message) Payload() ([]byte, error) {
 	return rlp.EncodeToBytes(m)
 }
 
-// PayloadNoSig returns the RLP-encoded message with Signature zeroed, used for
-// recovering the signer address from the attached Signature. Justification is
-// deliberately excluded: it is unsigned evidence checked against the payload.
+// PayloadNoSig returns the signed preimage, used for recovering the signer
+// address from the attached Signature. Evidence is
+// deliberately excluded: it is unsigned and checked against the signed claim.
 func (m *Message) PayloadNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&Message{
-		Hash:          m.Hash,
-		Code:          m.Code,
-		Msg:           m.Msg,
-		Address:       m.Address,
-		Signature:     []byte{},
-		CommittedSeal: m.CommittedSeal,
+	return rlp.EncodeToBytes(struct {
+		PrevHash common.Hash
+		Code     uint64
+		Msg      []byte
+		Address  common.Address
+	}{
+		PrevHash: m.PrevHash,
+		Code:     m.Code,
+		Msg:      m.Msg,
+		Address:  m.Address,
 	})
 }
 
@@ -166,11 +164,10 @@ func (m *Message) Decode(val any) error {
 	return rlp.DecodeBytes(m.Msg, val)
 }
 
-// WithoutJustification returns a shallow copy of m without its unsigned
-// attachment. The copy keeps the original signature.
-func (m *Message) WithoutJustification() *Message {
+// WithoutEvidence returns a shallow copy without its unsigned attachment.
+func (m *Message) WithoutEvidence() *Message {
 	stripped := *m
-	stripped.Justification = nil
+	stripped.Evidence = nil
 	return &stripped
 }
 
@@ -188,12 +185,18 @@ func (m *Message) GetView() (*View, error) {
 			return nil, decodeErr
 		}
 		msgView = preprepare.View
-	case MsgPrepare, MsgCommit:
-		var subject *Subject
-		if decodeErr := m.Decode(&subject); decodeErr != nil {
+	case MsgPrepare:
+		var prepare *Prepare
+		if decodeErr := m.Decode(&prepare); decodeErr != nil {
 			return nil, decodeErr
 		}
-		msgView = subject.View
+		msgView = prepare.View
+	case MsgCommit:
+		var commit *Commit
+		if decodeErr := m.Decode(&commit); decodeErr != nil {
+			return nil, decodeErr
+		}
+		msgView = commit.View
 	case MsgRoundChange:
 		var roundChange *RoundChange
 		if decodeErr := m.Decode(&roundChange); decodeErr != nil {

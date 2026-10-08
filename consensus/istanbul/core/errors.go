@@ -22,6 +22,9 @@ var (
 	// errInconsistentSubject is returned when received subject is different from
 	// current subject.
 	errInconsistentSubject = errors.New("inconsistent subjects")
+	// errInconsistentPrevHash is returned when a message of the current
+	// sequence does not extend the current chain head.
+	errInconsistentPrevHash = errors.New("inconsistent parent hash")
 	// errNotFromProposer is returned when received message is supposed to be from
 	// proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")

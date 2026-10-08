@@ -36,22 +36,22 @@ func (c *core) sendPrepare() {
 	}
 
 	sub := c.current.Subject()
-	encodedSubject, err := bft.Encode(sub)
+	encodedPrepare, err := bft.Encode(&bft.Prepare{View: sub.View, Digest: sub.Digest})
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
 	c.broadcast(&bft.Message{
-		Hash: c.current.Proposal().ParentHash(),
-		Code: bft.MsgPrepare,
-		Msg:  encodedSubject,
+		PrevHash: c.current.Proposal().ParentHash(),
+		Code:     bft.MsgPrepare,
+		Msg:      encodedPrepare,
 	})
 }
 
 func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	// Decode PREPARE message
-	var prepare *bft.Subject
+	var prepare *bft.Prepare
 	err := msg.Decode(&prepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
@@ -59,7 +59,7 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	}
 
 	// logger.Error("call receive prepare","num",prepare.View.Sequence)
-	if err := c.checkMessage(bft.MsgPrepare, prepare.View); err != nil {
+	if err := c.checkMessage(msg, prepare.View); err != nil {
 		return err
 	}
 
@@ -77,10 +77,10 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 
 	c.acceptPrepare(msg, src)
 
-	// Change to Prepared state once this view has quorum evidence. Before
-	// Permissionless activation, legacy hash-locked nodes retain their direct
-	// COMMIT shortcut. After activation, they must also contribute a PREPARE and
-	// establish a certificate for this round before committing.
+	// Change to Prepared state once this view has quorum evidence. Where the
+	// hash-lock shortcut applies, a node locked on this digest commits directly;
+	// otherwise it must also contribute a PREPARE and establish a certificate
+	// for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
 		if !c.backend.IsPermissionlessAt(prepare.View.Sequence.Uint64()) &&
 			c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
@@ -101,11 +101,11 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *bft.Subject, src common.Address) error {
+func (c *core) verifyPrepare(prepare *bft.Prepare, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()
-	if !prepare.Equal(sub) {
+	if !sub.matches(prepare.View, prepare.Digest) {
 		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", sub, "got", prepare)
 		return errInconsistentSubject
 	}

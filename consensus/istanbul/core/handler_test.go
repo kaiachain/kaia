@@ -256,81 +256,84 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 	return signBlock(block, signerKey)
 }
 
-// genIstanbulMsg generates an istanbul message with given values
-func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey) (istanbul.MessageEvent, error) {
-	return genIstanbulMsgWithSealKey(msgType, prevHash, proposal, signerAddr, signerKey, signerKey)
+// genIstanbulMsg generates an istanbul message with given values, in the wire
+// format selected by permissionless.
+func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey, permissionless bool) (istanbul.MessageEvent, error) {
+	return genIstanbulMsgWithSealKey(msgType, prevHash, proposal, signerAddr, signerKey, signerKey, permissionless)
 }
 
 // genIstanbulMsgWithSealKey builds an istanbul message signed (outer signature) by
-// signerKey, but whose COMMIT CommittedSeal is signed by sealKey. A sealKey different
-// from signerKey forges the committed seal.
-func genIstanbulMsgWithSealKey(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey, sealKey *ecdsa.PrivateKey) (istanbul.MessageEvent, error) {
-	var subject interface{}
-	if msgType == bft.MsgPreprepare {
-		subject = &bft.Preprepare{
-			View:     &bft.View{Round: big.NewInt(0), Sequence: proposal.Number()},
-			Proposal: proposal,
-		}
-	} else {
-		subject = &bft.Subject{
-			View:     &bft.View{Round: big.NewInt(0), Sequence: proposal.Number()},
-			Digest:   proposal.Hash(),
-			PrevHash: prevHash,
-		}
-	}
-
-	// A COMMIT carries a CommittedSeal: the sender's signature over the proposal's
-	// committed-seal preimage, which handleCommit verifies.
-	var seal []byte
-	if msgType == bft.MsgCommit {
-		var err error
-		if seal, err = crypto.Sign(crypto.Keccak256(istanbul.PrepareCommittedSeal(proposal.Hash())), sealKey); err != nil {
+// signerKey, but whose COMMIT CommittedSeal is signed by sealKey over the legacy
+// (non-round-bound) preimage. A sealKey different from signerKey forges the
+// committed seal.
+func genIstanbulMsgWithSealKey(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey, sealKey *ecdsa.PrivateKey, permissionless bool) (istanbul.MessageEvent, error) {
+	view := &bft.View{Round: big.NewInt(0), Sequence: proposal.Number()}
+	var payload any
+	switch msgType {
+	case bft.MsgPreprepare:
+		payload = &bft.Preprepare{View: view, Proposal: proposal}
+	case bft.MsgPrepare:
+		payload = &bft.Prepare{View: view, Digest: proposal.Hash()}
+	case bft.MsgCommit:
+		// A COMMIT carries a CommittedSeal: the sender's signature over the proposal's
+		// committed-seal preimage, which handleCommit verifies.
+		seal, err := crypto.Sign(crypto.Keccak256(istanbul.PrepareCommittedSeal(proposal.Hash())), sealKey)
+		if err != nil {
 			return istanbul.MessageEvent{}, err
 		}
+		payload = &bft.Commit{View: view, Digest: proposal.Hash(), CommittedSeal: seal}
+	case bft.MsgRoundChange:
+		payload = &bft.RoundChange{View: view}
+	default:
+		return istanbul.MessageEvent{}, bft.ErrInvalidMessage
 	}
-	return signIstanbulMsg(prevHash, msgType, subject, signerAddr, signerKey, seal)
+	return signIstanbulMsg(prevHash, msgType, payload, signerAddr, signerKey, permissionless)
 }
 
 // genIstanbulCommitWithRoundBoundSeal builds a COMMIT with a round-bound committed seal (post-permissionless).
 func genIstanbulCommitWithRoundBoundSeal(prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey, round byte) (istanbul.MessageEvent, error) {
-	subject := &bft.Subject{
-		View:     &bft.View{Round: big.NewInt(int64(round)), Sequence: proposal.Number()},
-		Digest:   proposal.Hash(),
-		PrevHash: prevHash,
-	}
 	seal, err := crypto.Sign(crypto.Keccak256(istanbul.PrepareCommittedSealWithRound(proposal.Hash(), round)), signerKey)
 	if err != nil {
 		return istanbul.MessageEvent{}, err
 	}
-	return signIstanbulMsg(prevHash, bft.MsgCommit, subject, signerAddr, signerKey, seal)
+	commit := &bft.Commit{
+		View:          &bft.View{Round: big.NewInt(int64(round)), Sequence: proposal.Number()},
+		Digest:        proposal.Hash(),
+		CommittedSeal: seal,
+	}
+	return signIstanbulMsg(prevHash, bft.MsgCommit, commit, signerAddr, signerKey, true)
 }
 
-// signIstanbulMsg assembles a bft.Message carrying committedSeal and signs it with signerKey.
-func signIstanbulMsg(prevHash common.Hash, code uint64, subject interface{}, signerAddr common.Address, signerKey *ecdsa.PrivateKey, committedSeal []byte) (istanbul.MessageEvent, error) {
-	encodedSubject, err := bft.Encode(subject)
+// signIstanbulMsg assembles a bft.Message carrying payload and signs it with
+// signerKey in the wire format selected by permissionless.
+func signIstanbulMsg(prevHash common.Hash, code uint64, payload any, signerAddr common.Address, signerKey *ecdsa.PrivateKey, permissionless bool) (istanbul.MessageEvent, error) {
+	encodedPayload, err := bft.Encode(payload)
 	if err != nil {
 		return istanbul.MessageEvent{}, err
 	}
 	msg := &bft.Message{
-		Hash:          prevHash,
-		Code:          code,
-		Msg:           encodedSubject,
-		Address:       signerAddr,
-		CommittedSeal: committedSeal,
+		PrevHash: prevHash,
+		Code:     code,
+		Msg:      encodedPayload,
+		Address:  signerAddr,
 	}
-	data, err := msg.PayloadNoSig()
+	isPermissionlessAt := func(uint64) bool { return permissionless }
+	data, err := msg.PayloadNoSigForFork(isPermissionlessAt)
 	if err != nil {
 		return istanbul.MessageEvent{}, err
 	}
-	if msg.Signature, err = crypto.Sign(crypto.Keccak256([]byte(data)), signerKey); err != nil {
+	if msg.Signature, err = crypto.Sign(crypto.Keccak256(data), signerKey); err != nil {
 		return istanbul.MessageEvent{}, err
 	}
-	encodedPayload, err := msg.Payload()
+	wire, err := msg.PayloadForFork(isPermissionlessAt)
 	if err != nil {
 		return istanbul.MessageEvent{}, err
 	}
-	return istanbul.MessageEvent{Hash: msg.Hash, Payload: encodedPayload}, nil
+	return istanbul.MessageEvent{Hash: msg.PrevHash, Payload: wire}, nil
 }
+
+func neverPermissionless(uint64) bool  { return false }
+func alwaysPermissionless(uint64) bool { return true }
 
 // startCoreAtPreprepare starts a core, drives a preprepare, and returns the core plus a committee
 // sender (≠ proposer) with its key, ready to send COMMITs. permissionless sets the backend fork status.
@@ -355,7 +358,7 @@ func startCoreAtPreprepare(t *testing.T, permissionless bool) (c *core, prevHash
 	_, committee, proposer, _ := getTestCommitteeState(addrs, uint64(len(addrs)/3), c.currentView().Sequence.Uint64(), c.currentView().Round.Uint64())
 	cand, err := genBlock(lastBlock, keys[proposer])
 	require.NoError(t, err)
-	pp, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), cand, proposer, keys[proposer])
+	pp, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), cand, proposer, keys[proposer], permissionless)
 	require.NoError(t, err)
 	require.NoError(t, mockBackend.EventMux().Post(pp))
 	time.Sleep(time.Second)
@@ -379,14 +382,14 @@ func TestCore_handleCommit_RejectsForgedCommittedSeal(t *testing.T) {
 	// Seal signed by a key other than the sender's: recovered signer != sender, so it is rejected.
 	forgeKey, err := crypto.GenerateKey()
 	require.NoError(t, err)
-	forged, err := genIstanbulMsgWithSealKey(bft.MsgCommit, prevHash, proposal, sender, senderKey, forgeKey)
+	forged, err := genIstanbulMsgWithSealKey(bft.MsgCommit, prevHash, proposal, sender, senderKey, forgeKey, false)
 	require.NoError(t, err)
 	require.NoError(t, c.backend.EventMux().Post(forged))
 	time.Sleep(time.Second)
 	assert.Equal(t, 0, len(c.current.Commits.messages), "forged committed seal must be rejected")
 
 	// A correctly-signed seal from the same sender is accepted (so it was the seal, not the sender).
-	valid, err := genIstanbulMsg(bft.MsgCommit, prevHash, proposal, sender, senderKey)
+	valid, err := genIstanbulMsg(bft.MsgCommit, prevHash, proposal, sender, senderKey, false)
 	require.NoError(t, err)
 	require.NoError(t, c.backend.EventMux().Post(valid))
 	time.Sleep(time.Second)
@@ -399,7 +402,7 @@ func TestCore_handleCommit_PermissionlessRoundBoundSeal(t *testing.T) {
 	c, prevHash, proposal, sender, senderKey := startCoreAtPreprepare(t, true)
 
 	// A legacy (non-round-bound) committed seal must be rejected post-permissionless.
-	legacy, err := genIstanbulMsg(bft.MsgCommit, prevHash, proposal, sender, senderKey)
+	legacy, err := genIstanbulMsg(bft.MsgCommit, prevHash, proposal, sender, senderKey, true)
 	require.NoError(t, err)
 	require.NoError(t, c.backend.EventMux().Post(legacy))
 	time.Sleep(time.Second)
@@ -454,7 +457,7 @@ func TestCore_handlerMsg(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, nonValidatorAddr, nonValidatorKey)
+		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, nonValidatorAddr, nonValidatorKey, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -473,7 +476,7 @@ func TestCore_handlerMsg(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -510,13 +513,13 @@ func TestCore_postPrepreparedEvent(t *testing.T) {
 	invalidProposal, err := genBlock(lastBlock, validatorKeyMap[invalidSender])
 	require.NoError(t, err)
 	invalidMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), invalidProposal,
-		invalidSender, validatorKeyMap[invalidSender])
+		invalidSender, validatorKeyMap[invalidSender], false)
 	require.NoError(t, err)
 
 	proposal, err := genBlock(lastBlock, validatorKeyMap[proposer])
 	require.NoError(t, err)
 	validMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), proposal,
-		proposer, validatorKeyMap[proposer])
+		proposer, validatorKeyMap[proposer], false)
 	require.NoError(t, err)
 	require.NotEqual(t, invalidProposal.Hash(), proposal.Hash())
 
@@ -647,30 +650,29 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 
 // makeRCMsgPayload makes a payload of round change message.
 func makeRCMsgPayload(t *testing.T, round int64, sequence int64, prevHash common.Hash, senderAddr common.Address, signerKey *ecdsa.PrivateKey) []byte {
-	subject, err := bft.Encode(&bft.Subject{
+	encoded, err := bft.Encode(&bft.RoundChange{
 		View: &bft.View{
 			Round:    big.NewInt(round),
 			Sequence: big.NewInt(sequence),
 		},
-		Digest:   common.Hash{},
-		PrevHash: prevHash,
 	})
 	require.Nil(t, err)
 
 	msg := &bft.Message{
-		Hash:    prevHash,
-		Code:    bft.MsgRoundChange,
-		Msg:     subject,
-		Address: senderAddr,
+		PrevHash: prevHash,
+		Code:     bft.MsgRoundChange,
+		Msg:      encoded,
+		Address:  senderAddr,
 	}
 
-	data, err := msg.PayloadNoSig()
+	// The mock backend in this test is pre-Permissionless.
+	data, err := msg.PayloadNoSigForFork(neverPermissionless)
 	require.Nil(t, err)
 
 	msg.Signature, err = crypto.Sign(crypto.Keccak256([]byte(data)), signerKey)
 	require.Nil(t, err)
 
-	payload, err := msg.Payload()
+	payload, err := msg.PayloadForFork(neverPermissionless)
 	require.Nil(t, err)
 
 	return payload
@@ -678,23 +680,32 @@ func makeRCMsgPayload(t *testing.T, round int64, sequence int64, prevHash common
 
 // An oversized PREPARE, COMMIT or ROUND CHANGE must be rejected before any of
 // the retention paths (backlog, roundChangeSet, messageSet) can keep it. The
-// envelope can be inflated through CommittedSeal, which is only validated for
-// COMMIT, or through a view field, since rlp does not cap big.Int on decode.
+// signed payload can be inflated through a view field, since rlp does not cap
+// big.Int on decode, or through any variable-length payload field.
 func TestHandleCheckedMsgRejectsOversizedSubjectMessage(t *testing.T) {
 	src := common.HexToAddress("0x1")
-	subject, err := bft.Encode(&bft.Subject{View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}})
-	require.NoError(t, err)
-	oversizedRound, err := bft.Encode(&bft.Subject{View: &bft.View{
+	oversizedView := &bft.View{
 		Sequence: big.NewInt(1),
 		Round:    new(big.Int).Lsh(big.NewInt(1), 8*maxSubjectMessageBytes),
-	}})
-	require.NoError(t, err)
+	}
+	encode := func(val any) []byte {
+		encoded, err := bft.Encode(val)
+		require.NoError(t, err)
+		return encoded
+	}
+	view := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}
+	payloads := map[uint64]map[string][]byte{
+		bft.MsgPrepare: {"view field": encode(&bft.Prepare{View: oversizedView})},
+		bft.MsgCommit: {
+			"view field":     encode(&bft.Commit{View: oversizedView}),
+			"committed seal": encode(&bft.Commit{View: view, CommittedSeal: make([]byte, maxSubjectMessageBytes+1)}),
+		},
+		bft.MsgRoundChange: {"view field": encode(&bft.RoundChange{View: oversizedView})},
+	}
 
-	for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
-		for name, msg := range map[string]*bft.Message{
-			"committed seal": {Code: code, Msg: subject, CommittedSeal: make([]byte, maxSubjectMessageBytes+1)},
-			"view field":     {Code: code, Msg: oversizedRound},
-		} {
+	for code, byName := range payloads {
+		for name, payload := range byName {
+			msg := &bft.Message{Code: code, Msg: payload}
 			t.Run(fmt.Sprintf("code %d/%s", code, name), func(t *testing.T) {
 				c := newTestBacklogCore()
 				c.roundChangeSet = newRoundChangeSet(valset.NewAddressSet([]common.Address{src}), 1)
@@ -715,46 +726,53 @@ func TestHandleCheckedMsgRejectsOversizedSubjectMessage(t *testing.T) {
 // the largest view. PREPREPARE carries a block and is bounded by the block size
 // rather than by this check.
 func TestCheckMessageSizeFitsWellFormedMessages(t *testing.T) {
-	subject, err := bft.Encode(&bft.Subject{
-		View: &bft.View{
-			Sequence: new(big.Int).SetUint64(^uint64(0)),
-			Round:    new(big.Int).SetUint64(^uint64(0)),
-		},
-	})
-	require.NoError(t, err)
-
-	for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
+	view := &bft.View{
+		Sequence: new(big.Int).SetUint64(^uint64(0)),
+		Round:    new(big.Int).SetUint64(^uint64(0)),
+	}
+	maxRound := new(big.Int).SetUint64(^uint64(0))
+	for code, payload := range map[uint64]any{
+		bft.MsgPrepare: &bft.Prepare{View: view, Digest: common.HexToHash("0x01")},
+		bft.MsgCommit:  &bft.Commit{View: view, Digest: common.HexToHash("0x01"), CommittedSeal: make([]byte, crypto.SignatureLength)},
+		bft.MsgRoundChange: &bft.RoundChange{View: view, Prepared: &bft.PreparedClaim{
+			Round: maxRound, Digest: common.HexToHash("0x01"),
+		}},
+	} {
+		encoded, err := bft.Encode(payload)
+		require.NoError(t, err)
 		require.NoError(t, checkMessageSize(&bft.Message{
-			Code:          code,
-			Msg:           subject,
-			Signature:     make([]byte, crypto.SignatureLength),
-			CommittedSeal: make([]byte, crypto.SignatureLength),
-		}))
+			PrevHash:  common.HexToHash("0x02"),
+			Code:      code,
+			Msg:       encoded,
+			Signature: make([]byte, crypto.SignatureLength),
+		}, alwaysPermissionless))
 	}
 	require.NoError(t, checkMessageSize(&bft.Message{
 		Code: bft.MsgPreprepare,
 		Msg:  make([]byte, maxSubjectMessageBytes+1),
-	}))
+	}, alwaysPermissionless))
 }
 
 func TestCheckMessageSizeIncludesConsensusP2PWrapper(t *testing.T) {
+	encoded, err := bft.Encode(&bft.RoundChange{View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}})
+	require.NoError(t, err)
 	msg := &bft.Message{
-		Code:          bft.MsgRoundChange,
-		Msg:           make([]byte, 100),
-		Signature:     make([]byte, crypto.SignatureLength),
-		Justification: make([]byte, maxConsensusP2PMessageBytes-100),
+		Code:      bft.MsgRoundChange,
+		Msg:       encoded,
+		Signature: make([]byte, crypto.SignatureLength),
+		Evidence:  make([]byte, maxConsensusP2PMessageBytes-64),
 	}
 	// The attachment alone is below 12 MiB, but the signed message and its
 	// ConsensusMsg wrapper push the wire message over the protocol cap.
-	require.LessOrEqual(t, len(msg.Justification), maxConsensusP2PMessageBytes)
+	require.LessOrEqual(t, len(msg.Evidence), maxConsensusP2PMessageBytes)
 	payload, err := msg.Payload()
 	require.NoError(t, err)
 	wire, err := bft.Encode(&bft.ConsensusMsg{Payload: payload})
 	require.NoError(t, err)
 	require.Equal(t, uint64(len(wire)), consensusP2PMessageSize(payload))
 	require.Greater(t, consensusP2PMessageSize(payload), uint64(maxConsensusP2PMessageBytes))
-	require.ErrorIs(t, checkMessageSize(msg), errMessageTooLarge)
+	require.ErrorIs(t, checkMessageSize(msg, alwaysPermissionless), errMessageTooLarge)
 
-	msg.Justification = msg.Justification[:len(msg.Justification)-2048]
-	require.NoError(t, checkMessageSize(msg))
+	msg.Evidence = msg.Evidence[:len(msg.Evidence)-2048]
+	require.NoError(t, checkMessageSize(msg, alwaysPermissionless))
 }

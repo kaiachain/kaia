@@ -115,7 +115,7 @@ func (c *core) handleEvents() {
 				}
 				// No need to check signature for internal messages
 				if err := c.handleCheckedMsg(ev.msg, ev.src); err == nil {
-					p, err := ev.msg.Payload()
+					p, err := ev.msg.PayloadForFork(c.isPermissionlessAt)
 					if err != nil {
 						c.logger.Warn("Get message payload failed", "err", err)
 						continue
@@ -157,7 +157,7 @@ func (c *core) handleMsg(payload []byte) error {
 
 	// Decode message and check its signature
 	msg := new(bft.Message)
-	if err := msg.FromPayload(payload, c.validateFn); err != nil {
+	if err := msg.FromPayloadForFork(payload, c.backend.IsPermissionlessAt, c.validateFn); err != nil {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			if err != istanbul.ErrUnauthorizedAddress {
 				logger.Error("Failed to decode message from payload", "err", err)
@@ -188,11 +188,8 @@ func (c *core) handleMsg(payload []byte) error {
 }
 
 // maxSubjectMessageBytes bounds the signed part of ROUND CHANGE, PREPARE and
-// COMMIT. These carry a fixed-shape subject (plus an optional prepared claim),
-// but the envelope is not otherwise bounded: CommittedSeal is only validated
-// for COMMIT, and rlp does not cap the length of a big.Int view field. The
-// limit is far above a well-formed message, whose subject, signature and
-// committed seal take a few hundred bytes.
+// COMMIT. These carry fixed-shape payloads, but rlp does not cap the length of
+// a big.Int view field. The limit is far above a well-formed message.
 const maxSubjectMessageBytes = 1024
 
 // maxConsensusP2PMessageBytes matches node/cn.ProtocolMaxMsgSize. The P2P
@@ -200,10 +197,9 @@ const maxSubjectMessageBytes = 1024
 // itself must be smaller than this cap.
 const maxConsensusP2PMessageBytes = 12 * 1024 * 1024
 
-// maxCertificateRoundChangeBytes is a coarse cap for the attachment. A
-// post-Permissionless ROUND CHANGE can attach a prepared certificate, including
-// the prepared block, as its unsigned Justification, so that attachment cannot
-// use the subject-only limit. The exact wrapped wire size is checked below.
+// maxCertificateRoundChangeBytes is a coarse cap for the attachment. A ROUND
+// CHANGE can attach a prepared certificate, including the prepared block, as
+// its unsigned Evidence, so that attachment cannot use the subject-only limit. The exact wrapped wire size is checked below.
 const maxCertificateRoundChangeBytes = maxConsensusP2PMessageBytes
 
 // consensusP2PMessageSize is the RLP size of ConsensusMsg{PrevHash, Payload}.
@@ -214,19 +210,18 @@ func consensusP2PMessageSize(payload []byte) uint64 {
 
 // checkMessageSize rejects an oversized consensus message before the retention
 // paths diverge (backlog, roundChangeSet, messageSet), so every retained copy
-// is bounded. Only a ROUND CHANGE Justification may use the larger cap; the
-// envelope decoder rejects a Justification on any other message.
-func checkMessageSize(msg *bft.Message) error {
-	justification := uint64(len(msg.Justification))
+// is bounded. Only ROUND CHANGE Evidence may use the larger cap.
+func checkMessageSize(msg *bft.Message, isPermissionlessAt func(uint64) bool) error {
+	evidence := uint64(len(msg.Evidence))
 	retained := retainedMessageBytes(msg)
-	if msg.Code != bft.MsgPreprepare && retained-justification > maxSubjectMessageBytes ||
-		justification > maxCertificateRoundChangeBytes {
+	if msg.Code != bft.MsgPreprepare && retained-evidence > maxSubjectMessageBytes ||
+		evidence > maxCertificateRoundChangeBytes {
 		return errMessageTooLarge
 	}
 	// Most messages are far below the P2P limit. Only encode near the boundary,
 	// where RLP headers and the ConsensusMsg wrapper can push a message over it.
 	if retained >= maxConsensusP2PMessageBytes-2048 {
-		payload, err := msg.Payload()
+		payload, err := msg.PayloadForFork(isPermissionlessAt)
 		if err != nil || consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
 			return errMessageTooLarge
 		}
@@ -237,7 +232,7 @@ func checkMessageSize(msg *bft.Message) error {
 func (c *core) handleCheckedMsg(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
 
-	if err := checkMessageSize(msg); err != nil {
+	if err := checkMessageSize(msg, c.isPermissionlessAt); err != nil {
 		logger.Debug("Discarding oversized message", "code", msg.Code, "bytes", retainedMessageBytes(msg))
 		return err
 	}

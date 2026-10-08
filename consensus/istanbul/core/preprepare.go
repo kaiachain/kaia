@@ -65,9 +65,9 @@ func (c *core) sendPreprepare(request *bft.Request) {
 		}
 
 		c.broadcast(&bft.Message{
-			Hash: request.Proposal.ParentHash(),
-			Code: bft.MsgPreprepare,
-			Msg:  preprepare,
+			PrevHash: request.Proposal.ParentHash(),
+			Code:     bft.MsgPreprepare,
+			Msg:      preprepare,
 		})
 	}
 }
@@ -91,7 +91,7 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
-	if err := c.checkMessage(bft.MsgPreprepare, preprepare.View); err != nil {
+	if err := c.checkMessage(msg, preprepare.View); err != nil {
 		if err == errOldMessage {
 			// This PRE-PREPARE targets an already-finalized height. Reply with a COMMIT
 			// to help the sender finish that block, only if:
@@ -148,7 +148,7 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 				c.sendEvent(backlogEvent{
 					src:  src,
 					msg:  msg,
-					Hash: msg.Hash,
+					Hash: msg.PrevHash,
 				})
 			})
 		} else {
@@ -167,11 +167,10 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 		}
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
-			// Legacy IBFT re-seals the locally retained proposal with the new
-			// round before comparing it. Keep that wire-compatible behavior on
-			// the legacy path. A Permissionless node may instead have adopted a
-			// certificate without a local Preprepare, so it must not dereference
-			// or mutate that optional local proposal.
+			// Where the hash-lock shortcut applies, re-seal the locally retained
+			// proposal with the new round before comparing it. Otherwise the node
+			// may have adopted a certificate without a local Preprepare, so it
+			// must not dereference or mutate that optional local proposal.
 			if !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) && c.current.Preprepare != nil {
 				header := c.current.Preprepare.Proposal.Header()
 				c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
@@ -180,7 +179,7 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				if !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) {
 					logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
-					// Preserve the legacy shortcut before Permissionless activation.
+					// Hash-lock shortcut: accept the locked proposal as prepared.
 					c.acceptPreprepare(preprepare)
 					c.postPrepreparedEvent(preprepare)
 					c.setState(StatePrepared)

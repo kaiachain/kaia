@@ -15,8 +15,8 @@
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package bft hosts wire-level BFT consensus types shared by Istanbul and
-// KaiaBFT engines. Any change to types in this file is a wire-protocol change
-// and must be considered against backward compatibility with deployed nodes.
+// KaiaBFT engines. Any change to these types is a wire-protocol change and must
+// be considered against backward compatibility with deployed nodes.
 package bft
 
 import (
@@ -106,11 +106,17 @@ func (v *View) Cmp(y *View) int {
 	return 0
 }
 
+// ConsensusMsg is the envelope used by p2p for forwarded consensus messages.
+type ConsensusMsg struct {
+	PrevHash common.Hash
+	Payload  []byte
+}
+
 // Preprepare is the message sent by the proposer to propose a new block.
 //
-// A post-Permissionless PRE-PREPARE above round 0 is justified by
+// A PRE-PREPARE above round 0 is justified by
 // RoundChangeCertificate, a quorum of signed ROUND CHANGE messages for its view
-// stripped of their Justification attachments. When any of them claims a
+// stripped of their Evidence attachments. When any of them claims a
 // prepared value, PreparedMessages are the PREPARE/COMMIT votes proving the
 // highest claim for Proposal. The prepared block is therefore sent once, as the
 // Proposal itself, instead of once per ROUND CHANGE.
@@ -153,7 +159,7 @@ func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 // prior round. Messages are the signed PREPARE/COMMIT envelopes that form the
 // quorum; carrying the complete envelopes lets receivers authenticate every
 // voter without persisting the certificate in the block header. It travels as
-// a ROUND CHANGE Justification and is never signed by the ROUND CHANGE sender.
+// ROUND CHANGE Evidence and is never signed by the ROUND CHANGE sender.
 type PreparedCertificate struct {
 	View     *View
 	Proposal *types.Block
@@ -167,62 +173,23 @@ type PreparedClaim struct {
 	Digest common.Hash
 }
 
-// RoundChange is the ROUND-CHANGE wire payload. Its first three fields match
-// Subject exactly, so a message without a PreparedClaim retains the legacy
-// wire encoding. The optional fourth field is enabled by the permissionless
-// consensus fork; the certificate proving it is the message's Justification.
+// Prepare is the PREPARE payload.
+type Prepare struct {
+	View   *View
+	Digest common.Hash
+}
+
+// Commit is the COMMIT payload. Its committed seal is part
+// of Msg and is therefore authenticated by the outer Message signature.
+type Commit struct {
+	View          *View
+	Digest        common.Hash
+	CommittedSeal []byte
+}
+
+// RoundChange is the ROUND-CHANGE payload. The certificate proving Prepared is
+// carried once as the outer Message Evidence.
 type RoundChange struct {
 	View     *View
-	Digest   common.Hash
-	PrevHash common.Hash
 	Prepared *PreparedClaim `rlp:"optional,nilList"`
-}
-
-// Subject is the common payload of prepare/commit/round-change messages.
-type Subject struct {
-	View     *View
-	Digest   common.Hash
-	PrevHash common.Hash
-}
-
-// EncodeRLP serializes a Subject into the Kaia RLP format.
-func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{b.View, b.Digest, b.PrevHash})
-}
-
-// DecodeRLP deserializes a Subject from a Kaia RLP stream.
-func (b *Subject) DecodeRLP(s *rlp.Stream) error {
-	var subject struct {
-		View     *View
-		Digest   common.Hash
-		PrevHash common.Hash
-	}
-	if err := s.Decode(&subject); err != nil {
-		return err
-	}
-	b.View, b.Digest, b.PrevHash = subject.View, subject.Digest, subject.PrevHash
-	return nil
-}
-
-// Equal reports whether a and b describe the same consensus subject.
-func (a *Subject) Equal(b *Subject) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return a.Digest == b.Digest &&
-		a.PrevHash == b.PrevHash &&
-		a.View.Cmp(b.View) == 0
-}
-
-func (b *Subject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v, ParentHash: %v}", b.View, b.Digest.String(), b.PrevHash.Hex())
-}
-
-// ConsensusMsg is the envelope used by p2p for forwarded consensus messages.
-type ConsensusMsg struct {
-	PrevHash common.Hash
-	Payload  []byte
 }

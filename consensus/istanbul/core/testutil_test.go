@@ -39,6 +39,7 @@ import (
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
 	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -319,8 +320,8 @@ func (s *scenarioNet) message(from *validator, code, height, round uint64) istan
 			continue
 		}
 		ev := sent.data.(istanbul.MessageEvent)
-		var msg bft.Message
-		require.NoError(s.t, msg.FromPayload(ev.Payload, nil))
+		msg, err := from.backend.decodeMessage(ev.Payload, nil)
+		require.NoError(s.t, err)
 		view, err := msg.GetView()
 		require.NoError(s.t, err)
 		if msg.Code == code && view.Sequence.Uint64() == height && view.Round.Uint64() == round {
@@ -561,26 +562,28 @@ func (node *validator) message(code uint64, proposal *types.Block, round uint64)
 
 func (node *validator) makeMessage(code uint64, proposal *types.Block, round uint64) (istanbul.MessageEvent, error) {
 	view := &bft.View{Sequence: proposal.Number(), Round: new(big.Int).SetUint64(round)}
-	var subject interface{}
+	var payload any
 	switch code {
 	case bft.MsgPreprepare:
-		subject = &bft.Preprepare{View: view, Proposal: proposal}
-	case bft.MsgPrepare, bft.MsgCommit:
-		subject = &bft.Subject{View: view, Digest: proposal.Hash(), PrevHash: proposal.ParentHash()}
+		payload = &bft.Preprepare{View: view, Proposal: proposal}
+	case bft.MsgPrepare:
+		payload = &bft.Prepare{View: view, Digest: proposal.Hash()}
+	case bft.MsgCommit:
+		payload = &bft.Commit{View: view, Digest: proposal.Hash()}
 	case bft.MsgRoundChange:
-		subject = &bft.Subject{View: view, PrevHash: proposal.ParentHash()}
+		payload = &bft.RoundChange{View: view}
 	default:
 		return istanbul.MessageEvent{}, fmt.Errorf("unknown consensus message code %d", code)
 	}
-	encoded, err := bft.Encode(subject)
+	encoded, err := bft.Encode(payload)
 	if err != nil {
 		return istanbul.MessageEvent{}, err
 	}
-	payload, err := node.core.finalizeMessage(&bft.Message{Hash: proposal.ParentHash(), Code: code, Msg: encoded})
+	signed, err := node.core.finalizeMessage(&bft.Message{PrevHash: proposal.ParentHash(), Code: code, Msg: encoded})
 	if err != nil {
 		return istanbul.MessageEvent{}, err
 	}
-	return istanbul.MessageEvent{Hash: proposal.ParentHash(), Payload: payload}, nil
+	return istanbul.MessageEvent{Hash: proposal.ParentHash(), Payload: signed}, nil
 }
 
 // timeout expires this node's real timer early; other nodes retain their own deadlines.
@@ -637,10 +640,19 @@ func (b *scenarioBackend) Gossip([]byte) error {
 	return err
 }
 
+// decodeMessage decodes payload with the wire codec its sequence selects on this chain.
+func (b *scenarioBackend) decodeMessage(payload []byte, validateFn func([]byte, []byte) (common.Address, error)) (*bft.Message, error) {
+	var msg bft.Message
+	if err := msg.FromPayloadForFork(payload, b.IsPermissionlessAt, validateFn); err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
 // Only successful self-processing forwards to direct peers; peer relays and P2P caches are not modeled.
 func (b *scenarioBackend) GossipSubPeer(hash common.Hash, payload []byte) {
-	var msg bft.Message
-	if err := msg.FromPayload(payload, nil); err != nil {
+	msg, err := b.decodeMessage(payload, nil)
+	if err != nil {
 		b.net.recordFailure(fmt.Errorf("node %d decode relayed message: %w", b.id, err))
 		return
 	}
@@ -653,8 +665,8 @@ func (b *scenarioBackend) GossipSubPeer(hash common.Hash, payload []byte) {
 func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) error {
 	b.net.mu.Lock()
 	defer b.net.mu.Unlock()
-	var msg bft.Message
-	if err := msg.FromPayload(payload, nil); err != nil {
+	msg, err := b.decodeMessage(payload, nil)
+	if err != nil {
 		return fmt.Errorf("node %d decode broadcast message: %w", b.id, err)
 	}
 	if self {
@@ -672,17 +684,17 @@ func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) er
 		}
 	}
 	if self && msg.Code == bft.MsgCommit {
-		var subject bft.Subject
-		if err := msg.Decode(&subject); err != nil {
+		var commit bft.Commit
+		if err := msg.Decode(&commit); err != nil {
 			return fmt.Errorf("node %d decode COMMIT: %w", b.id, err)
 		}
 		current := b.net.validators[b.id].core.current
-		if subject.View.Sequence.Cmp(current.Sequence()) == 0 {
+		if commit.View.Sequence.Cmp(current.Sequence()) == 0 {
 			if !current.IsHashLocked() {
 				return fmt.Errorf("node %d: honest COMMIT without a lock", b.id)
 			}
-			if current.GetLockedHash() != subject.Digest {
-				return fmt.Errorf("node %d: COMMIT conflicts with lock: have %s, want %s", b.id, subject.Digest, current.GetLockedHash())
+			if current.GetLockedHash() != commit.Digest {
+				return fmt.Errorf("node %d: COMMIT conflicts with lock: have %s, want %s", b.id, commit.Digest, current.GetLockedHash())
 			}
 		}
 	}
@@ -725,20 +737,16 @@ func (b *scenarioBackend) fanout(hash common.Hash, payload []byte, self bool) er
 					if err != nil {
 						return fmt.Errorf("node %d encode modified PREPREPARE: %w", b.id, err)
 					}
-					payload, err := rule.from.core.finalizeMessage(&bft.Message{Hash: rule.proposal.ParentHash(), Code: msg.Code, Msg: encoded})
+					payload, err := rule.from.core.finalizeMessage(&bft.Message{PrevHash: rule.proposal.ParentHash(), Code: msg.Code, Msg: encoded})
 					if err != nil {
 						return fmt.Errorf("node %d create modified PREPREPARE: %w", b.id, err)
 					}
 					ev.data = istanbul.MessageEvent{Hash: rule.proposal.ParentHash(), Payload: payload}
 				} else {
-					var subject *bft.Subject
-					if err := msg.Decode(&subject); err != nil {
-						return fmt.Errorf("node %d decode modified message: %w", b.id, err)
+					if view.Sequence.Cmp(rule.proposal.Number()) != 0 {
+						return fmt.Errorf("modified proposal must keep the message's sequence: have %s, want %s", rule.proposal.Number(), view.Sequence)
 					}
-					if subject.View.Sequence.Cmp(rule.proposal.Number()) != 0 {
-						return fmt.Errorf("modified proposal must keep the message's sequence: have %s, want %s", rule.proposal.Number(), subject.View.Sequence)
-					}
-					modified, err := rule.from.makeMessage(msg.Code, rule.proposal, subject.View.Round.Uint64())
+					modified, err := rule.from.makeMessage(msg.Code, rule.proposal, view.Round.Uint64())
 					if err != nil {
 						return fmt.Errorf("node %d create modified message: %w", b.id, err)
 					}
@@ -1072,55 +1080,100 @@ const (
 func (sender *validator) invalidMessage(invalid consensusInvalidKind) istanbul.MessageEvent {
 	s := sender.backend.net
 	ev := sender.message(bft.MsgPrepare, sender.proposal(1), 0)
-	var msg bft.Message
-	require.NoError(s.t, msg.FromPayload(ev.Payload, nil))
-	switch invalid {
-	case consensusMalformedRLP:
+	if invalid == consensusMalformedRLP {
 		ev.Payload = []byte{0xff}
+		return ev
+	}
+	// Mutate the envelope in the wire format of height 1 directly: a mutation
+	// may remove the view that would otherwise select the codec.
+	if !sender.backend.IsPermissionlessAt(1) {
+		ev.Payload = resignLegacy(s.t, ev.Payload, sender.backend.key, invalid == consensusInvalidSignature, func(msg *bft.PrePermissionlessMessage) {
+			var subject bft.Subject
+			require.NoError(s.t, rlp.DecodeBytes(msg.Msg, &subject))
+			switch invalid {
+			case consensusUnknownCode:
+				msg.Code = 99
+			case consensusInvalidSignature:
+				msg.Signature = []byte{1}
+			case consensusMissingView:
+				subject.View = nil
+			case consensusOverflowRound:
+				msg.Code = bft.MsgRoundChange
+				subject.View.Round = new(big.Int).Lsh(big.NewInt(1), 64)
+				subject.Digest = common.Hash{}
+			default:
+				s.t.Fatalf("unknown invalid input %s", invalid)
+			}
+			var err error
+			msg.Msg, err = bft.Encode(&subject)
+			require.NoError(s.t, err)
+		})
+		return ev
+	}
+	msg, err := sender.backend.decodeMessage(ev.Payload, nil)
+	require.NoError(s.t, err)
+	switch invalid {
 	case consensusUnknownCode:
 		msg.Code = 99
 	case consensusInvalidSignature:
 		msg.Signature = []byte{1}
 	case consensusMissingView, consensusOverflowRound:
-		var subject bft.Subject
-		require.NoError(s.t, msg.Decode(&subject))
+		var prepare bft.Prepare
+		require.NoError(s.t, msg.Decode(&prepare))
+		var payload any = &prepare
 		if invalid == consensusMissingView {
-			subject.View = nil
+			prepare.View = nil
 		} else {
 			msg.Code = bft.MsgRoundChange
-			subject.View.Round = new(big.Int).Lsh(big.NewInt(1), 64)
+			prepare.View.Round = new(big.Int).Lsh(big.NewInt(1), 64)
+			payload = &bft.RoundChange{View: prepare.View}
 		}
-		var err error
-		msg.Msg, err = bft.Encode(&subject)
+		msg.Msg, err = bft.Encode(payload)
 		require.NoError(s.t, err)
 	default:
 		s.t.Fatalf("unknown invalid input %s", invalid)
 	}
-	if invalid != consensusMalformedRLP {
-		if invalid != consensusInvalidSignature {
-			unsigned, err := msg.PayloadNoSig()
-			require.NoError(s.t, err)
-			msg.Signature, err = crypto.Sign(crypto.Keccak256(unsigned), sender.backend.key)
-			require.NoError(s.t, err)
-		}
-		var err error
-		ev.Payload, err = msg.Payload()
+	if invalid != consensusInvalidSignature {
+		unsigned, err := msg.PayloadNoSig()
+		require.NoError(s.t, err)
+		msg.Signature, err = crypto.Sign(crypto.Keccak256(unsigned), sender.backend.key)
 		require.NoError(s.t, err)
 	}
+	ev.Payload, err = msg.Payload()
+	require.NoError(s.t, err)
 	return ev
+}
+
+// resignLegacy applies mutate to a legacy wire message and, unless keepSignature
+// is set, signs the result over the legacy preimage.
+func resignLegacy(t *testing.T, payload []byte, key *ecdsa.PrivateKey, keepSignature bool, mutate func(*bft.PrePermissionlessMessage)) []byte {
+	t.Helper()
+	var legacy bft.PrePermissionlessMessage
+	require.NoError(t, rlp.DecodeBytes(payload, &legacy))
+	mutate(&legacy)
+	if !keepSignature {
+		legacy.Signature = nil
+		unsigned, err := bft.Encode(&legacy)
+		require.NoError(t, err)
+		legacy.Signature, err = crypto.Sign(crypto.Keccak256(unsigned), key)
+		require.NoError(t, err)
+	}
+	resigned, err := bft.Encode(&legacy)
+	require.NoError(t, err)
+	return resigned
 }
 
 func (sender *validator) corruptCommit(corruption consensusSealMutation) istanbul.MessageEvent {
 	s := sender.backend.net
 	ev := s.message(sender, bft.MsgCommit, 1, 0)
-	var msg bft.Message
-	require.NoError(s.t, msg.FromPayload(ev.Payload, nil))
-	var subject bft.Subject
-	require.NoError(s.t, msg.Decode(&subject))
+	msg, err := sender.backend.decodeMessage(ev.Payload, nil)
+	require.NoError(s.t, err)
+	var commit bft.Commit
+	require.NoError(s.t, msg.Decode(&commit))
 	if corruption == consensusMalformedSeal {
-		msg.CommittedSeal = []byte{1}
+		commit.CommittedSeal = []byte{1}
 	} else {
-		digest, round, key := subject.Digest, byte(subject.View.Round.Uint64()), sender.backend.key
+		digest, round, key := commit.Digest, byte(commit.View.Round.Uint64()), sender.backend.key
 		switch corruption {
 		case consensusWrongSigner:
 			key = s.validators[2].backend.key
@@ -1132,18 +1185,19 @@ func (sender *validator) corruptCommit(corruption consensusSealMutation) istanbu
 			s.t.Fatalf("unknown corruption %s", corruption)
 		}
 		preimage := append(digest.Bytes(), byte(bft.MsgCommit))
-		if sender.backend.IsPermissionlessAt(subject.View.Sequence.Uint64()) || corruption == consensusOtherRound {
+		if sender.backend.IsPermissionlessAt(commit.View.Sequence.Uint64()) || corruption == consensusOtherRound {
 			preimage = append(preimage, round)
 		}
-		var err error
-		msg.CommittedSeal, err = crypto.Sign(crypto.Keccak256(preimage), key)
+		commit.CommittedSeal, err = crypto.Sign(crypto.Keccak256(preimage), key)
 		require.NoError(s.t, err)
 	}
-	unsigned, err := msg.PayloadNoSig()
+	msg.Msg, err = bft.Encode(&commit)
+	require.NoError(s.t, err)
+	unsigned, err := msg.PayloadNoSigForFork(sender.backend.IsPermissionlessAt)
 	require.NoError(s.t, err)
 	msg.Signature, err = crypto.Sign(crypto.Keccak256(unsigned), sender.backend.key)
 	require.NoError(s.t, err)
-	ev.Payload, err = msg.Payload()
+	ev.Payload, err = msg.PayloadForFork(sender.backend.IsPermissionlessAt)
 	require.NoError(s.t, err)
 	return ev
 }
@@ -1168,19 +1222,19 @@ func (n *validator) assertCommitReply(height, round uint64, roundBound bool, act
 	require.Len(s.t, s.sent[start:], 1, "old proposal must produce one reply")
 	sent := s.sent[start]
 	require.Equal(s.t, n.id, sent.from)
-	var msg bft.Message
-	require.NoError(s.t, msg.FromPayload(sent.data.(istanbul.MessageEvent).Payload, istanbul.GetSignatureAddress))
+	msg, err := n.backend.decodeMessage(sent.data.(istanbul.MessageEvent).Payload, istanbul.GetSignatureAddress)
+	require.NoError(s.t, err)
 	require.Equal(s.t, bft.MsgCommit, msg.Code)
-	var subject bft.Subject
-	require.NoError(s.t, msg.Decode(&subject))
-	require.Equal(s.t, height, subject.View.Sequence.Uint64())
-	require.Equal(s.t, round, subject.View.Round.Uint64())
-	require.Equal(s.t, n.backend.blocks[height].Hash(), subject.Digest)
-	preimage := append(subject.Digest.Bytes(), byte(bft.MsgCommit))
+	var commit bft.Commit
+	require.NoError(s.t, msg.Decode(&commit))
+	require.Equal(s.t, height, commit.View.Sequence.Uint64())
+	require.Equal(s.t, round, commit.View.Round.Uint64())
+	require.Equal(s.t, n.backend.blocks[height].Hash(), commit.Digest)
+	preimage := append(commit.Digest.Bytes(), byte(bft.MsgCommit))
 	if roundBound {
 		preimage = append(preimage, byte(round))
 	}
-	signer, err := istanbul.GetSignatureAddress(preimage, msg.CommittedSeal)
+	signer, err := istanbul.GetSignatureAddress(preimage, commit.CommittedSeal)
 	require.NoError(s.t, err)
 	require.Equal(s.t, n.backend.Address(), signer)
 }

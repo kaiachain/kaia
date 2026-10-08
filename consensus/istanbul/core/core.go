@@ -96,20 +96,20 @@ func calcFaultTolerance(qualifiedLen int, committeeSize uint64) int {
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 	c := &core{
-		config:                    config,
-		address:                   backend.Address(),
-		state:                     StateAcceptRequest,
-		handlerWg:                 new(sync.WaitGroup),
-		logger:                    logger.NewWith("address", backend.Address()),
-		backend:                   backend,
-		backlogs:                  make(map[common.Address]*prque.Prque),
-		backlogsMu:                new(sync.Mutex),
-		backlogCounts:             make(map[common.Address]int),
-		backlogJustificationBytes: make(map[common.Address]uint64),
-		backlogPreprepares:        make(map[common.Address]backlogPreprepare),
-		pendingRequests:           prque.New(),
-		pendingRequestsMu:         new(sync.Mutex),
-		consensusTimestamp:        time.Time{},
+		config:               config,
+		address:              backend.Address(),
+		state:                StateAcceptRequest,
+		handlerWg:            new(sync.WaitGroup),
+		logger:               logger.NewWith("address", backend.Address()),
+		backend:              backend,
+		backlogs:             make(map[common.Address]*prque.Prque),
+		backlogsMu:           new(sync.Mutex),
+		backlogCounts:        make(map[common.Address]int),
+		backlogEvidenceBytes: make(map[common.Address]uint64),
+		backlogPreprepares:   make(map[common.Address]backlogPreprepare),
+		pendingRequests:      prque.New(),
+		pendingRequestsMu:    new(sync.Mutex),
+		consensusTimestamp:   time.Time{},
 
 		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
 		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
@@ -143,19 +143,19 @@ type core struct {
 	waitingForRoundChange bool
 	validateFn            func([]byte, []byte) (common.Address, error)
 
-	backlogs                       map[common.Address]*prque.Prque
-	backlogsMu                     *sync.Mutex
-	backlogCounts                  map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
-	backlogJustificationBytes      map[common.Address]uint64            // retained unsigned ROUND CHANGE attachment bytes per sender
-	backlogTotalJustificationBytes uint64                               // retained unsigned ROUND CHANGE attachment bytes across all senders
-	backlogPreprepares             map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
+	backlogs                  map[common.Address]*prque.Prque
+	backlogsMu                *sync.Mutex
+	backlogCounts             map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
+	backlogEvidenceBytes      map[common.Address]uint64            // retained unsigned ROUND CHANGE attachment bytes per sender
+	backlogTotalEvidenceBytes uint64                               // retained unsigned ROUND CHANGE attachment bytes across all senders
+	backlogPreprepares        map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
 
 	current   *roundState
 	handlerWg *sync.WaitGroup
 
 	roundChangeSet *roundChangeSet
 	// roundChangeCertificate is the signed ROUND CHANGE quorum, with each
-	// message's Justification, that started the current round.
+	// message's Evidence, that started the current round.
 	roundChangeCertificate []*bft.Message
 	roundChangeTimer       atomic.Value //*time.Timer
 	pendingRequests        *prque.Prque
@@ -182,38 +182,51 @@ func (c *core) RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovMod
 	c.govModule = mGov
 }
 
+// isPermissionlessAt is backend.IsPermissionlessAt for a core that may have no
+// backend, as in some focused unit tests.
+func (c *core) isPermissionlessAt(number uint64) bool {
+	return c.backend != nil && c.backend.IsPermissionlessAt(number)
+}
+
 func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	var err error
 	// Add sender address
 	msg.Address = c.Address()
+	view, err := msg.GetView()
+	if err != nil {
+		return nil, err
+	}
+	permissionless := c.backend.IsPermissionlessAt(view.Sequence.Uint64())
 
-	// Add proof of consensus
-	msg.CommittedSeal = []byte{}
 	// Assign the CommittedSeal if it's a COMMIT message.
-	// Sign over the digest carried in the message's own Subject (the block this
+	// Sign over the digest carried in the message's own payload (the block this
 	// COMMIT votes for) rather than the current proposal. For a normal COMMIT the
 	// subject digest equals the current proposal hash, so the produced seal is
 	// unchanged; for a rebroadcast COMMIT of an old block (sendCommitForOldBlock)
 	// this keeps the seal consistent with the message's digest instead of signing
 	// the current proposal.
 	if msg.Code == bft.MsgCommit {
-		var sub *bft.Subject
-		if err = msg.Decode(&sub); err != nil {
+		var commit *bft.Commit
+		if err = msg.Decode(&commit); err != nil {
 			return nil, err
 		}
 		// Post-permissionless: bind the round into the committed seal.
-		if c.backend.IsPermissionlessAt(sub.View.Sequence.Uint64()) {
-			msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHashWithRound(sub.Digest, byte(sub.View.Round.Uint64()))
+		if permissionless {
+			commit.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHashWithRound(commit.Digest, byte(commit.View.Round.Uint64()))
 		} else {
-			msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(sub.Digest)
+			commit.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(commit.Digest)
 		}
+		if err != nil {
+			return nil, err
+		}
+		msg.Msg, err = bft.Encode(commit)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Sign message
-	data, err := msg.PayloadNoSig()
+	data, err := msg.PayloadNoSigForFork(c.backend.IsPermissionlessAt)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +236,7 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	}
 
 	// Convert to payload
-	payload, err := msg.Payload()
+	payload, err := msg.PayloadForFork(c.backend.IsPermissionlessAt)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +258,7 @@ func (c *core) broadcast(msg *bft.Message) {
 	}
 
 	// Broadcast payload
-	if err = c.backend.Broadcast(msg.Hash, payload); err != nil {
+	if err = c.backend.Broadcast(msg.PrevHash, payload); err != nil {
 		logger.Error("Failed to broadcast message", "msg", msg, "err", err)
 		return
 	}
@@ -273,8 +286,12 @@ func (c *core) commit() {
 	if proposal != nil {
 		committedSeals := make([][]byte, c.current.Commits.Size())
 		for i, v := range c.current.Commits.Values() {
-			committedSeals[i] = make([]byte, len(v.CommittedSeal))
-			copy(committedSeals[i][:], v.CommittedSeal[:])
+			var commit *bft.Commit
+			if err := v.Decode(&commit); err != nil {
+				c.sendNextRoundChange("commit message decoding failure")
+				return
+			}
+			committedSeals[i] = append([]byte(nil), commit.CommittedSeal...)
 		}
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
