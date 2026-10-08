@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/derivesha"
 	"github.com/kaiachain/kaia/common"
@@ -789,6 +790,9 @@ func (b *scenarioBackend) Verify(proposal bft.Proposal) (time.Duration, error) {
 	if !ok || block.NumberU64() != b.head.NumberU64()+1 || block.ParentHash() != b.head.Hash() {
 		return 0, istanbul.ErrInvalidProposal
 	}
+	if err := b.VerifyProposalBody(block); err != nil {
+		return 0, err
+	}
 	author, err := b.sealer.Author(block.Header())
 	if err != nil {
 		return 0, err
@@ -797,6 +801,44 @@ func (b *scenarioBackend) Verify(proposal bft.Proposal) (time.Duration, error) {
 		return 0, istanbul.ErrUnauthorizedAddress
 	}
 	return 0, nil
+}
+
+func (b *scenarioBackend) VerifyProposalBody(proposal bft.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return istanbul.ErrInvalidProposal
+	}
+	if b.net.config.chainConfig.IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return blockchain.ErrBlockOversized
+	}
+	header := block.Header()
+	if types.DeriveTransactionsRoot(block.Transactions(), block.Number()) != header.TxHash {
+		return istanbul.ErrMismatchTxhashes
+	}
+	var blobs int
+	for _, tx := range block.Transactions() {
+		if header.BaseFee != nil && header.BaseFee.Cmp(tx.GasPrice()) > 0 {
+			return fmt.Errorf("invalid GasPrice: txHash %x", tx.Hash())
+		}
+		blobs += len(tx.BlobHashes())
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sidecar := tx.BlobTxSidecar()
+			if sidecar == nil {
+				return istanbul.ErrNoBlobSidecarForBlobTx
+			}
+			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+				return istanbul.ErrInvalidBlobTxWithSidecar
+			}
+		}
+	}
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want {
+			return errors.New("blob gas used mismatch")
+		}
+	} else if blobs > 0 {
+		return errors.New("data blobs present in block body")
+	}
+	return nil
 }
 
 func (b *scenarioBackend) Commit(proposal bft.Proposal, seals [][]byte) error {

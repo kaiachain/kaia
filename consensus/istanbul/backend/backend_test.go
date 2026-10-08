@@ -303,6 +303,7 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 
 		// An oversized proposal must be rejected up front in Verify.
 		oversized := buildOversizedBlock(t, chain, engine)
+		assert.ErrorIs(t, engine.VerifyProposalBody(oversized), blockchain.ErrBlockOversized)
 		_, err = engine.Verify(oversized)
 		assert.ErrorIs(t, err, blockchain.ErrBlockOversized)
 	})
@@ -314,6 +315,7 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 		defer engine.Stop()
 
 		oversized := buildOversizedBlock(t, chain, engine)
+		assert.NotErrorIs(t, engine.VerifyProposalBody(oversized), blockchain.ErrBlockOversized)
 		_, err := engine.Verify(oversized)
 		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
 	})
@@ -345,11 +347,13 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		}
 
 		priced := build(baseFeeGkei * params.Gkei)
+		assert.NoError(t, engine.VerifyProposalBody(priced))
 		_, err := engine.Verify(priced)
 		assert.NoError(t, err)
 		assert.NoError(t, chain.Validator().ValidateBody(priced))
 
 		underpriced := build(baseFeeGkei*params.Gkei - 1)
+		assert.ErrorContains(t, engine.VerifyProposalBody(underpriced), "invalid GasPrice")
 		_, err = engine.Verify(underpriced)
 		assert.ErrorContains(t, err, "invalid GasPrice")
 		assert.ErrorContains(t, chain.Validator().ValidateBody(underpriced), "invalid GasPrice")
@@ -362,6 +366,7 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		defer engine.Stop()
 
 		normal := makeBlockWithSeal(chain, engine, chain.CurrentBlock())
+		assert.NoError(t, engine.VerifyProposalBody(normal))
 		_, err := engine.Verify(normal)
 		assert.NoError(t, err)
 
@@ -370,6 +375,7 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		header.BlobGasUsed = &claimed
 		lying := sealBlock(engine, types.NewBlock(header, nil, nil))
 
+		assert.ErrorContains(t, engine.VerifyProposalBody(lying), "blob gas used mismatch")
 		_, err = engine.Verify(lying)
 		assert.ErrorContains(t, err, "blob gas used mismatch")
 		assert.ErrorContains(t, chain.Validator().ValidateBody(lying), "blob gas used mismatch")

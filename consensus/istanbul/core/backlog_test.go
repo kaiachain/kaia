@@ -101,6 +101,27 @@ func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogCounts[src])
 }
 
+func TestStoreBacklogRetainsRoundChangeWithPreparedClaim(t *testing.T) {
+	src := common.HexToAddress("0x1")
+	c := newTestBacklogCore()
+	payload, err := bft.Encode(&bft.RoundChange{
+		View: &bft.View{Sequence: big.NewInt(2), Round: big.NewInt(1)},
+		Prepared: &bft.PreparedClaim{
+			Round:  big.NewInt(0),
+			Digest: common.HexToHash("0x1234"),
+		},
+	})
+	require.NoError(t, err)
+	msg := &bft.Message{Code: bft.MsgRoundChange, Msg: payload, Evidence: []byte{0xc0}}
+
+	c.storeBacklog(msg, src)
+
+	require.Contains(t, c.backlogs, src)
+	assert.Equal(t, 1, c.backlogs[src].Size())
+	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogEvidenceBytes[src])
+}
+
 func TestStoreBacklogBoundsJustificationBytesPerSenderWithoutBlockingSmallMessages(t *testing.T) {
 	src := backlogSender(1)
 	c := newTestBacklogCore()

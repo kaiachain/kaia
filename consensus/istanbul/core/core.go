@@ -29,6 +29,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/bft"
@@ -107,6 +108,9 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		backlogCounts:        make(map[common.Address]int),
 		backlogEvidenceBytes: make(map[common.Address]uint64),
 		backlogPreprepares:   make(map[common.Address]backlogPreprepare),
+		preparedBlocks:       make(map[common.Hash]*types.Block),
+		preparedCertificates: make(map[preparedEvidenceKey]*bft.PreparedCertificate),
+		verifiedEvidence:     make(map[verifiedEvidenceKey]struct{}),
 		pendingRequests:      prque.New(),
 		pendingRequestsMu:    new(sync.Mutex),
 		consensusTimestamp:   time.Time{},
@@ -154,12 +158,19 @@ type core struct {
 	handlerWg *sync.WaitGroup
 
 	roundChangeSet *roundChangeSet
-	// roundChangeCertificate is the signed ROUND CHANGE quorum, with each
-	// message's Evidence, that started the current round.
+	// roundChangeCertificate is the compact signed ROUND CHANGE quorum that
+	// started the current round. Prepared evidence lives in the caches below.
 	roundChangeCertificate []*bft.Message
-	roundChangeTimer       atomic.Value //*time.Timer
-	pendingRequests        *prque.Prque
-	pendingRequestsMu      *sync.Mutex
+	// Prepared evidence is deduplicated independently from ROUND CHANGE
+	// envelopes. Blocks are retained once per digest and vote sets once per
+	// exact (sequence, prepared round, digest) claim. verifiedEvidence records
+	// the Evidence bytes already verified for each claim.
+	preparedBlocks       map[common.Hash]*types.Block
+	preparedCertificates map[preparedEvidenceKey]*bft.PreparedCertificate
+	verifiedEvidence     map[verifiedEvidenceKey]struct{}
+	roundChangeTimer     atomic.Value //*time.Timer
+	pendingRequests      *prque.Prque
+	pendingRequestsMu    *sync.Mutex
 
 	consensusTimestamp time.Time
 	// the meter to record the round change rate
@@ -471,6 +482,9 @@ func (c *core) updateRoundState(view *bft.View, roundChange bool,
 		// Only a new height makes the certificate stale.
 		if newSequence {
 			c.roundChangeCertificate = nil
+			c.preparedBlocks = make(map[common.Hash]*types.Block)
+			c.preparedCertificates = make(map[preparedEvidenceKey]*bft.PreparedCertificate)
+			c.verifiedEvidence = make(map[verifiedEvidenceKey]struct{})
 		}
 	}
 	// Update new committee state

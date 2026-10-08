@@ -19,9 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 	"testing"
 	"testing/synctest"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
@@ -591,6 +593,193 @@ func TestConsensusRejectsVotesForAnotherParent(t *testing.T) {
 	}
 }
 
+// TestConsensusJustifiedPreprepareOverridesOlderLock checks that a node locked
+// on X@0 adopts a different value Y proven prepared at a higher round, and
+// PREPAREs it, so the committee can finish on Y.
+func TestConsensusJustifiedPreprepareOverridesOlderLock(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b, d := s.validators[0], s.validators[1], s.validators[3]
+		x := a.proposal(1)
+		y := b.alternative(x)
+
+		// Round 0: only D reaches the PREPARE quorum for X, and its COMMIT is lost.
+		dropPeers(s, bft.MsgPrepare, all, s.nodes(0, 1, 2), 0)
+		s.drop(bft.MsgCommit, s.nodes(3), all, 0)
+		s.advanceConsensus(1, all)
+		d.assertHashLocked(x.Hash())
+		for _, n := range s.nodes(0, 1, 2) {
+			n.assertHashLocked(common.Hash{})
+		}
+
+		// Round 1: B does not hear D's claim, proposes Y, and A/B/C lock Y@1.
+		s.drop(bft.MsgRoundChange, s.nodes(3), s.nodes(1), 1)
+		s.modify(bft.MsgPreprepare, b, all, y)
+		s.drop(bft.MsgCommit, s.nodes(0, 1, 2), all, 1)
+		s.timeout(all)
+		settleConsensus(s, 1)
+		for _, n := range s.nodes(0, 1, 2) {
+			n.assertHashLocked(y.Hash())
+			require.Equal(t, int64(1), n.core.current.LockedRound().Int64())
+		}
+		d.assertHashLocked(x.Hash())
+		require.Zero(t, d.core.current.LockedRound().Sign())
+
+		// Round 2: C re-proposes Y with the r1 certificate. Hold the votes to D
+		// so its adoption is observable before the height completes.
+		s.delay(bft.MsgPrepare, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.delay(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.timeout(s.nodes(0, 1, 2))
+		settleConsensus(s, 1)
+		require.Equal(t, y.Hash(), sentPreprepare(t, s, s.validators[2], 1, 2).Proposal.Hash())
+		d.assertHashLocked(y.Hash())
+		require.Equal(t, int64(1), d.core.current.LockedRound().Int64())
+		s.message(d, bft.MsgPrepare, 1, 2)
+
+		s.release(bft.MsgPrepare, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.release(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.advanceConsensus(1)
+		for _, n := range all {
+			require.Equal(t, y.Hash(), n.assertCommitted(1, 2).Hash())
+		}
+	})
+}
+
+// TestConsensusOlderCertificateDoesNotOverrideNewerLock checks the inverse: a
+// node locked on Y@1 keeps that lock when the proposer re-proposes a different
+// value X justified only by an older X@0 certificate, and asks for a new round.
+func TestConsensusOlderCertificateDoesNotOverrideNewerLock(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b, c, d := s.validators[0], s.validators[1], s.validators[2], s.validators[3]
+		x := a.proposal(1)
+		y := b.alternative(x)
+
+		// Round 0: only A locks X.
+		dropPeers(s, bft.MsgPrepare, all, s.nodes(1, 2, 3), 0)
+		s.drop(bft.MsgCommit, s.nodes(0), all, 0)
+		s.advanceConsensus(1, all)
+		a.assertHashLocked(x.Hash())
+
+		// Round 1: B does not hear A's claim and proposes Y; only D locks Y@1.
+		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(1), 1)
+		s.modify(bft.MsgPreprepare, b, all, y)
+		dropPeers(s, bft.MsgPrepare, all, s.nodes(0, 1, 2), 1)
+		s.drop(bft.MsgCommit, s.nodes(3), all, 1)
+		s.timeout(all)
+		settleConsensus(s, 1)
+		d.assertHashLocked(y.Hash())
+		require.Equal(t, int64(1), d.core.current.LockedRound().Int64())
+
+		// Round 2: C's quorum {A, B, C} carries only A's X@0 claim, so C
+		// re-proposes X. D must keep its newer lock and request round 3.
+		s.drop(bft.MsgRoundChange, s.nodes(3), s.nodes(2), 2)
+		s.timeout(s.nodes(1, 2, 3))
+		settleConsensus(s, 1)
+		preprepare := sentPreprepare(t, s, c, 1, 2)
+		require.Equal(t, x.Hash(), preprepare.Proposal.Hash())
+		d.assertHashLocked(y.Hash())
+		require.Equal(t, int64(1), d.core.current.LockedRound().Int64())
+		s.message(d, bft.MsgRoundChange, 1, 3)
+	})
+}
+
+// TestConsensusRoundChangeCarriesCommitVoteCertificate checks a certificate in
+// which a COMMIT counts toward the prepared quorum, end to end: the claimant's
+// ROUND CHANGE is admitted by a peer, a round-bound seal for another round is
+// rejected, and the recovery PRE-PREPARE carries the COMMIT vote.
+func TestConsensusRoundChangeCarriesCommitVoteCertificate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b, c, d := s.validators[0], s.validators[1], s.validators[2], s.validators[3]
+		x := a.proposal(1)
+
+		// Round 0: nobody reaches a PREPARE quorum. D holds PREPAREs from C and
+		// itself, then a COMMIT from A completes its lock. D's COMMIT is lost,
+		// so D is the only claimant.
+		dropPeers(s, bft.MsgPrepare, all, s.nodes(0, 1, 2), 0)
+		s.drop(bft.MsgPrepare, s.nodes(0, 1), s.nodes(3), 0)
+		s.drop(bft.MsgCommit, s.nodes(3), all, 0)
+		s.advanceConsensus(1, all)
+		d.assertHashLocked(common.Hash{})
+		d.receive(a.message(bft.MsgCommit, x, 0), nil)
+		d.assertHashLocked(x.Hash())
+		cert := d.core.current.PreparedCertificate()
+		require.NotNil(t, cert)
+		require.True(t, slices.ContainsFunc(cert.Messages, func(m *bft.Message) bool { return m.Code == bft.MsgCommit }))
+
+		// A seal over another round byte, re-signed by A, must fail verification.
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
+		forged := *cert
+		forged.Messages = slices.Clone(cert.Messages)
+		for i, vote := range forged.Messages {
+			if vote.Code != bft.MsgCommit {
+				continue
+			}
+			var commit bft.Commit
+			require.NoError(t, vote.Decode(&commit))
+			var err error
+			commit.CommittedSeal, err = a.backend.sealer.MakeCommittedSealFromHashWithRound(x.Hash(), 1)
+			require.NoError(t, err)
+			reSealed := *vote
+			reSealed.Msg, err = bft.Encode(&commit)
+			require.NoError(t, err)
+			unsigned, err := reSealed.PayloadNoSig()
+			require.NoError(t, err)
+			reSealed.Signature, err = a.backend.Sign(unsigned)
+			require.NoError(t, err)
+			forged.Messages[i] = &reSealed
+		}
+		b.reject(signedRoundChange(t, d, 1, claim, &forged), bft.ErrInvalidMessage)
+
+		// A peer admits the genuine certificate.
+		c.receive(signedRoundChange(t, d, 1, claim, cert), errIgnored)
+		c.assertRoundChangeCount(1, 1)
+
+		// Round 1: B's quorum {B, C, D} carries D's claim, so B re-proposes X
+		// with D's mixed vote set.
+		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(1), 1)
+		s.timeout(all)
+		settleConsensus(s, 1)
+		preprepare := sentPreprepare(t, s, b, 1, 1)
+		require.Equal(t, x.Hash(), preprepare.Proposal.Hash())
+		require.True(t, slices.ContainsFunc(preprepare.PreparedMessages, func(m *bft.Message) bool {
+			return m.Code == bft.MsgCommit && m.Address == a.backend.Address()
+		}))
+		s.advanceConsensus(1)
+		for _, n := range all {
+			require.Equal(t, x.Hash(), n.assertCommitted(1, 1).Hash())
+		}
+	})
+}
+
+// dropPeers drops code on every route from a sender in from to a different
+// node in to. Self-delivery is kept: a node forwards a message to its peers
+// only after handling it locally.
+func dropPeers(s *scenarioNet, code uint64, from, to []*validator, round uint64) {
+	s.t.Helper()
+	for _, sender := range from {
+		for _, recipient := range to {
+			if sender != recipient {
+				s.drop(code, []*validator{sender}, []*validator{recipient}, round)
+			}
+		}
+	}
+}
+
+// settleConsensus delivers queued messages and worker requests for height
+// without requiring the height to commit.
+func settleConsensus(s *scenarioNet, height uint64) {
+	s.t.Helper()
+	for steps := 0; len(s.pendingDeliveries) > 0 || s.requestProposal(height); steps++ {
+		require.Less(s.t, steps, maxScenarioSteps, "consensus did not quiesce")
+		s.step()
+	}
+}
+
 // splitLock reproduces the round-0 split lock used by the tests above: C/D
 // lock X, B (the round-1 proposer) saw only Y, and A's COMMIT is withheld.
 func splitLock(t *testing.T) (s *scenarioNet, x *types.Block) {
@@ -773,6 +962,219 @@ func TestConsensusRoundChangeRejectsUnboundJustification(t *testing.T) {
 		// a lone future-round message is counted but reported as ignored.
 		receiver.receive(signedRoundChange(t, attacker, 2, claim, cert), errIgnored)
 		receiver.assertRoundChangeCount(2, 1)
+	})
+}
+
+// TestConsensusRoundChangeCachesPreparedEvidenceOnce ensures repeated claims
+// retain only compact signed ROUND CHANGEs. The prepared block and quorum of
+// votes are cached once per exact prepared claim, even across target rounds,
+// and changing only the unsigned attachment cannot trigger verification again.
+func TestConsensusRoundChangeCachesPreparedEvidenceOnce(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		sender, receiver := s.validators[0], s.validators[1]
+		cert := s.validators[2].core.current.PreparedCertificate()
+		require.NotNil(t, cert)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
+
+		first := signedRoundChange(t, sender, 2, claim, cert)
+		receiver.receive(first, errIgnored)
+		require.Len(t, receiver.core.preparedBlocks, 1)
+		require.Len(t, receiver.core.preparedCertificates, 1)
+		require.Equal(t, x.Hash(), receiver.core.preparedBlocks[x.Hash()].Hash())
+		for _, cached := range receiver.core.preparedCertificates {
+			require.Same(t, cached.Proposal, receiver.core.preparedBlocks[x.Hash()])
+		}
+		require.Len(t, receiver.core.roundChangeSet.Values(big.NewInt(2)), 1)
+		require.Empty(t, receiver.core.roundChangeSet.Values(big.NewInt(2))[0].Evidence)
+
+		// Justification is excluded from the ROUND CHANGE signature. A relay may
+		// replace it, but the already admitted signed message must be ignored
+		// before the replacement is decoded or cryptographically verified.
+		var duplicate bft.Message
+		require.NoError(t, duplicate.FromPayload(first.Payload, nil))
+		duplicate.Evidence = []byte{0xc0}
+		payload, err := duplicate.Payload()
+		require.NoError(t, err)
+		receiver.receive(istanbul.MessageEvent{Hash: first.Hash, Payload: payload}, errIgnored)
+
+		// New target rounds may carry the same prepared claim, but must reuse its
+		// single cached block and vote set rather than multiplying the evidence.
+		for round := uint64(3); round <= 5; round++ {
+			receiver.receive(signedRoundChange(t, sender, round, claim, cert), errIgnored)
+			stored := receiver.core.roundChangeSet.Values(new(big.Int).SetUint64(round))
+			require.Len(t, stored, 1)
+			require.Empty(t, stored[0].Evidence)
+		}
+		require.Len(t, receiver.core.preparedBlocks, 1)
+		require.Len(t, receiver.core.preparedCertificates, 1)
+	})
+}
+
+// TestConsensusRoundChangeRejectsCachedClaimNotBeforeItsRound checks that a
+// cached certificate does not bypass the claim rules. A claim must precede the
+// ROUND CHANGE view, or the proposer that selects it cannot justify its round.
+func TestConsensusRoundChangeRejectsCachedClaimNotBeforeItsRound(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		x := s.validators[0].proposal(1)
+		receiver := s.validators[3]
+		claim := &bft.PreparedClaim{Round: big.NewInt(1), Digest: x.Hash()}
+		receiver.receive(signedRoundChange(t, s.validators[0], 2, claim, preparedCertificate(t, s.nodes(0, 1, 2), x, 1)), errIgnored)
+		require.Len(t, receiver.core.preparedCertificates, 1)
+
+		// The claim hits the cache, so the junk attachment is never decoded.
+		for _, round := range []uint64{0, 1} {
+			receiver.reject(signedRoundChangeAt(t, s.validators[1], 1, round, claim, []byte{0xc0}), bft.ErrInvalidMessage)
+		}
+	})
+}
+
+// TestConsensusRoundChangeRejectsUnverifiedEvidenceForCachedClaim checks that
+// a cached certificate does not vouch for other Evidence bytes. A relay can
+// replace the unsigned attachment of another sender's ROUND CHANGE, and an
+// accepted message is relayed as received, so only bytes already verified for
+// the claim may skip verification.
+func TestConsensusRoundChangeRejectsUnverifiedEvidenceForCachedClaim(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		x := s.validators[0].proposal(1)
+		receiver := s.validators[3]
+		cert := preparedCertificate(t, s.nodes(0, 1, 2), x, 0)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
+		receiver.receive(signedRoundChange(t, s.validators[0], 1, claim, cert), errIgnored)
+		require.Len(t, receiver.core.preparedCertificates, 1)
+
+		receiver.reject(signedRoundChangeAt(t, s.validators[1], 1, 1, claim, []byte{0xc0}), bft.ErrInvalidMessage)
+		receiver.receive(signedRoundChange(t, s.validators[1], 1, claim, cert), errIgnored)
+		receiver.assertRoundChangeCount(1, 2)
+	})
+}
+
+// TestConsensusRoundChangeRejectsCertificateBodyWithoutBlobSidecar checks the
+// body rules that votes do not bind. TxHash excludes blob sidecars, so a
+// certificate whose blob transaction lost its sidecar keeps the voted hash.
+func TestConsensusRoundChangeRejectsCertificateBodyWithoutBlobSidecar(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		sender, receiver := s.validators[0], s.validators[3]
+		txs := types.Transactions{types.NewTx(&types.TxInternalDataEthereumBlob{
+			GasFeeCap:  uint256.NewInt(1),
+			GasLimit:   21000,
+			BlobFeeCap: uint256.NewInt(1),
+			BlobHashes: []common.Hash{{0x01}},
+			V:          big.NewInt(0),
+			R:          big.NewInt(1),
+			S:          big.NewInt(1),
+		})}
+		header := sender.proposal(1).Header()
+		header.TxHash = types.DeriveTransactionsRoot(txs, header.Number)
+		stripped := types.NewBlockWithHeader(header).WithBody(txs)
+		cert := preparedCertificate(t, s.nodes(0, 1, 2), stripped, 0)
+
+		target := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(1)}
+		require.ErrorIs(t, receiver.core.verifyPreparedCertificate(cert, target), istanbul.ErrNoBlobSidecarForBlobTx)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: stripped.Hash()}
+		receiver.reject(signedRoundChange(t, sender, 1, claim, cert), bft.ErrInvalidMessage)
+		require.Empty(t, receiver.core.preparedCertificates)
+	})
+}
+
+// TestConsensusRecoveryUsesHighestRoundVotesForSameDigest checks that claims
+// for one digest at different rounds share the cached block but keep their own
+// vote sets, and the proposer attaches the votes of the highest claimed round.
+// Receivers verify PreparedMessages at that round, so lower-round votes would
+// make the recovery PRE-PREPARE invalid.
+func TestConsensusRecoveryUsesHighestRoundVotesForSameDigest(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		x := s.validators[0].proposal(1)
+		receiver := s.validators[3]
+		voters := s.nodes(0, 1, 2)
+		lower, higher := preparedCertificate(t, voters, x, 0), preparedCertificate(t, voters, x, 1)
+		for _, ev := range []istanbul.MessageEvent{
+			signedRoundChange(t, s.validators[0], 2, &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}, lower),
+			signedRoundChange(t, s.validators[1], 2, &bft.PreparedClaim{Round: big.NewInt(1), Digest: x.Hash()}, higher),
+			signedRoundChange(t, s.validators[2], 2, nil, nil),
+		} {
+			err := receiver.core.handleMsg(ev.Payload)
+			synctest.Wait()
+			s.checkFailures()
+			if err != nil {
+				require.ErrorIs(t, err, errIgnored)
+			}
+		}
+		require.Len(t, receiver.core.preparedBlocks, 1)
+		require.Len(t, receiver.core.preparedCertificates, 2)
+		receiver.assertView(1, 2, false)
+
+		// The quorum moved the receiver to round 2, which keeps both caches.
+		target := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
+		_, prepared, err := receiver.core.roundChangeJustification(receiver.core.roundChangeCertificate, target)
+		require.NoError(t, err)
+		require.NotNil(t, prepared)
+		require.Equal(t, int64(1), prepared.View.Round.Int64())
+		require.Same(t, receiver.core.preparedBlocks[x.Hash()], prepared.Proposal)
+		require.Len(t, prepared.Messages, len(higher.Messages))
+		for i, vote := range prepared.Messages {
+			require.Equal(t, higher.Messages[i].Msg, vote.Msg)
+		}
+	})
+}
+
+// preparedCertificate builds a certificate for proposal at round from PREPARE
+// votes signed by voters.
+func preparedCertificate(t *testing.T, voters []*validator, proposal *types.Block, round uint64) *bft.PreparedCertificate {
+	messages := make([]*bft.Message, 0, len(voters))
+	for _, voter := range voters {
+		var message bft.Message
+		require.NoError(t, message.FromPayload(voter.message(bft.MsgPrepare, proposal, round).Payload, nil))
+		messages = append(messages, &message)
+	}
+	return &bft.PreparedCertificate{
+		View:     &bft.View{Sequence: proposal.Number(), Round: new(big.Int).SetUint64(round)},
+		Proposal: proposal,
+		Messages: messages,
+	}
+}
+
+// TestPreparedCertificateAcceptsCommitVotes covers the certificate branch in
+// which some quorum members contribute COMMIT rather than PREPARE envelopes.
+// The outer vote signature and the round-bound committed seal must both match.
+func TestPreparedCertificateAcceptsCommitVotes(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		proposal := s.validators[0].proposal(1)
+		messages := make([]*bft.Message, 0, 3)
+		for i, code := range []uint64{bft.MsgPrepare, bft.MsgPrepare, bft.MsgCommit} {
+			event := s.validators[i].message(code, proposal, 0)
+			var message bft.Message
+			require.NoError(t, message.FromPayload(event.Payload, nil))
+			messages = append(messages, &message)
+		}
+		cert := &bft.PreparedCertificate{
+			View:     &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)},
+			Proposal: proposal,
+			Messages: messages,
+		}
+		target := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(1)}
+		require.NoError(t, s.validators[3].core.verifyPreparedCertificate(cert, target))
+
+		wrongCommit := *messages[2]
+		var commit bft.Commit
+		require.NoError(t, wrongCommit.Decode(&commit))
+		var err error
+		commit.CommittedSeal, err = s.validators[2].backend.sealer.MakeCommittedSealFromHashWithRound(proposal.Hash(), 1)
+		require.NoError(t, err)
+		wrongCommit.Msg, err = bft.Encode(&commit)
+		require.NoError(t, err)
+		unsigned, err := wrongCommit.PayloadNoSig()
+		require.NoError(t, err)
+		wrongCommit.Signature, err = s.validators[2].backend.Sign(unsigned)
+		require.NoError(t, err)
+		badCert := *cert
+		badCert.Messages = []*bft.Message{messages[0], messages[1], &wrongCommit}
+		require.ErrorContains(t, s.validators[3].core.verifyPreparedCertificate(&badCert, target), "invalid committed seal")
 	})
 }
 

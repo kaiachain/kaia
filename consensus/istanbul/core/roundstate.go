@@ -165,14 +165,20 @@ func (s *roundState) LockedRound() *big.Int {
 	return new(big.Int).Set(s.preparedCertificate.View.Round)
 }
 
-// AdoptPreparedCertificate updates the local lock from an independently
-// verified certificate. This is used when the node did not observe the
-// original PREPARE quorum itself but learns it during round change.
+// AdoptPreparedCertificate updates the local lock from a strictly newer,
+// independently verified certificate. This is used when the node did not
+// observe the original PREPARE quorum itself but learns it during round change.
+// Keeping the comparison with the mutation prevents any caller from
+// accidentally downgrading a newer local lock.
 func (s *roundState) AdoptPreparedCertificate(cert *bft.PreparedCertificate) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if cert == nil || cert.Proposal == nil {
+	if cert == nil || cert.View == nil || cert.View.Round == nil || cert.Proposal == nil {
+		return
+	}
+	if s.preparedCertificate != nil && s.preparedCertificate.View != nil &&
+		s.preparedCertificate.View.Round != nil && cert.View.Round.Cmp(s.preparedCertificate.View.Round) <= 0 {
 		return
 	}
 	s.lockedHash = cert.Proposal.Hash()
