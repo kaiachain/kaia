@@ -167,10 +167,15 @@ type PreparedCertificate struct {
 }
 
 // PreparedClaim is the signed summary of the PreparedCertificate a ROUND
-// CHANGE sender holds: the round in which it prepared and the proposal hash.
+// CHANGE sender holds: the round in which it prepared, the proposal hash, and
+// the Keccak-256 hash of the encoded certificate attached as Evidence. Evidence
+// stays outside the signature so that a PRE-PREPARE can embed the ROUND CHANGE
+// without it; EvidenceHash binds the attachment to its signer, so a relay cannot
+// substitute different Evidence for a signed claim.
 type PreparedClaim struct {
-	Round  *big.Int
-	Digest common.Hash
+	Round        *big.Int
+	Digest       common.Hash
+	EvidenceHash common.Hash
 }
 
 // Prepare is the PREPARE payload.

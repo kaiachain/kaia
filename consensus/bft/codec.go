@@ -46,7 +46,7 @@ var ErrInvalidMessage = errors.New("invalid message")
 
 // Message is the envelope transmitted between BFT validators. PrevHash, Code,
 // Msg and Address, in that order, are authenticated by Signature. Evidence is deliberately excluded from that
-// signature and must be independently bound to the signed claim carried by Msg.
+// signature; it must hash to the EvidenceHash of the signed claim carried by Msg.
 type Message struct {
 	PrevHash  common.Hash
 	Code      uint64

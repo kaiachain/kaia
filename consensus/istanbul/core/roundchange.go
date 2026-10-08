@@ -108,8 +108,9 @@ func (c *core) sendRoundChange(round *big.Int) {
 			return
 		}
 		rc.Prepared = &bft.PreparedClaim{
-			Round:  new(big.Int).Set(preparedCertificate.View.Round),
-			Digest: preparedCertificate.Proposal.Hash(),
+			Round:        new(big.Int).Set(preparedCertificate.View.Round),
+			Digest:       preparedCertificate.Proposal.Hash(),
+			EvidenceHash: crypto.Keccak256Hash(evidence),
 		}
 	}
 
@@ -145,11 +146,12 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 	if c.backend != nil && !permissionless && (len(msg.Evidence) != 0 || rc.Prepared != nil) {
 		return bft.ErrInvalidMessage
 	}
-	// The full prepared certificate is expensive to verify, but its presence
-	// must match the signed claim before checkMessage can return errFutureMessage
-	// and retain the envelope. This rejects a large, unsigned attachment with no
-	// claim without doing certificate decoding or signature recovery.
-	if permissionless && !roundChangeEvidenceShapeValid(msg, rc) {
+	// The full prepared certificate is expensive to verify, but the Evidence must
+	// match the hash its sender signed before checkMessage can return
+	// errFutureMessage and retain the envelope. A relay therefore cannot attach
+	// different Evidence to a signed claim, and an attachment without a claim is
+	// rejected, both without certificate decoding or signature recovery.
+	if permissionless && !roundChangeEvidenceMatchesClaim(msg, rc) {
 		return bft.ErrInvalidMessage
 	}
 
@@ -248,10 +250,10 @@ func (c *core) verifyRoundChangeEvidence(msg *bft.Message, rc *bft.RoundChange) 
 	if rc.View.Round == nil || rc.Prepared.Round.Cmp(rc.View.Round) >= 0 || common.EmptyHash(rc.Prepared.Digest) {
 		return nil, errors.New("prepared claim is not before the round-change view")
 	}
-	// Skip verification only for bytes already verified for this claim. The
-	// handler relays the received payload, so accepting other bytes for a cached
-	// claim would forward an unverified attachment.
-	verified := verifiedEvidenceKey{claim: key, hash: crypto.Keccak256Hash(msg.Evidence)}
+	// Skip verification only for Evidence already verified for this claim. The
+	// signed EvidenceHash names the bytes, so a signer that attaches other bytes
+	// to the same claim is verified again rather than relayed unchecked.
+	verified := verifiedEvidenceKey{claim: key, hash: rc.Prepared.EvidenceHash}
 	if cert := c.preparedCertificates[key]; cert != nil {
 		if _, ok := c.verifiedEvidence[verified]; ok {
 			return cert, nil
@@ -276,8 +278,14 @@ func (c *core) verifyRoundChangeEvidence(msg *bft.Message, rc *bft.RoundChange) 
 	return c.rememberPreparedCertificate(cert), nil
 }
 
-func roundChangeEvidenceShapeValid(msg *bft.Message, rc *bft.RoundChange) bool {
-	return (rc.Prepared == nil) == (len(msg.Evidence) == 0)
+// roundChangeEvidenceMatchesClaim reports whether msg carries Evidence exactly
+// when rc claims a prepared value, and whether that Evidence hashes to the
+// EvidenceHash the sender signed.
+func roundChangeEvidenceMatchesClaim(msg *bft.Message, rc *bft.RoundChange) bool {
+	if rc.Prepared == nil {
+		return len(msg.Evidence) == 0
+	}
+	return len(msg.Evidence) != 0 && crypto.Keccak256Hash(msg.Evidence) == rc.Prepared.EvidenceHash
 }
 
 func preparedKey(sequence *big.Int, claim *bft.PreparedClaim) (preparedEvidenceKey, error) {
@@ -561,6 +569,7 @@ func (c *core) roundChangeJustification(messages []*bft.Message, target *bft.Vie
 	// signed ROUND CHANGE carrying that claim justifies the lock.
 	if own := c.current.PreparedCertificate(); own != nil && own.View.Sequence.Cmp(target.Sequence) == 0 &&
 		own.View.Round.Cmp(target.Round) < 0 && (highest == nil || own.View.Round.Cmp(highest.View.Round) > 0) {
+		own = c.rememberPreparedCertificate(own)
 		ownRoundChange, err := c.signedRoundChange(target, own)
 		if err != nil {
 			return nil, nil, err
@@ -575,7 +584,7 @@ func (c *core) roundChangeJustification(messages []*bft.Message, target *bft.Vie
 		if !replaced {
 			certificate = append(certificate, ownRoundChange)
 		}
-		highest = c.rememberPreparedCertificate(own)
+		highest = own
 	}
 	if _, _, err := c.verifyRoundChangeCertificate(certificate, target); err != nil {
 		return nil, nil, err
@@ -586,9 +595,17 @@ func (c *core) roundChangeJustification(messages []*bft.Message, target *bft.Vie
 // signedRoundChange signs this node's ROUND CHANGE for target claiming cert,
 // without Evidence, for embedding in a PRE-PREPARE justification.
 func (c *core) signedRoundChange(target *bft.View, cert *bft.PreparedCertificate) (*bft.Message, error) {
+	evidence, err := bft.Encode(cert)
+	if err != nil {
+		return nil, err
+	}
 	payload, err := bft.Encode(&bft.RoundChange{
-		View:     &bft.View{Sequence: new(big.Int).Set(target.Sequence), Round: new(big.Int).Set(target.Round)},
-		Prepared: &bft.PreparedClaim{Round: new(big.Int).Set(cert.View.Round), Digest: cert.Proposal.Hash()},
+		View: &bft.View{Sequence: new(big.Int).Set(target.Sequence), Round: new(big.Int).Set(target.Round)},
+		Prepared: &bft.PreparedClaim{
+			Round:        new(big.Int).Set(cert.View.Round),
+			Digest:       cert.Proposal.Hash(),
+			EvidenceHash: crypto.Keccak256Hash(evidence),
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -618,9 +635,10 @@ type roundChangeSet struct {
 	mu                  *sync.Mutex
 }
 
-// Check performs cheap, non-mutating admission checks before an unsigned
-// certificate is decoded and verified. Identical signed ROUND CHANGEs are
-// ignored even when a relay changes only the attachment.
+// Check performs cheap, non-mutating admission checks before the attached
+// certificate is decoded and verified. A sender's ROUND CHANGE for a round is
+// replaced only by one with a strictly higher claim; anything else, including
+// an identical copy, is ignored.
 func (rcs *roundChangeSet) Check(currentRound, messageRound *big.Int, msg *bft.Message) error {
 	if !messageRound.IsUint64() {
 		return bft.ErrInvalidMessage

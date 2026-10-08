@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/require"
 )
@@ -839,7 +840,15 @@ func postPermissionlessRoundChange(t *testing.T, sender *validator, sequence, ro
 	return istanbul.MessageEvent{Hash: msg.PrevHash, Payload: payload}
 }
 
+// roundChangeMessageAt builds an unsigned ROUND CHANGE. A claim without an
+// EvidenceHash is bound to evidence, as an honest sender would sign it; set the
+// hash explicitly to sign a claim for other bytes.
 func roundChangeMessageAt(t *testing.T, sender *validator, sequence, round uint64, claim *bft.PreparedClaim, evidence []byte) *bft.Message {
+	if claim != nil && claim.EvidenceHash == (common.Hash{}) && len(evidence) != 0 {
+		bound := *claim
+		bound.EvidenceHash = crypto.Keccak256Hash(evidence)
+		claim = &bound
+	}
 	encoded, err := bft.Encode(&bft.RoundChange{
 		View:     &bft.View{Sequence: new(big.Int).SetUint64(sequence), Round: new(big.Int).SetUint64(round)},
 		Prepared: claim,
@@ -953,10 +962,21 @@ func TestConsensusRoundChangeRejectsUnboundEvidence(t *testing.T) {
 		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
 
 		// Same header and votes, different transactions: the block hash is
-		// unchanged, so only the body check can catch it.
-		tx := types.NewTransaction(0, common.Address{}, big.NewInt(0), 21000, big.NewInt(0), nil)
+		// unchanged, so only the body check can catch it. The transaction is
+		// signed so that the Evidence decodes and reaches that check.
+		txKey, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		tx, err := types.SignTx(types.NewTransaction(0, common.Address{}, big.NewInt(0), 21000, big.NewInt(0), nil),
+			types.LatestSignerForChainID(s.config.chainConfig.ChainID), txKey)
+		require.NoError(t, err)
 		forged := &bft.PreparedCertificate{View: cert.View, Proposal: cert.Proposal.WithBody(types.Transactions{tx}), Messages: cert.Messages}
 		require.Equal(t, x.Hash(), forged.Proposal.Hash())
+		forgedMsg, err := receiver.backend.decodeMessage(signedRoundChange(t, attacker, 2, claim, forged).Payload, nil)
+		require.NoError(t, err)
+		var forgedRC *bft.RoundChange
+		require.NoError(t, forgedMsg.Decode(&forgedRC))
+		_, err = receiver.core.verifyRoundChangeEvidence(forgedMsg, forgedRC)
+		require.ErrorIs(t, err, istanbul.ErrMismatchTxhashes, "the forged body reaches the body check")
 
 		for _, tc := range []struct {
 			name  string
@@ -1011,15 +1031,17 @@ func TestConsensusRoundChangeCachesPreparedEvidenceOnce(t *testing.T) {
 			return validate(data, sig)
 		}
 
-		// Evidence is excluded from the ROUND CHANGE signature. A relay may
-		// replace it, but the already admitted signed message must be ignored
-		// before the replacement is decoded or cryptographically verified.
+		// Evidence is excluded from the ROUND CHANGE signature but bound by the
+		// signed EvidenceHash. A relay that replaces it is rejected before the
+		// replacement is decoded or any certificate signature is recovered.
 		var duplicate bft.Message
 		require.NoError(t, duplicate.FromPayload(first.Payload, nil))
 		duplicate.Evidence = []byte{0xc0}
 		payload, err := duplicate.Payload()
 		require.NoError(t, err)
-		receiver.receive(istanbul.MessageEvent{Hash: first.Hash, Payload: payload}, errIgnored)
+		before := recoveries
+		receiver.reject(istanbul.MessageEvent{Hash: first.Hash, Payload: payload}, bft.ErrInvalidMessage)
+		require.Equal(t, before+1, recoveries, "only the envelope signature is recovered")
 
 		// New target rounds may carry the same prepared claim, but must reuse its
 		// single cached block and vote set rather than multiplying the evidence.
@@ -1146,6 +1168,80 @@ func TestConsensusRecoveryUsesHighestRoundVotesForSameDigest(t *testing.T) {
 		for i, vote := range prepared.Messages {
 			require.Equal(t, higher.Messages[i].Msg, vote.Msg)
 		}
+	})
+}
+
+// TestConsensusEvidenceVariantsDoNotExhaustSignerBacklog checks that a relay
+// cannot vary the unsigned Evidence of one signed future-height ROUND CHANGE
+// to fill its signer's backlog allowance. Every variant fails the signed
+// EvidenceHash before it is retained, so the genuine copy and a later vote
+// from the same signer are still retained.
+func TestConsensusEvidenceVariantsDoNotExhaustSignerBacklog(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		sender, receiver := s.validators[0], s.validators[3]
+		// The claim's content is irrelevant until height 2 is reached; only its
+		// binding to the attached bytes is checked on receipt.
+		evidence := []byte{0xaa, 0xbb}
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: common.HexToHash("0xd1"), EvidenceHash: crypto.Keccak256Hash(evidence)}
+		genuine := signedRoundChangeAt(t, sender, 2, 1, claim, evidence)
+
+		var signed bft.Message
+		require.NoError(t, signed.FromPayload(genuine.Payload, nil))
+		for i := range maxBacklogMessagesPerSender {
+			variant := signed
+			variant.Evidence = []byte{byte(i)}
+			payload, err := variant.Payload()
+			require.NoError(t, err)
+			receiver.reject(istanbul.MessageEvent{Hash: genuine.Hash, Payload: payload}, bft.ErrInvalidMessage)
+		}
+		receiver.assertBacklogCount(0)
+
+		receiver.receive(genuine, errFutureMessage)
+		encoded, err := bft.Encode(&bft.Prepare{View: &bft.View{Sequence: big.NewInt(2), Round: big.NewInt(0)}, Digest: common.HexToHash("0xd2")})
+		require.NoError(t, err)
+		prepare, err := sender.core.finalizeMessage(&bft.Message{PrevHash: common.HexToHash("0x01"), Code: bft.MsgPrepare, Msg: encoded})
+		require.NoError(t, err)
+		receiver.receive(istanbul.MessageEvent{Payload: prepare}, errFutureMessage)
+		receiver.assertBacklogCount(2)
+	})
+}
+
+// TestConsensusReplaysFutureRoundChangeWithCertificate covers the full
+// future-height path of a prepared ROUND CHANGE: a node one height behind
+// retains it in the backlog, and once it reaches that height the replayed
+// message enters the round-change set with its certificate verified and cached.
+func TestConsensusReplaysFutureRoundChangeWithCertificate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		sender, receiver := s.validators[0], s.validators[3]
+		// Hold the other COMMITs to the receiver so it stays at height 1.
+		s.delay(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3))
+		s.advanceConsensus(1, s.nodes(3))
+		receiver.assertUncommitted(1)
+		require.Equal(t, uint64(1), sender.head().NumberU64())
+
+		next := sender.proposal(1)
+		require.Equal(t, uint64(2), next.NumberU64())
+		cert := preparedCertificate(t, s.nodes(0, 1, 2), next, 0)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: next.Hash()}
+		receiver.receive(signedRoundChange(t, sender, 1, claim, cert), errFutureMessage)
+		receiver.assertBacklogCount(1)
+		require.NotZero(t, receiver.core.backlogEvidenceBytes[sender.backend.Address()])
+
+		s.release(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3))
+		synctest.Wait()
+		receiver.assertCommitted(1)
+		receiver.assertView(2, 0, false)
+		receiver.assertBacklogCount(0)
+		require.Zero(t, receiver.core.backlogTotalEvidenceBytes)
+
+		stored := receiver.core.roundChangeSet.Values(big.NewInt(1))
+		require.Len(t, stored, 1)
+		require.Equal(t, sender.backend.Address(), stored[0].Address)
+		require.Empty(t, stored[0].Evidence)
+		key := preparedEvidenceKey{sequence: 2, round: 0, digest: next.Hash()}
+		require.NotNil(t, receiver.core.preparedCertificates[key], "the replayed certificate is verified and cached")
 	})
 }
 

@@ -51,11 +51,10 @@ const (
 	maxBacklogMessagesPerSender = 128
 
 	// A single sender may retain at most one transport-sized allocation across
-	// its unsigned ROUND CHANGE attachments. Small signed messages do not consume
-	// this budget, so a relayed attachment cannot crowd out the sender's future
-	// PREPARE or COMMIT messages. Because the attachment is unsigned, a relay can
-	// consume this evidence allowance; the consequence is intentionally limited
-	// to opportunistic future-height certificate retention.
+	// its ROUND CHANGE attachments. Small signed messages do not consume this
+	// budget, so large attachments cannot crowd out the sender's future PREPARE
+	// or COMMIT messages. Each attachment must match the EvidenceHash its sender
+	// signed, so only the sender itself can spend this allowance.
 	maxBacklogEvidenceBytesPerSender uint64 = maxConsensusP2PMessageBytes
 
 	// Bound aggregate attachment memory even when many qualified validators send
