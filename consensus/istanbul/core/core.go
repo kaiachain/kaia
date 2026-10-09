@@ -29,6 +29,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/bft"
@@ -96,19 +97,23 @@ func calcFaultTolerance(qualifiedLen int, committeeSize uint64) int {
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 	c := &core{
-		config:             config,
-		address:            backend.Address(),
-		state:              StateAcceptRequest,
-		handlerWg:          new(sync.WaitGroup),
-		logger:             logger.NewWith("address", backend.Address()),
-		backend:            backend,
-		backlogs:           make(map[common.Address]*prque.Prque),
-		backlogsMu:         new(sync.Mutex),
-		backlogCounts:      make(map[common.Address]int),
-		backlogPreprepares: make(map[common.Address]backlogPreprepare),
-		pendingRequests:    prque.New(),
-		pendingRequestsMu:  new(sync.Mutex),
-		consensusTimestamp: time.Time{},
+		config:               config,
+		address:              backend.Address(),
+		state:                StateAcceptRequest,
+		handlerWg:            new(sync.WaitGroup),
+		logger:               logger.NewWith("address", backend.Address()),
+		backend:              backend,
+		backlogs:             make(map[common.Address]*prque.Prque),
+		backlogsMu:           new(sync.Mutex),
+		backlogCounts:        make(map[common.Address]int),
+		backlogEvidenceBytes: make(map[common.Address]uint64),
+		backlogPreprepares:   make(map[common.Address]backlogPreprepare),
+		preparedBlocks:       make(map[common.Hash]*types.Block),
+		preparedCertificates: make(map[preparedEvidenceKey]*bft.PreparedCertificate),
+		verifiedEvidence:     make(map[verifiedEvidenceKey]struct{}),
+		pendingRequests:      prque.New(),
+		pendingRequestsMu:    new(sync.Mutex),
+		consensusTimestamp:   time.Time{},
 
 		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
 		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
@@ -142,18 +147,30 @@ type core struct {
 	waitingForRoundChange bool
 	validateFn            func([]byte, []byte) (common.Address, error)
 
-	backlogs           map[common.Address]*prque.Prque
-	backlogsMu         *sync.Mutex
-	backlogCounts      map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
-	backlogPreprepares map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
+	backlogs                  map[common.Address]*prque.Prque
+	backlogsMu                *sync.Mutex
+	backlogCounts             map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
+	backlogEvidenceBytes      map[common.Address]uint64            // retained unsigned ROUND CHANGE Evidence bytes per sender
+	backlogTotalEvidenceBytes uint64                               // retained unsigned ROUND CHANGE Evidence bytes across all senders
+	backlogPreprepares        map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
 
 	current   *roundState
 	handlerWg *sync.WaitGroup
 
-	roundChangeSet    *roundChangeSet
-	roundChangeTimer  atomic.Value //*time.Timer
-	pendingRequests   *prque.Prque
-	pendingRequestsMu *sync.Mutex
+	roundChangeSet *roundChangeSet
+	// roundChangeCertificate is the compact signed ROUND CHANGE quorum that
+	// started the current round. Prepared evidence lives in the caches below.
+	roundChangeCertificate []*bft.Message
+	// Prepared evidence is deduplicated independently from ROUND CHANGE
+	// envelopes. Blocks are retained once per digest and vote sets once per
+	// exact (sequence, prepared round, digest) claim. verifiedEvidence records
+	// the Evidence bytes already verified for each claim.
+	preparedBlocks       map[common.Hash]*types.Block
+	preparedCertificates map[preparedEvidenceKey]*bft.PreparedCertificate
+	verifiedEvidence     map[verifiedEvidenceKey]struct{}
+	roundChangeTimer     atomic.Value //*time.Timer
+	pendingRequests      *prque.Prque
+	pendingRequestsMu    *sync.Mutex
 
 	consensusTimestamp time.Time
 	// the meter to record the round change rate
@@ -176,38 +193,51 @@ func (c *core) RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovMod
 	c.govModule = mGov
 }
 
+// isPermissionlessAt is the fork gate used throughout this package. It is
+// backend.IsPermissionlessAt, tolerating the nil backend of focused unit tests.
+func (c *core) isPermissionlessAt(number uint64) bool {
+	return c.backend != nil && c.backend.IsPermissionlessAt(number)
+}
+
 func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	var err error
 	// Add sender address
 	msg.Address = c.Address()
+	view, err := msg.GetView()
+	if err != nil {
+		return nil, err
+	}
+	permissionless := c.isPermissionlessAt(view.Sequence.Uint64())
 
-	// Add proof of consensus
-	msg.CommittedSeal = []byte{}
 	// Assign the CommittedSeal if it's a COMMIT message.
-	// Sign over the digest carried in the message's own Subject (the block this
+	// Sign over the digest carried in the message's own payload (the block this
 	// COMMIT votes for) rather than the current proposal. For a normal COMMIT the
 	// subject digest equals the current proposal hash, so the produced seal is
 	// unchanged; for a rebroadcast COMMIT of an old block (sendCommitForOldBlock)
 	// this keeps the seal consistent with the message's digest instead of signing
 	// the current proposal.
 	if msg.Code == bft.MsgCommit {
-		var sub *bft.Subject
-		if err = msg.Decode(&sub); err != nil {
+		var commit *bft.Commit
+		if err = msg.Decode(&commit); err != nil {
 			return nil, err
 		}
 		// Post-permissionless: bind the round into the committed seal.
-		if c.backend.IsPermissionlessAt(sub.View.Sequence.Uint64()) {
-			msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHashWithRound(sub.Digest, byte(sub.View.Round.Uint64()))
+		if permissionless {
+			commit.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHashWithRound(commit.Digest, byte(commit.View.Round.Uint64()))
 		} else {
-			msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(sub.Digest)
+			commit.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(commit.Digest)
 		}
+		if err != nil {
+			return nil, err
+		}
+		msg.Msg, err = bft.Encode(commit)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Sign message
-	data, err := msg.PayloadNoSig()
+	data, err := msg.PayloadNoSigForFork(c.isPermissionlessAt)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +247,7 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	}
 
 	// Convert to payload
-	payload, err := msg.Payload()
+	payload, err := msg.PayloadForFork(c.isPermissionlessAt)
 	if err != nil {
 		return nil, err
 	}
@@ -233,9 +263,13 @@ func (c *core) broadcast(msg *bft.Message) {
 		logger.Error("Failed to finalize message", "msg", msg, "err", err)
 		return
 	}
+	if consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+		logger.Error("Consensus message exceeds P2P size limit", "code", msg.Code, "bytes", consensusP2PMessageSize(payload))
+		return
+	}
 
 	// Broadcast payload
-	if err = c.backend.Broadcast(msg.Hash, payload); err != nil {
+	if err = c.backend.Broadcast(msg.PrevHash, payload); err != nil {
 		logger.Error("Failed to broadcast message", "msg", msg, "err", err)
 		return
 	}
@@ -263,8 +297,12 @@ func (c *core) commit() {
 	if proposal != nil {
 		committedSeals := make([][]byte, c.current.Commits.Size())
 		for i, v := range c.current.Commits.Values() {
-			committedSeals[i] = make([]byte, len(v.CommittedSeal))
-			copy(committedSeals[i][:], v.CommittedSeal[:])
+			var commit *bft.Commit
+			if err := v.Decode(&commit); err != nil {
+				c.sendNextRoundChange("commit message decoding failure")
+				return
+			}
+			committedSeals[i] = append([]byte(nil), commit.CommittedSeal...)
 		}
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
@@ -358,21 +396,34 @@ func (c *core) startNewRound(round *big.Int) {
 	// Update logger
 	logger = logger.NewWith("old_proposer", oldProposer)
 	// New snapshot for new round
-	c.updateRoundState(newView, roundChange, qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum)
+	c.updateRoundState(newView, roundChange, lastProposal.Hash(), qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum)
 	// Clear invalid ROUND CHANGE messages
-	c.roundChangeSet = newRoundChangeSet(c.current.qualified, c.current.requiredMessageCount)
+	c.roundChangeSet = newRoundChangeSet(c.current.qualified, c.current.committee.Len())
 	// Calculate new proposer
 	c.waitingForRoundChange = false
 	c.setState(StateAcceptRequest)
 	if roundChange && c.isProposer() && c.current != nil {
-		// If it is locked, propose the old proposal
-		// If we have pending request, propose pending request
-		if c.current.IsHashLocked() {
+		proposedPrepared := false
+		if c.isPermissionlessAt(newView.Sequence.Uint64()) && len(c.roundChangeCertificate) > 0 {
+			_, prepared, verifyErr := c.roundChangeJustification(c.roundChangeCertificate, newView)
+			if verifyErr != nil {
+				logger.Error("Invalid round-change certificate selected for new round", "err", verifyErr)
+				c.sendNextRoundChange("startNewRound. Invalid round-change certificate")
+				return
+			}
+			if prepared != nil {
+				c.sendPreprepare(&bft.Request{Proposal: prepared.Proposal})
+				proposedPrepared = true
+			}
+		}
+		// If it is locked, propose the old proposal.
+		// If we have pending request, propose pending request.
+		if !proposedPrepared && c.current.IsHashLocked() {
 			r := &bft.Request{
-				Proposal: c.current.Proposal(), // c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
+				Proposal: c.current.Proposal(),
 			}
 			c.sendPreprepare(r)
-		} else if c.current.pendingRequest != nil {
+		} else if !proposedPrepared && c.current.pendingRequest != nil {
 			c.sendPreprepare(c.current.pendingRequest)
 		}
 	}
@@ -396,7 +447,7 @@ func (c *core) catchUpRound(view *bft.View) {
 	c.waitingForRoundChange = true
 
 	// Need to keep block locked for round catching up
-	c.updateRoundState(view, true, c.current.qualified, c.current.committee, c.current.proposer, c.current.committeeSize, c.current.requiredMessageCount, c.current.f)
+	c.updateRoundState(view, true, c.current.parentHash, c.current.qualified, c.current.committee, c.current.proposer, c.current.committeeSize, c.current.requiredMessageCount, c.current.f)
 	c.roundChangeSet.Clear(view.Round)
 
 	newProposer, err := c.valsetModule.GetProposer(view.Sequence.Uint64(), view.Round.Uint64())
@@ -411,20 +462,35 @@ func (c *core) catchUpRound(view *bft.View) {
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
-func (c *core) updateRoundState(view *bft.View, roundChange bool,
+// parentHash is the parent of the height being decided. It is fixed for all
+// rounds of the height, so messages are compared against it rather than
+// against the live chain head.
+func (c *core) updateRoundState(view *bft.View, roundChange bool, parentHash common.Hash,
 	qualified *valset.AddressSet, committee *valset.AddressSet, proposer common.Address,
 	committeeSize uint64, requiredMessageCount, f int,
 ) {
 	// Lock only if both roundChange is true and it is locked
 	if roundChange && c.current != nil {
 		if c.current.IsHashLocked() {
-			c.current = newRoundState(view, qualified, c.current.GetLockedHash(), c.current.Preprepare, c.current.pendingRequest, c.backend.HasBadProposal)
+			c.current = newRoundState(view, qualified, c.current.GetLockedHash(), c.current.Preprepare, c.current.PreparedCertificate(), c.current.pendingRequest, c.backend.HasBadProposal)
 		} else {
-			c.current = newRoundState(view, qualified, common.Hash{}, nil, c.current.pendingRequest, c.backend.HasBadProposal)
+			c.current = newRoundState(view, qualified, common.Hash{}, nil, nil, c.current.pendingRequest, c.backend.HasBadProposal)
 		}
 	} else {
-		c.current = newRoundState(view, qualified, common.Hash{}, nil, nil, c.backend.HasBadProposal)
+		newSequence := c.current == nil || c.current.Sequence().Cmp(view.Sequence) != 0
+		c.current = newRoundState(view, qualified, common.Hash{}, nil, nil, nil, c.backend.HasBadProposal)
+		// A proposer can have already caught up to this round when the final
+		// ROUND-CHANGE message completes its quorum. startNewRound then has no
+		// round delta, but it still needs that quorum to justify its PRE-PREPARE.
+		// Only a new height makes the certificate stale.
+		if newSequence {
+			c.roundChangeCertificate = nil
+			c.preparedBlocks = make(map[common.Hash]*types.Block)
+			c.preparedCertificates = make(map[preparedEvidenceKey]*bft.PreparedCertificate)
+			c.verifiedEvidence = make(map[verifiedEvidenceKey]struct{})
+		}
 	}
+	c.current.parentHash = parentHash
 	// Update new committee state
 	c.current.qualified = qualified
 	c.current.committee = committee

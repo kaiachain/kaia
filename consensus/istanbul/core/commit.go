@@ -46,7 +46,7 @@ func (c *core) sendCommit() {
 }
 
 func (c *core) sendCommitForOldBlock(view *bft.View, digest common.Hash, prevHash common.Hash) {
-	sub := &bft.Subject{
+	sub := &proposalSubject{
 		View:     view,
 		Digest:   digest,
 		PrevHash: prevHash,
@@ -54,25 +54,25 @@ func (c *core) sendCommitForOldBlock(view *bft.View, digest common.Hash, prevHas
 	c.broadcastCommit(sub)
 }
 
-func (c *core) broadcastCommit(sub *bft.Subject) {
+func (c *core) broadcastCommit(sub *proposalSubject) {
 	logger := c.logger.NewWith("state", c.state)
 
-	encodedSubject, err := bft.Encode(sub)
+	encodedCommit, err := bft.Encode(&bft.Commit{View: sub.View, Digest: sub.Digest})
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
 	c.broadcast(&bft.Message{
-		Hash: sub.PrevHash,
-		Code: bft.MsgCommit,
-		Msg:  encodedSubject,
+		PrevHash: sub.PrevHash,
+		Code:     bft.MsgCommit,
+		Msg:      encodedCommit,
 	})
 }
 
 func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	// Decode COMMIT message
-	var commit *bft.Subject
+	var commit *bft.Commit
 	err := msg.Decode(&commit)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
@@ -80,7 +80,7 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
-	if err := c.checkMessage(bft.MsgCommit, commit.View); err != nil {
+	if err := c.checkMessage(msg, commit.View); err != nil {
 		// logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
 	}
@@ -95,14 +95,14 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 		return errNotFromCommittee
 	}
 
-	// Verify msg.CommittedSeal is the sender's signature over the proposal's
+	// Verify commit.CommittedSeal is the sender's signature over the proposal's
 	// committed-seal preimage. Without this, an arbitrary seal would be copied verbatim into the sealed block.
 	// commit.Digest is the proposal hash, already validated by verifyCommit above.
 	committedSealPreimage := istanbul.PrepareCommittedSeal(commit.Digest)
-	if c.backend.IsPermissionlessAt(commit.View.Sequence.Uint64()) {
+	if c.isPermissionlessAt(commit.View.Sequence.Uint64()) {
 		committedSealPreimage = istanbul.PrepareCommittedSealWithRound(commit.Digest, byte(commit.View.Round.Uint64()))
 	}
-	committer, err := istanbul.GetSignatureAddress(committedSealPreimage, msg.CommittedSeal)
+	committer, err := istanbul.GetSignatureAddress(committedSealPreimage, commit.CommittedSeal)
 	if err != nil || committer != src {
 		logger.Warn("invalid committed seal in commit message", "sender", src.String(), "recovered", committer.String(), "err", err)
 		return errInvalidCommittedSeal
@@ -110,12 +110,13 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 
 	c.acceptCommit(msg, src)
 
-	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
-	// and we are in earlier state before Prepared state.
-	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in
-	// the previous round skip sending PREPARE messages.
+	// Change to Prepared state once this view has quorum evidence. Where the
+	// hash-lock shortcut applies (IsPermissionlessAt is false), a node locked
+	// on this digest commits directly; otherwise it must also contribute a
+	// PREPARE and establish a certificate for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
-		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
+		if !c.isPermissionlessAt(commit.View.Sequence.Uint64()) &&
+			c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", bft.MsgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -142,11 +143,11 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *bft.Subject, src common.Address) error {
+func (c *core) verifyCommit(commit *bft.Commit, src common.Address) error {
 	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	sub := c.current.Subject()
-	if !commit.Equal(sub) {
+	if !sub.matches(commit.View, commit.Digest) {
 		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		return errInconsistentSubject
 	}

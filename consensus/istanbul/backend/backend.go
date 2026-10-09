@@ -375,46 +375,8 @@ func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 	if sb.HasBadProposal(block.Hash()) {
 		return 0, blockchain.ErrBlacklistedHash
 	}
-
-	// The checks below mirror BlockValidator.ValidateBody, so a bad proposal is rejected
-	// here instead of being PREPARE/COMMIT-ed and then refused on the import path.
-
-	// check EIP-7934 RLP-encoded block size cap
-	if sb.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
-		return 0, blockchain.ErrBlockOversized
-	}
-
-	// check block body
-	header := block.Header()
-	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
-	if txnHash != header.TxHash {
-		return 0, istanbul.ErrMismatchTxhashes
-	}
-	baseFee := header.BaseFee
-	var blobs int
-	for _, tx := range block.Transactions() {
-		if baseFee != nil && baseFee.Cmp(tx.GasPrice()) > 0 {
-			return 0, fmt.Errorf("invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
-		}
-		blobs += len(tx.BlobHashes())
-		if tx.Type() == types.TxTypeEthereumBlob {
-			sidecar := tx.BlobTxSidecar()
-			if sidecar == nil {
-				sb.logger.Error("No blob sidecar for blob transaction", "txHash", tx.Hash())
-				return 0, istanbul.ErrNoBlobSidecarForBlobTx
-			}
-			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-				sb.logger.Error("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
-				return 0, istanbul.ErrInvalidBlobTxWithSidecar
-			}
-		}
-	}
-	if header.BlobGasUsed != nil {
-		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want {
-			return 0, fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
-		}
-	} else if blobs > 0 {
-		return 0, errors.New("data blobs present in block body")
+	if err := sb.VerifyProposalBody(block); err != nil {
+		return 0, err
 	}
 
 	// Verify the header of the proposed block. The proposal entry point skips the
@@ -427,6 +389,59 @@ func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 		return time.Unix(block.Header().Time.Int64(), 0).Sub(time.Now()), consensus.ErrFutureBlock
 	}
 	return 0, err
+}
+
+// VerifyProposalBody checks the body rules shared by ordinary PRE-PREPARE
+// validation and prepared-certificate admission. It deliberately excludes
+// local bad-block state and header validation, which are inappropriate for a
+// peer-supplied certificate and may depend on wall-clock time.
+func (sb *backend) VerifyProposalBody(proposal bft.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return istanbul.ErrInvalidProposal
+	}
+
+	// The checks below mirror BlockValidator.ValidateBody, so a bad proposal is rejected
+	// here instead of being PREPARE/COMMIT-ed and then refused on the import path.
+
+	// check EIP-7934 RLP-encoded block size cap
+	if sb.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return blockchain.ErrBlockOversized
+	}
+
+	// check block body
+	header := block.Header()
+	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
+	if txnHash != header.TxHash {
+		return istanbul.ErrMismatchTxhashes
+	}
+	baseFee := header.BaseFee
+	var blobs int
+	for _, tx := range block.Transactions() {
+		if baseFee != nil && baseFee.Cmp(tx.GasPrice()) > 0 {
+			return fmt.Errorf("invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
+		}
+		blobs += len(tx.BlobHashes())
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sidecar := tx.BlobTxSidecar()
+			if sidecar == nil {
+				sb.logger.Warn("No blob sidecar for blob transaction", "txHash", tx.Hash())
+				return istanbul.ErrNoBlobSidecarForBlobTx
+			}
+			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+				sb.logger.Warn("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
+				return istanbul.ErrInvalidBlobTxWithSidecar
+			}
+		}
+	}
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want {
+			return fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
+		}
+	} else if blobs > 0 {
+		return errors.New("data blobs present in block body")
+	}
+	return nil
 }
 
 // Sign implements istanbul.Backend.Sign

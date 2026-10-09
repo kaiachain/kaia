@@ -167,7 +167,7 @@ func (m *IstanbulSealer) Author(header *types.Header) (common.Address, error) {
 	if len(extra.Seal) == 0 {
 		return common.Address{}, ErrInvalidSignature
 	}
-	addr, err := cacheSignatureAddress(m.SigHash(header).Bytes(), extra.Seal)
+	addr, err := CachedSignatureAddress(m.SigHash(header).Bytes(), extra.Seal)
 	if err != nil {
 		return common.Address{}, ErrInvalidSignature
 	}
@@ -194,7 +194,7 @@ func (m *IstanbulSealer) RecoverCommitters(_ uint64, hash common.Hash, round byt
 		if len(seal) != IstanbulExtraSeal {
 			return nil, ErrInvalidCommittedSeals
 		}
-		addr, err := cacheSignatureAddress(proposalSeal, seal)
+		addr, err := CachedSignatureAddress(proposalSeal, seal)
 		if err != nil {
 			return nil, ErrInvalidCommittedSeals
 		}
@@ -214,7 +214,7 @@ func (m *IstanbulSealer) committers(header *types.Header, proposalSeal []byte) (
 
 	committers := make([]common.Address, 0, len(extra.CommittedSeal))
 	for _, seal := range extra.CommittedSeal {
-		addr, err := cacheSignatureAddress(proposalSeal, seal)
+		addr, err := CachedSignatureAddress(proposalSeal, seal)
 		if err != nil {
 			return nil, ErrInvalidCommittedSeals
 		}
@@ -382,7 +382,11 @@ func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {
 	return crypto.Sign(crypto.Keccak256(m.SigHash(canonicalHeader).Bytes()), m.privateKey)
 }
 
-func cacheSignatureAddress(data []byte, sig []byte) (common.Address, error) {
+// CachedSignatureAddress is GetSignatureAddress memoized on (data, sig). Any
+// signature over any preimage can use it: header seals, committed seals, and
+// the votes and ROUND CHANGEs embedded in consensus certificates. Callers still
+// check that the returned signer is authorized.
+func CachedSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	// Key on both data and sig: ecrecover depends on data, so keying on sig alone
 	// would return a cached address even when queried with different data.
 	key := string(crypto.Keccak256(data, sig))

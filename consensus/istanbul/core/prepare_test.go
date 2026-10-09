@@ -16,15 +16,11 @@
 package core
 
 import (
-	crand "crypto/rand"
 	"math/big"
-	"math/rand"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/fork"
@@ -73,105 +69,4 @@ func TestCore_sendPrepare(t *testing.T) {
 		istCore.Stop()
 		mockCtrl.Finish()
 	}
-}
-
-func BenchmarkMsgCmp(b *testing.B) {
-	getEmptySubject := func() bft.Subject {
-		return bft.Subject{
-			View: &bft.View{
-				Round:    big.NewInt(0),
-				Sequence: big.NewInt(0),
-			},
-			Digest:   common.HexToHash("1"),
-			PrevHash: common.HexToHash("2"),
-		}
-	}
-	s1, s2 := getEmptySubject(), getEmptySubject()
-
-	// Worst
-	b.Run("reflect.DeepEqual", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			reflect.DeepEqual(s1, s2)
-		}
-	})
-
-	// Better
-	b.Run("EqualImpl", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			s1.Equal(&s2)
-		}
-	})
-}
-
-func TestSubjectCmp(t *testing.T) {
-	genRandomHash := func(n int) common.Hash {
-		b := make([]byte, n)
-		_, err := crand.Read(b)
-		assert.Nil(t, err)
-		return common.BytesToHash(b)
-	}
-	genRandomInt := func(min, max int) int64 {
-		return int64(rand.Intn(max-min) + min)
-	}
-	genSubject := func(min, max int) *bft.Subject {
-		round, seq := big.NewInt(genRandomInt(min, max)), big.NewInt(genRandomInt(min, max))
-		digest, prevHash := genRandomHash(max), genRandomHash(max)
-		return &bft.Subject{
-			View: &bft.View{
-				Round:    round,
-				Sequence: seq,
-			},
-			Digest:   digest,
-			PrevHash: prevHash,
-		}
-	}
-	copySubject := func(s *bft.Subject) *bft.Subject {
-		r := new(bft.Subject)
-		v := new(bft.View)
-		r.Digest = s.Digest
-		r.PrevHash = s.PrevHash
-		v.Round = new(big.Int).SetUint64(s.View.Round.Uint64())
-		v.Sequence = new(big.Int).SetUint64(s.View.Sequence.Uint64())
-		r.View = v
-		return r
-	}
-
-	min, max, n := 1, 9999, 10000
-	var identity bool
-	var s1, s2 *bft.Subject
-	for range n {
-		s1 = genSubject(min, max)
-		if rand.Intn(2) == 0 {
-			identity = true
-			s2 = copySubject(s1)
-		} else {
-			identity = false
-			s2 = genSubject(max+1, max*2)
-		}
-		e := s1.Equal(s2)
-		if identity {
-			assert.Equal(t, e, true)
-		} else {
-			assert.Equal(t, e, false)
-		}
-		assert.Equal(t, e, reflect.DeepEqual(s1, s2))
-	}
-}
-
-func TestNilSubjectCmp(t *testing.T) {
-	sbj := bft.Subject{
-		View: &bft.View{
-			Round:    big.NewInt(0),
-			Sequence: big.NewInt(0),
-		},
-		Digest:   common.HexToHash("1"),
-		PrevHash: common.HexToHash("2"),
-	}
-	var nilSbj *bft.Subject = nil
-
-	assert.Equal(t, sbj.Equal(nil), false)
-	assert.Equal(t, sbj.Equal(nilSbj), false)
-	assert.Equal(t, nilSbj.Equal(&sbj), false)
-	assert.Equal(t, nilSbj.Equal(nilSbj), true)
-	assert.Equal(t, nilSbj.Equal(nil), true)
 }

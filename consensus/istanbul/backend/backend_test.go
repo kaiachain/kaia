@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -303,6 +304,7 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 
 		// An oversized proposal must be rejected up front in Verify.
 		oversized := buildOversizedBlock(t, chain, engine)
+		assert.ErrorIs(t, engine.VerifyProposalBody(oversized), blockchain.ErrBlockOversized)
 		_, err = engine.Verify(oversized)
 		assert.ErrorIs(t, err, blockchain.ErrBlockOversized)
 	})
@@ -314,6 +316,7 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 		defer engine.Stop()
 
 		oversized := buildOversizedBlock(t, chain, engine)
+		assert.NotErrorIs(t, engine.VerifyProposalBody(oversized), blockchain.ErrBlockOversized)
 		_, err := engine.Verify(oversized)
 		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
 	})
@@ -345,11 +348,13 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		}
 
 		priced := build(baseFeeGkei * params.Gkei)
+		assert.NoError(t, engine.VerifyProposalBody(priced))
 		_, err := engine.Verify(priced)
 		assert.NoError(t, err)
 		assert.NoError(t, chain.Validator().ValidateBody(priced))
 
 		underpriced := build(baseFeeGkei*params.Gkei - 1)
+		assert.ErrorContains(t, engine.VerifyProposalBody(underpriced), "invalid GasPrice")
 		_, err = engine.Verify(underpriced)
 		assert.ErrorContains(t, err, "invalid GasPrice")
 		assert.ErrorContains(t, chain.Validator().ValidateBody(underpriced), "invalid GasPrice")
@@ -362,6 +367,7 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		defer engine.Stop()
 
 		normal := makeBlockWithSeal(chain, engine, chain.CurrentBlock())
+		assert.NoError(t, engine.VerifyProposalBody(normal))
 		_, err := engine.Verify(normal)
 		assert.NoError(t, err)
 
@@ -370,9 +376,38 @@ func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
 		header.BlobGasUsed = &claimed
 		lying := sealBlock(engine, types.NewBlock(header, nil, nil))
 
+		assert.ErrorContains(t, engine.VerifyProposalBody(lying), "blob gas used mismatch")
 		_, err = engine.Verify(lying)
 		assert.ErrorContains(t, err, "blob gas used mismatch")
 		assert.ErrorContains(t, chain.Validator().ValidateBody(lying), "blob gas used mismatch")
+	})
+
+	// TxHash excludes blob sidecars, so a block whose blob transaction lost its
+	// sidecar keeps the hash its votes were cast for. Prepared-certificate
+	// admission relies on this check.
+	t.Run("blobSidecar", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		header := makeBlockWithSeal(chain, engine, chain.CurrentBlock()).Header()
+		stripped := types.NewTx(&types.TxInternalDataEthereumBlob{
+			ChainID:    uint256.MustFromBig(chain.Config().ChainID),
+			GasTipCap:  uint256.NewInt(params.Gkei),
+			GasFeeCap:  uint256.NewInt(1000 * params.Gkei),
+			GasLimit:   21000,
+			BlobFeeCap: uint256.NewInt(params.Gkei),
+			BlobHashes: []common.Hash{{0x01}},
+			V:          big.NewInt(0),
+			R:          big.NewInt(1),
+			S:          big.NewInt(1),
+		})
+		require.Nil(t, stripped.BlobTxSidecar())
+		block := sealBlock(engine, types.NewBlock(header, []*types.Transaction{stripped}, nil))
+
+		assert.ErrorIs(t, engine.VerifyProposalBody(block), istanbul.ErrNoBlobSidecarForBlobTx)
+		_, err := engine.Verify(block)
+		assert.ErrorIs(t, err, istanbul.ErrNoBlobSidecarForBlobTx)
 	})
 }
 

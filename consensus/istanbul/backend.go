@@ -60,6 +60,10 @@ type Backend interface {
 	// the time difference of the proposal and current time is also returned.
 	Verify(bft.Proposal) (time.Duration, error)
 
+	// VerifyProposalBody verifies the proposal body rules that are independent
+	// of local bad-block state, header time and proposer seals.
+	VerifyProposalBody(bft.Proposal) error
+
 	// Sign signs input data with the backend's private key
 	Sign([]byte) ([]byte, error)
 

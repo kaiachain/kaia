@@ -15,8 +15,8 @@
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package bft hosts wire-level BFT consensus types shared by Istanbul and
-// KaiaBFT engines. Any change to types in this file is a wire-protocol change
-// and must be considered against backward compatibility with deployed nodes.
+// KaiaBFT engines. Any change to these types is a wire-protocol change and must
+// be considered against backward compatibility with deployed nodes.
 package bft
 
 import (
@@ -106,15 +106,34 @@ func (v *View) Cmp(y *View) int {
 	return 0
 }
 
+// ConsensusMsg is the envelope used by p2p for forwarded consensus messages.
+type ConsensusMsg struct {
+	PrevHash common.Hash
+	Payload  []byte
+}
+
 // Preprepare is the message sent by the proposer to propose a new block.
+//
+// A PRE-PREPARE above round 0 is justified by RoundChangeCertificate, a quorum
+// of signed ROUND CHANGE messages for its view stripped of their Evidence. When
+// any of them claims a prepared value, PreparedMessages are the PREPARE/COMMIT
+// votes proving the highest claim for Proposal. The prepared block is therefore
+// sent once, as the Proposal itself, instead of once per ROUND CHANGE.
 type Preprepare struct {
-	View     *View
-	Proposal Proposal
+	View                   *View
+	Proposal               Proposal
+	RoundChangeCertificate []*Message
+	PreparedMessages       []*Message
 }
 
 // EncodeRLP serializes a Preprepare into the Kaia RLP format.
 func (b *Preprepare) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{b.View, b.Proposal})
+	return rlp.Encode(w, struct {
+		View                   *View
+		Proposal               Proposal
+		RoundChangeCertificate []*Message `rlp:"optional"`
+		PreparedMessages       []*Message `rlp:"optional"`
+	}{b.View, b.Proposal, b.RoundChangeCertificate, b.PreparedMessages})
 }
 
 // DecodeRLP deserializes a Preprepare from a Kaia RLP stream.
@@ -122,61 +141,59 @@ func (b *Preprepare) EncodeRLP(w io.Writer) error {
 // implementation exchanged on the wire.
 func (b *Preprepare) DecodeRLP(s *rlp.Stream) error {
 	var preprepare struct {
-		View     *View
-		Proposal *types.Block
+		View                   *View
+		Proposal               *types.Block
+		RoundChangeCertificate []*Message `rlp:"optional"`
+		PreparedMessages       []*Message `rlp:"optional"`
 	}
 	if err := s.Decode(&preprepare); err != nil {
 		return err
 	}
 	b.View, b.Proposal = preprepare.View, preprepare.Proposal
+	b.RoundChangeCertificate, b.PreparedMessages = preprepare.RoundChangeCertificate, preprepare.PreparedMessages
 	return nil
 }
 
-// Subject is the common payload of prepare/commit/round-change messages.
-type Subject struct {
+// PreparedCertificate proves that a proposal reached the prepared state in a
+// prior round. Messages are the signed PREPARE/COMMIT envelopes that form the
+// quorum; carrying the complete envelopes lets receivers authenticate every
+// voter without persisting the certificate in the block header. It travels as
+// ROUND CHANGE Evidence and is never signed by the ROUND CHANGE sender.
+type PreparedCertificate struct {
 	View     *View
-	Digest   common.Hash
-	PrevHash common.Hash
+	Proposal *types.Block
+	Messages []*Message
 }
 
-// EncodeRLP serializes a Subject into the Kaia RLP format.
-func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{b.View, b.Digest, b.PrevHash})
+// PreparedClaim is the signed summary of the PreparedCertificate a ROUND
+// CHANGE sender holds: the round in which it prepared, the proposal hash, and
+// the Keccak-256 hash of the encoded certificate attached as Evidence. Evidence
+// stays outside the signature so that a PRE-PREPARE can embed the ROUND CHANGE
+// without it; EvidenceHash binds the Evidence to its signer, so a relay cannot
+// substitute different Evidence for a signed claim.
+type PreparedClaim struct {
+	Round        *big.Int
+	Digest       common.Hash
+	EvidenceHash common.Hash
 }
 
-// DecodeRLP deserializes a Subject from a Kaia RLP stream.
-func (b *Subject) DecodeRLP(s *rlp.Stream) error {
-	var subject struct {
-		View     *View
-		Digest   common.Hash
-		PrevHash common.Hash
-	}
-	if err := s.Decode(&subject); err != nil {
-		return err
-	}
-	b.View, b.Digest, b.PrevHash = subject.View, subject.Digest, subject.PrevHash
-	return nil
+// Prepare is the PREPARE payload.
+type Prepare struct {
+	View   *View
+	Digest common.Hash
 }
 
-// Equal reports whether a and b describe the same consensus subject.
-func (a *Subject) Equal(b *Subject) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return a.Digest == b.Digest &&
-		a.PrevHash == b.PrevHash &&
-		a.View.Cmp(b.View) == 0
+// Commit is the COMMIT payload. Its committed seal is part of Msg and is
+// therefore authenticated by the outer Message signature.
+type Commit struct {
+	View          *View
+	Digest        common.Hash
+	CommittedSeal []byte
 }
 
-func (b *Subject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v, ParentHash: %v}", b.View, b.Digest.String(), b.PrevHash.Hex())
-}
-
-// ConsensusMsg is the envelope used by p2p for forwarded consensus messages.
-type ConsensusMsg struct {
-	PrevHash common.Hash
-	Payload  []byte
+// RoundChange is the ROUND-CHANGE payload. The certificate proving Prepared is
+// carried once as the outer Message Evidence.
+type RoundChange struct {
+	View     *View
+	Prepared *PreparedClaim `rlp:"optional,nilList"`
 }
