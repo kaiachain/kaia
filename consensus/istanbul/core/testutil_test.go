@@ -604,6 +604,8 @@ type scenarioBackend struct {
 	chainConfig  *params.ChainConfig
 	badProposals map[common.Hash]bool
 	commitErrors []error
+	bodyChecks   int // VerifyProposalBody calls, to observe skipped certificate verification
+	verifies     int // Verify calls, to observe proposals that are ignored before verification
 	commitCalls  int
 }
 
@@ -786,6 +788,7 @@ func (b *scenarioBackend) HasPropsal(hash common.Hash, height *big.Int) bool {
 
 // Verify checks empty-block parent, height and author; execution and full header validation belong to backend tests.
 func (b *scenarioBackend) Verify(proposal bft.Proposal) (time.Duration, error) {
+	b.verifies++
 	block, ok := proposal.(*types.Block)
 	if !ok || block.NumberU64() != b.head.NumberU64()+1 || block.ParentHash() != b.head.Hash() {
 		return 0, istanbul.ErrInvalidProposal
@@ -804,6 +807,7 @@ func (b *scenarioBackend) Verify(proposal bft.Proposal) (time.Duration, error) {
 }
 
 func (b *scenarioBackend) VerifyProposalBody(proposal bft.Proposal) error {
+	b.bodyChecks++
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return istanbul.ErrInvalidProposal

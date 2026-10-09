@@ -99,7 +99,7 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	// committed-seal preimage. Without this, an arbitrary seal would be copied verbatim into the sealed block.
 	// commit.Digest is the proposal hash, already validated by verifyCommit above.
 	committedSealPreimage := istanbul.PrepareCommittedSeal(commit.Digest)
-	if c.backend.IsPermissionlessAt(commit.View.Sequence.Uint64()) {
+	if c.isPermissionlessAt(commit.View.Sequence.Uint64()) {
 		committedSealPreimage = istanbul.PrepareCommittedSealWithRound(commit.Digest, byte(commit.View.Round.Uint64()))
 	}
 	committer, err := istanbul.GetSignatureAddress(committedSealPreimage, commit.CommittedSeal)
@@ -111,11 +111,11 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	c.acceptCommit(msg, src)
 
 	// Change to Prepared state once this view has quorum evidence. Where the
-	// hash-lock shortcut applies, a node locked on this digest commits directly;
-	// otherwise it must also contribute a PREPARE and establish a certificate
-	// for this round before committing.
+	// hash-lock shortcut applies (IsPermissionlessAt is false), a node locked
+	// on this digest commits directly; otherwise it must also contribute a
+	// PREPARE and establish a certificate for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
-		if !c.backend.IsPermissionlessAt(commit.View.Sequence.Uint64()) &&
+		if !c.isPermissionlessAt(commit.View.Sequence.Uint64()) &&
 			c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", bft.MsgCommit)
 			c.setState(StatePrepared)

@@ -114,12 +114,11 @@ type ConsensusMsg struct {
 
 // Preprepare is the message sent by the proposer to propose a new block.
 //
-// A PRE-PREPARE above round 0 is justified by
-// RoundChangeCertificate, a quorum of signed ROUND CHANGE messages for its view
-// stripped of their Evidence attachments. When any of them claims a
-// prepared value, PreparedMessages are the PREPARE/COMMIT votes proving the
-// highest claim for Proposal. The prepared block is therefore sent once, as the
-// Proposal itself, instead of once per ROUND CHANGE.
+// A PRE-PREPARE above round 0 is justified by RoundChangeCertificate, a quorum
+// of signed ROUND CHANGE messages for its view stripped of their Evidence. When
+// any of them claims a prepared value, PreparedMessages are the PREPARE/COMMIT
+// votes proving the highest claim for Proposal. The prepared block is therefore
+// sent once, as the Proposal itself, instead of once per ROUND CHANGE.
 type Preprepare struct {
 	View                   *View
 	Proposal               Proposal
@@ -170,7 +169,7 @@ type PreparedCertificate struct {
 // CHANGE sender holds: the round in which it prepared, the proposal hash, and
 // the Keccak-256 hash of the encoded certificate attached as Evidence. Evidence
 // stays outside the signature so that a PRE-PREPARE can embed the ROUND CHANGE
-// without it; EvidenceHash binds the attachment to its signer, so a relay cannot
+// without it; EvidenceHash binds the Evidence to its signer, so a relay cannot
 // substitute different Evidence for a signed claim.
 type PreparedClaim struct {
 	Round        *big.Int
@@ -184,8 +183,8 @@ type Prepare struct {
 	Digest common.Hash
 }
 
-// Commit is the COMMIT payload. Its committed seal is part
-// of Msg and is therefore authenticated by the outer Message signature.
+// Commit is the COMMIT payload. Its committed seal is part of Msg and is
+// therefore authenticated by the outer Message signature.
 type Commit struct {
 	View          *View
 	Digest        common.Hash

@@ -425,11 +425,11 @@ func (sb *backend) VerifyProposalBody(proposal bft.Proposal) error {
 		if tx.Type() == types.TxTypeEthereumBlob {
 			sidecar := tx.BlobTxSidecar()
 			if sidecar == nil {
-				sb.logger.Error("No blob sidecar for blob transaction", "txHash", tx.Hash())
+				sb.logger.Warn("No blob sidecar for blob transaction", "txHash", tx.Hash())
 				return istanbul.ErrNoBlobSidecarForBlobTx
 			}
 			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-				sb.logger.Error("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
+				sb.logger.Warn("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
 				return istanbul.ErrInvalidBlobTxWithSidecar
 			}
 		}

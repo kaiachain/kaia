@@ -157,7 +157,7 @@ func (c *core) handleMsg(payload []byte) error {
 
 	// Decode message and check its signature
 	msg := new(bft.Message)
-	if err := msg.FromPayloadForFork(payload, c.backend.IsPermissionlessAt, c.validateFn); err != nil {
+	if err := msg.FromPayloadForFork(payload, c.isPermissionlessAt, c.validateFn); err != nil {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			if err != istanbul.ErrUnauthorizedAddress {
 				logger.Error("Failed to decode message from payload", "err", err)
@@ -197,11 +197,6 @@ const maxSubjectMessageBytes = 1024
 // itself must be smaller than this cap.
 const maxConsensusP2PMessageBytes = 12 * 1024 * 1024
 
-// maxCertificateRoundChangeBytes is a coarse cap for the attachment. A ROUND
-// CHANGE can attach a prepared certificate, including the prepared block, as
-// its unsigned Evidence, so that attachment cannot use the subject-only limit. The exact wrapped wire size is checked below.
-const maxCertificateRoundChangeBytes = maxConsensusP2PMessageBytes
-
 // consensusP2PMessageSize is the RLP size of ConsensusMsg{PrevHash, Payload}.
 // A 32-byte PrevHash always occupies 33 RLP bytes.
 func consensusP2PMessageSize(payload []byte) uint64 {
@@ -210,12 +205,12 @@ func consensusP2PMessageSize(payload []byte) uint64 {
 
 // checkMessageSize rejects an oversized consensus message before the retention
 // paths diverge (backlog, roundChangeSet, messageSet), so every retained copy
-// is bounded. Only ROUND CHANGE Evidence may use the larger cap.
+// is bounded. A ROUND CHANGE may attach a prepared certificate, including the
+// prepared block, as its unsigned Evidence, so only the signed part is held to
+// the subject limit; the Evidence is bounded by the P2P limit below.
 func checkMessageSize(msg *bft.Message, isPermissionlessAt func(uint64) bool) error {
-	evidence := uint64(len(msg.Evidence))
 	retained := retainedMessageBytes(msg)
-	if msg.Code != bft.MsgPreprepare && retained-evidence > maxSubjectMessageBytes ||
-		evidence > maxCertificateRoundChangeBytes {
+	if msg.Code != bft.MsgPreprepare && retained-uint64(len(msg.Evidence)) > maxSubjectMessageBytes {
 		return errMessageTooLarge
 	}
 	// Most messages are far below the P2P limit. Only encode near the boundary,

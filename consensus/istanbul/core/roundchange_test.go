@@ -46,7 +46,7 @@ func TestRoundChangeSetBoundsMessagesPerRound(t *testing.T) {
 	require.ErrorIs(t, err, errRoundChangeMessageLimit)
 	assert.Equal(t, 2, rcs.roundChanges[round.Uint64()].Size())
 
-	// A duplicate sender may still replace its prior message after the limit.
+	// A duplicate sender's identical message is re-added after the limit.
 	count, err := rcs.Add(currentRound, round, &bft.Message{Address: addrs[0]})
 	require.NoError(t, err)
 	assert.Equal(t, 2, count)
@@ -114,7 +114,7 @@ func TestRoundChangeSetReplacesOnlyWithHigherClaim(t *testing.T) {
 	assert.Equal(t, roundChange(2).Msg, rcs.Values(round)[0].Msg)
 }
 
-// A zero quorum means no ROUND CHANGE can contribute to progress, so not even a
+// A zero limit means no ROUND CHANGE can contribute to progress, so not even a
 // freshly created bucket may retain one.
 func TestRoundChangeSetRejectsEveryMessageWhenLimitIsZero(t *testing.T) {
 	addr := common.HexToAddress("0x1")

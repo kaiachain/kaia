@@ -78,11 +78,11 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	c.acceptPrepare(msg, src)
 
 	// Change to Prepared state once this view has quorum evidence. Where the
-	// hash-lock shortcut applies, a node locked on this digest commits directly;
-	// otherwise it must also contribute a PREPARE and establish a certificate
-	// for this round before committing.
+	// hash-lock shortcut applies (IsPermissionlessAt is false), a node locked
+	// on this digest commits directly; otherwise it must also contribute a
+	// PREPARE and establish a certificate for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
-		if !c.backend.IsPermissionlessAt(prepare.View.Sequence.Uint64()) &&
+		if !c.isPermissionlessAt(prepare.View.Sequence.Uint64()) &&
 			c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
 			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", bft.MsgPrepare)
 			c.setState(StatePrepared)

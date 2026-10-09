@@ -51,13 +51,13 @@ const (
 	maxBacklogMessagesPerSender = 128
 
 	// A single sender may retain at most one transport-sized allocation across
-	// its ROUND CHANGE attachments. Small signed messages do not consume this
-	// budget, so large attachments cannot crowd out the sender's future PREPARE
-	// or COMMIT messages. Each attachment must match the EvidenceHash its sender
+	// its ROUND CHANGE Evidence. Small signed messages do not consume this
+	// budget, so large Evidence cannot crowd out the sender's future PREPARE
+	// or COMMIT messages. Each Evidence must match the EvidenceHash its sender
 	// signed, so only the sender itself can spend this allowance.
 	maxBacklogEvidenceBytesPerSender uint64 = maxConsensusP2PMessageBytes
 
-	// Bound aggregate attachment memory even when many qualified validators send
+	// Bound aggregate Evidence memory even when many qualified validators send
 	// maximum-sized future ROUND CHANGEs. Only Evidence bytes consume this
 	// budget: ordinary votes and ROUND CHANGEs without prepared evidence remain
 	// admissible when it is full. PREPREPAREs likewise remain in their separate
@@ -195,12 +195,12 @@ func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	if evidenceBytes != 0 {
 		if evidenceBytes > maxBacklogEvidenceBytesPerSender ||
 			c.backlogEvidenceBytes[src] > maxBacklogEvidenceBytesPerSender-evidenceBytes {
-			logger.Trace("Discarding future message: sender backlog attachment limit reached", "bytes", evidenceBytes)
+			logger.Trace("Discarding future message: sender backlog evidence limit reached", "bytes", evidenceBytes)
 			return
 		}
 		if evidenceBytes > maxBacklogEvidenceBytes ||
 			c.backlogTotalEvidenceBytes > maxBacklogEvidenceBytes-evidenceBytes {
-			logger.Trace("Discarding future message: total backlog attachment limit reached", "bytes", evidenceBytes)
+			logger.Trace("Discarding future message: total backlog evidence limit reached", "bytes", evidenceBytes)
 			return
 		}
 	}
@@ -252,7 +252,7 @@ func (c *core) removeBacklogMessage(src common.Address, msg *bft.Message) {
 		// This is an internal invariant violation, not peer input. Preserve the
 		// conservative accounting instead of silently clamping it and hiding the
 		// mismatch or wrapping an unsigned subtraction.
-		c.logger.Error("Inconsistent backlog attachment accounting", "from", src,
+		c.logger.Error("Inconsistent backlog evidence accounting", "from", src,
 			"messageBytes", evidenceBytes, "senderBytes", senderBytes,
 			"totalBytes", c.backlogTotalEvidenceBytes)
 		return

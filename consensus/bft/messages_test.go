@@ -119,7 +119,6 @@ func TestMessageRoundTrip(t *testing.T) {
 		Msg:       []byte{0xaa, 0xbb, 0xcc},
 		Address:   common.HexToAddress("0xcafe"),
 		Signature: []byte{0x11, 0x22},
-		Evidence:  []byte{0x33, 0x44},
 	}
 	b, err := rlp.EncodeToBytes(orig)
 	if err != nil {
@@ -416,4 +415,36 @@ func equalBytes(a, b []byte) bool {
 		}
 	}
 	return true
+}
+
+// TestMessageRejectsEmptyEvidenceField checks that a message without Evidence
+// has exactly one encoding. An explicit empty sixth field would otherwise be
+// accepted with the same signature, giving a relay a second payload hash for
+// the same message.
+func TestMessageRejectsEmptyEvidenceField(t *testing.T) {
+	msg := bft.Message{
+		PrevHash:  common.HexToHash("0x01"),
+		Code:      bft.MsgPrepare,
+		Msg:       []byte{0xaa, 0xbb, 0xcc},
+		Address:   common.HexToAddress("0xcafe"),
+		Signature: make([]byte, crypto.SignatureLength),
+	}
+	canonical, err := msg.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	variant, err := rlp.EncodeToBytes([]any{msg.PrevHash, msg.Code, msg.Msg, msg.Address, msg.Signature, []byte{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(canonical, variant) {
+		t.Fatal("variant must differ from the canonical encoding")
+	}
+	var decoded bft.Message
+	if err := decoded.FromPayload(canonical, nil); err != nil {
+		t.Fatalf("canonical payload rejected: %v", err)
+	}
+	if err := decoded.FromPayload(variant, nil); !errors.Is(err, bft.ErrInvalidMessage) {
+		t.Fatalf("empty evidence field: got %v, want ErrInvalidMessage", err)
+	}
 }

@@ -146,7 +146,9 @@ func TestPrePermissionlessMessageNormalization(t *testing.T) {
 
 // TestPrePermissionlessGoldenPayloads pins messages produced by the deployed
 // pre-Permissionless codec (core.message on kaiachain/kaia main at ac7c81f3a,
-// signed with a fixed key). The other legacy tests build their bytes with
+// signed with the go-ethereum test key
+// b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291, address
+// 0x71562b71999873DB5b286dF957af199Ec94617F7). The other legacy tests build their bytes with
 // PrePermissionlessMessage itself, so they cannot detect a change that both
 // encodes and decodes differently from deployed nodes. Each payload must
 // authenticate over the normalized signed preimage and re-encode to exactly
@@ -425,4 +427,83 @@ func decodeLegacy(t *testing.T, payload []byte) *bft.Message {
 		t.Fatal(err)
 	}
 	return &msg
+}
+
+// TestPrePermissionlessPreprepareAuthenticatesBeforePayloadCheck checks the
+// order of the legacy PRE-PREPARE checks: the signature is verified before the
+// {View, Proposal} shape, so an unauthenticated frame is rejected by the
+// cheaper check.
+func TestPrePermissionlessPreprepareAuthenticatesBeforePayloadCheck(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	view := testView(7)
+	prevHash := common.HexToHash("0xfeed")
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(7), ParentHash: prevHash})
+	extended := mustEncode(t, []any{view, block, []any{}, []any{}})
+	legacy := &bft.PrePermissionlessMessage{
+		Hash: prevHash, Code: bft.MsgPreprepare, Msg: extended,
+		Address: crypto.PubkeyToAddress(key.PublicKey), CommittedSeal: []byte{},
+		Signature: make([]byte, crypto.SignatureLength),
+	}
+	payload := mustEncode(t, legacy)
+
+	errBadSignature := errors.New("bad signature")
+	var msg bft.Message
+	err = msg.FromPayloadForFork(payload, neverPermissionless, func([]byte, []byte) (common.Address, error) {
+		return common.Address{}, errBadSignature
+	})
+	if !errors.Is(err, errBadSignature) {
+		t.Fatalf("unauthenticated PRE-PREPARE: got %v, want the signature error before the payload check", err)
+	}
+	// With the sender accepted, the payload shape is still enforced.
+	err = msg.FromPayloadForFork(payload, neverPermissionless, func([]byte, []byte) (common.Address, error) {
+		return legacy.Address, nil
+	})
+	if !errors.Is(err, bft.ErrInvalidMessage) {
+		t.Fatalf("authenticated PRE-PREPARE with justification fields: got %v, want ErrInvalidMessage", err)
+	}
+}
+
+// TestMessageFromPayloadForForkRejectsMalformedEnvelope checks that locating
+// the sequence in place does not accept or panic on payloads that are not a
+// well-formed envelope.
+func TestMessageFromPayloadForForkRejectsMalformedEnvelope(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		payload []byte
+	}{
+		{"empty", nil},
+		{"not a list", mustEncode(t, []byte{1, 2, 3})},
+		{"too few fields", mustEncode(t, []any{common.HexToHash("0x01"), uint64(bft.MsgPrepare)})},
+		{"msg is a list", mustEncode(t, []any{common.HexToHash("0x01"), uint64(bft.MsgPrepare), []any{}, common.Address{}, []byte{}})},
+		{"truncated", mustEncode(t, []any{common.HexToHash("0x01"), uint64(bft.MsgPrepare), []byte{0xc0}, common.Address{}, []byte{}})[:8]},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var msg bft.Message
+			if err := msg.FromPayloadForFork(tc.payload, neverPermissionless, nil); err == nil {
+				t.Fatal("malformed envelope accepted")
+			}
+		})
+	}
+}
+
+// TestPrePermissionlessPayloadRejectsExtendedPreprepare checks the encoder
+// side of the shape rule: a PRE-PREPARE with justification fields cannot be
+// emitted in the legacy envelope, which deployed nodes would refuse.
+func TestPrePermissionlessPayloadRejectsExtendedPreprepare(t *testing.T) {
+	view := testView(1)
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	plain := &bft.Message{Code: bft.MsgPreprepare, Msg: mustEncode(t, []any{view, block})}
+	if _, err := plain.PayloadForFork(neverPermissionless); err != nil {
+		t.Fatalf("plain legacy PRE-PREPARE: %v", err)
+	}
+	extended := &bft.Message{Code: bft.MsgPreprepare, Msg: mustEncode(t, []any{view, block, []any{}, []any{}})}
+	if _, err := extended.PayloadForFork(neverPermissionless); !errors.Is(err, bft.ErrInvalidMessage) {
+		t.Fatalf("extended legacy PRE-PREPARE: got %v, want ErrInvalidMessage", err)
+	}
+	if _, err := extended.PayloadNoSigForFork(neverPermissionless); !errors.Is(err, bft.ErrInvalidMessage) {
+		t.Fatalf("PayloadNoSig: got %v, want ErrInvalidMessage", err)
+	}
 }

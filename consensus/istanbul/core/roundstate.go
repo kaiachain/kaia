@@ -37,8 +37,9 @@ import (
 
 // newRoundState creates a new roundState instance with the given view and validatorSet.
 // A round change retains the accepted PRE-PREPARE, which is the proposal behind a
-// local hash lock. The new round is recorded in round, independently of the
-// PRE-PREPARE's original view.
+// local hash lock, and the prepared certificate behind that lock when known.
+// The new round is recorded in round, independently of the PRE-PREPARE's
+// original view.
 func newRoundState(view *bft.View, qualified *valset.AddressSet, lockedHash common.Hash, preprepare *bft.Preprepare, preparedCertificate *bft.PreparedCertificate, pendingRequest *bft.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
 	return &roundState{
 		round:               view.Round,
@@ -71,7 +72,7 @@ type roundState struct {
 	// Ignore RLP ----------------------------------------------------------------------------
 	qualified            *valset.AddressSet
 	committee            *valset.AddressSet
-	parentHash           common.Hash // chain head when this round started; the parent of the height being decided
+	parentHash           common.Hash // parent of the height being decided; fixed across its rounds and equal to the ParentHash of every proposal Verify accepts
 	proposer             common.Address
 	committeeSize        uint64
 	requiredMessageCount int
@@ -102,7 +103,7 @@ type proposalSubject struct {
 }
 
 // matches reports whether a vote for view and digest is for s. The vote's
-// PrevHash is checked against the chain head by checkMessage.
+// PrevHash is checked against the height's parent by checkMessage.
 func (s *proposalSubject) matches(view *bft.View, digest common.Hash) bool {
 	return view != nil && view.Cmp(s.View) == 0 && digest == s.Digest
 }
@@ -168,7 +169,8 @@ func (s *roundState) LockedRound() *big.Int {
 
 // AdoptPreparedCertificate updates the local lock from a strictly newer,
 // independently verified certificate. This is used when the node did not
-// observe the original PREPARE quorum itself but learns it during round change.
+// observe the original PREPARE quorum itself but learns it from a justified
+// PRE-PREPARE.
 // Keeping the comparison with the mutation prevents any caller from
 // accidentally downgrading a newer local lock.
 func (s *roundState) AdoptPreparedCertificate(cert *bft.PreparedCertificate) {

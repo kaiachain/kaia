@@ -221,7 +221,8 @@ func TestConsensusNetworkAndVoting(t *testing.T) {
 			s.delay(bft.MsgPrepare, late, s.nodes(1))
 			s.delay(bft.MsgCommit, late, s.nodes(1))
 			s.advanceConsensus(1, s.nodes(1))
-			target.assertStateUnchanged(func() { target.receive(sender.message(bft.MsgPreprepare, b, 0), nil) })
+			// The second proposal is ignored before verification and not relayed.
+			target.assertStateUnchanged(func() { target.receive(sender.message(bft.MsgPreprepare, b, 0), errIgnored) })
 			s.release(bft.MsgPrepare, late, s.nodes(1))
 			s.release(bft.MsgCommit, late, s.nodes(1))
 			require.Equal(s.t, a.Hash(), target.assertCommitted(1).Hash())
@@ -978,6 +979,25 @@ func TestConsensusRoundChangeRejectsUnboundEvidence(t *testing.T) {
 		_, err = receiver.core.verifyRoundChangeEvidence(forgedMsg, forgedRC)
 		require.ErrorIs(t, err, istanbul.ErrMismatchTxhashes, "the forged body reaches the body check")
 
+		// The pairing predicate itself: a claim needs Evidence hashing to its
+		// EvidenceHash, and Evidence needs a claim.
+		for _, tc := range []struct {
+			name  string
+			claim *bft.PreparedClaim
+			cert  *bft.PreparedCertificate
+			want  bool
+		}{
+			{"matching", claim, cert, true},
+			{"claim without evidence", claim, nil, false},
+			{"evidence without claim", nil, cert, false},
+		} {
+			paired, err := receiver.backend.decodeMessage(signedRoundChange(t, attacker, 2, tc.claim, tc.cert).Payload, nil)
+			require.NoError(t, err)
+			var pairedRC *bft.RoundChange
+			require.NoError(t, paired.Decode(&pairedRC))
+			require.Equal(t, tc.want, roundChangeEvidenceMatchesClaim(paired, pairedRC), tc.name)
+		}
+
 		for _, tc := range []struct {
 			name  string
 			claim *bft.PreparedClaim
@@ -1022,14 +1042,9 @@ func TestConsensusRoundChangeCachesPreparedEvidenceOnce(t *testing.T) {
 		require.Len(t, receiver.core.roundChangeSet.Values(big.NewInt(2)), 1)
 		require.Empty(t, receiver.core.roundChangeSet.Values(big.NewInt(2))[0].Evidence)
 
-		// Count signature recoveries from here on: a cached claim must cost only
-		// the envelope signature, not the certificate's votes.
-		recoveries := 0
-		validate := receiver.core.validateFn
-		receiver.core.validateFn = func(data, sig []byte) (common.Address, error) {
-			recoveries++
-			return validate(data, sig)
-		}
+		// Count body checks from here on: a cached claim must skip certificate
+		// verification entirely, votes and body alike.
+		bodyChecks := receiver.backend.bodyChecks
 
 		// Evidence is excluded from the ROUND CHANGE signature but bound by the
 		// signed EvidenceHash. A relay that replaces it is rejected before the
@@ -1039,16 +1054,14 @@ func TestConsensusRoundChangeCachesPreparedEvidenceOnce(t *testing.T) {
 		duplicate.Evidence = []byte{0xc0}
 		payload, err := duplicate.Payload()
 		require.NoError(t, err)
-		before := recoveries
 		receiver.reject(istanbul.MessageEvent{Hash: first.Hash, Payload: payload}, bft.ErrInvalidMessage)
-		require.Equal(t, before+1, recoveries, "only the envelope signature is recovered")
+		require.Equal(t, bodyChecks, receiver.backend.bodyChecks, "the replacement is not verified")
 
 		// New target rounds may carry the same prepared claim, but must reuse its
 		// single cached block and vote set rather than multiplying the evidence.
 		for round := uint64(3); round <= 5; round++ {
-			before := recoveries
 			receiver.receive(signedRoundChange(t, sender, round, claim, cert), errIgnored)
-			require.Equal(t, before+1, recoveries, "round %d: only the envelope signature is recovered", round)
+			require.Equal(t, bodyChecks, receiver.backend.bodyChecks, "round %d: the cached claim is not re-verified", round)
 			stored := receiver.core.roundChangeSet.Values(new(big.Int).SetUint64(round))
 			require.Len(t, stored, 1)
 			require.Empty(t, stored[0].Evidence)
@@ -1652,4 +1665,284 @@ func TestConsensusForkBoundary(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestConsensusRoundChangeDropsClaimForBadProposal checks that a ROUND CHANGE
+// claims only the lock that survives catchUpRound. A lock whose block the
+// backend has since reported bad is dropped there, so the ROUND CHANGE must
+// not claim it either.
+func TestConsensusRoundChangeDropsClaimForBadProposal(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		// Hold V1 below the commit quorum after it has locked the proposal.
+		s.delay(bft.MsgCommit, s.nodes(2, 3), s.nodes(1))
+		s.advanceConsensus(1, s.nodes(1))
+		target := s.validators[1]
+		locked := s.proposal.Hash()
+		target.assertHashLocked(locked)
+		require.NotNil(t, target.core.current.PreparedCertificate())
+
+		target.backend.badProposals[locked] = true
+		target.assertBadHashLocked(locked)
+		s.timeout(s.nodes(1))
+		synctest.Wait()
+		target.assertView(1, 1, true)
+
+		msg, err := target.backend.decodeMessage(s.message(target, bft.MsgRoundChange, 1, 1).Payload, nil)
+		require.NoError(t, err)
+		var roundChange *bft.RoundChange
+		require.NoError(t, msg.Decode(&roundChange))
+		require.Nil(t, roundChange.Prepared, "a dropped lock is not claimed")
+		require.Empty(t, msg.Evidence)
+	})
+}
+
+// TestConsensusRoundChangeRejectsCertificateWithCommittedSeals checks that a
+// certificate body padded with committed seals is rejected. The block hash
+// excludes that list, so the digest and votes still match; without the check
+// honest nodes would retain, re-propose and relay the padded copy.
+func TestConsensusRoundChangeRejectsCertificateWithCommittedSeals(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		attacker, receiver := s.validators[0], s.validators[1]
+		cert := s.validators[2].core.current.PreparedCertificate()
+		require.NotNil(t, cert)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
+
+		header := types.CopyHeader(x.Header())
+		seals := make([][]byte, 64)
+		for i := range seals {
+			seals[i] = make([]byte, istanbul.IstanbulExtraSeal)
+		}
+		require.NoError(t, attacker.backend.sealer.WriteCommittedSeals(header, seals))
+		padded := &bft.PreparedCertificate{View: cert.View, Proposal: x.WithSeal(header), Messages: cert.Messages}
+		require.Equal(t, x.Hash(), padded.Proposal.Hash(), "committed seals are outside the hash")
+		require.Greater(t, padded.Proposal.Size(), x.Size())
+
+		msg, err := receiver.backend.decodeMessage(signedRoundChange(t, attacker, 2, claim, padded).Payload, nil)
+		require.NoError(t, err)
+		var roundChange *bft.RoundChange
+		require.NoError(t, msg.Decode(&roundChange))
+		_, err = receiver.core.verifyRoundChangeEvidence(msg, roundChange)
+		require.ErrorContains(t, err, "committed seals")
+		receiver.reject(signedRoundChange(t, attacker, 2, claim, padded), bft.ErrInvalidMessage)
+		require.Empty(t, receiver.core.preparedBlocks)
+
+		// The genuine certificate is still accepted and the retained block is clean.
+		receiver.receive(signedRoundChange(t, attacker, 2, claim, cert), errIgnored)
+		_, retained, err := receiver.backend.sealer.RawSeals(receiver.core.preparedBlocks[x.Hash()].Header())
+		require.NoError(t, err)
+		require.Empty(t, retained)
+	})
+}
+
+// TestCanonicalPreparedCertificateSharesBlockAcrossRounds checks that one
+// height retains a prepared block once, even when the block is prepared again
+// at a later round and a local copy exists. Every verified body for a digest
+// is equivalent, so the first retained block is reused.
+func TestCanonicalPreparedCertificateSharesBlockAcrossRounds(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		node := s.validators[1]
+		voters := s.nodes(0, 2, 3)
+		first := node.core.canonicalPreparedCertificate(preparedCertificate(t, voters, x, 0))
+		require.Same(t, first, node.core.preparedCertificates[preparedEvidenceKey{sequence: 1, round: 0, digest: x.Hash()}])
+		require.Same(t, first.Proposal, node.core.preparedBlocks[x.Hash()])
+
+		// A later PRE-PREPARE for the same block decodes into a new object.
+		local := x.WithSeal(types.CopyHeader(x.Header()))
+		require.Equal(t, x.Hash(), local.Hash())
+		node.core.current.SetPreprepare(&bft.Preprepare{View: node.core.currentView(), Proposal: local})
+
+		second := node.core.canonicalPreparedCertificate(preparedCertificate(t, voters, x, 2))
+		require.NotSame(t, first, second)
+		require.Same(t, first.Proposal, second.Proposal, "the retained block is reused")
+		require.Same(t, first.Proposal, node.core.preparedBlocks[x.Hash()])
+		require.Len(t, node.core.preparedBlocks, 1)
+		require.Len(t, node.core.preparedCertificates, 2)
+
+		// The same claim returns the stored certificate and discards the argument.
+		again := preparedCertificate(t, voters, x, 2)
+		require.Same(t, second, node.core.canonicalPreparedCertificate(again))
+		require.NotSame(t, again, node.core.preparedCertificates[preparedEvidenceKey{sequence: 1, round: 2, digest: x.Hash()}])
+	})
+}
+
+// TestConsensusRepeatedInvalidBodiesDoNotBlockValidCertificate checks a sender
+// that repeats a genuine vote set with other invalid bodies: every attempt is
+// rejected without leaving a cache entry, and the genuine certificate is still
+// accepted afterwards.
+func TestConsensusRepeatedInvalidBodiesDoNotBlockValidCertificate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, x := splitLock(t)
+		attacker, receiver := s.validators[0], s.validators[1]
+		cert := s.validators[2].core.current.PreparedCertificate()
+		require.NotNil(t, cert)
+		claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: x.Hash()}
+
+		txKey, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		signer := types.LatestSignerForChainID(s.config.chainConfig.ChainID)
+		for attempt := range 3 {
+			// Each attempt carries a different signed body that fails only the
+			// body check, with the votes reordered.
+			tx, err := types.SignTx(types.NewTransaction(uint64(attempt), common.Address{}, big.NewInt(0), 21000, big.NewInt(0), nil), signer, txKey)
+			require.NoError(t, err)
+			votes := slices.Clone(cert.Messages)
+			slices.Reverse(votes[attempt%len(votes):])
+			forged := &bft.PreparedCertificate{View: cert.View, Proposal: cert.Proposal.WithBody(types.Transactions{tx}), Messages: votes}
+			receiver.reject(signedRoundChange(t, attacker, 2, claim, forged), bft.ErrInvalidMessage)
+			require.Empty(t, receiver.core.preparedCertificates)
+			require.Empty(t, receiver.core.verifiedEvidence)
+		}
+		receiver.receive(signedRoundChange(t, attacker, 2, claim, cert), errIgnored)
+		require.Len(t, receiver.core.preparedCertificates, 1)
+	})
+}
+
+// TestProposalCarriesCommittedSeals covers the direct extra decode used for
+// peer-supplied certificate bodies: a sealed proposal, an unsealed one, and an
+// extra too short to carry the istanbul fields.
+func TestProposalCarriesCommittedSeals(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		block := s.validators[0].proposal(1)
+		padded, err := proposalCarriesCommittedSeals(block.Header())
+		require.NoError(t, err)
+		require.False(t, padded, "a proposal carries no committed seals")
+
+		header := types.CopyHeader(block.Header())
+		require.NoError(t, s.validators[0].backend.sealer.WriteCommittedSeals(header, [][]byte{make([]byte, istanbul.IstanbulExtraSeal)}))
+		padded, err = proposalCarriesCommittedSeals(header)
+		require.NoError(t, err)
+		require.True(t, padded)
+
+		short := types.CopyHeader(block.Header())
+		short.Extra = short.Extra[:istanbul.IstanbulExtraVanity-1]
+		_, err = proposalCarriesCommittedSeals(short)
+		require.ErrorIs(t, err, istanbul.ErrInvalidIstanbulHeaderExtra)
+	})
+}
+
+// TestConsensusRejectsPaddedProposal checks that a proposal padded with
+// committed seals is refused at admission. Its hash excludes the seal list, so
+// honest nodes would otherwise lock on a body that certificate verification
+// refuses, and no later round could carry their claim.
+func TestConsensusRejectsPaddedProposal(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		proposer := s.validators[0]
+		x := proposer.proposal(1)
+		header := types.CopyHeader(x.Header())
+		require.NoError(t, proposer.backend.sealer.WriteCommittedSeals(header, [][]byte{make([]byte, istanbul.IstanbulExtraSeal)}))
+		padded := x.WithSeal(header)
+		require.Equal(t, x.Hash(), padded.Hash(), "committed seals are outside the hash")
+
+		// The proposer sends the padded body to its peers; they must refuse it,
+		// change round, and decide a clean block without ever locking on X.
+		s.modify(bft.MsgPreprepare, proposer, s.nodes(1, 2, 3), padded)
+		s.advanceConsensus(1)
+		for _, n := range all {
+			block := n.assertCommitted(1, 1)
+			require.NotEqual(t, x.Hash(), block.Hash())
+			_, seals, err := n.backend.sealer.RawSeals(block.Header())
+			require.NoError(t, err)
+			require.NotEmpty(t, seals, "the committed block carries real seals")
+		}
+		for _, n := range s.nodes(1, 2, 3) {
+			s.message(n, bft.MsgRoundChange, 1, 1)
+		}
+	})
+}
+
+// TestConsensusIgnoresSecondPreprepareForView checks that once a proposal is
+// accepted for a view, a further distinct PRE-PREPARE from the proposer is
+// ignored before verification and not relayed, so an equivocating proposer
+// cannot multiply block-sized verifications and relays across the committee.
+func TestConsensusIgnoresSecondPreprepareForView(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		proposer, receiver := s.validators[0], s.validators[1]
+		x := proposer.proposal(1)
+		y := proposer.alternative(x)
+		// Hold every vote to the receiver so it stays Preprepared on X.
+		s.delay(bft.MsgPrepare, all, s.nodes(1))
+		s.delay(bft.MsgCommit, all, s.nodes(1))
+		s.advanceConsensus(1, s.nodes(1))
+		receiver.assertView(1, 0, false)
+		require.Equal(t, StatePreprepared, receiver.core.state)
+		require.Equal(t, x.Hash(), receiver.core.current.Proposal().Hash())
+
+		verifies := receiver.backend.verifies
+		receiver.reject(proposer.message(bft.MsgPreprepare, y, 0), errIgnored)
+		require.Equal(t, verifies, receiver.backend.verifies, "the second proposal is not verified")
+		require.Equal(t, x.Hash(), receiver.core.current.Proposal().Hash())
+	})
+}
+
+// TestConsensusUnjustifiedPreprepareStartsNextRound covers the handler-level
+// reaction to a proposer's unjustified PRE-PREPARE: it is rejected without a
+// relay, and the receiver starts the next round as it does for a proposal that
+// fails Verify, rather than waiting for its timer.
+func TestConsensusUnjustifiedPreprepareStartsNextRound(t *testing.T) {
+	t.Run("justification at round 0", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+			proposer, receiver := s.validators[0], s.validators[1]
+			x := proposer.proposal(1)
+			roundChange, err := receiver.backend.decodeMessage(proposer.message(bft.MsgRoundChange, x, 1).Payload, nil)
+			require.NoError(t, err)
+			pp, err := bft.Encode(&bft.Preprepare{
+				View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, Proposal: x,
+				RoundChangeCertificate: []*bft.Message{roundChange},
+			})
+			require.NoError(t, err)
+			payload, err := proposer.core.finalizeMessage(&bft.Message{PrevHash: x.ParentHash(), Code: bft.MsgPreprepare, Msg: pp})
+			require.NoError(t, err)
+			receiver.receive(istanbul.MessageEvent{Hash: x.ParentHash(), Payload: payload}, bft.ErrInvalidMessage)
+			receiver.assertView(1, 1, true)
+			s.message(receiver, bft.MsgRoundChange, 1, 1)
+		})
+	})
+	t.Run("invalid justification above round 0", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			s, x := splitLock(t)
+			nextProposer, receiver := s.validators[1], s.validators[2]
+			s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(0, 1, 2, 3))
+			s.drop(bft.MsgPreprepare, s.nodes(1), s.nodes(0, 2, 3), 1)
+			s.timeout(s.nodes(1, 2, 3))
+			s.drain()
+			receiver.assertView(1, 1, false)
+
+			pp := sentPreprepare(t, s, nextProposer, 1, 1)
+			pp.PreparedMessages = nil
+			encoded, err := bft.Encode(pp)
+			require.NoError(t, err)
+			payload, err := nextProposer.core.finalizeMessage(&bft.Message{PrevHash: x.ParentHash(), Code: bft.MsgPreprepare, Msg: encoded})
+			require.NoError(t, err)
+			receiver.receive(istanbul.MessageEvent{Hash: x.ParentHash(), Payload: payload}, bft.ErrInvalidMessage)
+			receiver.assertView(1, 2, true)
+			s.message(receiver, bft.MsgRoundChange, 1, 2)
+		})
+	})
+}
+
+// TestBroadcastRejectsOversizedMessage covers the send side of the P2P cap: a
+// message that would not fit the protocol frame is dropped before broadcast.
+func TestBroadcastRejectsOversizedMessage(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		node := s.validators[0]
+		roundChange, err := bft.Encode(&bft.RoundChange{View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(1)}})
+		require.NoError(t, err)
+		send := func(evidence []byte) int {
+			before := len(s.sent)
+			node.core.broadcast(&bft.Message{PrevHash: node.core.current.parentHash, Code: bft.MsgRoundChange, Msg: roundChange, Evidence: evidence})
+			return len(s.sent) - before
+		}
+		require.Equal(t, 1, send([]byte{0xc0}), "a small message is broadcast")
+		require.Equal(t, 0, send(make([]byte, maxConsensusP2PMessageBytes)), "an oversized message is dropped")
+	})
 }

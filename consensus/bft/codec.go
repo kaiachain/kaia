@@ -41,12 +41,14 @@ const (
 // match the address recovered from its signature.
 var ErrInvalidSigner = errors.New("message not signed by the sender")
 
-// ErrInvalidMessage indicates the message code is not recognized.
+// ErrInvalidMessage indicates a malformed envelope or payload, including an
+// unrecognized message code.
 var ErrInvalidMessage = errors.New("invalid message")
 
 // Message is the envelope transmitted between BFT validators. PrevHash, Code,
-// Msg and Address, in that order, are authenticated by Signature. Evidence is deliberately excluded from that
-// signature; it must hash to the EvidenceHash of the signed claim carried by Msg.
+// Msg and Address, in that order, are authenticated by Signature. Evidence is
+// deliberately excluded from that signature; it must hash to the EvidenceHash
+// of the signed claim carried by Msg.
 type Message struct {
 	PrevHash  common.Hash
 	Code      uint64
@@ -86,11 +88,19 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
+	// A missing optional field decodes as nil and an explicit empty one as
+	// []byte{}. EncodeRLP never writes the latter, so reject it: otherwise a
+	// message without Evidence would have a second valid encoding, and a relay
+	// could re-encode it past gossip deduplication.
+	if msg.Evidence != nil && len(msg.Evidence) == 0 {
+		return fmt.Errorf("%w: empty evidence field", ErrInvalidMessage)
+	}
 	m.PrevHash, m.Code, m.Msg, m.Address, m.Signature, m.Evidence = msg.PrevHash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.Evidence
 	return nil
 }
 
-// FromPayload decodes b into m and verifies its signer.
+// FromPayload decodes b into m and, when validateFn is non-nil, verifies its
+// signer.
 func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
 	if err := rlp.DecodeBytes(b, &m); err != nil {
 		return err
@@ -123,12 +133,11 @@ func (m *Message) validateEnvelope() error {
 	switch m.Code {
 	case MsgCommit:
 		var commit *Commit
-		if err := m.Decode(&commit); err != nil || commit == nil || len(commit.CommittedSeal) != crypto.SignatureLength {
-			sealLen := 0
-			if commit != nil {
-				sealLen = len(commit.CommittedSeal)
-			}
-			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, sealLen)
+		if err := m.Decode(&commit); err != nil || commit == nil {
+			return fmt.Errorf("%w: undecodable commit payload: %v", ErrInvalidMessage, err)
+		}
+		if len(commit.CommittedSeal) != crypto.SignatureLength {
+			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, len(commit.CommittedSeal))
 		}
 	}
 	if len(m.Evidence) != 0 && m.Code != MsgRoundChange {
@@ -143,8 +152,8 @@ func (m *Message) Payload() ([]byte, error) {
 }
 
 // PayloadNoSig returns the signed preimage, used for recovering the signer
-// address from the attached Signature. Evidence is
-// deliberately excluded: it is unsigned and checked against the signed claim.
+// address from the attached Signature. Evidence is deliberately excluded: it
+// is unsigned and checked against the signed claim.
 func (m *Message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(struct {
 		PrevHash common.Hash
@@ -164,7 +173,7 @@ func (m *Message) Decode(val any) error {
 	return rlp.DecodeBytes(m.Msg, val)
 }
 
-// WithoutEvidence returns a shallow copy without its unsigned attachment.
+// WithoutEvidence returns a shallow copy without its unsigned Evidence.
 func (m *Message) WithoutEvidence() *Message {
 	stripped := *m
 	stripped.Evidence = nil

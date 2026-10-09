@@ -724,8 +724,8 @@ func TestHandleCheckedMsgRejectsOversizedSubjectMessage(t *testing.T) {
 }
 
 // A well-formed message of every code must stay inside the size limit, even at
-// the largest view. PREPREPARE carries a block and is bounded by the block size
-// rather than by this check.
+// the largest view. PREPREPARE carries a block and is exempt from the subject
+// limit; only the P2P size cap applies to it.
 func TestCheckMessageSizeFitsWellFormedMessages(t *testing.T) {
 	view := &bft.View{
 		Sequence: new(big.Int).SetUint64(^uint64(0)),

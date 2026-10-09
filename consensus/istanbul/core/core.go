@@ -150,8 +150,8 @@ type core struct {
 	backlogs                  map[common.Address]*prque.Prque
 	backlogsMu                *sync.Mutex
 	backlogCounts             map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
-	backlogEvidenceBytes      map[common.Address]uint64            // retained unsigned ROUND CHANGE attachment bytes per sender
-	backlogTotalEvidenceBytes uint64                               // retained unsigned ROUND CHANGE attachment bytes across all senders
+	backlogEvidenceBytes      map[common.Address]uint64            // retained unsigned ROUND CHANGE Evidence bytes per sender
+	backlogTotalEvidenceBytes uint64                               // retained unsigned ROUND CHANGE Evidence bytes across all senders
 	backlogPreprepares        map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
 
 	current   *roundState
@@ -193,8 +193,8 @@ func (c *core) RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovMod
 	c.govModule = mGov
 }
 
-// isPermissionlessAt is backend.IsPermissionlessAt for a core that may have no
-// backend, as in some focused unit tests.
+// isPermissionlessAt is the fork gate used throughout this package. It is
+// backend.IsPermissionlessAt, tolerating the nil backend of focused unit tests.
 func (c *core) isPermissionlessAt(number uint64) bool {
 	return c.backend != nil && c.backend.IsPermissionlessAt(number)
 }
@@ -207,7 +207,7 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	permissionless := c.backend.IsPermissionlessAt(view.Sequence.Uint64())
+	permissionless := c.isPermissionlessAt(view.Sequence.Uint64())
 
 	// Assign the CommittedSeal if it's a COMMIT message.
 	// Sign over the digest carried in the message's own payload (the block this
@@ -237,7 +237,7 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	}
 
 	// Sign message
-	data, err := msg.PayloadNoSigForFork(c.backend.IsPermissionlessAt)
+	data, err := msg.PayloadNoSigForFork(c.isPermissionlessAt)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	}
 
 	// Convert to payload
-	payload, err := msg.PayloadForFork(c.backend.IsPermissionlessAt)
+	payload, err := msg.PayloadForFork(c.isPermissionlessAt)
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +404,7 @@ func (c *core) startNewRound(round *big.Int) {
 	c.setState(StateAcceptRequest)
 	if roundChange && c.isProposer() && c.current != nil {
 		proposedPrepared := false
-		if c.backend.IsPermissionlessAt(newView.Sequence.Uint64()) && len(c.roundChangeCertificate) > 0 {
+		if c.isPermissionlessAt(newView.Sequence.Uint64()) && len(c.roundChangeCertificate) > 0 {
 			_, prepared, verifyErr := c.roundChangeJustification(c.roundChangeCertificate, newView)
 			if verifyErr != nil {
 				logger.Error("Invalid round-change certificate selected for new round", "err", verifyErr)

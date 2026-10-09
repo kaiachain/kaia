@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
@@ -139,6 +138,30 @@ func (m *Message) FromPayloadForFork(b []byte, isPermissionlessAt func(uint64) b
 			return ErrInvalidSigner
 		}
 	}
+	if legacy.Code == MsgPreprepare {
+		return validateLegacyPreprepare(legacy.Msg)
+	}
+	return nil
+}
+
+// validateLegacyPreprepare checks that a legacy PRE-PREPARE payload is exactly
+// {View, Proposal}. Preprepare also accepts the post-Permissionless
+// justification fields, so without this check a legacy PRE-PREPARE could carry
+// fields that deployed nodes refuse. Only the list shape is read; the block is
+// decoded by the handler once the message is admitted.
+func validateLegacyPreprepare(msg []byte) error {
+	content, rest, err := rlp.SplitList(msg)
+	if err != nil || len(rest) != 0 {
+		return fmt.Errorf("%w: legacy preprepare is not a list", ErrInvalidMessage)
+	}
+	for range 2 { // View, Proposal
+		if _, content, err = rlp.SplitList(content); err != nil {
+			return fmt.Errorf("%w: legacy preprepare: %v", ErrInvalidMessage, err)
+		}
+	}
+	if len(content) != 0 {
+		return fmt.Errorf("%w: legacy preprepare carries extra fields", ErrInvalidMessage)
+	}
 	return nil
 }
 
@@ -176,19 +199,25 @@ func (m *Message) PayloadNoSigForFork(isPermissionlessAt func(uint64) bool) ([]b
 	return legacy.payloadNoSig()
 }
 
+// payloadSequence reads the view sequence of a wire payload without decoding
+// the envelope. Both formats start with {PrevHash or Hash, Code, Msg, ...}, so Msg is
+// located by skipping the first two fields and its view is read in place. The
+// envelope itself is validated by the full decode that follows.
 func payloadSequence(payload []byte) (uint64, error) {
-	var raw struct {
-		Hash      common.Hash
-		Code      uint64
-		Msg       []byte
-		Address   common.Address
-		Signature []byte
-		Tail      []byte `rlp:"optional"`
-	}
-	if err := rlp.DecodeBytes(payload, &raw); err != nil {
+	content, _, err := rlp.SplitList(payload)
+	if err != nil {
 		return 0, err
 	}
-	return msgSequence(raw.Msg)
+	for range 2 { // Hash, Code
+		if _, content, err = rlp.SplitString(content); err != nil {
+			return 0, err
+		}
+	}
+	msg, _, err := rlp.SplitString(content)
+	if err != nil {
+		return 0, err
+	}
+	return msgSequence(msg)
 }
 
 // msgSequence reads the sequence of the View that every consensus payload,
@@ -214,16 +243,8 @@ func (m *Message) fromPrePermissionless(legacy *PrePermissionlessMessage) error 
 	m.PrevHash, m.Code, m.Address, m.Signature = legacy.Hash, legacy.Code, legacy.Address, legacy.Signature
 	m.Evidence = nil
 	if legacy.Code == MsgPreprepare {
-		// The legacy codec decodes exactly {View, Proposal}. Preprepare also
-		// accepts the post-Permissionless justification fields, so reject them
-		// here or a legacy PRE-PREPARE could carry fields deployed nodes refuse.
-		var preprepare struct {
-			View     *View
-			Proposal *types.Block
-		}
-		if err := rlp.DecodeBytes(legacy.Msg, &preprepare); err != nil {
-			return fmt.Errorf("%w: legacy preprepare: %v", ErrInvalidMessage, err)
-		}
+		// The payload is checked by validateLegacyPreprepare once the sender
+		// is authenticated; it carries a block, which is not decoded before.
 		m.Msg = legacy.Msg
 		return nil
 	}
@@ -256,8 +277,9 @@ func (m *Message) fromPrePermissionless(legacy *PrePermissionlessMessage) error 
 }
 
 // toPrePermissionless is the inverse of fromPrePermissionless. Fields that the
-// legacy format cannot express, such as Evidence or a prepared claim, are
-// rejected instead of being silently dropped from the signed payload.
+// legacy format cannot express, such as Evidence, a prepared claim or the
+// PRE-PREPARE justification, are rejected instead of being silently dropped
+// from the signed payload.
 func (m *Message) toPrePermissionless() (*PrePermissionlessMessage, error) {
 	if len(m.Evidence) != 0 {
 		return nil, fmt.Errorf("%w: evidence in legacy message", ErrInvalidMessage)
@@ -266,6 +288,9 @@ func (m *Message) toPrePermissionless() (*PrePermissionlessMessage, error) {
 	subject := &Subject{PrevHash: m.PrevHash}
 	switch m.Code {
 	case MsgPreprepare:
+		if err := validateLegacyPreprepare(m.Msg); err != nil {
+			return nil, err
+		}
 		legacy.Msg = m.Msg
 		return legacy, nil
 	case MsgPrepare:

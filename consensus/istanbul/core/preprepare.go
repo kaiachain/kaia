@@ -47,7 +47,7 @@ func (c *core) sendPreprepare(request *bft.Request) {
 			View:     curView,
 			Proposal: request.Proposal,
 		}
-		if c.backend.IsPermissionlessAt(curView.Sequence.Uint64()) && curView.Round.Sign() > 0 {
+		if c.isPermissionlessAt(curView.Sequence.Uint64()) && curView.Round.Sign() > 0 {
 			certificate, prepared, err := c.roundChangeJustification(c.roundChangeCertificate, curView)
 			if err != nil {
 				logger.Error("Failed to justify PRE-PREPARE", "view", curView, "err", err)
@@ -114,7 +114,7 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 				return getProposerErr
 			}
 			storedRound, hasProposal := c.backend.ProposalRound(preprepare.Proposal.Hash(), preprepare.Proposal.Number())
-			roundMatches := !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) ||
+			roundMatches := !c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) ||
 				uint64(storedRound) == preprepare.View.Round.Uint64()
 			if proposer == src && hasProposal && roundMatches {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
@@ -129,19 +129,42 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 		logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
+	// A proposal for this view has already been accepted, or the view has
+	// moved past accepting one. A further PRE-PREPARE from the proposer is a
+	// duplicate or an equivocation: verifying it would cost a full block check
+	// and relaying it would multiply the proposer's bytes across the committee.
+	if c.state != StateAcceptRequest {
+		logger.Trace("Ignore preprepare after a proposal was accepted for this view", "state", c.state)
+		return errIgnored
+	}
 
 	var highestPrepared *bft.PreparedCertificate
-	if c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+	if c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+		// An unjustified proposal is the proposer's signed misbehaviour, like a
+		// proposal that fails Verify: start the next round rather than waiting
+		// for the timer.
 		if preprepare.View.Round.Sign() == 0 {
 			if len(preprepare.RoundChangeCertificate) != 0 || len(preprepare.PreparedMessages) != 0 {
+				logger.Warn("Reject round-0 PRE-PREPARE that carries a justification")
+				c.sendNextRoundChange("handlePreprepare. Justification at round 0")
 				return bft.ErrInvalidMessage
 			}
 		} else {
 			highestPrepared, err = c.verifyPreprepareJustification(preprepare)
 			if err != nil {
 				logger.Warn("Invalid round-change justification in PRE-PREPARE", "err", err)
+				c.sendNextRoundChange("handlePreprepare. Invalid round-change justification")
 				return bft.ErrInvalidMessage
 			}
+		}
+		// A proposal carries no committed seals until it is committed, and the
+		// block hash excludes them. Refuse a padded proposal before locking on
+		// it: certificate verification refuses padded bodies, so such a lock
+		// could never be claimed in a later round.
+		if padded, err := proposalCarriesCommittedSeals(preprepare.Proposal.Header()); err != nil || padded {
+			logger.Warn("Reject proposal that carries committed seals", "err", err)
+			c.sendNextRoundChange("handlePreprepare. Proposal carries committed seals")
+			return bft.ErrInvalidMessage
 		}
 	}
 
@@ -175,13 +198,13 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			// proposal with the new round before comparing it. Otherwise the node
 			// may have adopted a certificate without a local Preprepare, so it
 			// must not dereference or mutate that optional local proposal.
-			if !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) && c.current.Preprepare != nil {
+			if !c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) && c.current.Preprepare != nil {
 				header := c.current.Preprepare.Proposal.Header()
 				c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 				c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
 			}
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
-				if !c.backend.IsPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+				if !c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) {
 					logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 					// Hash-lock shortcut: accept the locked proposal as prepared.
 					c.acceptPreprepare(preprepare)

@@ -39,6 +39,24 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
+// Round-change recovery, enabled by isPermissionlessAt:
+//  1. A node that saw a PREPARE/COMMIT quorum for X at round r locks (r, X) and
+//     keeps the quorum votes as a PreparedCertificate (roundState.LockHash).
+//  2. Its ROUND CHANGE signs PreparedClaim{r, X, keccak(Evidence)} and carries the
+//     certificate as unsigned Message.Evidence; the hash binds the two.
+//  3. Receivers verify the Evidence against the claim (verifyRoundChangeEvidence)
+//     and cache the certificate by (sequence, r, X); roundChangeSet keeps only the
+//     stripped envelope, one per committee member, within maxRoundChangeRoundsAhead.
+//  4. The proposer of round r' embeds the stripped ROUND CHANGE quorum and the
+//     votes of the highest claim (roundChangeJustification); its proposal must be
+//     that claim's value, re-proposed with the new round byte, which the block
+//     hash excludes.
+//  5. A receiver accepts a justified PRE-PREPARE regardless of its own lock,
+//     adopts a strictly newer certificate, and keeps its lock until a PREPARE
+//     quorum at the new round replaces it (handlePreprepare).
+//  6. Proposals and certificate bodies carrying committed seals are rejected: the
+//     block hash excludes seals too, so such bodies would share a digest.
+
 // maxRoundChangeRoundsAhead retains the current round plus this many future
 // rounds while a sequence is stalled. The window bounds memory while keeping the
 // near-round buckets the node needs to catch up. It deliberately trades catch-up
@@ -82,14 +100,14 @@ func (c *core) sendRoundChange(round *big.Int) {
 	logger.Warn("[RC] Commit messages received before catchUpRound",
 		"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 
-	preparedCertificate := c.current.PreparedCertificate()
 	c.catchUpRound(&bft.View{
 		// The round number we'd like to transfer to.
 		Round:    new(big.Int).Set(round),
 		Sequence: new(big.Int).Set(cv.Sequence),
 	})
-
-	lastProposal, _ := c.backend.LastProposal()
+	// Read the certificate after catching up: the new round state drops a lock
+	// whose block is now known to be bad, and the claim must follow it.
+	preparedCertificate := c.current.PreparedCertificate()
 
 	// Now we have the new round number and sequence number
 	cv = c.currentView()
@@ -100,8 +118,8 @@ func (c *core) sendRoundChange(round *big.Int) {
 	// the unsigned Evidence so a later PRE-PREPARE can carry this signed
 	// message without repeating the prepared block.
 	var evidence []byte
-	if c.backend.IsPermissionlessAt(cv.Sequence.Uint64()) && preparedCertificate != nil {
-		preparedCertificate = c.rememberPreparedCertificate(preparedCertificate)
+	if c.isPermissionlessAt(cv.Sequence.Uint64()) && preparedCertificate != nil {
+		preparedCertificate = c.canonicalPreparedCertificate(preparedCertificate)
 		var err error
 		if evidence, err = bft.Encode(preparedCertificate); err != nil {
 			logger.Error("Failed to encode prepared certificate", "err", err)
@@ -121,7 +139,9 @@ func (c *core) sendRoundChange(round *big.Int) {
 	}
 
 	c.broadcast(&bft.Message{
-		PrevHash: lastProposal.Hash(),
+		// The parent recorded for this height, as checkPrevHash expects: the
+		// live chain head may already have moved on to the inserted block.
+		PrevHash: c.current.parentHash,
 		Code:     bft.MsgRoundChange,
 		Msg:      payload,
 		Evidence: evidence,
@@ -137,19 +157,19 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
 		return bft.ErrInvalidMessage
 	}
-	if rc == nil || rc.View == nil || rc.View.Sequence == nil {
+	if rc == nil || rc.View == nil || rc.View.Sequence == nil || !rc.View.Sequence.IsUint64() {
 		return bft.ErrInvalidMessage
 	}
 	permissionless := c.isPermissionlessAt(rc.View.Sequence.Uint64())
 	// Reject a claim or Evidence at a height that does not accept them. The
 	// decoder cannot produce one there, so this is defense in depth.
-	if c.backend != nil && !permissionless && (len(msg.Evidence) != 0 || rc.Prepared != nil) {
+	if !permissionless && (len(msg.Evidence) != 0 || rc.Prepared != nil) {
 		return bft.ErrInvalidMessage
 	}
 	// The full prepared certificate is expensive to verify, but the Evidence must
 	// match the hash its sender signed before checkMessage can return
 	// errFutureMessage and retain the envelope. A relay therefore cannot attach
-	// different Evidence to a signed claim, and an attachment without a claim is
+	// different Evidence to a signed claim, and Evidence without a claim is
 	// rejected, both without certificate decoding or signature recovery.
 	if permissionless && !roundChangeEvidenceMatchesClaim(msg, rc) {
 		return bft.ErrInvalidMessage
@@ -159,7 +179,7 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		return err
 	}
 	// Reject ineligible or unretainable messages before decoding and verifying
-	// the potentially large unsigned certificate attachment.
+	// the potentially large unsigned Evidence.
 	if !c.current.committee.Contains(src) {
 		logger.Warn("received an istanbul round change message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.Hex(), "msgView", rc.View.String())
@@ -169,9 +189,6 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		logger.Trace("Discarding ROUND CHANGE before certificate verification", "round", rc.View.Round, "err", err)
 		return err
 	}
-	// Some focused unit tests exercise round-change-set admission with a bare
-	// core and no backend. Production cores always have one; the extension
-	// validation itself requires it and therefore applies only when present.
 	if permissionless {
 		if _, err := c.verifyRoundChangeEvidence(msg, rc); err != nil {
 			logger.Warn("Invalid prepared certificate in ROUND CHANGE", "err", err)
@@ -184,7 +201,7 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 
 	// Add the ROUND CHANGE message to its message set and return how many
 	// messages we've got with the same round number and sequence number.
-	// The attachment has been verified and cached independently. Retain only the
+	// The Evidence has been verified and cached independently. Retain only the
 	// compact signed envelope so the block and votes are not multiplied by sender
 	// and target round inside roundChangeSet.
 	num, err := c.roundChangeSet.Add(cv.Round, roundView.Round, msg.WithoutEvidence())
@@ -209,7 +226,7 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 			"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 		logger.Warn("[RC] Received 2f+1 Round Change Messages. Starting new round",
 			"currentRound", cv.Round.String(), "newRound", roundView.Round.String())
-		if c.backend.IsPermissionlessAt(roundView.Sequence.Uint64()) {
+		if permissionless {
 			c.roundChangeCertificate = c.roundChangeSet.Values(roundView.Round)
 		}
 		c.startNewRound(roundView.Round)
@@ -263,8 +280,8 @@ func (c *core) verifyRoundChangeEvidence(msg *bft.Message, rc *bft.RoundChange) 
 	if err := rlp.DecodeBytes(msg.Evidence, &cert); err != nil {
 		return nil, err
 	}
-	// Bind the attachment to the signed claim before the expensive checks.
-	if cert == nil || cert.View == nil || cert.View.Round == nil || cert.Proposal == nil || rc.Prepared.Round == nil ||
+	// Bind the Evidence to the signed claim before the expensive checks.
+	if cert == nil || cert.View == nil || cert.View.Round == nil || cert.Proposal == nil ||
 		cert.View.Round.Cmp(rc.Prepared.Round) != 0 || cert.Proposal.Hash() != rc.Prepared.Digest {
 		return nil, errors.New("evidence does not match the prepared claim")
 	}
@@ -275,7 +292,7 @@ func (c *core) verifyRoundChangeEvidence(msg *bft.Message, rc *bft.RoundChange) 
 		c.verifiedEvidence = make(map[verifiedEvidenceKey]struct{})
 	}
 	c.verifiedEvidence[verified] = struct{}{}
-	return c.rememberPreparedCertificate(cert), nil
+	return c.canonicalPreparedCertificate(cert), nil
 }
 
 // roundChangeEvidenceMatchesClaim reports whether msg carries Evidence exactly
@@ -295,9 +312,14 @@ func preparedKey(sequence *big.Int, claim *bft.PreparedClaim) (preparedEvidenceK
 	return preparedEvidenceKey{sequence: sequence.Uint64(), round: claim.Round.Uint64(), digest: claim.Digest}, nil
 }
 
-// rememberPreparedCertificate canonicalizes verified evidence so each block is
-// retained once per digest and each vote set once per exact prepared claim.
-func (c *core) rememberPreparedCertificate(cert *bft.PreparedCertificate) *bft.PreparedCertificate {
+// canonicalPreparedCertificate returns the canonical certificate for cert's
+// (sequence, round, digest), like unique.Make: if one is stored it is returned
+// and cert is discarded; otherwise a copy of cert is stored and returned.
+// Callers must use the result in place of cert. The block is shared by every
+// certificate for its digest, so each block is retained once per height and
+// each vote set once per exact prepared claim. The cache is cleared on a new
+// height.
+func (c *core) canonicalPreparedCertificate(cert *bft.PreparedCertificate) *bft.PreparedCertificate {
 	if cert == nil || cert.View == nil || cert.View.Sequence == nil || cert.View.Round == nil || cert.Proposal == nil {
 		return cert
 	}
@@ -311,9 +333,12 @@ func (c *core) rememberPreparedCertificate(cert *bft.PreparedCertificate) *bft.P
 	if existing := c.preparedCertificates[key]; existing != nil {
 		return existing
 	}
+	// Every verified body for a digest is equivalent (verifyPreparedCertificate
+	// rejects committed seals, the only body component outside the hash), so
+	// reuse the retained block rather than adding a copy per prepared round.
 	block := c.preparedBlocks[key.digest]
-	if local := c.localPreparedBlock(key.digest); local != nil {
-		block = local
+	if block == nil {
+		block = c.localPreparedBlock(key.digest)
 	}
 	if block == nil {
 		block = cert.Proposal
@@ -359,15 +384,53 @@ func (c *core) verifyPreparedCertificate(cert *bft.PreparedCertificate, target *
 		cert.Proposal.Number().Cmp(cert.View.Sequence) != 0 {
 		return errors.New("prepared certificate has invalid view")
 	}
-	// Check the votes first: a quorum of signature recoveries is cheaper than
-	// hashing a block-sized body and verifying blob proofs.
+	// Check the votes first: they bind the header hash, and a quorum of cached
+	// signature recoveries is cheaper than the body checks below.
 	if err := c.verifyPreparedCertificateVotes(cert); err != nil {
 		return err
+	}
+	// The block hash excludes the committed-seal list, so bodies that differ
+	// only there share a digest and pass every vote and body check. A proposal
+	// carries none until it is committed; reject the rest so a padded copy is
+	// never retained, re-proposed or relayed.
+	padded, err := proposalCarriesCommittedSeals(cert.Proposal.Header())
+	if err != nil {
+		return fmt.Errorf("prepared certificate proposal has invalid extra: %w", err)
+	}
+	if padded {
+		return errors.New("prepared certificate proposal carries committed seals")
 	}
 	// Votes bind the header hash, but not every body component. Apply the same
 	// size, transaction and blob-sidecar checks used by ordinary PRE-PREPARE
 	// admission before retaining or re-proposing the peer-supplied body.
 	return c.backend.VerifyProposalBody(cert.Proposal)
+}
+
+// proposalCarriesCommittedSeals reports whether a peer-supplied proposal header
+// has a committed-seal list. It decodes the extra directly: the sealer's parser
+// caches every distinct extra for the life of the process, which must not be
+// fed with unverified bodies.
+func proposalCarriesCommittedSeals(header *types.Header) (bool, error) {
+	if len(header.Extra) < istanbul.IstanbulExtraVanity {
+		return false, istanbul.ErrInvalidIstanbulHeaderExtra
+	}
+	var extra *istanbul.IstanbulExtra
+	if err := rlp.DecodeBytes(header.Extra[istanbul.IstanbulExtraVanity:], &extra); err != nil {
+		return false, err
+	}
+	return len(extra.CommittedSeal) != 0, nil
+}
+
+// recoverSigner recovers the signer of bytes embedded in a certificate through
+// the shared signature cache. A sender that repeats a genuine vote set with
+// another body therefore pays the body check, not a quorum of recoveries, on
+// every attempt. Only certificate verification uses the cache, for votes and
+// for the ROUND CHANGEs embedded in a PRE-PREPARE justification; both are
+// reached only through a committee member's signed envelope, so a
+// non-validator cannot churn entries the header checks rely on. Callers check
+// that the signer is the committee member the message names.
+func (c *core) recoverSigner(unsigned, signature []byte) (common.Address, error) {
+	return istanbul.CachedSignatureAddress(unsigned, signature)
 }
 
 // verifyPreparedCertificateVotes performs the expensive committee, signature,
@@ -396,7 +459,7 @@ func (c *core) verifyPreparedCertificateVotes(cert *bft.PreparedCertificate) err
 		if err != nil {
 			return err
 		}
-		signer, err := c.validateFn(unsigned, vote.Signature)
+		signer, err := c.recoverSigner(unsigned, vote.Signature)
 		if err != nil || signer != vote.Address {
 			return errors.New("prepared certificate contains invalid signature")
 		}
@@ -421,11 +484,11 @@ func (c *core) verifyPreparedCertificateVotes(cert *bft.PreparedCertificate) err
 			return errors.New("prepared certificate vote has inconsistent payload")
 		}
 		if vote.Code == bft.MsgCommit {
-			preimage := istanbul.PrepareCommittedSeal(digest)
-			if c.backend.IsPermissionlessAt(view.Sequence.Uint64()) {
-				preimage = istanbul.PrepareCommittedSealWithRound(digest, byte(view.Round.Uint64()))
-			}
-			committer, err := istanbul.GetSignatureAddress(preimage, committedSeal)
+			// Certificates exist only where committed seals bind the round. The
+			// same preimage and seal are cached when the sealed header is
+			// verified, so the two paths share recoveries.
+			preimage := istanbul.PrepareCommittedSealWithRound(digest, byte(view.Round.Uint64()))
+			committer, err := istanbul.CachedSignatureAddress(preimage, committedSeal)
 			if err != nil || committer != vote.Address {
 				return errors.New("prepared certificate contains invalid committed seal")
 			}
@@ -469,7 +532,7 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 		if err != nil {
 			return nil, nil, err
 		}
-		signer, err := c.validateFn(unsigned, message.Signature)
+		signer, err := c.recoverSigner(unsigned, message.Signature)
 		if err != nil || signer != message.Address {
 			return nil, nil, errors.New("round-change certificate contains invalid signature")
 		}
@@ -498,9 +561,9 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 }
 
 // verifyPreprepareJustification checks the round-change justification of a
-// PRE-PREPARE above round 0. When the quorum claims a
-// prepared value, the proposal must be one claimed at the highest round and
-// PreparedMessages must prove it; the resulting certificate is returned.
+// PRE-PREPARE above round 0. When the quorum claims a prepared value, the
+// proposal must be one claimed at the highest round and PreparedMessages must
+// prove it; the resulting certificate is returned.
 func (c *core) verifyPreprepareJustification(preprepare *bft.Preprepare) (*bft.PreparedCertificate, error) {
 	highest, claims, err := c.verifyRoundChangeCertificate(preprepare.RoundChangeCertificate, preprepare.View)
 	if err != nil {
@@ -569,7 +632,7 @@ func (c *core) roundChangeJustification(messages []*bft.Message, target *bft.Vie
 	// signed ROUND CHANGE carrying that claim justifies the lock.
 	if own := c.current.PreparedCertificate(); own != nil && own.View.Sequence.Cmp(target.Sequence) == 0 &&
 		own.View.Round.Cmp(target.Round) < 0 && (highest == nil || own.View.Round.Cmp(highest.View.Round) > 0) {
-		own = c.rememberPreparedCertificate(own)
+		own = c.canonicalPreparedCertificate(own)
 		ownRoundChange, err := c.signedRoundChange(target, own)
 		if err != nil {
 			return nil, nil, err
@@ -691,9 +754,11 @@ func roundChangeClaimRound(msg *bft.Message) *big.Int {
 
 // Add retains a ROUND CHANGE only when its round is within the current window.
 // A round keeps at most one message per committee member. A quorum alone is not
-// enough: claims carry block-sized Evidence and tend to arrive last, so a
+// enough: claims arrive last because their Evidence is block-sized, so a
 // quorum-sized limit could drop the highest prepared claim. A sender's message
-// is replaced only by one with a strictly higher claim.
+// is replaced only by one with a strictly higher claim; Check has already
+// ignored an identical copy, which Add re-adds unchanged so that callers
+// bypassing Check stay idempotent.
 // Add holds rcs.mu and is the only writer of a retained messageSet, so reading
 // that set's size before adding to it cannot race.
 func (rcs *roundChangeSet) Add(currentRound, messageRound *big.Int, msg *bft.Message) (int, error) {
