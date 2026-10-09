@@ -615,9 +615,11 @@ func TestConsensusJustifiedPreprepareOverridesOlderLock(t *testing.T) {
 			n.assertHashLocked(common.Hash{})
 		}
 
-		// Round 1: B does not hear D's claim, proposes Y, and A/B/C lock Y@1.
+		// Round 1: B does not hear D's claim and proposes Y, which D never sees;
+		// A/B/C lock Y@1 while D keeps X@0.
 		s.drop(bft.MsgRoundChange, s.nodes(3), s.nodes(1), 1)
-		s.modify(bft.MsgPreprepare, b, all, y)
+		s.modify(bft.MsgPreprepare, b, s.nodes(0, 1, 2), y)
+		s.drop(bft.MsgPreprepare, s.nodes(1), s.nodes(3), 1)
 		s.drop(bft.MsgCommit, s.nodes(0, 1, 2), all, 1)
 		s.timeout(all)
 		settleConsensus(s, 1)
@@ -632,7 +634,7 @@ func TestConsensusJustifiedPreprepareOverridesOlderLock(t *testing.T) {
 		// so its adoption is observable before the height completes.
 		s.delay(bft.MsgPrepare, s.nodes(0, 1, 2), s.nodes(3), 2)
 		s.delay(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3), 2)
-		s.timeout(s.nodes(0, 1, 2))
+		s.timeout(all)
 		settleConsensus(s, 1)
 		require.Equal(t, y.Hash(), sentPreprepare(t, s, s.validators[2], 1, 2).Proposal.Hash())
 		d.assertHashLocked(y.Hash())
@@ -648,10 +650,12 @@ func TestConsensusJustifiedPreprepareOverridesOlderLock(t *testing.T) {
 	})
 }
 
-// TestConsensusOlderCertificateDoesNotOverrideNewerLock checks the inverse: a
-// node locked on Y@1 keeps that lock when the proposer re-proposes a different
-// value X justified only by an older X@0 certificate, and asks for a new round.
-func TestConsensusOlderCertificateDoesNotOverrideNewerLock(t *testing.T) {
+// TestConsensusJustifiedPreprepareAcceptedDespiteNewerLock checks the inverse:
+// a node locked on Y@1 whose ROUND CHANGE was lost receives X justified only by
+// an older X@0 certificate. Y was never decided, or the quorum would carry its
+// claim, so the node PREPAREs X as QBFT does instead of losing the round. Its
+// lock stays Y@1 until the PREPARE quorum for X replaces it.
+func TestConsensusJustifiedPreprepareAcceptedDespiteNewerLock(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
 		all := s.nodes(0, 1, 2, 3)
@@ -665,7 +669,8 @@ func TestConsensusOlderCertificateDoesNotOverrideNewerLock(t *testing.T) {
 		s.advanceConsensus(1, all)
 		a.assertHashLocked(x.Hash())
 
-		// Round 1: B does not hear A's claim and proposes Y; only D locks Y@1.
+		// Round 1: B does not hear A's claim and proposes Y; only D locks Y@1,
+		// while A PREPAREs Y but keeps X@0 without a quorum.
 		s.drop(bft.MsgRoundChange, s.nodes(0), s.nodes(1), 1)
 		s.modify(bft.MsgPreprepare, b, all, y)
 		dropPeers(s, bft.MsgPrepare, all, s.nodes(0, 1, 2), 1)
@@ -674,17 +679,30 @@ func TestConsensusOlderCertificateDoesNotOverrideNewerLock(t *testing.T) {
 		settleConsensus(s, 1)
 		d.assertHashLocked(y.Hash())
 		require.Equal(t, int64(1), d.core.current.LockedRound().Int64())
+		a.assertHashLocked(x.Hash())
+		require.Zero(t, a.core.current.LockedRound().Sign())
 
 		// Round 2: C's quorum {A, B, C} carries only A's X@0 claim, so C
-		// re-proposes X. D must keep its newer lock and request round 3.
+		// re-proposes X. Hold the votes to D so its acceptance is observable.
 		s.drop(bft.MsgRoundChange, s.nodes(3), s.nodes(2), 2)
-		s.timeout(s.nodes(1, 2, 3))
+		s.delay(bft.MsgPrepare, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.delay(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.timeout(all)
 		settleConsensus(s, 1)
 		preprepare := sentPreprepare(t, s, c, 1, 2)
 		require.Equal(t, x.Hash(), preprepare.Proposal.Hash())
-		d.assertHashLocked(y.Hash())
+		s.message(d, bft.MsgPrepare, 1, 2)
+		d.assertView(1, 2, false)
+		require.Equal(t, StatePreprepared, d.core.state)
+		d.assertHashLocked(y.Hash()) // kept until a PREPARE quorum replaces it
 		require.Equal(t, int64(1), d.core.current.LockedRound().Int64())
-		s.message(d, bft.MsgRoundChange, 1, 3)
+
+		s.release(bft.MsgPrepare, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.release(bft.MsgCommit, s.nodes(0, 1, 2), s.nodes(3), 2)
+		s.advanceConsensus(1)
+		for _, n := range all {
+			require.Equal(t, x.Hash(), n.assertCommitted(1, 2).Hash())
+		}
 	})
 }
 

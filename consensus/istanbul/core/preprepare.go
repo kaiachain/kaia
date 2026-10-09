@@ -189,37 +189,39 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 
 	// Here is about to accept the PRE-PREPARE
 	if c.state == StateAcceptRequest {
-		if highestPrepared != nil {
-			c.current.AdoptPreparedCertificate(highestPrepared)
+		if c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+			// The justification verified above already forces the proposal to any
+			// value that could have been decided: such a value is locked by a
+			// quorum less f honest nodes, so every round-change quorum carries
+			// its claim and the highest-claim rule selects it. A local lock
+			// therefore adds no safety and is not compared (QBFT). It is kept
+			// for the next ROUND CHANGE until a PREPARE quorum at this view
+			// replaces it, and a carried certificate proves a prior round, so a
+			// quorum is re-established here before COMMIT.
+			if highestPrepared != nil {
+				c.current.AdoptPreparedCertificate(highestPrepared)
+			}
+			c.acceptPreprepare(preprepare)
+			c.postPrepreparedEvent(preprepare)
+			c.setState(StatePreprepared)
+			c.sendPrepare()
+			return nil
 		}
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
-			// Where the hash-lock shortcut applies, re-seal the locally retained
-			// proposal with the new round before comparing it. Otherwise the node
-			// may have adopted a certificate without a local Preprepare, so it
-			// must not dereference or mutate that optional local proposal.
-			if !c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) && c.current.Preprepare != nil {
-				header := c.current.Preprepare.Proposal.Header()
-				c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
-				c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
-			}
+			// Re-seal the locally retained proposal with the new round before
+			// comparing it.
+			header := c.current.Preprepare.Proposal.Header()
+			c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
+			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
+
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
-				if !c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) {
-					logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
-					// Hash-lock shortcut: accept the locked proposal as prepared.
-					c.acceptPreprepare(preprepare)
-					c.postPrepreparedEvent(preprepare)
-					c.setState(StatePrepared)
-					c.sendCommit()
-				} else {
-					// A carried certificate proves a prior round, not this one. Re-establish
-					// a quorum at the current view before sending COMMIT, so every honest
-					// committer can advertise a current-round certificate in a later RC.
-					c.acceptPreprepare(preprepare)
-					c.postPrepreparedEvent(preprepare)
-					c.setState(StatePreprepared)
-					c.sendPrepare()
-				}
+				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
+				// Hash-lock shortcut: accept the locked proposal as prepared.
+				c.acceptPreprepare(preprepare)
+				c.postPrepreparedEvent(preprepare)
+				c.setState(StatePrepared)
+				c.sendCommit()
 			} else {
 				// Send round change
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
