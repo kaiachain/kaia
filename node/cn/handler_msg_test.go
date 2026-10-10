@@ -101,15 +101,18 @@ func prepareTestHandleNewBlockMsg(t *testing.T, mockCtrl *gomock.Controller, blo
 	return newBlock, msg, mockPeer, mockFetcher
 }
 
-// countingConsensusHandler records how many messages reached the consensus engine.
-type countingConsensusHandler struct{ calls int }
+// countingConsensusHandler records how many messages reached the consensus engine and fails each with err.
+type countingConsensusHandler struct {
+	calls int
+	err   error
+}
 
 func (h *countingConsensusHandler) NewChainHead() error                  { return nil }
 func (h *countingConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
 
 func (h *countingConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) {
 	h.calls++
-	return true, nil
+	return true, h.err
 }
 
 func TestHandleConsensusMsgFromNonCNPeer(t *testing.T) {
@@ -138,6 +141,49 @@ func TestHandleConsensusMsgFromNonCNPeer(t *testing.T) {
 			err := pm.handleMsg(mockPeer, addrs[0], msg)
 			assert.Equal(t, tc.wantErr, err != nil, "err: %v", err)
 			assert.Equal(t, tc.wantCalls, handler.calls)
+		})
+	}
+}
+
+// A consensus message that reaches a stopped engine (e.g. while syncing) must not drop the peer.
+func TestHandleConsensusMsgWhileEngineStopped(t *testing.T) {
+	tcs := []struct {
+		name    string
+		err     error
+		wantErr error
+	}{
+		{"stopped engine keeps the peer", istanbul.ErrStoppedEngine, nil},
+		{"other errors drop the peer", expectedErr, expectedErr},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+			mockPeer.EXPECT().GetP2PPeer().Return(p2p.NewPeer(nodeids[0], "cn", nil)).AnyTimes()
+
+			handler := &countingConsensusHandler{err: tc.err}
+			pm := &ProtocolManager{handler: handler}
+
+			// Single-channel peers
+			err := pm.handleMsg(mockPeer, addrs[0], generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{}))
+			assert.Equal(t, tc.wantErr, err)
+
+			// Multichannel peers
+			msgCh := make(chan p2p.Msg, 1)
+			errCh := make(chan error, 1)
+			msgCh <- generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{})
+			close(msgCh)
+			pm.processConsensusMsg(msgCh, mockPeer, addrs[0], errCh)
+			select {
+			case err := <-errCh:
+				assert.Equal(t, tc.wantErr, err)
+			default:
+				assert.Nil(t, tc.wantErr)
+			}
+			assert.Equal(t, 2, handler.calls)
 		})
 	}
 }
