@@ -50,6 +50,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Reduce some of the parameters to make the tester faster.
@@ -1190,6 +1191,38 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	tester.downloader.Cancel()
 	if !tester.downloader.queue.Idle() {
 		t.Errorf("download queue not idle")
+	}
+}
+
+// Tests that dropping the peer a sync runs against cancels the sync, and dropping another peer doesn't.
+func TestMasterPeerDropCancelsSync(t *testing.T) {
+	t.Parallel()
+
+	tester := newTester(t)
+	defer tester.terminate()
+
+	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(MaxHeaderFetch, 0, tester.genesis, nil, false)
+	tester.newSlowPeer("master", 65, hashes, headers, blocks, receipts, stakingInfos, 5*time.Second)
+	tester.newPeer("other", 65, hashes, headers, blocks, receipts, stakingInfos)
+
+	errc := make(chan error, 1)
+	go func() { errc <- tester.sync("master", nil, FullSync) }()
+	require.Eventually(t, func() bool { return tester.downloader.isMasterPeer("master") }, time.Second, 10*time.Millisecond)
+
+	// Unregister only: the master's pending request still reads its chain after the test.
+	require.NoError(t, tester.downloader.UnregisterPeer("other"))
+	select {
+	case err := <-errc:
+		t.Fatalf("sync ended after a non-master peer dropped: %v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	require.NoError(t, tester.downloader.UnregisterPeer("master"))
+	select {
+	case err := <-errc:
+		assert.ErrorIs(t, err, errCanceled)
+	case <-time.After(2 * time.Second):
+		t.Fatal("sync still running after its master peer dropped")
 	}
 }
 

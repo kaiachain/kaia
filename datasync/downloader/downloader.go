@@ -347,6 +347,10 @@ func (d *Downloader) UnregisterPeer(id string) error {
 	}
 	d.queue.Revoke(id)
 
+	// Cancel a sync against this peer instead of letting it wait out the request timeout.
+	if d.isMasterPeer(id) {
+		d.cancel()
+	}
 	return nil
 }
 
