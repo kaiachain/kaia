@@ -146,6 +146,8 @@ type worker struct {
 	engine consensus.Engine
 
 	mu sync.Mutex
+	// startMu serializes start and stop, which must not hold mu: the engine's Start and Stop wait on update().
+	startMu sync.Mutex
 
 	// update loop
 	mux          *event.TypeMux
@@ -237,8 +239,8 @@ func (self *worker) pendingBlock() *types.Block {
 }
 
 func (self *worker) start() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	self.startMu.Lock()
+	defer self.startMu.Unlock()
 
 	self.mining.Store(1)
 
@@ -250,8 +252,8 @@ func (self *worker) start() {
 func (self *worker) stop() {
 	self.wg.Wait()
 
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	self.startMu.Lock()
+	defer self.startMu.Unlock()
 
 	self.engine.Stop()
 
