@@ -100,6 +100,7 @@ type backend struct {
 	proposedBlockHash common.Hash
 	sealMu            sync.Mutex
 	sealSkippedNum    uint64 // block number that was committed before Seal started (0 = none)
+	sealNum           uint64 // block number of the Seal waiting on commitCh
 	coreStarted       atomic.Bool
 	coreMu            sync.RWMutex
 
@@ -161,16 +162,29 @@ func (sb *backend) initSealState(number uint64, blockHash common.Hash) chan *typ
 		sb.sealSkippedNum = 0
 		return nil
 	}
+	if sb.commitCh != nil {
+		// A Seal for an older block that starts late leaves the current one alone.
+		if number < sb.sealNum {
+			return nil
+		}
+		// Release the previous Seal, which waits forever if this node never commits its block itself.
+		close(sb.commitCh)
+	}
+	sb.sealNum = number
 	sb.proposedBlockHash = blockHash
 	sb.commitCh = make(chan *types.Result, 1)
 	return sb.commitCh
 }
 
-// cleanupSealState cleans up state after Seal completes.
-func (sb *backend) cleanupSealState() {
+// cleanupSealState cleans up state after the Seal waiting on commitCh completes.
+func (sb *backend) cleanupSealState(commitCh chan *types.Result) {
 	sb.sealMu.Lock()
 	defer sb.sealMu.Unlock()
 
+	// Keep the state of a newer Seal.
+	if sb.commitCh != nil && sb.commitCh != commitCh {
+		return
+	}
 	sb.proposedBlockHash = common.Hash{}
 	sb.commitCh = nil
 }
@@ -342,12 +356,13 @@ func (sb *backend) Commit(proposal bft.Proposal, seals [][]byte) error {
 		return nil
 	}
 
-	// Non-proposer: send nil to unblock Seal() waiting on commitCh
+	// Non-proposer: release the waiting Seal; a Seal for this block that hasn't started returns at once.
+	number := proposal.Number().Uint64()
 	if sb.commitCh != nil {
 		sb.commitCh <- nil
-	} else {
-		// Seal hasn't started yet, record block number so it returns immediately when it starts
-		sb.sealSkippedNum = proposal.Number().Uint64()
+	}
+	if sb.commitCh == nil || number > sb.sealNum {
+		sb.sealSkippedNum = number
 	}
 	sb.sealMu.Unlock()
 

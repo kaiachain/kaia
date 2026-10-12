@@ -234,6 +234,118 @@ func TestCommit(t *testing.T) {
 	}
 }
 
+type sealResult struct {
+	block *types.Block
+	err   error
+}
+
+// startSeal runs engine.Seal on block in the background.
+func startSeal(chain *blockchain.BlockChain, engine *backend, block *types.Block) <-chan sealResult {
+	ch := make(chan sealResult, 1)
+	go func() {
+		b, err := engine.Seal(chain, block)
+		ch <- sealResult{b, err}
+	}()
+	return ch
+}
+
+// requireSealWaiting waits until a Seal is waiting for its block to be committed.
+func requireSealWaiting(t *testing.T, engine *backend) {
+	require.Eventually(t, func() bool {
+		engine.sealMu.Lock()
+		defer engine.sealMu.Unlock()
+		return engine.commitCh != nil
+	}, 5*time.Second, 10*time.Millisecond)
+}
+
+// commitBlock commits block as this node's core does and returns the committed block.
+func commitBlock(t *testing.T, engine *backend, block *types.Block) *types.Block {
+	committed, err := engine.updateBlock(block)
+	require.NoError(t, err)
+	require.NoError(t, engine.Commit(committed, [][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, istanbul.IstanbulExtraSeal-1)...)}))
+	return committed
+}
+
+// requireSealCommits commits block and checks that the Seal waiting on it returns it.
+func requireSealCommits(t *testing.T, engine *backend, block *types.Block, sealed <-chan sealResult) {
+	expBlock := commitBlock(t, engine, block)
+	select {
+	case r := <-sealed:
+		require.NoError(t, r.err)
+		require.NotNil(t, r.block)
+		require.Equal(t, expBlock.Hash(), r.block.Hash())
+	case <-time.After(5 * time.Second):
+		t.Fatal("the Seal didn't get its committed block")
+	}
+}
+
+// requireSealReleased checks that a Seal returns without a block.
+func requireSealReleased(t *testing.T, sealed <-chan sealResult) {
+	select {
+	case r := <-sealed:
+		require.NoError(t, r.err)
+		require.Nil(t, r.block)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the Seal is still waiting")
+	}
+}
+
+// Tests that a Seal whose block this node never commits returns once the next Seal starts.
+func TestSealReleasedByNextSeal(t *testing.T) {
+	// With 4 validators and no peers, this node can't commit a block itself.
+	chain, engine := newBlockChain(t, 4)
+	defer engine.Stop()
+
+	first := startSeal(chain, engine, makeBlockWithoutSeal(chain, engine, chain.Genesis()))
+	requireSealWaiting(t, engine)
+
+	// The network's block 1 arrives by import, and this node starts on block 2.
+	imported := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{imported})
+	require.NoError(t, err)
+	block2 := makeBlockWithoutSeal(chain, engine, imported)
+	second := startSeal(chain, engine, block2)
+
+	requireSealReleased(t, first)
+	requireSealWaiting(t, engine)
+	requireSealCommits(t, engine, block2, second)
+}
+
+// Tests that a Seal for an older block that starts late returns at once and leaves the current Seal alone.
+func TestSealOlderBlockStartingLate(t *testing.T) {
+	chain, engine := newBlockChain(t, 4)
+	defer engine.Stop()
+
+	imported := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{imported})
+	require.NoError(t, err)
+	block2 := makeBlockWithoutSeal(chain, engine, imported)
+	second := startSeal(chain, engine, block2)
+	requireSealWaiting(t, engine)
+
+	requireSealReleased(t, startSeal(chain, engine, makeBlockWithoutSeal(chain, engine, chain.Genesis())))
+	requireSealCommits(t, engine, block2, second)
+}
+
+// Tests that a Seal returns at once if its block was committed while an older Seal was waiting.
+func TestSealStartingAfterItsBlockCommitted(t *testing.T) {
+	chain, engine := newBlockChain(t, 4)
+	defer engine.Stop()
+
+	first := startSeal(chain, engine, makeBlockWithoutSeal(chain, engine, chain.Genesis()))
+	requireSealWaiting(t, engine)
+
+	// Block 1 arrives by import, and block 2 is committed before this node's Seal for it starts.
+	imported := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{imported})
+	require.NoError(t, err)
+	block2 := makeBlockWithoutSeal(chain, engine, imported)
+	commitBlock(t, engine, block2)
+	requireSealReleased(t, first)
+
+	requireSealReleased(t, startSeal(chain, engine, block2))
+}
+
 // buildBlockWithTx returns a sealed block carrying the given tx, built on top of the
 // chain's current head.
 func buildBlockWithTx(t *testing.T, chain *blockchain.BlockChain, engine *backend, txdata *types.TxInternalDataLegacy) *types.Block {
