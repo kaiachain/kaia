@@ -1833,6 +1833,339 @@ func TestConsensusReturningValidatorWithoutLockAcceptsFreshProposal(t *testing.T
 	})
 }
 
+// TestConsensusLockedNodeExecutesLockBeforeRefusingRecovery checks a node
+// locked on a bad block X it never imported: C and D found X bad on import, A
+// keeps claiming X@0 and withholds its votes, and B holds X as its lock either
+// because it adopted A's certificate when re-proposing X as the round-1
+// proposer (it missed round 0), or because it saw the round-0 PREPARE quorum
+// but not the COMMIT quorum. When C proposes a fresh value below A's claim, B
+// must execute X once, find it bad, release the lock and accept, so B, C and D
+// decide at round 2 instead of B refusing every recovery proposal.
+func TestConsensusLockedNodeExecutesLockBeforeRefusingRecovery(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		missedRound0 bool
+	}{
+		{"AdoptedLockAsReturningProposer", true},
+		{"OwnLockWithoutCommitQuorum", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+				all := s.nodes(0, 1, 2, 3)
+				a, b, c := s.validators[0], s.validators[1], s.validators[2]
+				x := a.proposal(1)
+
+				// Round 0: the COMMITs are lost. B either sees nothing or locks X.
+				if tc.missedRound0 {
+					s.drop(bft.MsgPreprepare, s.nodes(0), s.nodes(1), 0)
+					s.drop(bft.MsgPrepare, all, s.nodes(1), 0)
+				}
+				s.drop(bft.MsgCommit, all, all, 0)
+				s.advanceConsensus(1, all)
+				b.assertHashLocked(map[bool]common.Hash{true: {}, false: x.Hash()}[tc.missedRound0])
+				for _, n := range s.nodes(2, 3) {
+					n.backend.badProposals[x.Hash()] = true
+					n.assertBadHashLocked(x.Hash())
+				}
+				b.backend.badExecutions[x.Hash()] = true // what B would find if it executed X
+
+				// A withholds its votes from round 1 on. B's round-1 quorum is A,
+				// B and C, so A's X@0 claim is in it.
+				for r := uint64(1); r <= 3; r++ {
+					s.drop(bft.MsgPrepare, s.nodes(0), all, r)
+					s.drop(bft.MsgCommit, s.nodes(0), all, r)
+				}
+				s.delay(bft.MsgRoundChange, s.nodes(3), s.nodes(1), 1)
+
+				// Round 1: B re-proposes X, which C and D refuse. B is locked on X.
+				s.timeout(all)
+				settleConsensus(s, 1)
+				require.Equal(t, x.Hash(), sentPreprepare(t, s, b, 1, 1).Proposal.Hash())
+				b.assertHashLocked(x.Hash())
+				require.Zero(t, b.backend.executions, "no conflict yet, so no execution")
+				for _, n := range all {
+					n.assertUncommitted(1)
+				}
+
+				// Round 2: C proposes a fresh value below A's claim. B executes X,
+				// finds it bad, releases the lock and accepts.
+				var armed []*validator
+				for _, n := range all {
+					if !n.core.waitingForRoundChange {
+						armed = append(armed, n)
+					}
+				}
+				s.timeout(armed)
+				s.advanceConsensus(1, s.nodes(0))
+				y := sentPreprepare(t, s, c, 1, 2).Proposal.Hash()
+				require.NotEqual(t, x.Hash(), y)
+				require.Equal(t, 1, b.backend.executions, "the locked block is executed once")
+				require.True(t, b.backend.badProposals[x.Hash()], "execution failure is recorded")
+				for _, n := range s.nodes(1, 2, 3) {
+					require.Equal(t, y, n.assertCommitted(1, 2).Hash())
+				}
+				a.assertUncommitted(1)
+			})
+		})
+	}
+}
+
+// TestConsensusLockedNodeExecutesLockBelowProvenClaim checks the trigger when
+// the marked proposer honours a LOWER claim instead of proposing a fresh
+// value: Byzantine A carries a genuine W@0 certificate that nobody locked, X@1
+// is bad, B found it bad on import, C and D locked X@1 without a COMMIT
+// quorum. When B re-proposes W with W@0 votes, C and D must execute X, find it
+// bad, re-judge the justification with the claim void and accept W.
+func TestConsensusLockedNodeExecutesLockBelowProvenClaim(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		honest := s.nodes(1, 2, 3)
+		a, b := s.validators[0], s.validators[1]
+		w := a.proposal(1)
+
+		// Round 0: A proposes W; every vote is lost, nobody locks.
+		s.drop(bft.MsgPrepare, all, all, 0)
+		s.drop(bft.MsgCommit, all, all, 0)
+		// Round 1: B proposes X; the PREPARE quorum locks everyone, COMMITs are lost.
+		x := b.proposal(2)
+		newMessageRule(s, bft.MsgPreprepare, b, all, 1).proposal = x
+		s.drop(bft.MsgCommit, all, all, 1)
+		// A withholds everything from round 2 on; its claims are injected below.
+		for r := uint64(2); r <= 6; r++ {
+			for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange, bft.MsgPreprepare} {
+				s.drop(code, s.nodes(0), all, r)
+			}
+		}
+		s.advanceConsensus(1, all)
+		s.timeout(all)
+		s.advanceConsensus(1, all)
+		for _, n := range all {
+			n.assertHashLocked(x.Hash())
+		}
+		b.backend.badProposals[x.Hash()] = true
+		b.assertBadHashLocked(x.Hash())
+		for _, n := range s.nodes(2, 3) {
+			n.backend.badExecutions[x.Hash()] = true
+		}
+		lower := preparedCertificate(t, s.nodes(0, 2, 3), w, 0)
+		lowerClaim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: w.Hash()}
+
+		// Rounds 2-4: C and D re-propose X, B refuses it; A's turn is silent.
+		// Round 5: B honours A's W@0 claim and proposes W with its votes.
+		for r := uint64(2); r <= 5; r++ {
+			for _, n := range honest {
+				synctest.Wait()
+				_ = n.core.handleMsg(signedRoundChange(t, a, r, lowerClaim, lower).Payload)
+				synctest.Wait()
+			}
+			var armed []*validator
+			for _, n := range honest {
+				if !n.core.waitingForRoundChange {
+					armed = append(armed, n)
+				}
+			}
+			s.timeout(armed)
+			settleConsensus(s, 1)
+		}
+		preprepare := sentPreprepare(t, s, b, 1, 5)
+		require.Equal(t, w.Hash(), preprepare.Proposal.Hash())
+		require.NotEmpty(t, preprepare.PreparedMessages)
+		for _, n := range s.nodes(2, 3) {
+			require.Equal(t, 1, n.backend.executions, "node %d executes its lock once", n.id)
+			require.True(t, n.backend.badProposals[x.Hash()])
+		}
+		for _, n := range honest {
+			require.Equal(t, w.Hash(), n.assertCommitted(1, 5).Hash())
+		}
+	})
+}
+
+// TestConsensusUnlockedNodeAcceptsProposalBelowProvenClaim checks that a node
+// with no lock accepts a proposal backed by a lower certificate the same way it
+// accepts a fresh one. D missed round 1, so it holds neither a lock on X nor a
+// record. At round 5 B, which has a record for X, proposes W with W@0 votes
+// while C's round change still claims X@1: D sees the higher claim, has no lock
+// to execute, and accepts W without executing anything.
+func TestConsensusUnlockedNodeAcceptsProposalBelowProvenClaim(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		honest := s.nodes(1, 2, 3)
+		a, b, c, d := s.validators[0], s.validators[1], s.validators[2], s.validators[3]
+		w := a.proposal(1)
+
+		// Round 0: A proposes W; every vote is lost, nobody locks.
+		s.drop(bft.MsgPrepare, all, all, 0)
+		s.drop(bft.MsgCommit, all, all, 0)
+		// Round 1: B proposes X to A, B and C, which lock it; D sees nothing.
+		x := b.proposal(2)
+		newMessageRule(s, bft.MsgPreprepare, b, s.nodes(0, 1, 2), 1).proposal = x
+		s.drop(bft.MsgPreprepare, s.nodes(1), s.nodes(3), 1)
+		s.drop(bft.MsgPrepare, all, s.nodes(3), 1)
+		s.drop(bft.MsgCommit, all, all, 1)
+		// A withholds everything from round 2 on; its claims are injected below.
+		for r := uint64(2); r <= 6; r++ {
+			for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange, bft.MsgPreprepare} {
+				s.drop(code, s.nodes(0), all, r)
+			}
+		}
+		// D never handles a justified X proposal, which would adopt X's
+		// certificate as a lock: it misses C's at round 2 and its own at round 3.
+		s.drop(bft.MsgPreprepare, s.nodes(2), s.nodes(3), 2)
+		s.drop(bft.MsgPreprepare, s.nodes(3), all, 3)
+		// B's round-5 quorum is A, B and C, so its certificate carries C's claim.
+		s.drop(bft.MsgRoundChange, s.nodes(3), s.nodes(1), 5)
+		s.advanceConsensus(1, all)
+		s.timeout(all)
+		s.advanceConsensus(1, all)
+		for _, n := range s.nodes(0, 1, 2) {
+			n.assertHashLocked(x.Hash())
+		}
+		d.assertHashLocked(common.Hash{})
+		b.backend.badProposals[x.Hash()] = true
+		b.assertBadHashLocked(x.Hash())
+		c.backend.badExecutions[x.Hash()] = true
+		lower := preparedCertificate(t, s.nodes(0, 2, 3), w, 0)
+		lowerClaim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: w.Hash()}
+
+		// Rounds 2-4: C and D re-propose X, B refuses it; A's turn is silent.
+		// Round 5: B honours A's W@0 claim over C's voided X@1 claim and
+		// proposes W with its votes; the certificate still carries C's claim.
+		for r := uint64(2); r <= 5; r++ {
+			for _, n := range honest {
+				synctest.Wait()
+				_ = n.core.handleMsg(signedRoundChange(t, a, r, lowerClaim, lower).Payload)
+				synctest.Wait()
+			}
+			var armed []*validator
+			for _, n := range honest {
+				if !n.core.waitingForRoundChange {
+					armed = append(armed, n)
+				}
+			}
+			s.timeout(armed)
+			settleConsensus(s, 1)
+		}
+		d.assertHashLocked(common.Hash{})
+		preprepare := sentPreprepare(t, s, b, 1, 5)
+		require.Equal(t, w.Hash(), preprepare.Proposal.Hash())
+		require.NotEmpty(t, preprepare.PreparedMessages)
+		claimsX := false
+		for _, m := range preprepare.RoundChangeCertificate {
+			var rc bft.RoundChange
+			require.NoError(t, m.Decode(&rc))
+			if rc.Prepared != nil && rc.Prepared.Digest == x.Hash() {
+				claimsX = true
+			}
+		}
+		require.True(t, claimsX, "the certificate carries an X@1 claim that D cannot see as void")
+		require.Equal(t, 1, c.backend.executions, "C executes its lock once")
+		require.True(t, c.backend.badProposals[x.Hash()])
+		require.Zero(t, d.backend.executions, "an unlocked node has nothing to execute")
+		for _, n := range honest {
+			require.Equal(t, w.Hash(), n.assertCommitted(1, 5).Hash())
+		}
+	})
+}
+
+// TestConsensusLockedNodeRetriesTransientExecutionFailure checks that an
+// execution that fails without a verdict, such as the parent state being
+// unavailable, is retried on the next proposal below the claim rather than
+// counted as done for the height.
+func TestConsensusLockedNodeRetriesTransientExecutionFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b := s.validators[0], s.validators[1]
+		x := a.proposal(1)
+
+		s.drop(bft.MsgCommit, all, all, 0)
+		s.advanceConsensus(1, all)
+		for _, n := range s.nodes(2, 3) {
+			n.backend.badProposals[x.Hash()] = true
+		}
+		b.backend.badExecutions[x.Hash()] = true
+		b.backend.transientExecutions[x.Hash()] = 1
+		for r := uint64(1); r <= 3; r++ {
+			s.drop(bft.MsgPrepare, s.nodes(0), all, r)
+			s.drop(bft.MsgCommit, s.nodes(0), all, r)
+		}
+		s.delay(bft.MsgRoundChange, s.nodes(3), s.nodes(1), 1)
+
+		// Round 1: B re-proposes X. Round 2: C proposes fresh; B's execution
+		// fails transiently, so B refuses and keeps the lock. Round 3: D
+		// proposes fresh; B executes again, records X and accepts.
+		for r := uint64(1); r <= 3; r++ {
+			var armed []*validator
+			for _, n := range all {
+				if !n.core.waitingForRoundChange {
+					armed = append(armed, n)
+				}
+			}
+			s.timeout(armed)
+			settleConsensus(s, 1)
+			if r == 2 {
+				require.Equal(t, 1, b.backend.executions)
+				b.assertHashLocked(x.Hash())
+				b.assertUncommitted(1)
+			}
+		}
+		require.Equal(t, 2, b.backend.executions, "the transient failure is retried")
+		require.True(t, b.backend.badProposals[x.Hash()])
+		for _, n := range s.nodes(1, 2, 3) {
+			n.assertCommitted(1, 3)
+		}
+		a.assertUncommitted(1)
+	})
+}
+
+// TestConsensusLockedNodeKeepsGoodLockAfterExecution checks the other outcome:
+// a proposer that proposes below a claim for a block that executes fine makes
+// the locked node execute it once, keep the lock and refuse, and never execute
+// it again for the height.
+func TestConsensusLockedNodeKeepsGoodLockAfterExecution(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b := s.validators[0], s.validators[1]
+		x := a.proposal(1)
+
+		// Round 0: every node locks X; the COMMITs are lost. B, C and D then
+		// claim X is bad; A never imported it and executes it fine.
+		s.drop(bft.MsgCommit, all, all, 0)
+		s.advanceConsensus(1, all)
+		for _, n := range s.nodes(1, 2, 3) {
+			n.backend.badProposals[x.Hash()] = true
+		}
+		s.delay(bft.MsgRoundChange, s.nodes(2), s.nodes(1), 1)
+		// Round 1 reaches no PREPARE quorum, so nobody locks the fresh value and
+		// round 2 proposes below A's claim again.
+		s.drop(bft.MsgPrepare, all, all, 1)
+		s.timeout(all)
+		settleConsensus(s, 1)
+		require.NotEqual(t, x.Hash(), sentPreprepare(t, s, b, 1, 1).Proposal.Hash())
+		require.Equal(t, 1, a.backend.executions)
+		require.False(t, a.backend.badProposals[x.Hash()])
+		a.assertHashLocked(x.Hash())
+
+		// Round 2: C proposes below the claim again. A does not execute X twice.
+		var armed []*validator
+		for _, n := range all {
+			if !n.core.waitingForRoundChange {
+				armed = append(armed, n)
+			}
+		}
+		s.timeout(armed)
+		s.advanceConsensus(1, s.nodes(0))
+		require.NotEqual(t, x.Hash(), sentPreprepare(t, s, s.validators[2], 1, 2).Proposal.Hash())
+		require.Equal(t, 1, a.backend.executions, "a good lock is executed once per height")
+		a.assertHashLocked(x.Hash())
+		a.assertUncommitted(1)
+	})
+}
+
 // TestConsensusRoundChangeRejectsCertificateWithCommittedSeals checks that a
 // certificate body padded with committed seals is rejected. The block hash
 // excludes that list, so the digest and votes still match; without the check

@@ -345,7 +345,7 @@ func newValidator(net *scenarioNet, id int, key *ecdsa.PrivateKey, genesis *type
 	backend := &scenarioBackend{
 		net: net, id: id, key: key, sealer: istanbul.NewSealerImpl(key),
 		mux: new(event.TypeMux), head: genesis, blocks: map[uint64]*types.Block{0: genesis},
-		chainConfig: net.config.chainConfig, badProposals: make(map[common.Hash]bool),
+		chainConfig: net.config.chainConfig, badProposals: make(map[common.Hash]bool), badExecutions: make(map[common.Hash]bool), transientExecutions: make(map[common.Hash]int),
 	}
 
 	c := New(backend, net.config.istanbulConfig.Copy()).(*core)
@@ -592,21 +592,24 @@ func (node *validator) timeout() { node.backend.net.timeout([]*validator{node}) 
 
 // scenarioBackend records core commits as-is; validator assertions expose invalid quorum or conflicting blocks.
 type scenarioBackend struct {
-	net          *scenarioNet
-	id           int
-	key          *ecdsa.PrivateKey
-	sealer       *istanbul.IstanbulSealer
-	mux          *event.TypeMux
-	view         *bft.View
-	head         *types.Block
-	blocks       map[uint64]*types.Block
-	committed    []*types.Block
-	chainConfig  *params.ChainConfig
-	badProposals map[common.Hash]bool
-	commitErrors []error
-	bodyChecks   int // VerifyProposalBody calls, to observe skipped certificate verification
-	verifies     int // Verify calls, to observe proposals that are ignored before verification
-	commitCalls  int
+	net                 *scenarioNet
+	id                  int
+	key                 *ecdsa.PrivateKey
+	sealer              *istanbul.IstanbulSealer
+	mux                 *event.TypeMux
+	view                *bft.View
+	head                *types.Block
+	blocks              map[uint64]*types.Block
+	committed           []*types.Block
+	chainConfig         *params.ChainConfig
+	badProposals        map[common.Hash]bool
+	badExecutions       map[common.Hash]bool // VerifyProposalExecution fails and records these
+	transientExecutions map[common.Hash]int  // VerifyProposalExecution fails this many times without a record
+	executions          int                  // VerifyProposalExecution calls
+	commitErrors        []error
+	bodyChecks          int // VerifyProposalBody calls, to observe skipped certificate verification
+	verifies            int // Verify calls, to observe proposals that are ignored before verification
+	commitCalls         int
 }
 
 var _ istanbul.Backend = (*scenarioBackend)(nil)
@@ -793,6 +796,9 @@ func (b *scenarioBackend) Verify(proposal bft.Proposal) (time.Duration, error) {
 	if !ok || block.NumberU64() != b.head.NumberU64()+1 || block.ParentHash() != b.head.Hash() {
 		return 0, istanbul.ErrInvalidProposal
 	}
+	if b.badProposals[block.Hash()] { // as the real backend: a recorded bad proposal is refused
+		return 0, blockchain.ErrBlacklistedHash
+	}
 	if err := b.VerifyProposalBody(block); err != nil {
 		return 0, err
 	}
@@ -804,6 +810,20 @@ func (b *scenarioBackend) Verify(proposal bft.Proposal) (time.Duration, error) {
 		return 0, istanbul.ErrUnauthorizedAddress
 	}
 	return 0, nil
+}
+
+func (b *scenarioBackend) VerifyProposalExecution(proposal bft.Proposal) error {
+	b.executions++
+	hash := proposal.Hash()
+	if b.transientExecutions[hash] > 0 {
+		b.transientExecutions[hash]--
+		return errors.New("parent state unavailable") // no record, as the chain writes none
+	}
+	if b.badExecutions[hash] {
+		b.badProposals[hash] = true // The chain records a bad proposal on execution failure.
+		return errors.New("proposal execution failed")
+	}
+	return nil
 }
 
 func (b *scenarioBackend) VerifyProposalBody(proposal bft.Proposal) error {

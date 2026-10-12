@@ -70,6 +70,11 @@ type ChainReader interface {
 	// HasBadBlock reports whether the given hash is on the bad-block blacklist.
 	HasBadBlock(hash common.Hash) bool
 
+	// ValidateProposalExecution executes a proposal on its parent state and
+	// validates the result without importing it, recording a bad proposal on
+	// failure as import would.
+	ValidateProposalExecution(block *types.Block) error
+
 	// State retrieves statedb
 	State() (*state.StateDB, error)
 

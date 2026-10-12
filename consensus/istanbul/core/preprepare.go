@@ -149,25 +149,10 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 				c.sendNextRoundChange("handlePreprepare. Justification at round 0")
 				return bft.ErrInvalidMessage
 			}
-		} else {
-			highestPrepared, err = c.verifyPreprepareJustification(preprepare)
-			if err == errFreshProposalBelowClaim && !c.current.IsHashLocked() {
-				// The proposer treated the claimed value as void, a block its
-				// chain found invalid, which this node may not know. A node with
-				// no lock holds no value a decision could depend on, so it may
-				// accept the fresh proposal as it does before the fork. A decided
-				// value, one a quorum committed and imported, is locked by at
-				// least quorum-f honest nodes that never find it bad and refuse
-				// any other value; the honest nodes without that lock, at most
-				// n-quorum, cannot complete a quorum for another value.
-				logger.Debug("Accept fresh proposal below a prepared claim without a lock")
-				err = nil
-			}
-			if err != nil {
-				logger.Warn("Invalid round-change justification in PRE-PREPARE", "err", err)
-				c.sendNextRoundChange("handlePreprepare. Invalid round-change justification")
-				return bft.ErrInvalidMessage
-			}
+		} else if highestPrepared, err = c.verifyRecoveryJustification(preprepare); err != nil {
+			logger.Warn("Invalid round-change justification in PRE-PREPARE", "err", err)
+			c.sendNextRoundChange("handlePreprepare. Invalid round-change justification")
+			return bft.ErrInvalidMessage
 		}
 		// A proposal carries no committed seals until it is committed, and the
 		// block hash excludes them. Refuse a padded proposal before locking on
@@ -251,6 +236,68 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	}
 
 	return nil
+}
+
+// verifyRecoveryJustification judges the justification of a PRE-PREPARE above
+// round 0 from this node's point of view. A proposal of a value below the
+// highest claim, fresh or backed by a lower certificate, means the proposer
+// treated the highest claim as void: a block its chain found invalid, which
+// this node may not know. Such a proposal is accepted by a node without a
+// lock, as before the fork: it holds no value a decision could depend on. A
+// decided value, one a quorum committed and imported, is locked by at least
+// quorum-f honest nodes that never find it bad and refuse any other value;
+// the honest nodes without that lock, at most n-quorum, cannot complete a
+// quorum for another value. A locked node may hold the voided value itself,
+// without having imported it, if it never received the COMMIT quorum or
+// adopted the certificate; it would then refuse every recovery proposal for a
+// value that cannot be decided. So it first executes its locked block once:
+// a failure records it as bad and releases the lock, exactly as import would
+// have, and the proposal is then judged again; a good block keeps the lock.
+func (c *core) verifyRecoveryJustification(preprepare *bft.Preprepare) (*bft.PreparedCertificate, error) {
+	highest, err := c.verifyPreprepareJustification(preprepare)
+	if err != errFreshProposalBelowClaim && err != errProposalNotHighestClaim {
+		return highest, err
+	}
+	if c.current.IsHashLocked() {
+		c.verifyLockedProposalExecution()
+		if c.current.IsHashLocked() {
+			return nil, err
+		}
+		if highest, err = c.verifyPreprepareJustification(preprepare); err != errFreshProposalBelowClaim && err != errProposalNotHighestClaim {
+			return highest, err
+		}
+	}
+	c.logger.Debug("Accept proposal below a prepared claim without a lock", "view", preprepare.View)
+	return nil, nil
+}
+
+// verifyLockedProposalExecution executes the locked block once per height, so
+// that a lock on a block this node never imported cannot refuse recovery from
+// a value that is known bad elsewhere. A definite result is kept for the
+// height: a proposer cannot repeat the cost by proposing below the claim
+// again. A failure is recorded by the chain and read back through IsHashLocked.
+func (c *core) verifyLockedProposalExecution() {
+	locked := c.current.GetLockedHash()
+	var proposal bft.Proposal
+	if cert := c.current.PreparedCertificate(); cert != nil && cert.Proposal != nil && cert.Proposal.Hash() == locked {
+		proposal = cert.Proposal
+	} else if p := c.current.Proposal(); p != nil && p.Hash() == locked {
+		proposal = p
+	} else {
+		return
+	}
+	if _, done := c.executedProposals[locked]; done {
+		return
+	}
+	err := c.backend.VerifyProposalExecution(proposal)
+	if err == nil || c.backend.HasBadProposal(locked) {
+		// A definite result; a failure to execute at all, such as the parent
+		// state being unavailable, is retried on the next occasion.
+		c.executedProposals[locked] = struct{}{}
+	}
+	if err != nil {
+		c.logger.Warn("Locked proposal fails execution", "hash", locked, "released", !c.current.IsHashLocked(), "err", err)
+	}
 }
 
 // proposalNumberMatchesView reports whether the proposal's block number equals the view sequence.

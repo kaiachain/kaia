@@ -479,6 +479,15 @@ func (sb *backend) LastProposal() (bft.Proposal, common.Address) {
 	return block, proposer
 }
 
+// VerifyProposalExecution implements istanbul.Backend.VerifyProposalExecution
+func (sb *backend) VerifyProposalExecution(proposal bft.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return istanbul.ErrInvalidProposal
+	}
+	return sb.chain.ValidateProposalExecution(block)
+}
+
 func (sb *backend) HasBadProposal(hash common.Hash) bool {
 	if sb.chain == nil {
 		return false

@@ -74,6 +74,38 @@ func TestUpdateLeaks(t *testing.T) {
 	}
 }
 
+// TestObjectReadErrorSurfaces checks that a read failure met while loading an
+// object's code is reported by StateDB.Error(), not only kept on the object.
+func TestObjectReadErrorSurfaces(t *testing.T) {
+	memDBManager := database.NewMemoryDBManager()
+	addr := common.BytesToAddress([]byte{1})
+	code := []byte{0x60, 0x00}
+
+	sdb := NewDatabase(memDBManager)
+	state, _ := New(common.Hash{}, sdb, nil, nil)
+	state.SetCode(addr, code)
+	root, err := state.Commit(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sdb.TrieDB().Commit(root, false, 0); err != nil {
+		t.Fatal(err)
+	}
+	memDBManager.DeleteCode(crypto.Keccak256Hash(code))
+
+	// A fresh database bypasses the code cache that served the commit.
+	state, err = New(root, NewDatabase(memDBManager), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := state.GetCode(addr); got != nil {
+		t.Fatalf("code = %x, want nil", got)
+	}
+	if state.Error() == nil {
+		t.Fatal("a code read failure must surface in StateDB.Error()")
+	}
+}
+
 // Tests that no intermediate state of an object is stored into the database,
 // only the one right before the commit.
 func TestIntermediateLeaks(t *testing.T) {

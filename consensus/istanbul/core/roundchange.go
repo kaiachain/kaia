@@ -55,7 +55,9 @@ import (
 //     adopts a strictly newer certificate, and keeps its lock until a PREPARE
 //     quorum at the new round replaces it (handlePreprepare). A receiver with
 //     no lock also accepts a fresh proposal below a claim, as before the fork:
-//     justification is enforced by the locked nodes.
+//     justification is enforced by the locked nodes. A locked receiver first
+//     executes its locked block once (verifyLockedProposalExecution), so a lock
+//     on a block it never imported cannot refuse recovery from a bad value.
 //  6. Proposals and certificate bodies carrying committed seals are rejected: the
 //     block hash excludes seals too, so such bodies would share a digest.
 //  7. A claim for a block this node imported and found invalid is void, like a
@@ -581,6 +583,13 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 // depends on its lock, see handlePreprepare.
 var errFreshProposalBelowClaim = errors.New("fresh proposal below a prepared claim")
 
+// errProposalNotHighestClaim reports a PRE-PREPARE whose proposal is not a
+// value claimed at the highest round of its round-change quorum although votes
+// are attached: the proposer honoured a lower claim, which happens when it
+// treated the highest one as void. Like errFreshProposalBelowClaim, a locked
+// receiver re-evaluates it after executing its lock, see handlePreprepare.
+var errProposalNotHighestClaim = errors.New("proposal is not the highest prepared value")
+
 // verifyPreprepareJustification checks the round-change justification of a
 // PRE-PREPARE above round 0. When the quorum claims a prepared value, the
 // proposal must be one claimed at the highest round and PreparedMessages must
@@ -611,7 +620,7 @@ func (c *core) verifyPreprepareJustification(preprepare *bft.Preprepare) (*bft.P
 		if len(preprepare.PreparedMessages) == 0 {
 			return nil, errFreshProposalBelowClaim
 		}
-		return nil, errors.New("proposal is not the highest prepared value")
+		return nil, errProposalNotHighestClaim
 	}
 	cert := &bft.PreparedCertificate{
 		View:     &bft.View{Sequence: new(big.Int).Set(preprepare.View.Sequence), Round: new(big.Int).Set(highest)},

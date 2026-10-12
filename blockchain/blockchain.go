@@ -182,6 +182,8 @@ type BlockChain struct {
 
 	mu sync.RWMutex // global mutex for locking chain operations
 
+	badBlockMu sync.Mutex // serialises bad-proposal records written from import and from consensus
+
 	checkpoint       int          // checkpoint counts towards the new checkpoint
 	currentBlock     atomic.Value // Current head of the block chain
 	currentFastBlock atomic.Value // Current head of the fast-sync chain (may be above the block chain!)
@@ -2113,7 +2115,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Process block using the parent state as reference point.
 		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
 		if err != nil {
-			bc.reportBlock(block, receipts, err)
+			bc.reportExecutionFailure(block, receipts, stateDB, err)
 			atomic.StoreUint32(&followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
@@ -2121,7 +2123,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		// Validate the state using the default validator
 		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 		if err != nil {
-			bc.reportBlock(block, receipts, err)
+			bc.reportExecutionFailure(block, receipts, stateDB, err)
 			atomic.StoreUint32(&followupInterrupt, 1)
 			return i, events, coalescedLogs, err
 		}
@@ -2634,6 +2636,47 @@ func (bc *BlockChain) BadBlocks() ([]BadBlockArgs, error) {
 	return badBlockArgs, err
 }
 
+// ValidateProposalExecution executes a consensus proposal on its parent state
+// and validates the resulting state without importing it. A failure is
+// reported and recorded as a bad proposal exactly as it would be on import, so
+// a node can establish whether a block it never imported is bad. The proposal
+// must build on a block whose state is available.
+func (bc *BlockChain) ValidateProposalExecution(block *types.Block) error {
+	bc.wg.Add(1)
+	defer bc.wg.Done()
+
+	parent := bc.GetBlock(block.ParentHash(), block.NumberU64()-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+	stateDB, err := bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+	if err != nil {
+		return err
+	}
+	receipts, _, usedGas, _, _, err := bc.processor.Process(block, stateDB, bc.vmConfig)
+	if err == nil {
+		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
+	}
+	if err != nil {
+		return bc.reportExecutionFailure(block, receipts, stateDB, err)
+	}
+	return nil
+}
+
+// reportExecutionFailure reports a block whose execution or resulting state
+// failed validation. The block is recorded as a bad proposal only if the state
+// was read without error: StateDB keeps a read failure in Error() and returns
+// zero values, so a missing trie node or an I/O fault surfaces as a wrong
+// state root that says nothing about the block. Returns the error to report.
+func (bc *BlockChain) reportExecutionFailure(block *types.Block, receipts types.Receipts, stateDB *state.StateDB, err error) error {
+	if dbErr := stateDB.Error(); dbErr != nil {
+		bc.logBadBlock(block, receipts, fmt.Errorf("%w (state access failed: %v)", err, dbErr))
+		return dbErr
+	}
+	bc.reportBlock(block, receipts, err)
+	return err
+}
+
 // istanbul BFT
 func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
 	badBlock := bc.db.ReadBadBlock(hash)
@@ -2650,7 +2693,9 @@ func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
 	bc.logBadBlock(block, receipts, err)
 	if shouldMarkBadProposal(err) {
+		bc.badBlockMu.Lock()
 		bc.db.WriteBadBlock(block)
+		bc.badBlockMu.Unlock()
 	}
 }
 

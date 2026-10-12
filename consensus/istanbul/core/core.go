@@ -111,6 +111,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		preparedBlocks:       make(map[common.Hash]*types.Block),
 		preparedCertificates: make(map[preparedEvidenceKey]*bft.PreparedCertificate),
 		verifiedEvidence:     make(map[verifiedEvidenceKey]struct{}),
+		executedProposals:    make(map[common.Hash]struct{}),
 		pendingRequests:      prque.New(),
 		pendingRequestsMu:    new(sync.Mutex),
 		consensusTimestamp:   time.Time{},
@@ -168,7 +169,8 @@ type core struct {
 	preparedBlocks       map[common.Hash]*types.Block
 	preparedCertificates map[preparedEvidenceKey]*bft.PreparedCertificate
 	verifiedEvidence     map[verifiedEvidenceKey]struct{}
-	roundChangeTimer     atomic.Value //*time.Timer
+	executedProposals    map[common.Hash]struct{} // locked blocks executed by verifyLockedProposalExecution this height
+	roundChangeTimer     atomic.Value             //*time.Timer
 	pendingRequests      *prque.Prque
 	pendingRequestsMu    *sync.Mutex
 
@@ -491,6 +493,7 @@ func (c *core) updateRoundState(view *bft.View, roundChange bool, parentHash com
 			c.preparedBlocks = make(map[common.Hash]*types.Block)
 			c.preparedCertificates = make(map[preparedEvidenceKey]*bft.PreparedCertificate)
 			c.verifiedEvidence = make(map[verifiedEvidenceKey]struct{})
+			c.executedProposals = make(map[common.Hash]struct{})
 		}
 	}
 	c.current.parentHash = parentHash

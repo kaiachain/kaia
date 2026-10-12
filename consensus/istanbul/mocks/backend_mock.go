@@ -249,6 +249,20 @@ func (mr *MockBackendMockRecorder) Verify(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockBackend)(nil).Verify), arg0)
 }
 
+// VerifyProposalExecution mocks base method.
+func (m *MockBackend) VerifyProposalExecution(arg0 bft.Proposal) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyProposalExecution", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyProposalExecution indicates an expected call of VerifyProposalExecution.
+func (mr *MockBackendMockRecorder) VerifyProposalExecution(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyProposalExecution", reflect.TypeOf((*MockBackend)(nil).VerifyProposalExecution), arg0)
+}
+
 // VerifyProposalBody mocks base method.
 func (m *MockBackend) VerifyProposalBody(arg0 bft.Proposal) error {
 	m.ctrl.T.Helper()

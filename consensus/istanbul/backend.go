@@ -76,6 +76,11 @@ type Backend interface {
 	// HasBadProposal returns whether the proposal with the hash is a bad proposal
 	HasBadProposal(hash common.Hash) bool
 
+	// VerifyProposalExecution executes the proposal on its parent state and
+	// validates the result without importing it. A failure is recorded as a bad
+	// proposal, as it would be on import, so HasBadProposal reports it afterwards.
+	VerifyProposalExecution(bft.Proposal) error
+
 	SetCurrentView(view *bft.View)
 
 	NodeType() common.ConnType
