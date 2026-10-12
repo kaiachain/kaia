@@ -356,12 +356,13 @@ func (sb *backend) Commit(proposal bft.Proposal, seals [][]byte) error {
 		return nil
 	}
 
-	// Non-proposer: send nil to unblock Seal() waiting on commitCh
+	// Non-proposer: release the waiting Seal; a Seal for this block that hasn't started returns at once.
+	number := proposal.Number().Uint64()
 	if sb.commitCh != nil {
 		sb.commitCh <- nil
-	} else {
-		// Seal hasn't started yet, record block number so it returns immediately when it starts
-		sb.sealSkippedNum = proposal.Number().Uint64()
+	}
+	if sb.commitCh == nil || number > sb.sealNum {
+		sb.sealSkippedNum = number
 	}
 	sb.sealMu.Unlock()
 
