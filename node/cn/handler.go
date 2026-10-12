@@ -739,7 +739,7 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
 		if pm.handler != nil {
-			_, err := pm.handler.HandleMsg(addr, msg)
+			_, err := pm.handleConsensusMsg(addr, msg)
 			// if msg is consensus msg, handled is true and err is nil if handle msg is successful.
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
@@ -750,6 +750,15 @@ func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, add
 		msg.Discard()
 	}
 	p.GetP2PPeer().Log().Info("ProtocolManager.processConsensusMsg closed", "PeerName", p.GetP2PPeer().Name())
+}
+
+// handleConsensusMsg drops messages that reach a stopped engine (e.g. while syncing) but keeps the peer.
+func (pm *ProtocolManager) handleConsensusMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+	handled, err := pm.handler.HandleMsg(addr, msg)
+	if errors.Is(err, istanbul.ErrStoppedEngine) {
+		return handled, nil
+	}
+	return handled, err
 }
 
 // handleMsg is invoked whenever an inbound message is received from a remote
@@ -778,7 +787,7 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 		if pm.handler == nil {
 			return nil
 		}
-		handled, err := pm.handler.HandleMsg(addr, msg)
+		handled, err := pm.handleConsensusMsg(addr, msg)
 		if handled {
 			return err
 		}

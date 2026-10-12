@@ -347,6 +347,12 @@ func (d *Downloader) UnregisterPeer(id string) error {
 	}
 	d.queue.Revoke(id)
 
+	// Cancel a sync against this peer instead of letting it wait out the request timeout.
+	d.cancelLock.Lock()
+	if id == d.cancelPeer {
+		d.closeCancelCh()
+	}
+	d.cancelLock.Unlock()
 	return nil
 }
 
@@ -707,8 +713,13 @@ func (d *Downloader) SyncStakingInfoStatus() *SyncingStatus {
 // not wait for the running download goroutines to finish. This method should be
 // used when cancelling the downloads from inside the downloader.
 func (d *Downloader) cancel() {
-	// Close the current cancel channel
 	d.cancelLock.Lock()
+	d.closeCancelCh()
+	d.cancelLock.Unlock()
+}
+
+// closeCancelCh closes the current cancel channel if it's open; the caller holds cancelLock.
+func (d *Downloader) closeCancelCh() {
 	if d.cancelCh != nil {
 		select {
 		case <-d.cancelCh:
@@ -717,7 +728,6 @@ func (d *Downloader) cancel() {
 			close(d.cancelCh)
 		}
 	}
-	d.cancelLock.Unlock()
 }
 
 func (d *Downloader) isMasterPeer(id string) bool {
