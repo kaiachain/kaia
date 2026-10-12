@@ -416,9 +416,12 @@ func (c *core) startNewRound(round *big.Int) {
 				proposedPrepared = true
 			}
 		}
-		// If it is locked, propose the old proposal.
+		// Before Permissionless, a locked proposer re-proposes its lock, which is
+		// the last accepted proposal. After it, roundChangeJustification above
+		// already selected the value to propose.
 		// If we have pending request, propose pending request.
-		if !proposedPrepared && c.current.IsHashLocked() {
+		permissionless := c.isPermissionlessAt(newView.Sequence.Uint64())
+		if !proposedPrepared && !permissionless && c.current.IsHashLocked() {
 			r := &bft.Request{
 				Proposal: c.current.Proposal(),
 			}
