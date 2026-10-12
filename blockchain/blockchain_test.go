@@ -91,6 +91,33 @@ func TestReportBlockRecordPolicy(t *testing.T) {
 	assert.NotNil(t, db.ReadBadBlock(block.Hash()))
 }
 
+// TestInsertChainBodyMismatchDoesNotMarkBadProposal checks that a block whose
+// body does not match its sealed header is refused without blacklisting the
+// hash: any peer can pair a valid header with another body, and the consensus
+// engine must still accept the genuine block under that hash.
+func TestInsertChainBodyMismatchDoesNotMarkBadProposal(t *testing.T) {
+	db, blockchain, err := newCanonical(faker.NewFaker(), 0, true)
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	genuine := MakeBlockChain(blockchain.CurrentBlock(), 1, faker.NewFaker(), db, 10)[0]
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	tx, err := types.SignTx(types.NewTransaction(0, common.Address{1}, common.Big0, 21000, common.Big0, nil),
+		types.LatestSignerForChainID(blockchain.Config().ChainID), key)
+	require.NoError(t, err)
+	forged := genuine.WithBody(types.Transactions{tx})
+	require.Equal(t, genuine.Hash(), forged.Hash(), "the body is outside the header hash")
+
+	_, err = blockchain.InsertChain(types.Blocks{forged})
+	require.ErrorContains(t, err, "transaction root hash mismatch")
+	require.False(t, blockchain.HasBadBlock(genuine.Hash()), "a mismatched body must not blacklist the hash")
+
+	_, err = blockchain.InsertChain(types.Blocks{genuine})
+	require.NoError(t, err)
+	require.Equal(t, genuine.Hash(), blockchain.CurrentBlock().Hash())
+}
+
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.

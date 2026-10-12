@@ -2101,7 +2101,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		case err != nil:
 			bc.futureBlocks.Remove(block.Hash())
-			bc.reportBlock(block, nil, err)
+			bc.logBadBlock(block, nil, err)
 			return i, events, coalescedLogs, err
 		}
 
@@ -2643,12 +2643,24 @@ func (bc *BlockChain) HasBadBlock(hash common.Hash) bool {
 	return false
 }
 
-// reportBlock logs a bad block error.
+// reportBlock logs a bad block error and records the block as a bad proposal
+// for the consensus engine. Only a failure of execution or of the resulting
+// state may be recorded: ValidateBody has by then bound the body to the header,
+// so the failure is a property of the block hash.
 func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, err error) {
-	badBlockCounter.Inc(1)
+	bc.logBadBlock(block, receipts, err)
 	if shouldMarkBadProposal(err) {
 		bc.db.WriteBadBlock(block)
 	}
+}
+
+// logBadBlock logs a bad block error without recording the block as a bad
+// proposal. A header or body validation failure can come from a peer that
+// paired a correctly sealed header with another body, so it says nothing about
+// the block that hash names; recording it would make the consensus engine
+// refuse a block that a quorum prepared.
+func (bc *BlockChain) logBadBlock(block *types.Block, receipts types.Receipts, err error) {
+	badBlockCounter.Inc(1)
 
 	var receiptString strings.Builder
 	for i, receipt := range receipts {
