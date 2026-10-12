@@ -53,9 +53,14 @@ import (
 //     hash excludes.
 //  5. A receiver accepts a justified PRE-PREPARE regardless of its own lock,
 //     adopts a strictly newer certificate, and keeps its lock until a PREPARE
-//     quorum at the new round replaces it (handlePreprepare).
+//     quorum at the new round replaces it (handlePreprepare). A receiver with
+//     no lock also accepts a fresh proposal below a claim, as before the fork:
+//     justification is enforced by the locked nodes.
 //  6. Proposals and certificate bodies carrying committed seals are rejected: the
 //     block hash excludes seals too, so such bodies would share a digest.
+//  7. A claim for a block this node imported and found invalid is void, like a
+//     local lock on it (roundState.IsHashLocked): such a block cannot be decided,
+//     and selecting it would spend recovery rounds on a value Verify refuses.
 
 // maxRoundChangeRoundsAhead retains the current round plus this many future
 // rounds while a sequence is stalled. The window bounds memory while keeping the
@@ -547,6 +552,15 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 			if claim.Round == nil || claim.Round.Cmp(target.Round) >= 0 || common.EmptyHash(claim.Digest) {
 				return nil, nil, errors.New("round-change certificate has an invalid prepared claim")
 			}
+			// A claim for a block this node has imported and found invalid is
+			// void, as a local lock on it is: Verify refuses the block, so a
+			// quorum that selects it cannot be prepared here, and honest nodes
+			// dropped their locks on it. Deciding it was impossible, so skipping
+			// the claim leaves every decidable value in place.
+			if c.backend.HasBadProposal(claim.Digest) {
+				seen[message.Address] = struct{}{}
+				continue
+			}
 			if highest == nil || claim.Round.Cmp(highest) > 0 {
 				highest = claim.Round
 			}
@@ -560,10 +574,18 @@ func (c *core) verifyRoundChangeCertificate(messages []*bft.Message, target *bft
 	return highest, claims, nil
 }
 
+// errFreshProposalBelowClaim reports a PRE-PREPARE whose round-change quorum
+// claims a prepared value that the proposal does not re-propose, with no votes
+// attached: the proposer treated the claim as void, see
+// verifyRoundChangeCertificate. Whether the receiver may accept the proposal
+// depends on its lock, see handlePreprepare.
+var errFreshProposalBelowClaim = errors.New("fresh proposal below a prepared claim")
+
 // verifyPreprepareJustification checks the round-change justification of a
 // PRE-PREPARE above round 0. When the quorum claims a prepared value, the
 // proposal must be one claimed at the highest round and PreparedMessages must
-// prove it; the resulting certificate is returned.
+// prove it; the resulting certificate is returned. A proposal of another value
+// without votes returns errFreshProposalBelowClaim.
 func (c *core) verifyPreprepareJustification(preprepare *bft.Preprepare) (*bft.PreparedCertificate, error) {
 	highest, claims, err := c.verifyRoundChangeCertificate(preprepare.RoundChangeCertificate, preprepare.View)
 	if err != nil {
@@ -586,6 +608,9 @@ func (c *core) verifyPreprepareJustification(preprepare *bft.Preprepare) (*bft.P
 		return claim.Round.Cmp(highest) == 0 && claim.Digest == block.Hash()
 	})
 	if !claimed {
+		if len(preprepare.PreparedMessages) == 0 {
+			return nil, errFreshProposalBelowClaim
+		}
 		return nil, errors.New("proposal is not the highest prepared value")
 	}
 	cert := &bft.PreparedCertificate{
@@ -613,7 +638,9 @@ func (c *core) roundChangeJustification(messages []*bft.Message, target *bft.Vie
 		if err := message.Decode(&roundChange); err != nil {
 			return nil, nil, err
 		}
-		if roundChange.Prepared == nil || (highest != nil && roundChange.Prepared.Round.Cmp(highest.View.Round) <= 0) {
+		if roundChange.Prepared == nil || c.backend.HasBadProposal(roundChange.Prepared.Digest) ||
+			(highest != nil && roundChange.Prepared.Round.Cmp(highest.View.Round) <= 0) {
+			// A claim for a known bad block is void, see verifyRoundChangeCertificate.
 			continue
 		}
 		key, err := preparedKey(target.Sequence, roundChange.Prepared)
@@ -630,7 +657,7 @@ func (c *core) roundChangeJustification(messages []*bft.Message, target *bft.Vie
 	// still re-propose its lock: a lower claimed value would be refused by the
 	// proposer itself and by every node locked at the newer round. Its own
 	// signed ROUND CHANGE carrying that claim justifies the lock.
-	if own := c.current.PreparedCertificate(); own != nil && own.View.Sequence.Cmp(target.Sequence) == 0 &&
+	if own := c.current.PreparedCertificate(); own != nil && c.current.IsHashLocked() && own.View.Sequence.Cmp(target.Sequence) == 0 &&
 		own.View.Round.Cmp(target.Round) < 0 && (highest == nil || own.View.Round.Cmp(highest.View.Round) > 0) {
 		own = c.canonicalPreparedCertificate(own)
 		ownRoundChange, err := c.signedRoundChange(target, own)

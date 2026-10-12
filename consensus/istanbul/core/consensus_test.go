@@ -940,6 +940,12 @@ func TestConsensusPreprepareJustificationValidation(t *testing.T) {
 				"proposal is not the highest prepared value",
 			},
 			{
+				"fresh proposal below a prepared claim", func(pp *bft.Preprepare) {
+					pp.Proposal, pp.PreparedMessages = nextProposer.alternative(x), nil
+				},
+				errFreshProposalBelowClaim.Error(),
+			},
+			{
 				"missing prepared votes", func(pp *bft.Preprepare) { pp.PreparedMessages = nil },
 				"prepared certificate has 0 votes",
 			},
@@ -1712,6 +1718,118 @@ func TestConsensusRoundChangeDropsClaimForBadProposal(t *testing.T) {
 		require.NoError(t, msg.Decode(&roundChange))
 		require.Nil(t, roundChange.Prepared, "a dropped lock is not claimed")
 		require.Empty(t, msg.Evidence)
+	})
+}
+
+// TestConsensusRoundChangeSkipsClaimForBadProposal checks that a peer's claim
+// for a block this node imported and found invalid does not select that block
+// again. All four nodes lock X at round 0; B, C and D then learn X is bad while
+// A keeps its certificate. The round-1 proposer B must propose a fresh value
+// with no prepared votes although A's claim is in its quorum, and C and D must
+// accept it, instead of every proposer re-proposing X that Verify refuses.
+func TestConsensusRoundChangeSkipsClaimForBadProposal(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b := s.validators[0], s.validators[1]
+		x := a.proposal(1)
+
+		// Round 0: every node locks X; the COMMITs are lost.
+		s.drop(bft.MsgCommit, all, all, 0)
+		s.advanceConsensus(1, all)
+		for _, n := range all {
+			n.assertHashLocked(x.Hash())
+		}
+		for _, n := range s.nodes(1, 2, 3) {
+			n.backend.badProposals[x.Hash()] = true
+			n.assertBadHashLocked(x.Hash())
+		}
+
+		// Round 1: B's quorum is A, B and D, so A's X@0 claim is in it.
+		s.delay(bft.MsgRoundChange, s.nodes(2), s.nodes(1), 1)
+		s.timeout(all)
+		s.advanceConsensus(1, s.nodes(0))
+
+		// B proposes its own miner request, not X.
+		preprepare := sentPreprepare(t, s, b, 1, 1)
+		y := preprepare.Proposal.Hash()
+		require.NotEqual(t, x.Hash(), y)
+		require.Empty(t, preprepare.PreparedMessages, "a void claim selects no prepared value")
+		claimed := false
+		for _, msg := range preprepare.RoundChangeCertificate {
+			var roundChange *bft.RoundChange
+			require.NoError(t, msg.Decode(&roundChange))
+			if msg.Address == a.backend.Address() {
+				require.NotNil(t, roundChange.Prepared)
+				require.Equal(t, x.Hash(), roundChange.Prepared.Digest)
+				claimed = true
+			}
+		}
+		require.True(t, claimed, "A's claim is carried, not excluded")
+		for _, n := range s.nodes(1, 2, 3) {
+			require.Equal(t, y, n.assertCommitted(1, 1).Hash())
+		}
+		// A has not found X bad, so from its view Y is not the highest claim.
+		a.assertUncommitted(1)
+		a.assertHashLocked(x.Hash())
+	})
+}
+
+// TestConsensusReturningValidatorWithoutLockAcceptsFreshProposal checks the
+// returning-validator case: C missed round 0 and holds neither a lock on X nor
+// a bad-block record, while B and D found X bad and A keeps claiming X@0 and
+// withholds its votes. B proposes a fresh value below A's claim; C has no lock,
+// so it accepts as it did before the fork, and B, C and D decide at round 1.
+func TestConsensusReturningValidatorWithoutLockAcceptsFreshProposal(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		a, b, c := s.validators[0], s.validators[1], s.validators[2]
+		x := a.proposal(1)
+
+		// Round 0: C sees nothing; A, B and D lock X and the COMMITs are lost.
+		s.drop(bft.MsgPreprepare, s.nodes(0), s.nodes(2), 0)
+		s.drop(bft.MsgPrepare, all, s.nodes(2), 0)
+		s.drop(bft.MsgCommit, all, all, 0)
+		s.advanceConsensus(1, all)
+		for _, n := range s.nodes(0, 1, 3) {
+			n.assertHashLocked(x.Hash())
+		}
+		c.assertHashLocked(common.Hash{})
+		for _, n := range s.nodes(1, 3) {
+			n.backend.badProposals[x.Hash()] = true
+			n.assertBadHashLocked(x.Hash())
+		}
+		require.False(t, c.backend.HasBadProposal(x.Hash()))
+
+		// Round 1: B's quorum is A, B and C, so A's X@0 claim is in it; A
+		// withholds its votes.
+		s.delay(bft.MsgRoundChange, s.nodes(3), s.nodes(1), 1)
+		s.drop(bft.MsgPrepare, s.nodes(0), all, 1)
+		s.drop(bft.MsgCommit, s.nodes(0), all, 1)
+		s.timeout(all)
+		s.advanceConsensus(1, s.nodes(0))
+
+		preprepare := sentPreprepare(t, s, b, 1, 1)
+		y := preprepare.Proposal.Hash()
+		require.NotEqual(t, x.Hash(), y)
+		require.Empty(t, preprepare.PreparedMessages)
+		claimed := false
+		for _, msg := range preprepare.RoundChangeCertificate {
+			var roundChange *bft.RoundChange
+			require.NoError(t, msg.Decode(&roundChange))
+			if msg.Address == a.backend.Address() {
+				require.NotNil(t, roundChange.Prepared)
+				require.Equal(t, x.Hash(), roundChange.Prepared.Digest)
+				claimed = true
+			}
+		}
+		require.True(t, claimed, "C decides below A's claim")
+		for _, n := range s.nodes(1, 2, 3) {
+			require.Equal(t, y, n.assertCommitted(1, 1).Hash())
+		}
+		a.assertUncommitted(1)
+		a.assertHashLocked(x.Hash())
 	})
 }
 

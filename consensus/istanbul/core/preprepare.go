@@ -151,6 +151,18 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			}
 		} else {
 			highestPrepared, err = c.verifyPreprepareJustification(preprepare)
+			if err == errFreshProposalBelowClaim && !c.current.IsHashLocked() {
+				// The proposer treated the claimed value as void, a block its
+				// chain found invalid, which this node may not know. A node with
+				// no lock holds no value a decision could depend on, so it may
+				// accept the fresh proposal as it does before the fork. A decided
+				// value, one a quorum committed and imported, is locked by at
+				// least quorum-f honest nodes that never find it bad and refuse
+				// any other value; the honest nodes without that lock, at most
+				// n-quorum, cannot complete a quorum for another value.
+				logger.Debug("Accept fresh proposal below a prepared claim without a lock")
+				err = nil
+			}
 			if err != nil {
 				logger.Warn("Invalid round-change justification in PRE-PREPARE", "err", err)
 				c.sendNextRoundChange("handlePreprepare. Invalid round-change justification")
@@ -194,7 +206,8 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			// value that could have been decided: such a value is locked by a
 			// quorum less f honest nodes, so every round-change quorum carries
 			// its claim and the highest-claim rule selects it. A local lock
-			// therefore adds no safety and is not compared (QBFT). It is kept
+			// therefore adds no safety and is not compared (QBFT); it only
+			// decides whether a fresh proposal below a claim is accepted. It is kept
 			// for the next ROUND CHANGE until a PREPARE quorum at this view
 			// replaces it, and a carried certificate proves a prior round, so a
 			// quorum is re-established here before COMMIT.
