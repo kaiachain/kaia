@@ -23,66 +23,100 @@
 package core
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
-func (c *core) sendPreprepare(request *istanbul.Request) {
+func (c *core) sendPreprepare(request *bft.Request) {
 	logger := c.logger.NewWith("state", c.state)
 
-	header := types.SetRoundToHeader(request.Proposal.Header(), c.currentView().Round.Int64())
+	header := request.Proposal.Header()
+	c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 	request.Proposal = request.Proposal.WithSeal(header)
 
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
-		preprepare, err := Encode(&istanbul.Preprepare{
+		message := &bft.Preprepare{
 			View:     curView,
 			Proposal: request.Proposal,
-		})
+		}
+		if c.isPermissionlessAt(curView.Sequence.Uint64()) && curView.Round.Sign() > 0 {
+			certificate, prepared, err := c.roundChangeJustification(c.roundChangeCertificate, curView)
+			if err != nil {
+				logger.Error("Failed to justify PRE-PREPARE", "view", curView, "err", err)
+				return
+			}
+			if prepared != nil && prepared.Proposal.Hash() != request.Proposal.Hash() {
+				// A late request must not be proposed with a justification that
+				// proves another value; receivers would reject it.
+				logger.Debug("Skip PRE-PREPARE that differs from the justified value", "view", curView,
+					"justified", prepared.Proposal.Hash(), "requested", request.Proposal.Hash())
+				return
+			}
+			message.RoundChangeCertificate = certificate
+			if prepared != nil {
+				message.PreparedMessages = prepared.Messages
+			}
+		}
+		preprepare, err := bft.Encode(message)
 		if err != nil {
 			logger.Error("Failed to encode", "view", curView)
 			return
 		}
 
-		c.broadcast(&message{
-			Hash: request.Proposal.ParentHash(),
-			Code: msgPreprepare,
-			Msg:  preprepare,
+		c.broadcast(&bft.Message{
+			PrevHash: request.Proposal.ParentHash(),
+			Code:     bft.MsgPreprepare,
+			Msg:      preprepare,
 		})
 	}
 }
 
-func (c *core) handlePreprepare(msg *message, src common.Address) error {
+func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
-	timestamp := time.Now()
-
 	// Decode PRE-PREPARE
-	var preprepare *istanbul.Preprepare
+	var preprepare *bft.Preprepare
 	err := msg.Decode(&preprepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
+	}
+
+	// Proposal number must equal the view sequence, else it can be aliased to another height.
+	if !proposalNumberMatchesView(preprepare) {
+		logger.Warn("Ignore preprepare whose proposal number does not match view sequence")
+		return bft.ErrInvalidMessage
 	}
 
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
-	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
+	if err := c.checkMessage(msg, preprepare.View); err != nil {
 		if err == errOldMessage {
-			// Get validator set for the given proposal
-			councilState, getCouncilError := c.backend.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
-			if getCouncilError != nil {
-				return getCouncilError
+			// This PRE-PREPARE targets an already-finalized height. Reply with a COMMIT
+			// to help the sender finish that block, only if:
+			// 1. The sender is the scheduled proposer of the given (sequence, round).
+			// 2. This node has the given block in its chain.
+			// 3. Post-permissionless: the given round equals the round this node stored.
+			//    The committed seal signs (hash, round), so answering another round would
+			//    sign a commit at a round this node never committed at; callers could
+			//    collect such seals into a quorum certificate for a round that never
+			//    reached quorum.
+			proposer, getProposerErr := c.valsetModule.GetProposer(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
+			if getProposerErr != nil {
+				return getProposerErr
 			}
-			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
-			// 2. The given block must exist
-			if councilState.IsProposer(src) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			storedRound, hasProposal := c.backend.ProposalRound(preprepare.Proposal.Hash(), preprepare.Proposal.Number())
+			roundMatches := !c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) ||
+				uint64(storedRound) == preprepare.View.Round.Uint64()
+			if proposer == src && hasProposal && roundMatches {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}
@@ -91,9 +125,44 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	}
 
 	// Check if the message comes from current proposer
-	if !c.currentCommittee.IsProposer(src) {
+	if c.current.proposer != src {
 		logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
+	}
+	// A proposal for this view has already been accepted, or the view has
+	// moved past accepting one. A further PRE-PREPARE from the proposer is a
+	// duplicate or an equivocation: verifying it would cost a full block check
+	// and relaying it would multiply the proposer's bytes across the committee.
+	if c.state != StateAcceptRequest {
+		logger.Trace("Ignore preprepare after a proposal was accepted for this view", "state", c.state)
+		return errIgnored
+	}
+
+	var highestPrepared *bft.PreparedCertificate
+	if c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+		// An unjustified proposal is the proposer's signed misbehaviour, like a
+		// proposal that fails Verify: start the next round rather than waiting
+		// for the timer.
+		if preprepare.View.Round.Sign() == 0 {
+			if len(preprepare.RoundChangeCertificate) != 0 || len(preprepare.PreparedMessages) != 0 {
+				logger.Warn("Reject round-0 PRE-PREPARE that carries a justification")
+				c.sendNextRoundChange("handlePreprepare. Justification at round 0")
+				return bft.ErrInvalidMessage
+			}
+		} else if highestPrepared, err = c.verifyRecoveryJustification(preprepare); err != nil {
+			logger.Warn("Invalid round-change justification in PRE-PREPARE", "err", err)
+			c.sendNextRoundChange("handlePreprepare. Invalid round-change justification")
+			return bft.ErrInvalidMessage
+		}
+		// A proposal carries no committed seals until it is committed, and the
+		// block hash excludes them. Refuse a padded proposal before locking on
+		// it: certificate verification refuses padded bodies, so such a lock
+		// could never be claimed in a later round.
+		if padded, err := proposalCarriesCommittedSeals(preprepare.Proposal.Header()); err != nil || padded {
+			logger.Warn("Reject proposal that carries committed seals", "err", err)
+			c.sendNextRoundChange("handlePreprepare. Proposal carries committed seals")
+			return bft.ErrInvalidMessage
+		}
 	}
 
 	// Verify the proposal we received
@@ -106,7 +175,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				c.sendEvent(backlogEvent{
 					src:  src,
 					msg:  msg,
-					Hash: msg.Hash,
+					Hash: msg.PrevHash,
 				})
 			})
 		} else {
@@ -117,17 +186,38 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 
 	// Here is about to accept the PRE-PREPARE
 	if c.state == StateAcceptRequest {
+		if c.isPermissionlessAt(preprepare.View.Sequence.Uint64()) {
+			// The justification verified above already forces the proposal to any
+			// value that could have been decided: such a value is locked by a
+			// quorum less f honest nodes, so every round-change quorum carries
+			// its claim and the highest-claim rule selects it. A local lock
+			// therefore adds no safety and is not compared (QBFT); it only
+			// decides whether a fresh proposal below a claim is accepted. It is kept
+			// for the next ROUND CHANGE until a PREPARE quorum at this view
+			// replaces it, and a carried certificate proves a prior round, so a
+			// quorum is re-established here before COMMIT.
+			if highestPrepared != nil {
+				c.current.AdoptPreparedCertificate(highestPrepared)
+			}
+			c.acceptPreprepare(preprepare)
+			c.postPrepreparedEvent(preprepare)
+			c.setState(StatePreprepared)
+			c.sendPrepare()
+			return nil
+		}
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
-			header := types.SetRoundToHeader(c.current.Preprepare.Proposal.Header(), c.currentView().Round.Int64())
+			// Re-seal the locally retained proposal with the new round before
+			// comparing it.
+			header := c.current.Preprepare.Proposal.Header()
+			c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
 
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
-				// Broadcast COMMIT and enters Prepared state directly
-				Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-				Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
+				// Hash-lock shortcut: accept the locked proposal as prepared.
 				c.acceptPreprepare(preprepare)
+				c.postPrepreparedEvent(preprepare)
 				c.setState(StatePrepared)
 				c.sendCommit()
 			} else {
@@ -135,12 +225,11 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
-			Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-			Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 			// Either
 			//   1. the locked proposal and the received proposal match
 			//   2. we have no locked proposal
 			c.acceptPreprepare(preprepare)
+			c.postPrepreparedEvent(preprepare)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
 		}
@@ -149,7 +238,94 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	return nil
 }
 
-func (c *core) acceptPreprepare(preprepare *istanbul.Preprepare) {
+// verifyRecoveryJustification judges the justification of a PRE-PREPARE above
+// round 0 from this node's point of view. A proposal of a value below the
+// highest claim, fresh or backed by a lower certificate, means the proposer
+// treated the highest claim as void: a block its chain found invalid, which
+// this node may not know. Such a proposal is accepted by a node without a
+// lock, as before the fork: it holds no value a decision could depend on. A
+// decided value, one a quorum committed and imported, is locked by at least
+// quorum-f honest nodes that never find it bad and refuse any other value;
+// the honest nodes without that lock, at most n-quorum, cannot complete a
+// quorum for another value. A locked node may hold the voided value itself,
+// without having imported it, if it never received the COMMIT quorum or
+// adopted the certificate; it would then refuse every recovery proposal for a
+// value that cannot be decided. So it first executes its locked block once:
+// a failure records it as bad and releases the lock, exactly as import would
+// have, and the proposal is then judged again; a good block keeps the lock.
+func (c *core) verifyRecoveryJustification(preprepare *bft.Preprepare) (*bft.PreparedCertificate, error) {
+	highest, err := c.verifyPreprepareJustification(preprepare)
+	if err != errFreshProposalBelowClaim && err != errProposalNotHighestClaim {
+		return highest, err
+	}
+	if c.current.IsHashLocked() {
+		c.verifyLockedProposalExecution()
+		if c.current.IsHashLocked() {
+			return nil, err
+		}
+		if highest, err = c.verifyPreprepareJustification(preprepare); err != errFreshProposalBelowClaim && err != errProposalNotHighestClaim {
+			return highest, err
+		}
+	}
+	c.logger.Debug("Accept proposal below a prepared claim without a lock", "view", preprepare.View)
+	return nil, nil
+}
+
+// verifyLockedProposalExecution executes the locked block once per height, so
+// that a lock on a block this node never imported cannot refuse recovery from
+// a value that is known bad elsewhere. A definite result is kept for the
+// height: a proposer cannot repeat the cost by proposing below the claim
+// again. A failure is recorded by the chain and read back through IsHashLocked.
+func (c *core) verifyLockedProposalExecution() {
+	locked := c.current.GetLockedHash()
+	var proposal bft.Proposal
+	if cert := c.current.PreparedCertificate(); cert != nil && cert.Proposal != nil && cert.Proposal.Hash() == locked {
+		proposal = cert.Proposal
+	} else if p := c.current.Proposal(); p != nil && p.Hash() == locked {
+		proposal = p
+	} else {
+		return
+	}
+	if _, done := c.executedProposals[locked]; done {
+		return
+	}
+	err := c.backend.VerifyProposalExecution(proposal)
+	if err == nil || c.backend.HasBadProposal(locked) {
+		// A definite result; a failure to execute at all, such as the parent
+		// state being unavailable, is retried on the next occasion.
+		c.executedProposals[locked] = struct{}{}
+	}
+	if err != nil {
+		c.logger.Warn("Locked proposal fails execution", "hash", locked, "released", !c.current.IsHashLocked(), "err", err)
+	}
+}
+
+// proposalNumberMatchesView reports whether the proposal's block number equals the view sequence.
+func proposalNumberMatchesView(pp *bft.Preprepare) bool {
+	if pp == nil || pp.Proposal == nil || pp.Proposal.Number() == nil ||
+		pp.View == nil || pp.View.Sequence == nil {
+		return false
+	}
+	return pp.Proposal.Number().Cmp(pp.View.Sequence) == 0
+}
+
+func (c *core) acceptPreprepare(preprepare *bft.Preprepare) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetPreprepare(preprepare)
+}
+
+// postPrepreparedEvent notifies subscribers (VRank) that this node accepted the
+// PRE-PREPARE for the given (block, view). The view is deep-copied so later
+// round mutations don't alias the event payload.
+func (c *core) postPrepreparedEvent(preprepare *bft.Preprepare) {
+	block, ok := preprepare.Proposal.(*types.Block)
+	if !ok {
+		c.logger.Warn("Failed to post preprepared event due to unexpected proposal type")
+		return
+	}
+	view := &bft.View{
+		Round:    new(big.Int).Set(preprepare.View.Round),
+		Sequence: new(big.Int).Set(preprepare.View.Sequence),
+	}
+	c.sendEvent(istanbul.PrepreparedEvent{Block: block, View: view})
 }

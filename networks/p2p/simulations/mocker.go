@@ -176,7 +176,7 @@ func probabilistic(net *Network, quit chan struct{}, nodeCount int) {
 // connect nodeCount number of nodes in a ring
 func connectNodesInRing(net *Network, nodeCount int) ([]discover.NodeID, error) {
 	ids := make([]discover.NodeID, nodeCount)
-	for i := 0; i < nodeCount; i++ {
+	for i := range nodeCount {
 		conf := adapters.RandomNodeConfig()
 		node, err := net.NewNodeWithConfig(conf)
 		if err != nil {

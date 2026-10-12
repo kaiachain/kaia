@@ -23,18 +23,14 @@
 package core
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 type Engine interface {
 	Start() error
 	Stop() error
+	RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovModule)
 }
 
 type State uint64
@@ -73,130 +69,4 @@ func (s State) Cmp(y State) int {
 		return 1
 	}
 	return 0
-}
-
-const (
-	msgPreprepare uint64 = iota
-	msgPrepare
-	msgCommit
-	msgRoundChange
-	msgAll
-)
-
-type message struct {
-	Hash          common.Hash
-	Code          uint64
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
-}
-
-// ==============================================
-//
-// define the functions that needs to be provided for rlp Encoder/Decoder.
-
-// EncodeRLP serializes m into the Kaia RLP format.
-func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (m *message) DecodeRLP(s *rlp.Stream) error {
-	var msg struct {
-		Hash          common.Hash
-		Code          uint64
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
-	}
-
-	if err := s.Decode(&msg); err != nil {
-		return err
-	}
-	m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Hash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
-	return nil
-}
-
-// ==============================================
-//
-// define the functions that needs to be provided for core.
-
-func (m *message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
-	// Decode message
-	err := rlp.DecodeBytes(b, &m)
-	if err != nil {
-		return err
-	}
-
-	// Validate message (on a message without Signature)
-	if validateFn != nil {
-		var payload []byte
-		payload, err = m.PayloadNoSig()
-		if err != nil {
-			return err
-		}
-
-		signerAddr, err := validateFn(payload, m.Signature)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(signerAddr.Bytes(), m.Address.Bytes()) {
-			return errInvalidSigner
-		}
-	}
-	return nil
-}
-
-func (m *message) Payload() ([]byte, error) {
-	return rlp.EncodeToBytes(m)
-}
-
-func (m *message) PayloadNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&message{
-		Hash:          m.Hash,
-		Code:          m.Code,
-		Msg:           m.Msg,
-		Address:       m.Address,
-		Signature:     []byte{},
-		CommittedSeal: m.CommittedSeal,
-	})
-}
-
-func (m *message) Decode(val interface{}) error {
-	return rlp.DecodeBytes(m.Msg, val)
-}
-
-func (m *message) String() string {
-	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Address.String())
-}
-
-func (m *message) GetView() (*istanbul.View, error) {
-	var msgView *istanbul.View
-	switch m.Code {
-	case msgPreprepare:
-		var preprepare *istanbul.Preprepare
-		if decodeErr := m.Decode(&preprepare); decodeErr != nil {
-			return nil, decodeErr
-		}
-		msgView = preprepare.View
-	case msgPrepare, msgCommit, msgRoundChange:
-		var subject *istanbul.Subject
-		if decodeErr := m.Decode(&subject); decodeErr != nil {
-			return nil, decodeErr
-		}
-		msgView = subject.View
-	default:
-		return nil, errInvalidMessage
-	}
-	return msgView, nil
-}
-
-// ==============================================
-//
-// helper functions
-
-func Encode(val interface{}) ([]byte, error) {
-	return rlp.EncodeToBytes(val)
 }

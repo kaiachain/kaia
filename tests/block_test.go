@@ -25,6 +25,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -36,6 +37,7 @@ type ExecutionSpecBlockTestSuite struct {
 	suite.Suite
 	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
 	originalBlobTxMaxBlobs               int
+	originalActivePrecompiles            func(params.Rules) []common.Address
 }
 
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
@@ -43,12 +45,15 @@ func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
 	suite.originalBlobTxMaxBlobs = params.BlobTxMaxBlobs
 	params.BlobTxMaxBlobs = EthBlobTxMaxBlobs
+	suite.originalActivePrecompiles = vm.ActivePrecompiles
+	vm.ActivePrecompiles = activePrecompilesForEthTest
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	// Reset global variables for test
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
 	params.BlobTxMaxBlobs = suite.originalBlobTxMaxBlobs
+	vm.ActivePrecompiles = suite.originalActivePrecompiles
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
@@ -77,23 +82,19 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhashOutOfRange.json/tests/static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhashOutOfRangeFiller.yml::opcodeBlobhashOutOfRange\[fork_Cancun-blockchain_test_from_state_test-\]`)
 	bt.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBounds.json/tests/static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBoundsFiller.yml::opcodeBlobhBounds\[fork_Prague-blockchain_test_from_state_test-\]`)
 	bt.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBounds.json/tests/static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBoundsFiller.yml::opcodeBlobhBounds\[fork_Cancun-blockchain_test_from_state_test-\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Prague-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Cancun-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
+	bt.skipLoad(`^frontier/scenarios/.*fork_(Cancun|Prague)-blockchain_test-.*BLOBBASEFEE`)
 	bt.skipLoad(`^istanbul/eip1344_chainid/test_chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[fork_Prague-typed_transaction_3-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^istanbul/eip1344_chainid/test_chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[fork_Cancun-typed_transaction_3-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^istanbul/eip1344_chainid/.*\[fork_(Cancun|Prague).*typed_transaction_3`)
-	bt.skipLoad(`^cancun/eip4844_blobs/.*\[fork_(Cancun|Prague)`)
-	bt.skipLoad(`^prague/eip7702_set_code_tx/test_eoa_tx_after_set_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
-	bt.skipLoad(`^prague/eip7702_set_code_tx/test_eoa_tx_after_set_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
+	bt.skipLoad(`^cancun/eip4844_blobs/.*fork_(Cancun|Prague)`)
+	bt.skipLoad(`^prague/eip7702_set_code_tx/.*test_eoa_tx_after_set_code\[fork_Prague-tx_type_3`)
 	bt.skipLoad(`^prague/eip7623_increase_calldata_cost/test_transaction_validity_type_3.json/tests/prague/eip7623_increase_calldata_cost/test_transaction_validity.py::test_transaction_validity_type_3\[fork_(Cancun|Prague)`)
 	bt.skipLoad(`^prague/eip7623_increase_calldata_cost/.*type_3.*\[fork_Prague`)
 	bt.skipLoad(`^prague/eip7623_increase_calldata_cost/.*\[fork_(Cancun|Prague).*type_3`)
 
 	// should be skipped
 	// note: Kaia cannot calculate the same block hash as Ethereum.
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Cancun-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Prague-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
+	bt.skipLoad(`^frontier/scenarios/.*fork_(Cancun|Prague|Osaka)-blockchain_test-.*BLOCKHASH`)
 
 	// should be skipped
 	// note: Kaia's MaxBlockSize (10 MiB) higher than Ethereum's (8 MiB), so max_plus_1 is accepted in Kaia.
@@ -114,16 +115,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts/precompsEIP2929Cancun.json/tests/static/state_tests/stPreCompiledContracts/precompsEIP2929CancunFiller.yml::precompsEIP2929Cancun\[fork_Cancun-blockchain_test_from_state_test-all_then_yes_from_prague-15\]`)
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts/precompsEIP2929Cancun.json/tests/static/state_tests/stPreCompiledContracts/precompsEIP2929CancunFiller.yml::precompsEIP2929Cancun\[fork_Cancun-blockchain_test_from_state_test-all_then_yes_from_prague-8\]`)
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts/precompsEIP2929Cancun.json/tests/static/state_tests/stPreCompiledContracts/precompsEIP2929CancunFiller.yml::precompsEIP2929Cancun\[fork_Cancun-blockchain_test_from_state_test-yes.*\]`)
-
-	// should be skipped
-	// note: Different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Ethereum's Cancun fork doesn't have it as a precompiled contract.
-	// See https://github.com/kaiachain/kaia/blob/a7cb0f8aef2ce813e7ceda38e38353d63437489d/blockchain/vm/contracts.go#L242-L250.
-	// but the failure happens in only Cancun fork, so we can skip these.
-	bt.skipLoad(`^static/state_tests/stSpecialTest/failed_tx_xcf416c53_Paris.json/tests/static/state_tests/stSpecialTest/failed_tx_xcf416c53_ParisFiller.json::failed_tx_xcf416c53_Paris\[fork_Cancun-blockchain_test_from_state_test-\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompile_absence.json/tests/frontier/precompiles/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-31_bytes\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompile_absence.json/tests/frontier/precompiles/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-32_bytes\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompile_absence.json/tests/frontier/precompiles/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-empty_calldata\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompiles.json/tests/frontier/precompiles/test_precompiles.py::test_precompiles\[fork_Cancun-address_0x000000000000000000000000000000000000000b-precompile_exists_False-blockchain_test_from_state_test\]`)
 
 	// should be skipped
 	// note: Kaia's Cancun fork allow creating SCA with 0xEF code, but Ethereum's Cancun fork does not.
@@ -164,7 +155,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^static/state_tests/stRandom2/randomStatetest645.json/tests/static/state_tests/stRandom2/randomStatetest645Filler.json::randomStatetest645\[.*\]`)
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts2/modexpRandomInput.json/tests/static/state_tests/stPreCompiledContracts2/modexpRandomInputFiller.json::modexpRandomInput\[.*\]`)
 	bt.skipLoad(`^cancun/eip4844_blobs/test_tx_entry_point.json`)
-	bt.skipLoad(`^prague/eip7702_set_code_tx/test_gas_diff_pointer_vs_direct_call.json/tests/prague/eip7702_set_code_tx/test_set_code_txs_2.py::test_gas_diff_pointer_vs_direct_call\[.*-pointer_definition_PointerDefinition`)
+	bt.skipLoad(`^prague/eip7702_set_code_tx/.*test_gas_diff_pointer_vs_direct_call`)
 	bt.skipLoad(`^osaka/eip7883_modexp_gas_increase/modexp_thresholds/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-exact_gas\]`)
 	bt.skipLoad(`^osaka/eip7883_modexp_gas_increase/modexp_thresholds/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-extra_gas\]`)
 	bt.skipLoad(`^osaka/eip7883_modexp_gas_increase/modexp_thresholds/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-insufficient_gas\]`)

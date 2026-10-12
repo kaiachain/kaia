@@ -42,18 +42,25 @@ type blockContext struct {
 }
 
 func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
-	qualified, err := v.getQualifiedValidators(num)
+	// Canonical headers already carry the verified validator set;
+	// qualifiedFromHeaderOrState reads it from the header when available and
+	// falls back to state otherwise.
+	qualified, err := v.qualifiedFromHeaderOrState(num)
 	if err != nil {
 		return nil, err
 	}
+
 	prevHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if prevHeader == nil {
 		return nil, errNoHeader
 	}
 
+	// The previous block's author, which under a hash lock is not the proposer of the round that
+	// committed it. RoundRobin and Sticky index off this, so redefining it would change the
+	// proposer of already-committed blocks and break resync of an existing chain.
 	prevProposer := qualified.At(0)
 	if num-1 > 0 {
-		prevProposer, err = v.Chain.Engine().Author(prevHeader)
+		prevProposer, err = v.Chain.Sealer().Author(prevHeader)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +76,7 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 	}, nil
 }
 
-func (v *ValsetModule) getCommittee(c *blockContext, round uint64) ([]common.Address, error) {
+func (v *ValsetModule) getCommitteePermissioned(c *blockContext, round uint64) ([]common.Address, error) {
 	if c.num == 0 {
 		return c.qualified.List(), nil
 	}
@@ -178,7 +185,11 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 		return selectStickyProposer(c.qualified, c.prevProposer, round), nil
 	case istanbul.WeightedRandom:
 		if c.rules.IsRandao {
-			committee := selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash)
+			committeeSize := c.pset.CommitteeSize
+			if gov.DeprecatedAt(gov.IstanbulCommitteeSize, c.rules) {
+				committeeSize = uint64(c.qualified.Len())
+			}
+			committee := selectRandaoCommittee(c.qualified, committeeSize, c.prevHeader.MixHash)
 			return selectRandaoProposer(committee, round), nil
 		} else {
 			list, sourceNum, err := v.getProposerList(c)
@@ -194,18 +205,22 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 
 func selectRoundRobinProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
 	prevIdx := max(qualified.IndexOf(prevProposer), 0)
-	return qualified.At((prevIdx + int(round) + 1) % qualified.Len())
+	// Unsigned modular arithmetic keeps the index in range for any round.
+	n := uint64(qualified.Len())
+	return qualified.At(int((uint64(prevIdx) + 1 + round%n) % n))
 }
 
 func selectStickyProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
 	prevIdx := max(qualified.IndexOf(prevProposer), 0)
-	return qualified.At((prevIdx + int(round)) % qualified.Len())
+	n := uint64(qualified.Len())
+	return qualified.At(int((uint64(prevIdx) + round%n) % n))
 }
 
 // listSourceNum is the block number at which the list is generated. The caller must ensure that `len(list) > 0` and `listSourceNum <= num - 1`
 func selectWeightedRandomProposer(list []common.Address, listSourceNum, num uint64, round uint64) common.Address {
+	// Unsigned modulo, matching selectRandaoProposer.
 	idx := num + round - listSourceNum - 1
-	return list[int(idx)%len(list)]
+	return list[idx%uint64(len(list))]
 }
 
 func selectRandaoProposer(committee []common.Address, round uint64) common.Address {

@@ -8,7 +8,7 @@ import (
 type GovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
-	kaiax.ConsensusModule
+	kaiax.HeaderModule
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 

@@ -120,7 +120,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	hashCh := make(chan common.Hash, threads)
 	resultCh := make(chan statedb.SyncResult, threads)
 
-	for th := 0; th < threads; th++ {
+	for range threads {
 		go bc.concurrentRead(srcState, quitCh, hashCh, resultCh)
 	}
 

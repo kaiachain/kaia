@@ -46,7 +46,7 @@ func TestNetworkSimulation(t *testing.T) {
 	defer network.Shutdown()
 	nodeCount := 20
 	ids := make([]discover.NodeID, nodeCount)
-	for i := 0; i < nodeCount; i++ {
+	for i := range nodeCount {
 		conf := adapters.RandomNodeConfig()
 		node, err := network.NewNodeWithConfig(conf)
 		if err != nil {

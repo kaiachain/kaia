@@ -24,13 +24,14 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 )
@@ -39,18 +40,51 @@ func init() {
 	blockchain.InitDeriveSha(&params.ChainConfig{DeriveShaImpl: 0}) // DeriveSha is irrelevant for this test. Set any value.
 }
 
+// rewardModuleTestConfig configures makeTestRewardModuleWithConfig. Zero values are sensible defaults.
+type rewardModuleTestConfig struct {
+	Simple   bool // false => WeightedRandom, true => RoundRobin
+	Deferred bool
+	IsPrague bool
+
+	// Proposer address returned by Chain.Sealer().Author(header).
+	// Zero value falls back to params.AuthorAddressForTesting.
+	Proposer common.Address
+
+	// Block fixture. When Header is nil, block- and number-keyed mocks are
+	// replaced with gomock.Any() so the helper can be used by tests that
+	// don't fix a block (e.g. VerifyHeader).
+	Header   *types.Header
+	Txs      []*types.Transaction
+	Receipts []*types.Receipt
+}
+
 // Make a RewardModule that works with the given block.
 func makeTestRewardModule(t *testing.T,
 	simple, deferred, isPrague bool,
 	header *types.Header, txs []*types.Transaction, receipts []*types.Receipt,
 ) *RewardModule {
+	return makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+		Simple:   simple,
+		Deferred: deferred,
+		IsPrague: isPrague,
+		Header:   header,
+		Txs:      txs,
+		Receipts: receipts,
+	})
+}
+
+func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *RewardModule {
 	proposerPolicy := uint64(istanbul.WeightedRandom)
 	var pragueForkBlock *big.Int
-	if simple {
+	if cfg.Simple {
 		proposerPolicy = uint64(istanbul.RoundRobin)
 	}
-	if isPrague {
+	if cfg.IsPrague {
 		pragueForkBlock = big.NewInt(60)
+	}
+	proposer := cfg.Proposer
+	if proposer == (common.Address{}) {
+		proposer = params.AuthorAddressForTesting
 	}
 
 	var (
@@ -58,7 +92,7 @@ func makeTestRewardModule(t *testing.T,
 		chain    = chain_mock.NewMockBlockChain(mockCtrl)
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
-		engine   = consensus_mock.NewMockEngine(mockCtrl)
+		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 
 		chainConfig = &params.ChainConfig{
 			ChainID:                  big.NewInt(31337),
@@ -78,16 +112,14 @@ func makeTestRewardModule(t *testing.T,
 			UnitPrice:              25e9,
 			MintingAmount:          big.NewInt(6.4e18),
 			MinimumStake:           big.NewInt(5_000_000),
-			DeferredTxFee:          deferred,
+			DeferredTxFee:          cfg.Deferred,
 			Ratio:                  "50/20/30",
 			Kip82Ratio:             "20/80",
 			StakingRewardThreshold: big.NewInt(5_000_000),
 			UseFlexReward:          false,
 		}
 
-		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, isPrague)
-
-		block = types.NewBlock(header, txs, receipts)
+		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, cfg.IsPrague)
 	)
 
 	r := NewRewardModule()
@@ -96,14 +128,20 @@ func makeTestRewardModule(t *testing.T,
 		Chain:         chain,
 		GovModule:     mGov,
 		StakingModule: mStaking,
+		ValsetModule:  mValset,
 	})
 
-	chain.EXPECT().GetBlockByNumber(header.Number.Uint64()).Return(block).AnyTimes()
-	chain.EXPECT().GetReceiptsByBlockHash(block.Hash()).Return(receipts).AnyTimes()
-	chain.EXPECT().Engine().Return(engine).AnyTimes()
-	engine.EXPECT().Author(gomock.Any()).Return(common.HexToAddress("0xeee"), nil).AnyTimes() // Author is different from Rewardbase
-	mGov.EXPECT().GetParamSet(header.Number.Uint64()).Return(paramset).AnyTimes()
+	chain.EXPECT().Sealer().Return(faker.NewFakerWithFixedSealer(proposer)).AnyTimes()
 	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+
+	if cfg.Header != nil {
+		block := types.NewBlock(cfg.Header, cfg.Txs, cfg.Receipts)
+		chain.EXPECT().GetBlockByNumber(cfg.Header.Number.Uint64()).Return(block).AnyTimes()
+		chain.EXPECT().GetReceiptsByBlockHash(block.Hash()).Return(cfg.Receipts).AnyTimes()
+		mGov.EXPECT().GetParamSet(cfg.Header.Number.Uint64()).Return(paramset).AnyTimes()
+	} else {
+		mGov.EXPECT().GetParamSet(gomock.Any()).Return(paramset).AnyTimes()
+	}
 
 	return r
 }
@@ -206,6 +244,16 @@ func makeTestKaiaBlock(num int64) (*types.Header, []*types.Transaction, []*types
 			{GasUsed: 300_000},
 			{GasUsed: 400_000},
 		}
+}
+
+// makeTestOsakaBlock creates a Kaia block with one blob transaction.
+// execFee = 0.0376e18 (same as makeTestKaiaBlock)
+// blobFee = BlobTxBlobGasPerBlob * baseFee * BlobBaseFeeMultiplier = 131072 * 27e9 * 8 = 28311552000000000
+func makeTestOsakaBlock(num int64) (*types.Header, []*types.Transaction, []*types.Receipt) {
+	blobGasUsed := uint64(params.BlobTxBlobGasPerBlob)
+	header, txs, receipts := makeTestKaiaBlock(num)
+	header.BlobGasUsed = &blobGasUsed
+	return header, txs, receipts
 }
 
 func makeTestTx_type0(gasPrice, gasLimit int64) *types.Transaction {

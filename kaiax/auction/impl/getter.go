@@ -33,7 +33,7 @@ func (a *AuctionModule) GetBidTxGenerator(tx *types.Transaction, bid *auction.Bi
 			key               = a.InitOpts.NodeKey
 		)
 
-		data, err := system.EncodeAuctionCallData(bid)
+		data, err := system.EncodeAuctionCallData(bid, a.bidPool.GetAuctionEntryPointVersion())
 		if err != nil {
 			return nil, err
 		}

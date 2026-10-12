@@ -121,7 +121,13 @@ func (as *AddressSet) Len() int {
 func (as *AddressSet) At(i int) common.Address {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
-	return as.list[i%len(as.list)]
+	// Normalize into [0, len) so a negative i cannot index out of range.
+	n := len(as.list)
+	idx := i % n
+	if idx < 0 {
+		idx += n
+	}
+	return as.list[idx]
 }
 
 func (as *AddressSet) IndexOf(addr common.Address) int {

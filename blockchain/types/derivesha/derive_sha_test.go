@@ -91,7 +91,7 @@ func TestMuxGovernance(t *testing.T) {
 		&params.ChainConfig{DeriveShaImpl: testGovSchedule[0]},
 		&testGov{})
 
-	for num := uint64(0); num < 9; num++ {
+	for num := range uint64(9) {
 		implType := testGovSchedule[num]
 		impl := impls[implType]
 

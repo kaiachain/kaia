@@ -23,7 +23,6 @@ import (
 	"math/big"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -111,7 +110,6 @@ func TestEIP3541(t *testing.T) {
 			if receipt == nil {
 				t.Fatal("timeout")
 			}
-			time.Sleep(1 * time.Second)
 
 			deployedAddress := crypto.CreateAddress(optsOwner.From, nonce)
 
@@ -177,7 +175,6 @@ func TestEIP170(t *testing.T) {
 			if receipt == nil {
 				t.Fatal("timeout")
 			}
-			time.Sleep(1 * time.Second)
 
 			deployedAddress := crypto.CreateAddress(optsOwner.From, nonce)
 

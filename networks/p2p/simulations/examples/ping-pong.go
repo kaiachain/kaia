@@ -160,7 +160,9 @@ func (p *pingPongService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 
 	errC := make(chan error)
 	go func() {
-		for range time.Tick(10 * time.Second) {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
 			log.Info("sending ping")
 			if err := p2p.Send(rw, pingMsgCode, "PING"); err != nil {
 				errC <- err

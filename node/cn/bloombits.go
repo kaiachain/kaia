@@ -55,7 +55,7 @@ const (
 // startBloomHandlers starts a batch of goroutines to accept bloom bit database
 // retrievals from possibly a range of filters and serving the data to satisfy.
 func (cn *CN) startBloomHandlers() {
-	for i := 0; i < bloomServiceThreads; i++ {
+	for range bloomServiceThreads {
 		go func() {
 			for {
 				select {
@@ -138,7 +138,7 @@ func (b *BloomIndexer) Commit() error {
 	batch := b.db.NewBatch(database.MiscDB)
 	defer batch.Release()
 
-	for i := 0; i < types.BloomBitLength; i++ {
+	for i := range types.BloomBitLength {
 		bits, err := b.gen.Bitset(uint(i))
 		if err != nil {
 			return err

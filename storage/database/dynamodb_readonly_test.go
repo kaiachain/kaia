@@ -75,7 +75,7 @@ func TestDynamoDBReadOnly_Write(t *testing.T) {
 
 	itemNum := 25
 	// put items
-	for i := 0; i < itemNum; i++ {
+	for range itemNum {
 		testKey := common.MakeRandomBytes(32)
 		testVal := common.MakeRandomBytes(500)
 
@@ -87,7 +87,7 @@ func TestDynamoDBReadOnly_Write(t *testing.T) {
 	assert.NoError(t, batch.Write())
 
 	// check if not exist
-	for i := 0; i < itemNum; i++ {
+	for i := range itemNum {
 		val, err := dynamo.Get(testKeys[i])
 		assert.Nil(t, val)
 		assert.Error(t, err)

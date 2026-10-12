@@ -71,7 +71,7 @@ func TestMultiplePublicKeysFromBytes(t *testing.T) {
 	// [0:L/2] are cached and [L/2:L] are uncached
 	pks, err = MultiplePublicKeysFromBytes(tc.pkbs)
 	assert.Nil(t, err)
-	for i := 0; i < L; i++ {
+	for i := range L {
 		assert.Equal(t, tc.pks[i].Marshal(), pks[i].Marshal())
 	}
 

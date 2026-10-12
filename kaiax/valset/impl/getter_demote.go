@@ -26,8 +26,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-// getDemotedValidators returns the demoted validators at the given block number.
-func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint64) (*valset.AddressSet, error) {
+// getDemotedValidatorsPermissioned returns the demoted validators at the given block number.
+func (v *ValsetModule) getDemotedValidatorsPermissioned(council *valset.AddressSet, num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return valset.NewAddressSet(nil), nil
 	}
@@ -53,6 +53,26 @@ func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint
 	default:
 		return nil, errInvalidProposerPolicy
 	}
+}
+
+func (v *ValsetModule) getDemotedPermissioned(num uint64) (*valset.AddressSet, error) {
+	council, err := v.getCouncilPermissioned(num)
+	if err != nil {
+		return nil, err
+	}
+	return v.getDemotedValidatorsPermissioned(council, num)
+}
+
+func (v *ValsetModule) getQualifiedPermissioned(num uint64) (*valset.AddressSet, error) {
+	council, err := v.getCouncilPermissioned(num)
+	if err != nil {
+		return nil, err
+	}
+	demoted, err := v.getDemotedValidatorsPermissioned(council, num)
+	if err != nil {
+		return nil, err
+	}
+	return council.Subtract(demoted), nil
 }
 
 func getDemotedValidatorsIstanbul(council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {

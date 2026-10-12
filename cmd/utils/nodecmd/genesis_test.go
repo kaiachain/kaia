@@ -23,10 +23,15 @@
 package nodecmd
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 var customGenesisTests = []struct {
@@ -172,25 +177,65 @@ func TestCustomGenesis(t *testing.T) {
 			defer os.RemoveAll(datadir)
 
 			// Initialize the data directory with the custom genesis block
-			json := filepath.Join(datadir, "genesis.json")
-			if err := os.WriteFile(json, []byte(tt.genesis), 0o600); err != nil {
+			genesisFile := filepath.Join(datadir, "genesis.json")
+			if err := os.WriteFile(genesisFile, []byte(tt.genesis), 0o600); err != nil {
 				t.Fatalf("test %d: failed to write genesis file: %v", i, err)
 			}
-			runKaia(t, "kaia-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
+			runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "--datadir", datadir, "--verbosity", "0", "init", genesisFile).WaitExit()
 
-			// Query the custom genesis block
+			// Start a node once per test case, then run all queries via attach.
+			server := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
+				"--nodiscover", "--nat", "none", "--networkid", "123", "--verbosity", "0")
+			ipcEndpoint := filepath.Join(datadir, "klay.ipc")
+			waitForEndpoint(t, ipcEndpoint, 20*time.Second)
+			defer func() {
+				server.Interrupt()
+				server.ExpectExit()
+			}()
+
+			// Query the custom genesis block.
 			if len(tt.query) != len(tt.result) {
 				t.Errorf("Test cases are wrong, #query: %v, #result, %v", len(tt.query), len(tt.result))
 			}
-			for idx, query := range tt.query {
-				kaia := runKaia(t,
-					"kaia-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
-					"--nodiscover", "--nat", "none", "--ipcdisable", "--ntp.disable", "--networkid", "123",
-					"--exec", query, "--verbosity", "0", "console")
-				t.Log("query", query, "expected result", tt.result[idx], "actual result", kaia.StderrText())
-				kaia.ExpectRegexp(tt.result[idx])
-				kaia.ExpectExit()
+			execQuery := fmt.Sprintf("[%s]", strings.Join(tt.query, ","))
+			client := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "--verbosity", "0", "--exec", execQuery, "attach", ipcEndpoint)
+			_, matches := client.ExpectRegexp(`(?s)\[[\s\S]*\]`)
+			client.ExpectExit()
+			if len(matches) == 0 {
+				t.Fatal("failed to capture attach output")
+			}
+
+			var got []json.RawMessage
+			if err := json.Unmarshal([]byte(matches[0]), &got); err != nil {
+				t.Fatalf("failed to decode attach output as JSON array: %v\noutput: %s", err, matches[0])
+			}
+			if len(got) != len(tt.result) {
+				t.Fatalf("unexpected result count: got %d, want %d", len(got), len(tt.result))
+			}
+			for idx := range got {
+				gotValue, err := normalizeQueryValue(got[idx])
+				if err != nil {
+					t.Fatalf("failed to normalize result at index %d: %v", idx, err)
+				}
+				if gotValue != tt.result[idx] {
+					t.Errorf("query %q: got %q, want %q", tt.query[idx], gotValue, tt.result[idx])
+				}
 			}
 		})
 	}
+}
+
+func normalizeQueryValue(raw json.RawMessage) (string, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return "", errors.New("empty result")
+	}
+	if trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err != nil {
+			return "", err
+		}
+		return s, nil
+	}
+	return string(trimmed), nil
 }

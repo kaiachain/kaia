@@ -29,15 +29,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/holiman/uint256"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
+	"github.com/kaiachain/kaia/kaiax"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -68,37 +74,46 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, kaiaCompatibleBlock(nil))
 	configItems = append(configItems, pragueCompatibleBlock(nil))
 	configItems = append(configItems, osakaCompatibleBlock(nil))
+	configItems = append(configItems, permissionlessCompatibleBlock(nil))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	configItems = append(configItems, mStaking)
 
-	chain, istBackend := newBlockChain(len(stakes), configItems...)
-	chain.RegisterExecutionModule(istBackend.govModule)
+	chain, istBackend := newBlockChain(t, len(stakes), configItems...)
+	mGov := govModuleOf(istBackend)
+	chain.RegisterKaiaxModules(
+		mGov,
+		istBackend.valsetModule,
+		[]kaiax.ExecutionModule{mGov},
+		nil,
+		nil,
+		nil,
+	)
 	defer istBackend.Stop()
 
 	// Test for blocks from 0 to maxBlockNum
 	// from 0 to 4: before istanbul hard fork
 	// from 5 to 100: after istanbul hard fork
 	var previousBlock, currentBlock *types.Block = nil, chain.CurrentBlock()
-	for i := int64(0); i < maxBlockNum; i++ {
+	for range maxBlockNum {
 		previousBlock = currentBlock
 		currentBlock = makeBlockWithSeal(chain, istBackend, previousBlock)
 		_, err := chain.InsertChain(types.Blocks{currentBlock})
 		assert.NoError(t, err)
 	}
 
-	for i := int64(0); i < maxBlockNum; i++ {
+	for i := range maxBlockNum {
 		// Test for round 0 to round 14
 		for round := int64(0); round < 14; round++ {
-			currentCouncilState, err := istBackend.GetCommitteeStateByRound(uint64(i), uint64(round))
+			currentCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round))
 			assert.NoError(t, err)
 
 			// skip if the testing node is not in a committee
-			isInSubList := currentCouncilState.Committee().Contains(istBackend.Address())
-			if isInSubList == false {
+			isInSubList := valset.NewAddressSet(currentCommittee).Contains(istBackend.Address())
+			if !isInSubList {
 				continue
 			}
 
-			nextCouncilState, err := istBackend.GetCommitteeStateByRound(uint64(i), uint64(round)+1)
+			nextCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round)+1)
 			assert.NoError(t, err)
 
 			// Receiving the receiver list of a message
@@ -112,7 +127,8 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 			// committees[0]: current round's committee
 			// committees[1]: next view's committee
 			committees := make([]*valset.AddressSet, 2)
-			committees[0], committees[1] = currentCouncilState.Committee(), nextCouncilState.Committee()
+			committees[0] = valset.NewAddressSet(currentCommittee)
+			committees[1] = valset.NewAddressSet(nextCommittee)
 			assert.True(t, len(targets) <= committees[0].Len()+committees[1].Len())
 
 			// Check all nodes in the current and the next round are included in the target list
@@ -127,11 +143,10 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 
 func newTestBackend() (b *backend) {
 	config := params.TestChainConfig.Copy()
-	return newTestBackendWithConfig(config, istanbul.DefaultConfig.BlockPeriod, nil)
+	return newTestBackendWithConfig(config, nil)
 }
 
-func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint64, key *ecdsa.PrivateKey) (b *backend) {
-	dbm := database.NewMemoryDBManager()
+func newTestBackendWithConfig(chainConfig *params.ChainConfig, key *ecdsa.PrivateKey) (b *backend) {
 	if key == nil {
 		// if key is nil, generate new key for a test account
 		key, _ = crypto.GenerateKey()
@@ -144,19 +159,12 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		Epoch:          chainConfig.Istanbul.Epoch,
 		ProposerPolicy: istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy),
 		SubGroupSize:   chainConfig.Istanbul.SubGroupSize,
-		BlockPeriod:    blockPeriod,
 		Timeout:        10000,
 	}
 
-	// Derive BLS key from ECDSA key for Randao fork support
-	blsKey, _ := bls.DeriveFromECDSA(key)
-
 	backend := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
-		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     key,
-		BlsSecretKey:   blsKey,
-		DB:             dbm,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
 	return backend
@@ -176,52 +184,6 @@ func TestSign(t *testing.T) {
 	assert.Equal(t, b.address, actualSigner)
 }
 
-func TestCheckSignature(t *testing.T) {
-	b := newTestBackend()
-	defer b.Stop()
-
-	// testAddr is derived from testPrivateKey.
-	testPrivateKey, _ := crypto.HexToECDSA("bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1")
-	testAddr := common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
-	testInvalidAddr := common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
-
-	hashData := crypto.Keccak256([]byte(testSigningData))
-	sig, err := crypto.Sign(hashData, testPrivateKey)
-	assert.NoError(t, err)
-
-	assert.NoError(t, b.CheckSignature(testSigningData, testAddr, sig))
-	assert.Equal(t, errInvalidSignature, b.CheckSignature(testSigningData, testInvalidAddr, sig))
-}
-
-func TestCheckValidatorSignature(t *testing.T) {
-	// generate validators
-	setNodeKeys(5, nil)
-	valSet := istanbul.NewBlockValSet(addrs, []common.Address{})
-
-	// 1. Positive test: sign with validator's key should succeed
-	hashData := crypto.Keccak256(testSigningData)
-	for i, k := range nodeKeys {
-		// Sign
-		sig, err := crypto.Sign(hashData, k)
-		assert.NoError(t, err)
-		// CheckValidatorSignature should succeed
-		addr, err := valSet.CheckValidatorSignature(testSigningData, sig)
-		assert.NoError(t, err)
-		assert.Equal(t, addrs[i], addr)
-	}
-
-	// 2. Negative test: sign with any key other than validator's key should return error
-	key, err := crypto.GenerateKey()
-	assert.NoError(t, err)
-	// Sign
-	sig, err := crypto.Sign(hashData, key)
-	assert.NoError(t, err)
-	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	addr, err := valSet.CheckValidatorSignature(testSigningData, sig)
-	assert.Equal(t, istanbul.ErrUnauthorizedAddress, err)
-	assert.True(t, common.EmptyAddress(addr))
-}
-
 func TestCommit(t *testing.T) {
 	commitCh := make(chan *types.Block)
 
@@ -233,28 +195,31 @@ func TestCommit(t *testing.T) {
 		{
 			// normal case
 			nil,
-			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-1)...)},
+			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, istanbul.IstanbulExtraSeal-1)...)},
 		},
 		{
 			// invalid signature
-			errInvalidCommittedSeals,
+			consensus.ErrInvalidCommittedSeals,
 			nil,
 		},
 	} {
-		chain, engine := newBlockChain(1)
+		chain, engine := newBlockChain(t, 1)
 
 		block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 		expBlock, _ := engine.updateBlock(block)
 
-		go func() {
-			select {
-			case result := <-engine.commitCh:
-				commitCh <- result.Block
-				return
-			}
-		}()
+		// Initialize commitCh via initSealState (simulating Seal() setup)
+		sealCommitCh := engine.initSealState(expBlock.NumberU64(), expBlock.Hash())
 
-		engine.proposedBlockHash = expBlock.Hash()
+		if test.expectedErr == nil {
+			go func() {
+				result := <-sealCommitCh
+				if result != nil {
+					commitCh <- result.Block
+				}
+			}()
+		}
+
 		assert.Equal(t, test.expectedErr, engine.Commit(expBlock, test.expectedSignature))
 
 		if test.expectedErr == nil {
@@ -270,18 +235,399 @@ func TestCommit(t *testing.T) {
 	}
 }
 
-func TestGetProposer(t *testing.T) {
-	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
-	defer ctrl.Finish()
+type sealResult struct {
+	block *types.Block
+	err   error
+}
 
-	configItems := []interface{}{mStaking}
-	configItems = append(configItems, lowerBoundBaseFee(2))
-	configItems = append(configItems, upperBoundBaseFee(10))
-	chain, engine := newBlockChain(1, configItems...)
+// startSeal runs engine.Seal on block in the background.
+func startSeal(chain *blockchain.BlockChain, engine *backend, block *types.Block) <-chan sealResult {
+	ch := make(chan sealResult, 1)
+	go func() {
+		b, err := engine.Seal(chain, block)
+		ch <- sealResult{b, err}
+	}()
+	return ch
+}
+
+// requireSealWaiting waits until a Seal is waiting for its block to be committed.
+func requireSealWaiting(t *testing.T, engine *backend) {
+	require.Eventually(t, func() bool {
+		engine.sealMu.Lock()
+		defer engine.sealMu.Unlock()
+		return engine.commitCh != nil
+	}, 5*time.Second, 10*time.Millisecond)
+}
+
+// commitBlock commits block as this node's core does and returns the committed block.
+func commitBlock(t *testing.T, engine *backend, block *types.Block) *types.Block {
+	committed, err := engine.updateBlock(block)
+	require.NoError(t, err)
+	require.NoError(t, engine.Commit(committed, [][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, istanbul.IstanbulExtraSeal-1)...)}))
+	return committed
+}
+
+// requireSealCommits commits block and checks that the Seal waiting on it returns it.
+func requireSealCommits(t *testing.T, engine *backend, block *types.Block, sealed <-chan sealResult) {
+	expBlock := commitBlock(t, engine, block)
+	select {
+	case r := <-sealed:
+		require.NoError(t, r.err)
+		require.NotNil(t, r.block)
+		require.Equal(t, expBlock.Hash(), r.block.Hash())
+	case <-time.After(5 * time.Second):
+		t.Fatal("the Seal didn't get its committed block")
+	}
+}
+
+// requireSealReleased checks that a Seal returns without a block.
+func requireSealReleased(t *testing.T, sealed <-chan sealResult) {
+	select {
+	case r := <-sealed:
+		require.NoError(t, r.err)
+		require.Nil(t, r.block)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the Seal is still waiting")
+	}
+}
+
+// Tests that a Seal whose block this node never commits returns once the next Seal starts.
+func TestSealReleasedByNextSeal(t *testing.T) {
+	// With 4 validators and no peers, this node can't commit a block itself.
+	chain, engine := newBlockChain(t, 4)
 	defer engine.Stop()
 
-	block := makeBlockWithSeal(chain, engine, chain.Genesis())
-	_, err := chain.InsertChain(types.Blocks{block})
-	assert.NoError(t, err)
-	assert.Equal(t, engine.GetProposer(1), engine.Address())
+	first := startSeal(chain, engine, makeBlockWithoutSeal(chain, engine, chain.Genesis()))
+	requireSealWaiting(t, engine)
+
+	// The network's block 1 arrives by import, and this node starts on block 2.
+	imported := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{imported})
+	require.NoError(t, err)
+	block2 := makeBlockWithoutSeal(chain, engine, imported)
+	second := startSeal(chain, engine, block2)
+
+	requireSealReleased(t, first)
+	requireSealWaiting(t, engine)
+	requireSealCommits(t, engine, block2, second)
+}
+
+// Tests that a Seal for an older block that starts late returns at once and leaves the current Seal alone.
+func TestSealOlderBlockStartingLate(t *testing.T) {
+	chain, engine := newBlockChain(t, 4)
+	defer engine.Stop()
+
+	imported := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{imported})
+	require.NoError(t, err)
+	block2 := makeBlockWithoutSeal(chain, engine, imported)
+	second := startSeal(chain, engine, block2)
+	requireSealWaiting(t, engine)
+
+	requireSealReleased(t, startSeal(chain, engine, makeBlockWithoutSeal(chain, engine, chain.Genesis())))
+	requireSealCommits(t, engine, block2, second)
+}
+
+// Tests that a Seal returns at once if its block was committed while an older Seal was waiting.
+func TestSealStartingAfterItsBlockCommitted(t *testing.T) {
+	chain, engine := newBlockChain(t, 4)
+	defer engine.Stop()
+
+	first := startSeal(chain, engine, makeBlockWithoutSeal(chain, engine, chain.Genesis()))
+	requireSealWaiting(t, engine)
+
+	// Block 1 arrives by import, and block 2 is committed before this node's Seal for it starts.
+	imported := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{imported})
+	require.NoError(t, err)
+	block2 := makeBlockWithoutSeal(chain, engine, imported)
+	commitBlock(t, engine, block2)
+	requireSealReleased(t, first)
+
+	requireSealReleased(t, startSeal(chain, engine, block2))
+}
+
+// buildBlockWithTx returns a sealed block carrying the given tx, built on top of the
+// chain's current head.
+func buildBlockWithTx(t *testing.T, chain *blockchain.BlockChain, engine *backend, txdata *types.TxInternalDataLegacy) *types.Block {
+	t.Helper()
+	parent := chain.CurrentBlock()
+	header := makeHeader(parent, chain.Config())
+	if err := chain.PrepareHeader(header); err != nil {
+		t.Fatal(err)
+	}
+	state, err := chain.StateAt(parent.Root())
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyBlock, err := chain.Processor().FinalizeState(header, state, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedTx, err := types.SignTx(types.NewTx(txdata), types.LatestSignerForChainID(chain.Config().ChainID), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// NewBlock recomputes the header TxHash from the supplied tx, so Verify's tx-root
+	// check still passes.
+	return sealBlock(engine, types.NewBlock(emptyBlock.Header(), []*types.Transaction{signedTx}, nil))
+}
+
+// buildOversizedBlock returns a sealed block whose RLP-encoded size exceeds
+// params.MaxBlockSize. Verify does not execute transactions, so the injected tx only
+// needs to inflate the encoded size.
+func buildOversizedBlock(t *testing.T, chain *blockchain.BlockChain, engine *backend) *types.Block {
+	t.Helper()
+	recipient := common.Address{}
+	block := buildBlockWithTx(t, chain, engine, &types.TxInternalDataLegacy{
+		Price:     big.NewInt(1),
+		GasLimit:  1,
+		Recipient: &recipient,
+		Amount:    big.NewInt(0),
+		Payload:   make([]byte, params.MaxBlockSize), // pushes the whole block past the cap
+	})
+	if block.Size() <= params.MaxBlockSize {
+		t.Fatalf("test setup: block is not oversized (size=%d, cap=%d)", uint64(block.Size()), params.MaxBlockSize)
+	}
+	return block
+}
+
+// TestBackend_VerifyEnforcesBlockSizeCap checks that backend.Verify applies the
+// EIP-7934 RLP block-size cap (params.MaxBlockSize) on Osaka-enabled blocks, the
+// same rule the import path enforces in BlockValidator.ValidateBody. Without this,
+// honest validators would PREPARE/COMMIT an oversized proposal and only reject it
+// later on import.
+func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
+	// Osaka enabled: the cap applies.
+	t.Run("osaka", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		// A normal-sized block must not be rejected by the size cap.
+		normal := makeBlockWithSeal(chain, engine, chain.CurrentBlock())
+		_, err := engine.Verify(normal)
+		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
+
+		// An oversized proposal must be rejected up front in Verify.
+		oversized := buildOversizedBlock(t, chain, engine)
+		assert.ErrorIs(t, engine.VerifyProposalBody(oversized), blockchain.ErrBlockOversized)
+		_, err = engine.Verify(oversized)
+		assert.ErrorIs(t, err, blockchain.ErrBlockOversized)
+	})
+
+	// Pre-Osaka: the cap is gated on IsOsakaForkEnabled, so it must not apply.
+	t.Run("pre-osaka", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(nil), permissionlessCompatibleBlock(nil))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		oversized := buildOversizedBlock(t, chain, engine)
+		assert.NotErrorIs(t, engine.VerifyProposalBody(oversized), blockchain.ErrBlockOversized)
+		_, err := engine.Verify(oversized)
+		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
+	})
+}
+
+// TestBackend_VerifyEnforcesBodyRules checks that backend.Verify applies the body rules
+// ValidateBody enforces on import, running both paths on the same block.
+func TestBackend_VerifyEnforcesBodyRules(t *testing.T) {
+	t.Run("gasPrice", func(t *testing.T) {
+		const baseFeeGkei = 30
+		chain, engine := newBlockChain(t, 1,
+			LondonCompatibleBlock(big.NewInt(0)),
+			EthTxTypeCompatibleBlock(big.NewInt(0)),
+			magmaCompatibleBlock(big.NewInt(0)),
+			lowerBoundBaseFee(baseFeeGkei*params.Gkei),
+			upperBoundBaseFee(baseFeeGkei*params.Gkei),
+		)
+		defer chain.Stop()
+		defer engine.Stop()
+
+		recipient := common.Address{}
+		build := func(gasPrice uint64) *types.Block {
+			return buildBlockWithTx(t, chain, engine, &types.TxInternalDataLegacy{
+				Price:     new(big.Int).SetUint64(gasPrice),
+				GasLimit:  21000,
+				Recipient: &recipient,
+				Amount:    big.NewInt(0),
+			})
+		}
+
+		priced := build(baseFeeGkei * params.Gkei)
+		assert.NoError(t, engine.VerifyProposalBody(priced))
+		_, err := engine.Verify(priced)
+		assert.NoError(t, err)
+		assert.NoError(t, chain.Validator().ValidateBody(priced))
+
+		underpriced := build(baseFeeGkei*params.Gkei - 1)
+		assert.ErrorContains(t, engine.VerifyProposalBody(underpriced), "invalid GasPrice")
+		_, err = engine.Verify(underpriced)
+		assert.ErrorContains(t, err, "invalid GasPrice")
+		assert.ErrorContains(t, chain.Validator().ValidateBody(underpriced), "invalid GasPrice")
+	})
+
+	// ValidateHeader cannot catch this: it never sees the body.
+	t.Run("blobGasUsed", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		normal := makeBlockWithSeal(chain, engine, chain.CurrentBlock())
+		assert.NoError(t, engine.VerifyProposalBody(normal))
+		_, err := engine.Verify(normal)
+		assert.NoError(t, err)
+
+		header := normal.Header()
+		claimed := uint64(params.BlobTxBlobGasPerBlob)
+		header.BlobGasUsed = &claimed
+		lying := sealBlock(engine, types.NewBlock(header, nil, nil))
+
+		assert.ErrorContains(t, engine.VerifyProposalBody(lying), "blob gas used mismatch")
+		_, err = engine.Verify(lying)
+		assert.ErrorContains(t, err, "blob gas used mismatch")
+		assert.ErrorContains(t, chain.Validator().ValidateBody(lying), "blob gas used mismatch")
+	})
+
+	// TxHash excludes blob sidecars, so a block whose blob transaction lost its
+	// sidecar keeps the hash its votes were cast for. Prepared-certificate
+	// admission relies on this check.
+	t.Run("blobSidecar", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		header := makeBlockWithSeal(chain, engine, chain.CurrentBlock()).Header()
+		stripped := types.NewTx(&types.TxInternalDataEthereumBlob{
+			ChainID:    uint256.MustFromBig(chain.Config().ChainID),
+			GasTipCap:  uint256.NewInt(params.Gkei),
+			GasFeeCap:  uint256.NewInt(1000 * params.Gkei),
+			GasLimit:   21000,
+			BlobFeeCap: uint256.NewInt(params.Gkei),
+			BlobHashes: []common.Hash{{0x01}},
+			V:          big.NewInt(0),
+			R:          big.NewInt(1),
+			S:          big.NewInt(1),
+		})
+		require.Nil(t, stripped.BlobTxSidecar())
+		block := sealBlock(engine, types.NewBlock(header, []*types.Transaction{stripped}, nil))
+
+		assert.ErrorIs(t, engine.VerifyProposalBody(block), istanbul.ErrNoBlobSidecarForBlobTx)
+		_, err := engine.Verify(block)
+		assert.ErrorIs(t, err, istanbul.ErrNoBlobSidecarForBlobTx)
+	})
+}
+
+// A proposal sealed by an address outside the validator set must be rejected at
+// proposal-verification time, before it can reach a committed-seal quorum.
+//
+// The author here is BLS-registered, so the Randao header check resolves its public key,
+// but has no staking entry and is therefore demoted out of the qualified set.
+func TestVerifyRejectsUnauthorizedProposalAuthor(t *testing.T) {
+	const (
+		validatorCount = 5
+		outsiderIndex  = validatorCount - 1
+		minStake       = uint64(5_000_000)
+	)
+
+	setNodeKeys(validatorCount, nil)
+	stakingInfo := makeTestStakingInfo([]uint64{minStake, minStake, minStake, minStake, 0}, 0)
+	stakingInfo.NodeIds = stakingInfo.NodeIds[:outsiderIndex]
+	stakingInfo.StakingContracts = stakingInfo.StakingContracts[:outsiderIndex]
+	stakingInfo.RewardAddrs = stakingInfo.RewardAddrs[:outsiderIndex]
+	stakingInfo.StakingAmounts = stakingInfo.StakingAmounts[:outsiderIndex]
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	mStaking := staking_mock.NewMockStakingModule(ctrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+
+	config := testRandaoConfig.Copy()
+	config.IstanbulCompatibleBlock = common.Big0
+	config.PermissionlessCompatibleBlock = nil
+	config.Istanbul.ProposerPolicy = params.WeightedRandom
+	config.Governance.Reward.MinimumStake = new(big.Int).SetUint64(minStake)
+	config.Governance.Reward.StakingUpdateInterval = 1
+	config.Governance.Reward.ProposerUpdateInterval = 1
+
+	chain, engine := newBlockChain(t, validatorCount, config, mStaking, blockPeriod(0))
+	defer chain.Stop()
+	defer engine.Stop()
+
+	outsiderKey, outsiderAddr := nodeKeys[outsiderIndex], addrs[outsiderIndex]
+	outsiderBlsKey, err := bls.DeriveFromECDSA(outsiderKey)
+	require.NoError(t, err)
+
+	proposal := sealProposalWithForeignAuthor(t, chain, outsiderKey, outsiderBlsKey)
+
+	qualified, err := engine.valsetModule.GetQualifiedValidators(proposal.NumberU64())
+	require.NoError(t, err)
+	require.NotContains(t, qualified, outsiderAddr, "author must be outside the qualified set")
+
+	author, err := engine.sealer.Author(proposal.Header())
+	require.NoError(t, err)
+	require.Equal(t, outsiderAddr, author)
+
+	require.ErrorIs(t, chain.ValidateProposalHeader(proposal.Header()), consensus.ErrUnauthorized)
+
+	_, err = engine.Verify(proposal)
+	require.ErrorIs(t, err, consensus.ErrUnauthorized,
+		"backend.Verify must reject a proposal sealed by an unauthorized author")
+}
+
+// A well-formed proposal must still be accepted, its absent committed seals raising no error.
+func TestVerifyAcceptsWellFormedProposal(t *testing.T) {
+	chain, engine := newBlockChain(t, 1)
+	defer chain.Stop()
+	defer engine.Stop()
+
+	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+	proposal, err := engine.updateBlock(block)
+	require.NoError(t, err)
+
+	require.NoError(t, chain.ValidateProposalHeader(proposal.Header()))
+	_, err = engine.Verify(proposal)
+	require.NoError(t, err)
+}
+
+func sealProposalWithForeignAuthor(t *testing.T, chain *blockchain.BlockChain, authorKey *ecdsa.PrivateKey, authorBlsKey bls.SecretKey) *types.Block {
+	t.Helper()
+
+	parent := chain.CurrentBlock()
+	header := makeHeader(parent, chain.Config())
+	require.NoError(t, chain.PrepareHeader(header))
+
+	// Re-derive the Randao fields under the other author's BLS key so the Randao header
+	// module resolves that author's registered public key.
+	msg := common.BytesToHash(header.Number.Bytes())
+	header.RandomReveal = bls.Sign(authorBlsKey, msg.Bytes()).Marshal()
+	var prevMixHash []byte
+	if chain.Config().IsRandaoForkBlockParent(parent.Number()) {
+		prevMixHash = append([]byte(nil), params.ZeroMixHash...)
+	} else {
+		prevMixHash = append([]byte(nil), parent.Header().MixHash...)
+	}
+	require.Len(t, prevMixHash, 32)
+	revealHash := crypto.Keccak256(header.RandomReveal)
+	header.MixHash = make([]byte, 32)
+	for i := range 32 {
+		header.MixHash[i] = prevMixHash[i] ^ revealHash[i]
+	}
+
+	state, err := chain.StateAt(parent.Root())
+	require.NoError(t, err)
+	block, err := chain.Processor().FinalizeState(header, state, nil, nil)
+	require.NoError(t, err)
+
+	sealed := block.Header()
+	s := istanbul.NewSealerImpl(authorKey)
+	seal, err := s.MakeAuthorSeal(sealed)
+	require.NoError(t, err)
+	require.NoError(t, s.WriteAuthorSeal(sealed, seal))
+	return block.WithSeal(sealed)
 }

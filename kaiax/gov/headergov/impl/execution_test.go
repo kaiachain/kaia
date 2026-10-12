@@ -80,7 +80,7 @@ func TestAddVote(t *testing.T) {
 	config.Istanbul.Epoch = 3
 	h := newHeaderGovModule(t, config)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		h.AddVote(uint64(i), v)
 	}
 
@@ -97,7 +97,7 @@ func TestAddGov(t *testing.T) {
 	config.Istanbul.Epoch = 1
 	h := newHeaderGovModule(t, config)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		h.AddGov(uint64(i), g)
 	}
 

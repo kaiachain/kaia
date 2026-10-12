@@ -311,3 +311,78 @@ func testTxFeeRatioRange(t *testing.T, feeRatio types.FeeRatio, expected error) 
 		reservoir.Nonce += 1
 	}
 }
+
+// TestTxFeeRatioBlockExecutionRejectsOutOfRange exercises the consensus-side
+// check in Transaction.Validate (invoked from BlockChain.ApplyTransaction).
+func TestTxFeeRatioBlockExecutionRejectsOutOfRange(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCData(6, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer bcdata.Shutdown()
+
+	sender := &TestAccountType{
+		Addr:  *bcdata.addrs[1],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[1]},
+		Nonce: 0,
+	}
+	feePayer := &TestAccountType{
+		Addr:  *bcdata.addrs[2],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[2]},
+		Nonce: 0,
+	}
+	recipient := &TestAccountType{
+		Addr:  *bcdata.addrs[3],
+		Keys:  []*ecdsa.PrivateKey{bcdata.privKeys[3]},
+		Nonce: 0,
+	}
+
+	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
+	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+	build := func(ratio types.FeeRatio) *types.Transaction {
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:              sender.Nonce,
+			types.TxValueKeyFrom:               sender.Addr,
+			types.TxValueKeyTo:                 recipient.Addr,
+			types.TxValueKeyAmount:             new(big.Int),
+			types.TxValueKeyGasLimit:           gasLimit,
+			types.TxValueKeyGasPrice:           gasPrice,
+			types.TxValueKeyFeePayer:           feePayer.Addr,
+			types.TxValueKeyFeeRatioOfFeePayer: ratio,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, values)
+		assert.NoError(t, err)
+		assert.NoError(t, tx.SignWithKeys(signer, sender.Keys))
+		assert.NoError(t, tx.SignFeePayerWithKeys(signer, feePayer.Keys))
+		return tx
+	}
+
+	statedb, err := bcdata.bc.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockNumber := bcdata.bc.CurrentHeader().Number.Uint64()
+
+	cases := []struct {
+		ratio   types.FeeRatio
+		wantErr error
+	}{
+		{0, kerrors.ErrFeeRatioOutOfRange},
+		{1, nil},
+		{50, nil},
+		{99, nil},
+		{100, kerrors.ErrFeeRatioOutOfRange},
+		{200, kerrors.ErrFeeRatioOutOfRange},
+		{255, kerrors.ErrFeeRatioOutOfRange},
+	}
+
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("ratio_%d", tc.ratio), func(t *testing.T) {
+			tx := build(tc.ratio)
+			assert.Equal(t, tc.wantErr, tx.Validate(statedb, signer, blockNumber, false))
+		})
+	}
+}

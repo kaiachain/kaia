@@ -164,6 +164,20 @@ func (t TxSignatures) ToJSON() TxSignaturesJSON {
 // TxSignaturesJSON is an array of *TxSignatureJSON. This structure is for JSON marshalling.
 type TxSignaturesJSON []*TxSignatureJSON
 
+func (t *TxSignaturesJSON) UnmarshalJSON(b []byte) error {
+	var sigs []*TxSignatureJSON
+	if err := json.Unmarshal(b, &sigs); err != nil {
+		return err
+	}
+	for _, sig := range sigs {
+		if sig == nil || sig.V == nil || sig.R == nil || sig.S == nil {
+			return errInvalidTxSignatureJSON
+		}
+	}
+	*t = sigs
+	return nil
+}
+
 func (t TxSignaturesJSON) ToTxSignatures() TxSignatures {
 	sigs := make(TxSignatures, len(t))
 

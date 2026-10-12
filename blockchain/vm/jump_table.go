@@ -65,10 +65,30 @@ var (
 	CancunInstructionSet         = newCancunInstructionSet()
 	PragueInstructionSet         = newPragueInstructionSet()
 	OsakaInstructionSet          = newOsakaInstructionSet()
+	PermissionlessInstructionSet = newPermissionlessInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+// copyJumpTable deep-copies a table. Assigning a JumpTable copies only the
+// pointers, so the entries would stay shared with the source.
+func copyJumpTable(source *JumpTable) *JumpTable {
+	dest := *source
+	for i, op := range source {
+		if op != nil {
+			opCopy := *op
+			dest[i] = &opCopy
+		}
+	}
+	return &dest
+}
+
+func newPermissionlessInstructionSet() JumpTable {
+	instructionSet := newOsakaInstructionSet()
+	enablePermissionlessComputationCostModification(&instructionSet)
+	return instructionSet
+}
 
 func newOsakaInstructionSet() JumpTable {
 	instructionSet := newPragueInstructionSet()

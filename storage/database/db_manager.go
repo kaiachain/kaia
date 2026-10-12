@@ -387,7 +387,7 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 // If it isn't, logger.Crit is called.
 func checkDBEntryConfigRatio() {
 	entryConfigRatioSum := 0
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
+	for i := range int(databaseEntryTypeSize) {
 		entryConfigRatioSum += dbConfigRatio[i]
 	}
 	if entryConfigRatioSum != 100 {
@@ -493,7 +493,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	}
 
 	db.Meter(dbMetricPrefix)
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
+	for i := range int(databaseEntryTypeSize) {
 		dbm.dbs[i] = db
 	}
 	return dbm, nil
@@ -968,23 +968,23 @@ func (dbm *databaseManager) TryCatchUpWithPrimary() error {
 }
 
 func (dbm *databaseManager) Stat(property string) (string, error) {
-	stats := ""
-	errs := ""
+	var stats strings.Builder
+	var errs strings.Builder
 	for idx, db := range dbm.dbs {
 		if db != nil {
 			stat, err := db.Stat(property)
 			headInfo := fmt.Sprintf(" [%s:%s]\n", DBEntryType(idx), db.Type())
 			if err == nil {
-				stats += headInfo + stat
+				stats.WriteString(headInfo + stat)
 			} else {
-				errs += headInfo + err.Error()
+				errs.WriteString(headInfo + err.Error())
 			}
 		}
 	}
-	if errs == "" {
-		return stats, nil
+	if errs.String() == "" {
+		return stats.String(), nil
 	} else {
-		return stats, errors.New(errs)
+		return stats.String(), errors.New(errs.String())
 	}
 }
 

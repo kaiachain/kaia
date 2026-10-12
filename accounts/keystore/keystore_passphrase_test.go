@@ -48,7 +48,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	address := common.HexToAddress("45dea0fb0bba44f4fcf290bba71fd57d7117cbb8")
 
 	// Do a few rounds of decryption and encryption
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		// Try a bad password first
 		if _, err := DecryptKey(keyjson, password+"bad"); err == nil {
 			t.Errorf("test %d: json key decrypted with bad password", i)

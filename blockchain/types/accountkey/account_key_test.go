@@ -176,7 +176,7 @@ func genAccountKeyWeightedMultisig() AccountKey {
 	numKeys := 4
 	keys := make(WeightedPublicKeys, numKeys)
 
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		k, _ := crypto.GenerateKey()
 		keys[i] = NewWeightedPublicKey(1, (*PublicKeySerializable)(&k.PublicKey))
 	}
@@ -222,7 +222,7 @@ func TestAccountKeyWeightedMultiSig_Validate(t *testing.T) {
 
 	// generate multiSigAccount. weights: [1,1,1,1,1,1,1,1,1,1], threshold: 3
 	keys := make(WeightedPublicKeys, 6)
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		k, _ := crypto.GenerateKey()
 		keys[i] = NewWeightedPublicKey(1, (*PublicKeySerializable)(&k.PublicKey))
 	}
@@ -261,6 +261,28 @@ func TestAccountKeyWeightedMultiSig_Validate(t *testing.T) {
 	}
 }
 
+func TestAccountKeyWeightedMultiSig_CheckInstallable_ZeroThreshold(t *testing.T) {
+	const permissionlessBlock = 100
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(permissionlessBlock),
+	})
+
+	k, _ := crypto.GenerateKey()
+	keys := WeightedPublicKeys{
+		NewWeightedPublicKey(1, (*PublicKeySerializable)(&k.PublicKey)),
+	}
+	m := NewAccountKeyWeightedMultiSigWithValues(0, keys)
+
+	// Before Permissionless: zero threshold still accepted, so historical blocks don't diverge.
+	assert.NoError(t, m.CheckInstallable(permissionlessBlock-1))
+	assert.True(t, m.Validate(permissionlessBlock-1, RoleTransaction, []*ecdsa.PublicKey{}, common.Address{}))
+
+	// After Permissionless: rejected by both CheckInstallable and Validate.
+	assert.EqualError(t, m.CheckInstallable(permissionlessBlock), "threshold is zero")
+	assert.False(t, m.Validate(permissionlessBlock, RoleTransaction, []*ecdsa.PublicKey{}, common.Address{}))
+}
+
 func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 	// declare special block numbers and set hardForkBlockNumberConfig
 	var (
@@ -272,7 +294,7 @@ func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 
 	// generate multiSigAccount
 	keys := make(WeightedPublicKeys, 5)
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		k, _ := crypto.GenerateKey()
 		keys[i] = NewWeightedPublicKey(1, (*PublicKeySerializable)(&k.PublicKey))
 	}
@@ -310,7 +332,7 @@ func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 // getAnonymousKeys returns 'num' number of anonymousKeys which are not belongs to the multiSigAccount
 func getAnonymousPubKeys(num int) []*ecdsa.PublicKey {
 	var pubKeys []*ecdsa.PublicKey
-	for i := 0; i < num; i++ {
+	for range num {
 		k, _ := crypto.GenerateKey()
 		pubKeys = append(pubKeys, &k.PublicKey)
 	}
@@ -320,7 +342,7 @@ func getAnonymousPubKeys(num int) []*ecdsa.PublicKey {
 // getValidKeys returns multiSigAccount[0:num] keys
 func getValidKeys(multiSigAccount AccountKey, num int) []*ecdsa.PublicKey {
 	var pubKeys []*ecdsa.PublicKey
-	for i := 0; i < num; i++ {
+	for i := range num {
 		key := multiSigAccount.(*AccountKeyWeightedMultiSig).Keys[i].Key
 		pubKeys = append(pubKeys, &ecdsa.PublicKey{Curve: key.Curve, X: key.X, Y: key.Y})
 	}

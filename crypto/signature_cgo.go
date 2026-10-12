@@ -26,6 +26,7 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 
 	"github.com/erigontech/secp256k1" // To avoid CGO duplicate symbol error.
@@ -34,6 +35,16 @@ import (
 
 // Ecrecover returns the uncompressed public key that created the given signature.
 func Ecrecover(hash, sig []byte) ([]byte, error) {
+	if len(sig) != SignatureLength {
+		return nil, errors.New("invalid signature")
+	}
+	if len(hash) != DigestLength {
+		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(hash))
+	}
+	// Enforce canonical Ethereum recovery id v ∈ {0, 1}.
+	if sig[RecoveryIDOffset] >= 2 {
+		return nil, errors.New("invalid signature recovery id")
+	}
 	return secp256k1.RecoverPubkey(hash, sig)
 }
 

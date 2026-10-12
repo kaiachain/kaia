@@ -22,14 +22,12 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -49,19 +47,12 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxValset)
 )
 
-type chain interface {
-	GetHeaderByNumber(number uint64) *types.Header
-	GetHeaderByHash(hash common.Hash) *types.Header
-	CurrentBlock() *types.Block
-	Config() *params.ChainConfig
-	Engine() consensus.Engine
-}
-
 type InitOpts struct {
 	ChainKv       database.Database
-	Chain         chain
+	Chain         consensus.ChainReaderWithSealer
 	GovModule     gov.GovModule
 	StakingModule staking.StakingModule
+	VRankModule   vrank.VRankModule
 }
 
 type ValsetModule struct {
@@ -71,22 +62,27 @@ type ValsetModule struct {
 	wg   sync.WaitGroup
 
 	// cache for weightedRandom and uniformRandom proposerLists.
-	proposerListCache *lru.Cache // uint64 -> []common.Address
-	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
-	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
+	proposerListCache     *lru.Cache // uint64 -> []common.Address
+	removeVotesCache      *lru.Cache // uint64 -> removeVoteList
+	councilCache          *lru.Cache // uint64 -> *valset.AddressSet
+	transitionResultCache *lru.Cache // uint64 -> *TransitionResult (permissionless)
 
 	validatorVoteBlockNumsCache []uint64
 	lowestScannedVoteNumCache   *uint64
+
+	lastSuspendFallbackLog uint64 // block number of the last suspend-set fallback warning
 }
 
 func NewValsetModule() *ValsetModule {
 	pListCache, _ := lru.New(128)
 	rVoteCache, _ := lru.New(128)
 	councilCache, _ := lru.New(128)
+	transitionResultCache, _ := lru.New(128)
 	return &ValsetModule{
-		proposerListCache: pListCache,
-		removeVotesCache:  rVoteCache,
-		councilCache:      councilCache,
+		proposerListCache:     pListCache,
+		removeVotesCache:      rVoteCache,
+		councilCache:          councilCache,
+		transitionResultCache: transitionResultCache,
 	}
 }
 
@@ -137,9 +133,14 @@ func (v *ValsetModule) initSchema() error {
 func (v *ValsetModule) Start() error {
 	logger.Info("ValsetModule Started")
 
+	if err := v.verifyVRankEpochAtHead(); err != nil {
+		return err
+	}
+
 	// Reset all caches
 	v.proposerListCache.Purge()
 	v.removeVotesCache.Purge()
+	v.transitionResultCache.Purge()
 
 	// Reset the quit state.
 	v.quit.Store(0)

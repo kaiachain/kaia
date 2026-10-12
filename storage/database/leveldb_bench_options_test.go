@@ -96,14 +96,14 @@ func benchmarkKaiaOptionsGet(b *testing.B, opts *opt.Options, valueLength, numIn
 	require.NoError(b, err)
 	defer db.Close()
 
-	for i := 0; i < numInsertions; i++ {
+	for i := range numInsertions {
 		bs := []byte(strconv.Itoa(i))
 		db.Put(bs, randStrBytes(valueLength))
 	}
 
 	b.StartTimer()
 	for k := 0; k < b.N; k++ {
-		for i := 0; i < numGets; i++ {
+		for i := range numGets {
 			bs := []byte(strconv.Itoa(readTypeFunc(i, numInsertions)))
 			_, err := db.Get(bs)
 			if err != nil {
@@ -191,7 +191,7 @@ func benchmarkKaiaOptionsPut(b *testing.B, opts *opt.Options, valueLength, numIn
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		for k := 0; k < numInsertions; k++ {
+		for range numInsertions {
 			db.Put(randStrBytes(32), randStrBytes(valueLength))
 		}
 	}
@@ -242,7 +242,7 @@ func removeDirs(dirs []string) {
 
 func genDatabases(b *testing.B, dirs []string, opts *opt.Options) []*levelDB {
 	databases := make([]*levelDB, len(dirs), len(dirs))
-	for i := 0; i < len(dirs); i++ {
+	for i := range dirs {
 		databases[i], _ = NewLevelDBWithOption(dirs[i], opts)
 	}
 	return databases
@@ -257,7 +257,7 @@ func closeDBs(databases []*levelDB) {
 func genKeysAndValues(valueLength, numInsertions int) ([][]byte, [][]byte) {
 	keys := make([][]byte, numInsertions, numInsertions)
 	values := make([][]byte, numInsertions, numInsertions)
-	for i := 0; i < numInsertions; i++ {
+	for i := range numInsertions {
 		keys[i] = randStrBytes(32)
 		values[i] = randStrBytes(valueLength)
 	}
@@ -282,7 +282,7 @@ func benchmarkKaiaOptionsBatch(b *testing.B, opts *opt.Options, valueLength, num
 		keys, values := genKeysAndValues(valueLength, numInsertions)
 		b.StartTimer()
 		batch := db.NewBatch()
-		for k := 0; k < numInsertions; k++ {
+		for k := range numInsertions {
 			batch.Put(keys[k], values[k])
 		}
 		batch.Write()
@@ -352,7 +352,7 @@ func benchmarkIdealBatchSize(b *testing.B, bm idealBatchBM) {
 	var wg sync.WaitGroup
 	numBatches := bm.totalSize / bm.batchSize
 	wg.Add(numBatches)
-	for i := 0; i < numBatches; i++ {
+	for range numBatches {
 		batch := db.NewBatch()
 		for k := 0; k < bm.batchSize; k++ {
 			batch.Put(randStrBytes(32), randStrBytes(bm.rowSize))

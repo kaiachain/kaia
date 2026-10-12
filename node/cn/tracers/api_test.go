@@ -31,6 +31,8 @@ import (
 	"sort"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	kaiaapi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
@@ -55,9 +57,22 @@ var (
 	errTransactionNotFound = errors.New("transaction not found")
 )
 
+func emptyStructTraceResult(gas uint64) json.RawMessage {
+	result, err := json.Marshal(&kaiaapi.ExecutionResult{
+		Gas:         gas,
+		Failed:      false,
+		ReturnValue: "",
+		StructLogs:  []kaiaapi.StructLogRes{},
+	})
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
 type testBackend struct {
 	chainConfig *params.ChainConfig
-	engine      consensus.Engine
+	sealer      consensus.Sealer
 	chaindb     database.DBManager
 	chain       *blockchain.BlockChain
 
@@ -68,7 +83,7 @@ type testBackend struct {
 func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator func(i int, b *blockchain.BlockGen)) *testBackend {
 	backend := &testBackend{
 		chainConfig: params.TestChainConfig,
-		engine:      faker.NewFaker(),
+		sealer:      faker.NewFaker(),
 		chaindb:     database.NewMemoryDBManager(),
 	}
 	// Generate blocks for testing
@@ -77,7 +92,7 @@ func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator fu
 		gendb   = database.NewMemoryDBManager()
 		genesis = gspec.MustCommit(gendb)
 	)
-	blocks, _ := blockchain.GenerateChain(backend.chainConfig, genesis, backend.engine, gendb, n, generator)
+	blocks, _ := blockchain.GenerateChain(backend.chainConfig, genesis, backend.sealer, gendb, n, generator)
 	// Import the canonical chain
 	gspec.MustCommit(backend.chaindb)
 	cacheConfig := &blockchain.CacheConfig{
@@ -88,7 +103,7 @@ func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator fu
 		SnapshotCacheSize:   512,
 		ArchiveMode:         true, // Archive mode
 	}
-	chain, err := blockchain.NewBlockChain(backend.chaindb, cacheConfig, backend.chainConfig, backend.engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(backend.chaindb, cacheConfig, backend.chainConfig, backend.sealer, vm.Config{})
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
@@ -141,8 +156,8 @@ func (b *testBackend) ChainConfig() *params.ChainConfig {
 	return b.chainConfig
 }
 
-func (b *testBackend) Engine() consensus.Engine {
-	return b.engine
+func (b *testBackend) Sealer() consensus.Sealer {
+	return b.sealer
 }
 
 func (b *testBackend) ChainDB() database.DBManager {
@@ -287,7 +302,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
@@ -299,16 +314,11 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
-			expect: &kaiaapi.ExecutionResult{
-				Gas:         params.TxGas,
-				Failed:      false,
-				ReturnValue: "",
-				StructLogs:  []kaiaapi.StructLogRes{},
-			},
+			expect:    emptyStructTraceResult(params.TxGas),
 		},
 		// Standard JSON trace upon the non-existent block, error expects
 		{
@@ -316,7 +326,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
@@ -328,16 +338,11 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
-			expect: &kaiaapi.ExecutionResult{
-				Gas:         params.TxGas,
-				Failed:      false,
-				ReturnValue: "",
-				StructLogs:  []kaiaapi.StructLogRes{},
-			},
+			expect:    emptyStructTraceResult(params.TxGas),
 		},
 		// Standard JSON trace upon the pending block
 		{
@@ -345,16 +350,11 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
-			expect: &kaiaapi.ExecutionResult{
-				Gas:         params.TxGas,
-				Failed:      false,
-				ReturnValue: "",
-				StructLogs:  []kaiaapi.StructLogRes{},
-			},
+			expect:    emptyStructTraceResult(params.TxGas),
 		},
 	}
 	for _, testspec := range testSuite {
@@ -362,6 +362,583 @@ func TestTraceCall(t *testing.T) {
 		assert.Equal(t, testspec.expectErr, err)
 		assert.Equal(t, result, testspec.expect)
 	}
+}
+
+type tracedPrestateAccount struct {
+	Balance *hexutil.Big                `json:"balance"`
+	Nonce   uint64                      `json:"nonce"`
+	Code    hexutil.Bytes               `json:"code"`
+	Storage map[common.Hash]common.Hash `json:"storage"`
+}
+
+func assertTraceBalance(t *testing.T, account tracedPrestateAccount, want *big.Int) {
+	t.Helper()
+	if assert.NotNil(t, account.Balance) {
+		assert.Equal(t, 0, (*big.Int)(account.Balance).Cmp(want))
+	}
+}
+
+func traceCallPrestate(t *testing.T, api *API, call kaiaapi.CallArgs, config *TraceConfig) map[common.Address]tracedPrestateAccount {
+	t.Helper()
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), call, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return nil
+	}
+	raw, ok := result.(json.RawMessage)
+	if !assert.True(t, ok, "expected json.RawMessage result, got %T", result) {
+		return nil
+	}
+	var prestate map[common.Address]tracedPrestateAccount
+	assert.NoError(t, json.Unmarshal(raw, &prestate))
+	return prestate
+}
+
+func TestTraceCallPrestateTracerKeepsLogicalPrestate(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+	to := common.HexToAddress("0x000000000000000000000000000000000000bbbb")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "prestateTracer"
+	gas := hexutil.Uint64(params.TxGas)
+	gasPrice := hexutil.Big(*big.NewInt(1))
+	call := kaiaapi.CallArgs{From: from, To: &to, Gas: &gas, GasPrice: &gasPrice}
+
+	prestate := traceCallPrestate(t, api, call, &TraceConfig{Tracer: &tracerName})
+	assertTraceBalance(t, prestate[from], big.NewInt(0))
+
+	overrideBalance := hexutil.Big(*big.NewInt(0x42))
+	overrideBalancePtr := &overrideBalance
+	overrides := kaiaapi.EthStateOverride{
+		from: {Balance: &overrideBalancePtr},
+	}
+	prestate = traceCallPrestate(t, api, call, &TraceConfig{Tracer: &tracerName, StateOverrides: &overrides})
+	assertTraceBalance(t, prestate[from], big.NewInt(0x42))
+}
+
+func TestTraceCallPrestateTracerDiffModeKeepsLogicalPostBalance(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000a111")
+	to := common.HexToAddress("0x000000000000000000000000000000000000b111")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "prestateTracer"
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(1))
+	value := hexutil.Big(*big.NewInt(0x1234))
+	overrideBalance := hexutil.Big(*big.NewInt(100000))
+	overrideBalancePtr := &overrideBalance
+	overrides := kaiaapi.EthStateOverride{
+		from: {Balance: &overrideBalancePtr},
+	}
+	config := &TraceConfig{
+		Tracer:         &tracerName,
+		TracerConfig:   json.RawMessage(`{"diffMode":true}`),
+		StateOverrides: &overrides,
+	}
+
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &to,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+		Value:    value,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	raw, ok := result.(json.RawMessage)
+	if !assert.True(t, ok, "expected json.RawMessage result, got %T", result) {
+		return
+	}
+
+	var diff struct {
+		Pre  map[common.Address]tracedPrestateAccount `json:"pre"`
+		Post map[common.Address]tracedPrestateAccount `json:"post"`
+	}
+	assert.NoError(t, json.Unmarshal(raw, &diff))
+
+	assertTraceBalance(t, diff.Pre[from], (*big.Int)(&overrideBalance))
+	wantPost := new(big.Int).Sub((*big.Int)(&overrideBalance), (*big.Int)(&value))
+	assertTraceBalance(t, diff.Post[from], wantPost)
+}
+
+func TestTraceCallPrestateTracerDiffModeHidesMagmaFee(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000a121")
+	rewardbase := common.HexToAddress("0x000000000000000000000000000000000000b121")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, func(i int, b *blockchain.BlockGen) {
+		b.SetRewardbase(rewardbase)
+	}))
+
+	tracerName := "prestateTracer"
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(1))
+	value := hexutil.Big(*big.NewInt(0x10000))
+	overrideBalance := hexutil.Big(*big.NewInt(0x100000))
+	overrideBalancePtr := &overrideBalance
+	overrides := kaiaapi.EthStateOverride{
+		from: {Balance: &overrideBalancePtr},
+	}
+	config := &TraceConfig{
+		Tracer:         &tracerName,
+		TracerConfig:   json.RawMessage(`{"diffMode":true}`),
+		StateOverrides: &overrides,
+	}
+
+	// The call target is also the Magma rewardbase, so it receives both the
+	// transferred value and the (half-burned) synthetic gas fee. The fee must be
+	// hidden, leaving only the value in its post balance.
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &rewardbase,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+		Value:    value,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	raw, ok := result.(json.RawMessage)
+	if !assert.True(t, ok, "expected json.RawMessage result, got %T", result) {
+		return
+	}
+
+	var diff struct {
+		Pre  map[common.Address]tracedPrestateAccount `json:"pre"`
+		Post map[common.Address]tracedPrestateAccount `json:"post"`
+	}
+	assert.NoError(t, json.Unmarshal(raw, &diff))
+
+	assertTraceBalance(t, diff.Post[rewardbase], (*big.Int)(&value))
+}
+
+func TestTraceCallPrestateTracerDiffModeCreate(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000cafe")
+	created := crypto.CreateAddress(from, 0)
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from:    {Balance: big.NewInt(5)},
+		created: {Balance: big.NewInt(0x10)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "prestateTracer"
+	gas := hexutil.Uint64(200000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	value := hexutil.Big(*big.NewInt(5))
+	initCode := hexutil.Bytes(common.FromHex("0x303150600160005560006000526001601ff3"))
+	config := &TraceConfig{Tracer: &tracerName, TracerConfig: json.RawMessage(`{"diffMode":true}`)}
+
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+		Value:    value,
+		Data:     initCode,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	raw, ok := result.(json.RawMessage)
+	if !assert.True(t, ok, "expected json.RawMessage result, got %T", result) {
+		return
+	}
+
+	var diff struct {
+		Pre  map[common.Address]tracedPrestateAccount `json:"pre"`
+		Post map[common.Address]tracedPrestateAccount `json:"post"`
+	}
+	assert.NoError(t, json.Unmarshal(raw, &diff))
+
+	preCreated, ok := diff.Pre[created]
+	if assert.True(t, ok, "created account missing from pre diff") {
+		assertTraceBalance(t, preCreated, big.NewInt(0x10))
+		assert.Equal(t, uint64(0), preCreated.Nonce)
+		assert.NotContains(t, preCreated.Storage, common.Hash{})
+	}
+	postCreated, ok := diff.Post[created]
+	if assert.True(t, ok, "created account missing from post diff") {
+		assertTraceBalance(t, postCreated, big.NewInt(0x15))
+		assert.Equal(t, uint64(1), postCreated.Nonce)
+		assert.Equal(t, hexutil.Bytes{0}, postCreated.Code)
+		assert.Equal(t, common.BigToHash(big.NewInt(1)), postCreated.Storage[common.Hash{}])
+	}
+}
+
+func TestTraceCallPrestateTracerDiffModePrunesUnchangedStorage(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000d001")
+	contract := common.HexToAddress("0x000000000000000000000000000000000000d002")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "prestateTracer"
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	code := hexutil.Bytes(common.FromHex("0x600054600160015500"))
+	state := map[common.Hash]common.Hash{
+		{}: common.BigToHash(big.NewInt(1)),
+	}
+	overrides := kaiaapi.EthStateOverride{
+		contract: {Code: &code, State: &state},
+	}
+	config := &TraceConfig{Tracer: &tracerName, TracerConfig: json.RawMessage(`{"diffMode":true}`), StateOverrides: &overrides}
+
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &contract,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	raw, ok := result.(json.RawMessage)
+	if !assert.True(t, ok, "expected json.RawMessage result, got %T", result) {
+		return
+	}
+
+	var diff struct {
+		Pre  map[common.Address]tracedPrestateAccount `json:"pre"`
+		Post map[common.Address]tracedPrestateAccount `json:"post"`
+	}
+	assert.NoError(t, json.Unmarshal(raw, &diff))
+
+	preContract := diff.Pre[contract]
+	assert.NotContains(t, preContract.Storage, common.Hash{})
+	assert.Equal(t, common.BigToHash(big.NewInt(1)), diff.Post[contract].Storage[common.BigToHash(big.NewInt(1))])
+}
+
+func TestTraceCallCallTracerWithLog(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000a222")
+	contract := common.HexToAddress("0x000000000000000000000000000000000000b222")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "callTracer"
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	topic := common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
+	code := hexutil.Bytes(common.FromHex("0x7f111111111111111111111111111111111111111111111111111111111111111160006000a100"))
+	overrides := kaiaapi.EthStateOverride{
+		contract: {Code: &code},
+	}
+	config := &TraceConfig{
+		Tracer:         &tracerName,
+		TracerConfig:   json.RawMessage(`{"withLog":true}`),
+		StateOverrides: &overrides,
+	}
+
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &contract,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	frame, ok := result.(vm.CallFrame)
+	if !assert.True(t, ok, "expected vm.CallFrame result, got %T", result) {
+		return
+	}
+	if assert.Len(t, frame.Logs, 1) {
+		assert.Equal(t, contract, frame.Logs[0].Address)
+		assert.Equal(t, []common.Hash{topic}, frame.Logs[0].Topics)
+		assert.Empty(t, frame.Logs[0].Data)
+		assert.Equal(t, hexutil.Uint(0), frame.Logs[0].Index)
+		assert.Equal(t, hexutil.Uint(0), frame.Logs[0].Position)
+	}
+	encoded, err := json.Marshal(frame)
+	assert.NoError(t, err)
+	assert.Contains(t, string(encoded), `"logs"`)
+}
+
+func TestTraceCallStructLoggerHonorsTimeout(t *testing.T) {
+	from := common.HexToAddress("0x000000000000000000000000000000000000a333")
+	contract := common.HexToAddress("0x000000000000000000000000000000000000b333")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	gas := hexutil.Uint64(params.UpperGasLimit)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	code := hexutil.Bytes(common.FromHex("0x5b600056"))
+	timeout := "1ns"
+	overrides := kaiaapi.EthStateOverride{
+		contract: {Code: &code},
+	}
+	config := &TraceConfig{
+		LogConfig:      &vm.LogConfig{DisableMemory: true, DisableStack: true, DisableStorage: true, Limit: 1},
+		Timeout:        &timeout,
+		StateOverrides: &overrides,
+	}
+
+	blockNumber := rpc.LatestBlockNumber
+	_, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &contract,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.ErrorContains(t, err, "tracing aborted")
+}
+
+func TestTraceCallStructLoggerSlotWait(t *testing.T) {
+	from := common.HexToAddress("0xa666")
+	to := common.HexToAddress("0xb666")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	backend := newTestBackend(t, 1, genesis, nil)
+	t.Cleanup(backend.chain.Stop)
+	api := NewAPI(backend)
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	blockNumber := rpc.LatestBlockNumber
+	timeout := "1s"
+
+	for _, tc := range []struct {
+		name           string
+		cancel         bool
+		requestTimeout time.Duration
+		wantErr        error
+	}{
+		{name: "execution timeout excludes queueing"},
+		{name: "request cancellation", cancel: true, wantErr: context.Canceled},
+		{name: "request deadline", requestTimeout: time.Second, wantErr: context.DeadlineExceeded},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Keep the slot channel inside the fake-clock bubble. Do not run in parallel.
+			slots := structTraceSlots
+			defer func() { structTraceSlots = slots }()
+			synctest.Test(t, func(t *testing.T) {
+				structTraceSlots = make(chan struct{}, maxConcurrentStructTraces)
+				acquired := 0
+				defer func() {
+					for range acquired {
+						releaseStructTraceSlot()
+					}
+				}()
+				for range maxConcurrentStructTraces {
+					structTraceSlots <- struct{}{}
+					acquired++
+				}
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				if tc.requestTimeout > 0 {
+					var cancelDeadline context.CancelFunc
+					ctx, cancelDeadline = context.WithTimeout(ctx, tc.requestTimeout)
+					defer cancelDeadline()
+				}
+				var (
+					result interface{}
+					err    error
+				)
+				done := make(chan struct{})
+				go func() {
+					result, err = api.TraceCall(ctx, kaiaapi.CallArgs{
+						From: from, To: &to, Gas: &gas, GasPrice: &gasPrice,
+					}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, &TraceConfig{Timeout: &timeout})
+					close(done)
+				}()
+
+				synctest.Wait()
+				time.Sleep(2 * time.Second)
+				if tc.cancel {
+					cancel()
+				}
+				synctest.Wait()
+				if tc.wantErr == nil {
+					select {
+					case <-done:
+						t.Fatalf("trace finished before acquiring a slot: %v", err)
+					default:
+					}
+					releaseStructTraceSlot()
+					acquired--
+					synctest.Wait()
+				}
+				select {
+				case <-done:
+				default:
+					t.Fatal("trace did not finish")
+				}
+				if tc.wantErr != nil {
+					assert.ErrorIs(t, err, tc.wantErr)
+					assert.ErrorContains(t, err, "tracing aborted")
+				} else {
+					assert.NoError(t, err)
+					assert.NotNil(t, result)
+				}
+				assert.Len(t, structTraceSlots, acquired)
+			})
+		})
+	}
+}
+
+func TestResolveTraceTimeout(t *testing.T) {
+	short := "1s"
+	long := "30s"
+	invalid := "invalid"
+	for _, tc := range []struct {
+		name    string
+		config  *TraceConfig
+		want    time.Duration
+		wantErr bool
+	}{
+		{name: "default", want: defaultTraceTimeout},
+		{name: "no timeout", config: &TraceConfig{}, want: defaultTraceTimeout},
+		{name: "shorter", config: &TraceConfig{Timeout: &short}, want: time.Second},
+		{name: "longer", config: &TraceConfig{Timeout: &long}, want: 30 * time.Second},
+		{name: "invalid", config: &TraceConfig{Timeout: &invalid}, wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := resolveTraceTimeout(tc.config)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestTraceCallStructLoggerMemoryConfig(t *testing.T) {
+	from := common.HexToAddress("0xa444")
+	contract := common.HexToAddress("0xb444")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from:     {Balance: big.NewInt(0)},
+		contract: {Balance: big.NewInt(0), Code: common.FromHex("0x600160005200")},
+	}}
+	backend := newTestBackend(t, 1, genesis, nil)
+	t.Cleanup(backend.chain.Stop)
+	api := NewAPI(backend)
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	blockNumber := rpc.LatestBlockNumber
+
+	for _, tc := range []struct {
+		name   string
+		config string
+		memory bool
+	}{
+		{"nil", `null`, true},
+		{"empty", `{}`, true},
+		{"omitted", `{"disableStack":true}`, true},
+		{"enabled", `{"disableMemory":false}`, true},
+		{"disabled", `{"disableMemory":true}`, false},
+		{"legacy logger timeout", `{"loggerTimeout":"1ns"}`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var config *TraceConfig
+			if err := json.Unmarshal([]byte(tc.config), &config); err != nil {
+				t.Fatal(err)
+			}
+			result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+				From: from, To: &contract, Gas: &gas, GasPrice: &gasPrice,
+			}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded kaiaapi.ExecutionResult
+			if err := json.Unmarshal(result.(json.RawMessage), &decoded); err != nil {
+				t.Fatal(err)
+			}
+			if !assert.NotEmpty(t, decoded.StructLogs) {
+				return
+			}
+			last := decoded.StructLogs[len(decoded.StructLogs)-1]
+			assert.Equal(t, "STOP", last.Op)
+			if tc.memory {
+				assert.Equal(t, &[]string{fmt.Sprintf("%064x", 1)}, last.Memory)
+			} else {
+				assert.Nil(t, last.Memory)
+			}
+		})
+	}
+}
+
+func TestTraceCallNamedTracerKeepsCancellationBehavior(t *testing.T) {
+	from := common.HexToAddress("0xa555")
+	contract := common.HexToAddress("0xb555")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from:     {Balance: big.NewInt(0)},
+		contract: {Balance: big.NewInt(0), Code: common.FromHex("0x600160005200")},
+	}}
+	backend := newTestBackend(t, 1, genesis, nil)
+	t.Cleanup(backend.chain.Stop)
+	api := NewAPI(backend)
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	blockNumber := rpc.LatestBlockNumber
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	for _, name := range []string{"callTracer", "fastCallTracer", "prestateTracer", "noopTracer"} {
+		t.Run(name, func(t *testing.T) {
+			result, err := api.TraceCall(ctx, kaiaapi.CallArgs{
+				From: from, To: &contract, Gas: &gas, GasPrice: &gasPrice,
+			}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, &TraceConfig{Tracer: &name})
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
+	}
+}
+
+func TestStructTraceSlotWaitHonorsCancellation(t *testing.T) {
+	acquired := 0
+	defer func() {
+		for range acquired {
+			releaseStructTraceSlot()
+		}
+	}()
+	for range maxConcurrentStructTraces {
+		if err := acquireStructTraceSlot(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		acquired++
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	assert.ErrorIs(t, acquireStructTraceSlot(ctx), context.Canceled)
 }
 
 func TestTraceTransaction(t *testing.T) {
@@ -387,12 +964,7 @@ func TestTraceTransaction(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to trace transaction %v", err)
 	}
-	if !reflect.DeepEqual(result, &kaiaapi.ExecutionResult{
-		Gas:         params.TxGas,
-		Failed:      false,
-		ReturnValue: "",
-		StructLogs:  []kaiaapi.StructLogRes{},
-	}) {
+	if !reflect.DeepEqual(result, emptyStructTraceResult(params.TxGas)) {
 		t.Error("Transaction tracing result is different")
 	}
 }
@@ -436,14 +1008,7 @@ func TestTraceBlock(t *testing.T) {
 			config:      nil,
 			expectErr:   nil,
 			expect: []*txTraceResult{
-				{
-					Result: &kaiaapi.ExecutionResult{
-						Gas:         params.TxGas,
-						Failed:      false,
-						ReturnValue: "",
-						StructLogs:  []kaiaapi.StructLogRes{},
-					},
-				},
+				{Result: emptyStructTraceResult(params.TxGas)},
 			},
 		},
 		// Trace non-existent block
@@ -459,14 +1024,7 @@ func TestTraceBlock(t *testing.T) {
 			config:      nil,
 			expectErr:   nil,
 			expect: []*txTraceResult{
-				{
-					Result: &kaiaapi.ExecutionResult{
-						Gas:         params.TxGas,
-						Failed:      false,
-						ReturnValue: "",
-						StructLogs:  []kaiaapi.StructLogRes{},
-					},
-				},
+				{Result: emptyStructTraceResult(params.TxGas)},
 			},
 		},
 		// Trace pending block
@@ -475,14 +1033,7 @@ func TestTraceBlock(t *testing.T) {
 			config:      nil,
 			expectErr:   nil,
 			expect: []*txTraceResult{
-				{
-					Result: &kaiaapi.ExecutionResult{
-						Gas:         params.TxGas,
-						Failed:      false,
-						ReturnValue: "",
-						StructLogs:  []kaiaapi.StructLogRes{},
-					},
-				},
+				{Result: emptyStructTraceResult(params.TxGas)},
 			},
 		},
 	}
@@ -525,7 +1076,7 @@ func (a Accounts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Accounts) Less(i, j int) bool { return bytes.Compare(a[i].addr.Bytes(), a[j].addr.Bytes()) < 0 }
 
 func newAccounts(n int) (accounts Accounts) {
-	for i := 0; i < n; i++ {
+	for range n {
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		accounts = append(accounts, Account{key: key, addr: addr})

@@ -33,7 +33,9 @@ type TxInternalDataSerializer struct {
 
 // txInternalDataJSON is an internal object for JSON serialization.
 type txInternalDataJSON struct {
-	TxType TxType `json:"typeInt"`
+	TxType             TxType           `json:"typeInt"`
+	TxSignatures       TxSignaturesJSON `json:"signatures"`
+	FeePayerSignatures TxSignaturesJSON `json:"feePayerSignatures"`
 }
 
 // newTxInternalDataSerializerWithValues creates a new TxInternalDataSerializer object with the given TxInternalData object.
@@ -109,6 +111,12 @@ func (serializer *TxInternalDataSerializer) UnmarshalJSON(b []byte) error {
 
 	if err := json.Unmarshal(b, &dec); err != nil {
 		return err
+	}
+	if len(dec.TxSignatures) == 0 {
+		return errEmptyTxSignatures
+	}
+	if dec.TxType.IsFeeDelegatedTransaction() && len(dec.FeePayerSignatures) == 0 {
+		return errEmptyTxSignatures
 	}
 
 	if dec.TxType == TxTypeLegacyTransaction {

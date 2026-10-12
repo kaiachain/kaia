@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
 	"reflect"
 	"testing"
@@ -12,11 +13,16 @@ import (
 	mock_accounts "github.com/kaiachain/kaia/accounts/mocks"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // test tx types and internal data to be supported by APIs in KaiaTransactionAPI.
@@ -63,6 +69,89 @@ var (
 	senderPrvKey, _   = crypto.HexToECDSA("95a21e86efa290d6665a9dbce06ae56319335540d13540fb1b01e28a5b2c8460")
 	feePayerPrvKey, _ = crypto.HexToECDSA("aebb680a5e596c1d1a01bac78a3985b62c685c5e995d780c176138cb2679ba3e")
 )
+
+func TestSendTxArgsUnmarshalSignatures(t *testing.T) {
+	testcases := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"missing", `{}`, false},
+		{"null", `{"signatures":null}`, false},
+		{"empty", `{"signatures":[]}`, false},
+		{"null_element", `{"signatures":[null]}`, true},
+		{"empty_element", `{"signatures":[{}]}`, true},
+		{"partial_element", `{"signatures":[{"V":"0x1"}]}`, true},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var args SendTxArgs
+			err := json.Unmarshal([]byte(tc.input), &args)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Empty(t, args.TxSignatures)
+			}
+		})
+	}
+}
+
+func TestValidateSenderSignatures(t *testing.T) {
+	two := append(types.TxSignaturesJSON{}, testSig...)
+	two = append(two, testSig...)
+	malformed := []types.TxSignaturesJSON{
+		{nil},
+		{{}},
+		{{V: (*hexutil.Big)(big.NewInt(1))}},
+	}
+	for _, txType := range []types.TxType{
+		types.TxTypeLegacyTransaction,
+		types.TxTypeEthereumAccessList,
+		types.TxTypeEthereumDynamicFee,
+		types.TxTypeEthereumBlob,
+		types.TxTypeEthereumSetCode,
+	} {
+		t.Run(txType.String(), func(t *testing.T) {
+			assert.ErrorIs(t, validateSenderSignatures(txType, types.TxSignaturesJSON{}), errTxArgInvalidSignatures)
+			assert.ErrorIs(t, validateSenderSignatures(txType, two), errTxArgInvalidSignatures)
+			assert.NoError(t, validateSenderSignatures(txType, testSig))
+			assert.NoError(t, validateSenderSignatures(txType, nil))
+		})
+	}
+	for txType := range internalDataTypes {
+		if txType.IsFeeDelegatedTransaction() {
+			t.Run(txType.String(), func(t *testing.T) {
+				// Preserve native multisignatures and signing before the sender.
+				assert.NoError(t, validateSenderSignatures(txType, two))
+				assert.NoError(t, validateSenderSignatures(txType, testSig))
+				assert.NoError(t, validateSenderSignatures(txType, types.TxSignaturesJSON{}))
+				assert.NoError(t, validateSenderSignatures(txType, nil))
+				for _, signatures := range malformed {
+					assert.ErrorIs(t, validateSenderSignatures(txType, signatures), errTxArgInvalidSignatures)
+				}
+			})
+		}
+	}
+}
+
+func TestSendTransactionAsFeePayerRejectsEmptySenderSignatures(t *testing.T) {
+	txType := types.TxTypeFeeDelegatedValueTransfer
+	args := SendTxArgs{
+		TypeInt:      &txType,
+		AccountNonce: &testNonce,
+		GasLimit:     &testGas,
+		Price:        testGasPrice,
+		TxSignatures: types.TxSignaturesJSON{},
+	}
+
+	_, err := new(KaiaTransactionAPI).SendTransactionAsFeePayer(context.Background(), args)
+	assert.ErrorIs(t, err, errTxArgNilSenderSig)
+
+	_, err = new(PersonalAPI).SendTransactionAsFeePayer(context.Background(), args, "")
+	assert.ErrorIs(t, err, errTxArgNilSenderSig)
+}
 
 // TestTxTypeSupport tests tx type support of APIs in KaiaTransactionAPI.
 func TestTxTypeSupport(t *testing.T) {
@@ -156,6 +245,31 @@ func TestTxTypeSupport(t *testing.T) {
 		testTxTypeSupport_noFieldValues(t, api, ctx, args)
 		testTxTypeSupport_unnecessaryFieldValues(t, api, ctx, args)
 	}
+}
+
+func TestRecoverFromTransactionRejectsOversizedSignatureList(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	api := KaiaTransactionAPI{b: mock_api.NewMockBackend(mockCtrl)}
+
+	txData := &types.TxInternalDataFeeDelegatedValueTransfer{
+		Price:     big.NewInt(1),
+		GasLimit:  21000,
+		Amount:    big.NewInt(0),
+		From:      common.Address{1},
+		FeePayer:  common.Address{2},
+		Recipient: common.Address{},
+	}
+	sig := &types.TxSignature{V: big.NewInt(37), R: big.NewInt(1), S: big.NewInt(1)}
+	txData.SetSignature(types.TxSignatures{sig})
+	txData.SetFeePayerSignatures(make(types.TxSignatures, accountkey.MaxNumKeysForMultiSig+1))
+	for i := range txData.GetFeePayerRawSignatureValues() {
+		txData.GetFeePayerRawSignatureValues()[i] = sig
+	}
+
+	encodedTx, err := rlp.EncodeToBytes(types.NewTx(txData))
+	require.NoError(t, err)
+	_, err = api.RecoverFromTransaction(context.Background(), encodedTx, rpc.LatestBlockNumber)
+	require.ErrorIs(t, err, kerrors.ErrMaxKeysExceed)
 }
 
 // testTxTypeSupport_normalCase tests APIs with proper SendTxArgs values.

@@ -34,6 +34,7 @@ var data = BidData{
 	To:            common.HexToAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"),
 	Nonce:         0,
 	Bid:           new(big.Int).SetBytes(common.Hex2Bytes("8ac7230489e80000")),
+	MaxGasPrice:   new(big.Int),
 	CallGasLimit:  10000000,
 	Data:          common.Hex2Bytes("d09de08a"),
 	SearcherSig:   common.Hex2Bytes("2162312ceb6a69efdb73c98ee96e56d0aea1ea019184c372022ab378151112c0747066e9a9d224a822dbf31d59de492502d69d7cfc789464fa84aaac0d53f6a11b"),
@@ -45,7 +46,7 @@ var testBid = &Bid{
 }
 
 func TestBidEIP712Encode(t *testing.T) {
-	digest := testBid.GetHashTypedData(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"))
+	digest := testBid.GetHashTypedData(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), AuctionVersionV2)
 	require.Equal(t, common.Hex2Bytes("da9b3f7a46d0b5e6875970b19ef7c60e2f969e5b44f6a4701b9889694df6fe0d"), digest)
 }
 
@@ -55,7 +56,7 @@ func TestBidGetEthSignedMessageHash(t *testing.T) {
 }
 
 func TestBidValidateSearcherSig(t *testing.T) {
-	err := testBid.ValidateSearcherSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"))
+	err := testBid.ValidateSearcherSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), AuctionVersionV2)
 	require.NoError(t, err)
 	// Do not modify the original bid.
 	require.Equal(t, uint8(27), testBid.SearcherSig[crypto.RecoveryIDOffset])
@@ -101,4 +102,27 @@ func TestBidGetGasLimit(t *testing.T) {
 	bid.SetGasLimit(10000000)
 	gasLimit = bid.GetGasLimit()
 	require.Equal(t, uint64(10000000), gasLimit)
+}
+
+func TestBidGetHashTypedDataBranching(t *testing.T) {
+	chainId := big.NewInt(31337)
+	verifyingContract := common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9")
+	v2Digest := common.Hex2Bytes("da9b3f7a46d0b5e6875970b19ef7c60e2f969e5b44f6a4701b9889694df6fe0d")
+	v3Digest := common.Hex2Bytes("aa05ecfa4c6656eab74cdde5b57c4cb53f41cc74e8c4409889714ad377998a37")
+
+	tcs := []struct {
+		name     string
+		version  string
+		expected []byte
+	}{
+		{"v2.1 typehash + domain version", AuctionVersionV2, v2Digest},
+		{"v3.0 typehash + domain version", AuctionVersionV3, v3Digest},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			digest := testBid.GetHashTypedData(chainId, verifyingContract, tc.version)
+			require.Equal(t, tc.expected, digest)
+		})
+	}
 }

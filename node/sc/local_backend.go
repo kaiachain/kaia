@@ -131,6 +131,6 @@ func (fb *filterLocalBackend) ChainConfig() *params.ChainConfig {
 	return fb.subbridge.blockchain.Config()
 }
 
-func (fb *filterLocalBackend) Engine() consensus.Engine {
-	return fb.subbridge.blockchain.Engine()
+func (fb *filterLocalBackend) Sealer() consensus.Sealer {
+	return fb.subbridge.blockchain.Sealer()
 }

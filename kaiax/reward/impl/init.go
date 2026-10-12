@@ -22,6 +22,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -37,7 +38,7 @@ type blockChain interface {
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlockByNumber(number uint64) *types.Block
 	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 }
 
 type InitOpts struct {
@@ -45,6 +46,9 @@ type InitOpts struct {
 	Chain         blockChain
 	GovModule     reward.GovModule // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
 	StakingModule staking.StakingModule
+	ValsetModule  valset.ValsetModule
+	NodeAddress   common.Address
+	Rewardbase    common.Address
 }
 
 type RewardModule struct {
@@ -56,7 +60,7 @@ func NewRewardModule() *RewardModule {
 }
 
 func (r *RewardModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.GovModule == nil || opts.StakingModule == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.GovModule == nil || opts.StakingModule == nil || opts.ValsetModule == nil {
 		return reward.ErrInitUnexpectedNil
 	}
 	r.InitOpts = *opts

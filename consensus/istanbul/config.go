@@ -32,7 +32,6 @@ const (
 
 type Config struct {
 	Timeout        uint64         `toml:",omitempty"` // The timeout for each Istanbul round in milliseconds.
-	BlockPeriod    uint64         `toml:",omitempty"` // Default minimum difference between two consecutive block's timestamps in second
 	ProposerPolicy ProposerPolicy `toml:",omitempty"` // The policy for proposer selection
 	Epoch          uint64         `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
 	SubGroupSize   uint64         `toml:",omitempty"`
@@ -41,7 +40,6 @@ type Config struct {
 func (c *Config) Copy() *Config {
 	return &Config{
 		Timeout:        c.Timeout,
-		BlockPeriod:    c.BlockPeriod,
 		ProposerPolicy: c.ProposerPolicy,
 		Epoch:          c.Epoch,
 		SubGroupSize:   c.SubGroupSize,
@@ -51,7 +49,6 @@ func (c *Config) Copy() *Config {
 // TODO-Kaia-Istanbul: Do not use DefaultConfig except for assigning new config
 var DefaultConfig = &Config{
 	Timeout:        10000,
-	BlockPeriod:    1,
 	ProposerPolicy: RoundRobin,
 	Epoch:          30000,
 	SubGroupSize:   21,

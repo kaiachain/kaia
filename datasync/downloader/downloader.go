@@ -92,6 +92,7 @@ var (
 	errInvalidChain            = errors.New("retrieved hash chain is invalid")
 	errInvalidBody             = errors.New("retrieved block body is invalid")
 	errInvalidReceipt          = errors.New("retrieved receipt is invalid")
+	errInvalidStakingInfo      = errors.New("retrieved staking info is invalid")
 	errCancelStateFetch        = errors.New("state data download canceled (requested)")
 	errCancelContentProcessing = errors.New("content processing canceled (requested)")
 	errCanceled                = errors.New("syncing canceled (requested)")
@@ -104,6 +105,7 @@ type Downloader struct {
 	mux  *event.TypeMux // Event multiplexer to announce sync operation events
 
 	isStakingInfoRecovery     bool
+	stakingInfoRecoveryPeer   string
 	stakingInfoRecoveryTotal  int
 	stakingInfoRecoveryCh     chan []*staking.P2PStakingInfo
 	stakingInfoRecoveryBlocks []uint64
@@ -132,8 +134,8 @@ type Downloader struct {
 
 	// Status
 	synchroniseMock func(id string, hash common.Hash) error // Replacement for synchronise during testing
-	synchronising   int32
-	notified        int32
+	synchronising   atomic.Int32
+	notified        atomic.Int32
 	committed       int32
 
 	// Channels
@@ -310,7 +312,7 @@ func (d *Downloader) getMode() SyncMode {
 
 // Synchronising returns whether the downloader is currently retrieving blocks.
 func (d *Downloader) Synchronising() bool {
-	return atomic.LoadInt32(&d.synchronising) > 0
+	return d.synchronising.Load() > 0
 }
 
 // RegisterPeer injects a new download peer into the set of block source to be
@@ -345,6 +347,12 @@ func (d *Downloader) UnregisterPeer(id string) error {
 	}
 	d.queue.Revoke(id)
 
+	// Cancel a sync against this peer instead of letting it wait out the request timeout.
+	d.cancelLock.Lock()
+	if id == d.cancelPeer {
+		d.closeCancelCh()
+	}
+	d.cancelLock.Unlock()
 	return nil
 }
 
@@ -356,25 +364,14 @@ func (d *Downloader) GetSnapSyncer() *snap.Syncer {
 // adding various sanity checks as well as wrapping it with various logger entries.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	err := d.synchronise(id, head, td, mode)
-	switch err {
-	case nil, errBusy, errCanceled:
+	switch {
+	case err == nil, err == errBusy, err == errCanceled:
 		return err
-	}
 
-	if errors.Is(err, errInvalidChain) {
-		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
-		if d.dropPeer == nil {
-			logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
-		} else {
-			d.dropPeer(id)
-		}
-		return err
-	}
-
-	switch err {
-	case errTimeout, errBadPeer, errStallingPeer,
-		errEmptyHeaderSet, errPeersUnavailable, errTooOld,
-		errInvalidAncestor:
+	case errors.Is(err, errInvalidChain), errors.Is(err, errInvalidBody), errors.Is(err, errInvalidReceipt),
+		err == errTimeout, err == errBadPeer, err == errStallingPeer,
+		err == errEmptyHeaderSet, err == errPeersUnavailable, err == errTooOld,
+		err == errInvalidAncestor:
 		logger.Warn("Synchronisation failed, dropping peer", "peer", id, "err", err)
 		if d.dropPeer == nil {
 			logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", id)
@@ -398,13 +395,13 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	}
 	// TODO-Kaia-Downloader Below code can be replaced by mutex.
 	// Make sure only one goroutine is ever allowed past this point at once
-	if !atomic.CompareAndSwapInt32(&d.synchronising, 0, 1) {
+	if !d.synchronising.CompareAndSwap(0, 1) {
 		return errBusy
 	}
-	defer atomic.StoreInt32(&d.synchronising, 0)
+	defer d.synchronising.Store(0)
 
 	// Post a user notification of the sync (only once per session)
-	if atomic.CompareAndSwapInt32(&d.notified, 0, 1) {
+	if d.notified.CompareAndSwap(0, 1) {
 		logger.Info("Block synchronisation started")
 	}
 	// If we are already full syncing, but have a fast-sync bloom filter laying
@@ -571,7 +568,7 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	}
 	// Wait for the first error, then terminate the others.
 	var err error
-	for i := 0; i < len(fetchers); i++ {
+	for i := range fetchers {
 		if i == len(fetchers)-1 {
 			// Close the queue when all fetchers have exited.
 			// This will cause the block processor to end when
@@ -636,6 +633,7 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 		return errors.New("the given peer is not registered")
 	}
 
+	d.stakingInfoRecoveryPeer = id
 	d.stakingInfoRecoveryBlocks = blockNums
 	d.stakingInfoRecoveryTotal = len(blockNums)
 	d.stakingInfoRecoveryCh = make(chan []*staking.P2PStakingInfo, 1)
@@ -669,15 +667,21 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 				return
 			case stakingInfos := <-d.stakingInfoRecoveryCh:
 				logger.Info("received stakinginfos", "len", len(stakingInfos))
-				for _, stakingInfo := range stakingInfos {
-					if d.stakingInfoRecoveryBlocks[0] != stakingInfo.BlockNum {
-						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[0], "actual", stakingInfo.BlockNum)
+				if len(stakingInfos) > len(d.stakingInfoRecoveryBlocks) {
+					logger.Error("received more staking infos than requested", "received", len(stakingInfos), "pending", len(d.stakingInfoRecoveryBlocks))
+					return
+				}
+				for i, stakingInfo := range stakingInfos {
+					if d.stakingInfoRecoveryBlocks[i] != stakingInfo.BlockNum {
+						logger.Error("failed to receive expected block", "expected", d.stakingInfoRecoveryBlocks[i], "actual", stakingInfo.BlockNum)
 						return
 					}
-					d.stakingModule.PutStakingInfoToDB(stakingInfo.BlockNum, staking.ToStakingInfo(stakingInfo))
-					fixed++
-					d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[1:]
 				}
+				for i, stakingInfo := range stakingInfos {
+					d.stakingModule.PutStakingInfoToDB(d.stakingInfoRecoveryBlocks[i], staking.ToStakingInfo(stakingInfo))
+					fixed++
+				}
+				d.stakingInfoRecoveryBlocks = d.stakingInfoRecoveryBlocks[len(stakingInfos):]
 
 				if len(d.stakingInfoRecoveryBlocks) == 0 {
 					logger.Info("syncing staking info is finished", "fixed", fixed)
@@ -709,8 +713,13 @@ func (d *Downloader) SyncStakingInfoStatus() *SyncingStatus {
 // not wait for the running download goroutines to finish. This method should be
 // used when cancelling the downloads from inside the downloader.
 func (d *Downloader) cancel() {
-	// Close the current cancel channel
 	d.cancelLock.Lock()
+	d.closeCancelCh()
+	d.cancelLock.Unlock()
+}
+
+// closeCancelCh closes the current cancel channel if it's open; the caller holds cancelLock.
+func (d *Downloader) closeCancelCh() {
 	if d.cancelCh != nil {
 		select {
 		case <-d.cancelCh:
@@ -719,7 +728,13 @@ func (d *Downloader) cancel() {
 			close(d.cancelCh)
 		}
 	}
-	d.cancelLock.Unlock()
+}
+
+func (d *Downloader) isMasterPeer(id string) bool {
+	d.cancelLock.RLock()
+	defer d.cancelLock.RUnlock()
+
+	return id == d.cancelPeer
 }
 
 // Cancel aborts all of the operations and waits for all download goroutines to
@@ -867,7 +882,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				return 0, errEmptyHeaderSet
 			}
 			// Make sure the peer's reply conforms to the request
-			for i := 0; i < len(headers); i++ {
+			for i := range headers {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.logger.Error("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
 					return 0, fmt.Errorf("%w: %v", errInvalidChain, errors.New("head headers broke chain ordering"))
@@ -1327,30 +1342,48 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 			return errCanceled
 
 		case packet := <-deliveryCh:
+			pid := packet.PeerId()
+			peer := d.peers.Peer(pid)
+			if peer == nil {
+				// The peer may have been unregistered while this packet was queued.
+				// Ignore deliveries from peers no longer in the active peer set.
+				continue
+			}
 			deliveryTime := time.Now()
-			// If the peer was previously banned and failed to deliver its pack
-			// in a reasonable time frame, ignore its message.
-			if peer := d.peers.Peer(packet.PeerId()); peer != nil {
-				// Deliver the received chunk of data and check chain validity
-				accepted, err := deliver(packet)
-				if errors.Is(err, errInvalidChain) {
+			// Deliver the received chunk of data and check chain validity
+			accepted, err := deliver(packet)
+			// Issue a log to the user to see what's going on
+			switch {
+			case err == nil && packet.Items() == 0:
+				peer.logger.Trace("Requested data not delivered", "type", kind)
+			case err == nil:
+				peer.logger.Trace("Delivered new batch of data", "type", kind, "count", packet.Stats())
+			default:
+				peer.logger.Trace("Failed to deliver retrieved data", "type", kind, "err", err)
+			}
+
+			switch {
+			case errors.Is(err, errLateDelivery):
+				// A newer request may already be in flight for this peer. Leave its
+				// state unchanged so the current response can still be delivered.
+
+			case errors.Is(err, errInvalidBody), errors.Is(err, errInvalidReceipt):
+				if d.isMasterPeer(pid) {
 					return err
 				}
-				// Unless a peer delivered something completely else than requested (usually
-				// caused by a timed out request which came through in the end), set it to
-				// idle. If the delivery's stale, the peer should have already been idled.
-				if !errors.Is(err, errStaleDelivery) {
-					setIdle(peer, accepted, deliveryTime)
+				peer.logger.Debug("Invalid data delivery, dropping peer", "type", kind, "err", err)
+				if d.dropPeer == nil {
+					logger.Warn("Downloader wants to drop peer, but peerdrop-function is not set", "peer", pid)
+					setIdle(peer, 0, deliveryTime)
+				} else {
+					d.dropPeer(pid)
 				}
-				// Issue a log to the user to see what's going on
-				switch {
-				case err == nil && packet.Items() == 0:
-					peer.logger.Trace("Requested data not delivered", "type", kind)
-				case err == nil:
-					peer.logger.Trace("Delivered new batch of data", "type", kind, "count", packet.Stats())
-				default:
-					peer.logger.Trace("Failed to deliver retrieved data", "type", kind, "err", err)
-				}
+
+			case errors.Is(err, errInvalidChain):
+				return err
+
+			default:
+				setIdle(peer, accepted, deliveryTime)
 			}
 			// Blocks assembled, try to update the progress
 			select {
@@ -1403,11 +1436,7 @@ func (d *Downloader) fetchParts(deliveryCh chan dataPack, deliver func(dataPack)
 							d.dropPeer(pid)
 
 							// If this peer was the master peer, abort sync immediately
-							d.cancelLock.RLock()
-							master := pid == d.cancelPeer
-							d.cancelLock.RUnlock()
-
-							if master {
+							if d.isMasterPeer(pid) {
 								d.cancel()
 								return errTimeout
 							}
@@ -1879,8 +1908,9 @@ func (d *Downloader) commitFastSyncData(results []*fetchResult, stateSync *state
 		blocks[i] = types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 		receipts[i] = result.Receipts
 		if result.StakingInfo != nil {
-			d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, staking.ToStakingInfo(result.StakingInfo))
-			logger.Info("Imported new staking information", "number", result.StakingInfo.BlockNum)
+			num := result.Header.Number.Uint64()
+			d.stakingModule.PutStakingInfoToDB(num, staking.ToStakingInfo(result.StakingInfo))
+			logger.Info("Imported new staking information", "number", num)
 		}
 	}
 	if index, err := d.blockchain.InsertReceiptChain(blocks, receipts); err != nil {
@@ -1894,8 +1924,8 @@ func (d *Downloader) commitPivotBlock(result *fetchResult) error {
 	block := types.NewBlockWithHeader(result.Header).WithBody(result.Transactions)
 	logger.Debug("Committing fast sync pivot as new head", "number", block.Number(), "hash", block.Hash())
 	if result.StakingInfo != nil {
-		d.stakingModule.PutStakingInfoToDB(result.StakingInfo.BlockNum, staking.ToStakingInfo(result.StakingInfo))
-		logger.Info("Imported new staking information on pivot block", "number", result.StakingInfo.BlockNum, "pivot", block.Number())
+		d.stakingModule.PutStakingInfoToDB(block.NumberU64(), staking.ToStakingInfo(result.StakingInfo))
+		logger.Info("Imported new staking information on pivot block", "number", block.NumberU64())
 	}
 	if _, err := d.blockchain.InsertReceiptChain([]*types.Block{block}, []types.Receipts{result.Receipts}); err != nil {
 		return err
@@ -1934,8 +1964,11 @@ func (d *Downloader) DeliverReceipts(id string, receipts [][]*types.Receipt) (er
 
 // DeliverStakingInfos injects a new batch of staking information received from a remote node.
 func (d *Downloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error {
-	if d.isStakingInfoRecovery {
-		d.stakingInfoRecoveryCh <- stakingInfos
+	if d.isStakingInfoRecovery && id == d.stakingInfoRecoveryPeer {
+		select {
+		case d.stakingInfoRecoveryCh <- stakingInfos:
+		default:
+		}
 	}
 	return d.deliver(id, d.stakingInfoCh, &stakingInfoPack{id, stakingInfos}, stakingInfoInMeter, stakingInfoDropMeter)
 }

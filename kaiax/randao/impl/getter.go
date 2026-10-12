@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
@@ -71,89 +72,111 @@ func (r *RandaoModule) getParentBlockStateDB(blockNum *big.Int) (*state.StateDB,
 	return statedb, parentNum, nil
 }
 
+// getAllCached is the cache + singleflight wrapper. It dispatches to the
+// permissioned or permissionless reader based on whether the parent block
+// (the one being read) is post-permissionless-fork.
 func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, error) {
-	// First check the block number based cache
 	if item, ok := r.blsPubkeyCache.Get(num.Uint64()); ok {
 		logger.Trace("BlsPublicKeyInfos cache hit", "number", num.Uint64())
 		return item.(system.BlsPublicKeyInfos), nil
 	}
 
 	res, err, _ := r.sfGroup.Do(num.String(), func() (interface{}, error) {
-		start := time.Now()
-
-		backend := backends.NewBlockchainContractBackend(r.Chain, nil, nil)
-
-		var kip113Addr common.Address
-
-		// Early check for before-fork blocks
 		if !r.ChainConfig.IsRandaoForkEnabled(num) {
 			return nil, randao.ErrBeforeRandaoFork
 		}
-
-		// Get the parent block's statedb and block number
 		statedb, parentNum, err := r.getParentBlockStateDB(num)
 		if err != nil {
 			return nil, err
 		}
+		backend := backends.NewBlockchainContractBackend(r.Chain, nil, nil)
 
-		// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
-		// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
-		// Hence the ChainConfig fallback.
-		if r.ChainConfig.IsRandaoForkBlock(num) {
-			// For fork block, get kip113Addr from ChainConfig
-			var ok bool
-			kip113Addr, ok = r.ChainConfig.RandaoRegistry.Records[system.Kip113Name]
-			if !ok {
-				return nil, randao.ErrMissingKIP113
-			}
-		} else {
-			// For fork-enabled blocks, get kip113Addr from Registry
-			// (We already checked above that this is a fork-enabled block)
-			kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
-			if err != nil {
-				return nil, err
-			}
+		// ABv2 is installed at Finalize(HF-1), so it's available from HF
+		// onward. At num=HF (parentNum=HF-1) this is false — falls through
+		// to KIP113, which returns the same BLS keys since ABv2 mirrors
+		// KIP113 at migration.
+		if r.ChainConfig.IsPermissionlessForkEnabled(parentNum) {
+			return r.readBlsPermissionless(num, parentNum, statedb, backend)
 		}
-
-		// Check storage root cache
-		systemRegistryAddr := system.RegistryAddr
-		kip113Root := statedb.GetStorageRoot(kip113Addr)
-		systemRegistryRoot := statedb.GetStorageRoot(systemRegistryAddr)
-		storageKey := kip113Root.Hex() + ":" + systemRegistryRoot.Hex()
-
-		if item, ok := r.storageRootCache.Get(storageKey); ok {
-			logger.Trace("BlsPublicKeyInfos storage root cache hit",
-				"number", num.Uint64(),
-				"kip113Root", kip113Root.Hex(),
-				"systemRegistryRoot", systemRegistryRoot.Hex())
-
-			infos := item.(system.BlsPublicKeyInfos)
-			r.blsPubkeyCache.Add(num.Uint64(), infos)
-			return infos, nil
-		}
-
-		// Cache miss - read data from contracts
-		infos, err := system.ReadKip113All(backend, kip113Addr, parentNum)
-		if err != nil {
-			return nil, err
-		}
-
-		logger.Trace("BlsPublicKeyInfos cache miss",
-			"number", num.Uint64(),
-			"kip113Root", kip113Root.Hex(),
-			"systemRegistryRoot", systemRegistryRoot.Hex(),
-			"elapsed", time.Since(start))
-
-		// Update both caches
-		r.blsPubkeyCache.Add(num.Uint64(), infos)
-		r.storageRootCache.Add(storageKey, infos)
-
-		return infos, nil
+		return r.readBlsPermissioned(num, parentNum, statedb, backend)
 	})
-
 	if err != nil {
 		return nil, err
 	}
-
 	return res.(system.BlsPublicKeyInfos), nil
+}
+
+// readBlsPermissionless reads BLS pubkey info from AddressBookV2
+// post-permissionless-fork and seeds both the per-block and storage-root
+// caches.
+func (r *RandaoModule) readBlsPermissionless(num, parentNum *big.Int, statedb *state.StateDB, backend bind.ContractCaller) (system.BlsPublicKeyInfos, error) {
+	abv2Root := statedb.GetStorageRoot(system.AddressBookAddr)
+	storageKey := abv2Root.Hex()
+
+	if item, ok := r.storageRootCache.Get(storageKey); ok {
+		logger.Trace("BlsPublicKeyInfos storage root cache hit (ABv2)", "number", num.Uint64(), "abv2Root", abv2Root.Hex())
+		infos := item.(system.BlsPublicKeyInfos)
+		r.blsPubkeyCache.Add(num.Uint64(), infos)
+		return infos, nil
+	}
+
+	start := time.Now()
+	infos, err := system.ReadAddressBookV2BlsAll(backend, parentNum)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("BlsPublicKeyInfos cache miss (ABv2)", "number", num.Uint64(), "abv2Root", abv2Root.Hex(), "elapsed", time.Since(start))
+	r.blsPubkeyCache.Add(num.Uint64(), infos)
+	r.storageRootCache.Add(storageKey, infos)
+	return infos, nil
+}
+
+// readBlsPermissioned reads BLS pubkey info from KIP113 (resolved via
+// Registry, with a ChainConfig fallback at the Randao fork block since the
+// Registry is installed at Finalize() of that block).
+func (r *RandaoModule) readBlsPermissioned(num, parentNum *big.Int, statedb *state.StateDB, backend bind.ContractCaller) (system.BlsPublicKeyInfos, error) {
+	var (
+		kip113Addr common.Address
+		err        error
+	)
+	if r.ChainConfig.IsRandaoForkBlock(num) {
+		var ok bool
+		kip113Addr, ok = r.ChainConfig.RandaoRegistry.Records[system.Kip113Name]
+		if !ok {
+			return nil, randao.ErrMissingKIP113
+		}
+	} else {
+		kip113Addr, err = system.ReadActiveAddressFromRegistry(backend, system.Kip113Name, parentNum)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	kip113Root := statedb.GetStorageRoot(kip113Addr)
+	systemRegistryRoot := statedb.GetStorageRoot(system.RegistryAddr)
+	storageKey := kip113Root.Hex() + ":" + systemRegistryRoot.Hex()
+
+	if item, ok := r.storageRootCache.Get(storageKey); ok {
+		logger.Trace("BlsPublicKeyInfos storage root cache hit",
+			"number", num.Uint64(),
+			"kip113Root", kip113Root.Hex(),
+			"systemRegistryRoot", systemRegistryRoot.Hex())
+		infos := item.(system.BlsPublicKeyInfos)
+		r.blsPubkeyCache.Add(num.Uint64(), infos)
+		return infos, nil
+	}
+
+	start := time.Now()
+	infos, err := system.ReadKip113All(backend, kip113Addr, parentNum)
+	if err != nil {
+		return nil, err
+	}
+	logger.Trace("BlsPublicKeyInfos cache miss",
+		"number", num.Uint64(),
+		"kip113Root", kip113Root.Hex(),
+		"systemRegistryRoot", systemRegistryRoot.Hex(),
+		"elapsed", time.Since(start))
+	r.blsPubkeyCache.Add(num.Uint64(), infos)
+	r.storageRootCache.Add(storageKey, infos)
+	return infos, nil
 }

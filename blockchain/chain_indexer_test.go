@@ -36,7 +36,7 @@ import (
 
 // Runs multiple tests with randomized parameters.
 func TestChainIndexerSingle(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		testChainIndexer(t, 1)
 	}
 }
@@ -61,7 +61,7 @@ func testChainIndexer(t *testing.T, count int) {
 
 	// Create a chain of indexers and ensure they all report empty
 	backends := make([]*testChainIndexBackend, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		var (
 			sectionSize = uint64(rand.Intn(100) + 1)
 			confirmsReq = uint64(rand.Intn(10))
@@ -153,7 +153,7 @@ type testChainIndexBackend struct {
 func (b *testChainIndexBackend) assertSections() {
 	// Keep trying for 3 seconds if it does not match
 	var sections uint64
-	for i := 0; i < 300; i++ {
+	for range 300 {
 		sections, _, _ = b.indexer.Sections()
 		if sections == b.stored {
 			return
@@ -177,7 +177,7 @@ func (b *testChainIndexBackend) assertBlocks(headNum, failNum uint64) (uint64, b
 					// rolled back after processing started, no more process calls expected
 					// wait until updating is done to make sure that processing actually fails
 					var updating bool
-					for i := 0; i < 300; i++ {
+					for range 300 {
 						b.indexer.lock.Lock()
 						updating = b.indexer.knownSections > b.indexer.storedSections
 						b.indexer.lock.Unlock()

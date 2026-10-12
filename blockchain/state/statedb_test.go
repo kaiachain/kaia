@@ -54,7 +54,7 @@ func TestUpdateLeaks(t *testing.T) {
 	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil, nil)
 
 	// Update it with some accounts
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		addr := common.BytesToAddress([]byte{i})
 		if i%2 == 0 {
 			state.SetState(addr, common.BytesToHash([]byte{i, i, i}), common.BytesToHash([]byte{i, i, i, i}))
@@ -71,6 +71,38 @@ func TestUpdateLeaks(t *testing.T) {
 	for _, key := range db.Keys() {
 		value, _ := db.Get(key)
 		t.Errorf("State leaked into database: %x -> %x", key, value)
+	}
+}
+
+// TestObjectReadErrorSurfaces checks that a read failure met while loading an
+// object's code is reported by StateDB.Error(), not only kept on the object.
+func TestObjectReadErrorSurfaces(t *testing.T) {
+	memDBManager := database.NewMemoryDBManager()
+	addr := common.BytesToAddress([]byte{1})
+	code := []byte{0x60, 0x00}
+
+	sdb := NewDatabase(memDBManager)
+	state, _ := New(common.Hash{}, sdb, nil, nil)
+	state.SetCode(addr, code)
+	root, err := state.Commit(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sdb.TrieDB().Commit(root, false, 0); err != nil {
+		t.Fatal(err)
+	}
+	memDBManager.DeleteCode(crypto.Keccak256Hash(code))
+
+	// A fresh database bypasses the code cache that served the commit.
+	state, err = New(root, NewDatabase(memDBManager), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := state.GetCode(addr); got != nil {
+		t.Fatalf("code = %x, want nil", got)
+	}
+	if state.Error() == nil {
+		t.Fatal("a code read failure must surface in StateDB.Error()")
 	}
 }
 
@@ -100,14 +132,14 @@ func TestIntermediateLeaks(t *testing.T) {
 	}
 
 	// Modify the transient state.
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		modify(transState, common.Address{byte(i)}, i, 0)
 	}
 	// Write modifications to trie.
 	transState.IntermediateRoot(false)
 
 	// Overwrite all the data with new values in the transient database.
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		modify(transState, common.Address{byte(i)}, i, 99)
 		modify(finalState, common.Address{byte(i)}, i, 99)
 	}
@@ -133,6 +165,50 @@ func TestIntermediateLeaks(t *testing.T) {
 	}
 }
 
+func TestFinaliseDeferredStorageRoot(t *testing.T) {
+	addr := common.HexToAddress("0x1234")
+	newState := func() *StateDB {
+		stateDB, err := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+		assert.NoError(t, err)
+		return stateDB
+	}
+	emptyRoot := newState().IntermediateRoot(true)
+
+	t.Run("deleted object", func(t *testing.T) {
+		stateDB := newState()
+		stateDB.AddBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+		assert.Contains(t, stateDB.stateObjectsDirtyStorage, addr)
+
+		stateDB.SubBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+		assert.Nil(t, stateDB.getStateObject(addr))
+
+		root := stateDB.IntermediateRoot(true)
+		committedRoot, err := stateDB.Commit(true)
+		assert.NoError(t, err)
+		assert.Equal(t, emptyRoot, root)
+		assert.Equal(t, root, committedRoot)
+	})
+
+	t.Run("recreated object", func(t *testing.T) {
+		stateDB := newState()
+		stateDB.AddBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+		stateDB.SubBalance(addr, big.NewInt(100))
+		stateDB.Finalise(true, false)
+
+		stateDB.AddBalance(addr, big.NewInt(1))
+		stateDB.Finalise(true, false)
+
+		root := stateDB.IntermediateRoot(true)
+		committedRoot, err := stateDB.Commit(true)
+		assert.NoError(t, err)
+		assert.NotEqual(t, emptyRoot, root)
+		assert.Equal(t, root, committedRoot)
+	})
+}
+
 // TestCopy tests that copying a statedb object indeed makes the original and
 // the copy independent of each other. This test is a regression test against
 // https://github.com/ethereum/go-ethereum/pull/15549.
@@ -140,7 +216,7 @@ func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
 	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		obj.AddBalance(big.NewInt(int64(i)))
 		orig.updateStateObject(obj)
@@ -153,7 +229,7 @@ func TestCopy(t *testing.T) {
 	// Copy the copy state
 	ccopy := copy.Copy()
 
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -181,7 +257,7 @@ func TestCopy(t *testing.T) {
 	wg.Wait()
 
 	// Verify that the two states have been updated independently
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -215,7 +291,7 @@ func TestStateObjects(t *testing.T) {
 	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	// Update each account, it will update StateDB.stateObjects.
-	for i := byte(0); i < 128; i++ {
+	for i := range byte(128) {
 		addr := common.BytesToAddress([]byte{i})
 		stateObj := stateDB.GetOrNewStateObject(addr)
 
@@ -870,4 +946,57 @@ func TestStateDBTransientStorage(t *testing.T) {
 	if got := cpy.GetTransientState(addr, key); got != value {
 		t.Fatalf("transient storage mismatch: have %x, want %x", got, value)
 	}
+}
+
+var pragueRules = params.Rules{IsIstanbul: true, IsLondon: true, IsShanghai: true, IsCancun: true, IsPrague: true}
+
+// delegationCode returns an EIP-7702 delegation designator (0xef0100 || address).
+func delegationCode(target common.Address) []byte {
+	return append([]byte{0xef, 0x01, 0x00}, target.Bytes()...)
+}
+
+// TestSetCodeToEOARevertRestoresCodeInfo checks that CodeInfo (not just code/hash) is restored on revert.
+func TestSetCodeToEOARevertRestoresCodeInfo(t *testing.T) {
+	state, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	authority := common.HexToAddress("0xa11ce")
+	state.AddBalance(authority, common.Big1) // materialize the EOA before the snapshot
+
+	snap := state.Snapshot()
+	if err := state.SetCodeToEOA(authority, delegationCode(common.HexToAddress("0xde1")), pragueRules); err != nil {
+		t.Fatal(err)
+	}
+	if vm, _ := state.GetVmVersion(authority); vm != params.VmVersion1 {
+		t.Fatalf("SetCodeToEOA should install vmVersion1, got %v", vm)
+	}
+
+	state.RevertToSnapshot(snap)
+	if vm, _ := state.GetVmVersion(authority); vm != params.VmVersion0 {
+		t.Fatalf("CodeInfo not restored on revert: got vmVersion %v", vm)
+	}
+	assert.Empty(t, state.GetCode(authority))
+}
+
+// TestSetCodeToEOARevertMatchesRoot checks a reverted SetCode tx commits the same root as if it never ran.
+func TestSetCodeToEOARevertMatchesRoot(t *testing.T) {
+	authority := common.HexToAddress("0xa11ce")
+	target := common.HexToAddress("0xde1")
+	commitRoot := func(setCode bool) common.Hash {
+		s, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
+		s.AddBalance(authority, common.Big1)
+		s.Finalise(true, false)
+		if setCode {
+			snap := s.Snapshot()
+			s.IncNonce(authority)
+			if err := s.SetCodeToEOA(authority, delegationCode(target), pragueRules); err != nil {
+				t.Fatal(err)
+			}
+			s.RevertToSnapshot(snap)
+		}
+		root, err := s.Commit(false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return root
+	}
+	assert.Equal(t, commitRoot(false), commitRoot(true))
 }

@@ -34,6 +34,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -269,10 +270,7 @@ func (t *httpReadWriteNopCloser) Close() error {
 // Deprecated: Server implements http.Handler
 func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv http.Handler) *http.Server {
 	timeouts = sanitizeTimeouts(timeouts)
-	// Wrap the CORS-handler within a host-handler
-	handler := newCorsHandler(srv, cors)
-	handler = newVHostHandler(vhosts, handler)
-	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
+	handler := srv
 
 	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
 	nrApp := newNewRelicApp()
@@ -285,6 +283,11 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	if ddTracer != nil {
 		handler = newDatadogHTTPHandler(ddTracer, handler)
 	}
+
+	// Wrap the CORS-handler within a host-handler.
+	handler = newCorsHandler(handler, cors)
+	handler = newVHostHandler(vhosts, handler)
+	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
 
 	return &http.Server{
 		Handler:      handler,
@@ -300,17 +303,15 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
 	timeouts = sanitizeTimeouts(timeouts)
 	if len(cors) == 0 {
-		for _, vhost := range vhosts {
-			if vhost == "*" {
-				return &fasthttp.Server{
-					Concurrency:        ConcurrencyLimit,
-					Handler:            fasthttp.TimeoutHandler(srv.HandleFastHTTP, timeouts.ExecutionTimeout, "timeout"),
-					ReadTimeout:        timeouts.ReadTimeout,
-					WriteTimeout:       timeouts.WriteTimeout,
-					IdleTimeout:        timeouts.IdleTimeout,
-					MaxRequestBodySize: common.MaxRequestContentLength,
-					ReduceMemoryUsage:  true,
-				}
+		if slices.Contains(vhosts, "*") {
+			return &fasthttp.Server{
+				Concurrency:        ConcurrencyLimit,
+				Handler:            fasthttp.TimeoutHandler(srv.HandleFastHTTP, timeouts.ExecutionTimeout, "timeout"),
+				ReadTimeout:        timeouts.ReadTimeout,
+				WriteTimeout:       timeouts.WriteTimeout,
+				IdleTimeout:        timeouts.IdleTimeout,
+				MaxRequestBodySize: common.MaxRequestContentLength,
+				ReduceMemoryUsage:  true,
 			}
 		}
 	}
@@ -423,10 +424,8 @@ func validateRequest(r *http.Request) (int, error) {
 	}
 	// Check content-type
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("content-type")); err == nil {
-		for _, accepted := range acceptedContentTypes {
-			if accepted == mt {
-				return 0, nil
-			}
+		if slices.Contains(acceptedContentTypes, mt) {
+			return 0, nil
 		}
 	}
 	// Invalid content-type

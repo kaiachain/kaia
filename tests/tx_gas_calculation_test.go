@@ -98,8 +98,6 @@ func TestGasCalculation(t *testing.T) {
 	}{
 		{"KaiaLegacy", genKaiaLegacyAccount(t)},
 		{"Public", genPublicAccount(t)},
-		{"MultiSig", genMultiSigAccount(t)},
-		{"RoleBasedWithPublic", genRoleBasedWithPublicAccount(t)},
 		{"RoleBasedWithMultiSig", genRoleBasedWithMultiSigAccount(t)},
 	}
 

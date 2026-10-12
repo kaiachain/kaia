@@ -341,12 +341,19 @@ func coordinateTargetTxHash(bundles []*Bundle) []*Bundle {
 
 	newBundles := make([]*Bundle, 0, len(bundles))
 	sameTargetTxHashBundles := make(map[common.Hash][]*Bundle)
+	// Emit groups in first-seen (input) order. Ranging over the map directly
+	// uses Go's randomized iteration order, which is nondeterministic.
+	order := make([]common.Hash, 0, len(bundles))
 
 	for _, bundle := range bundles {
+		if _, ok := sameTargetTxHashBundles[bundle.TargetTxHash]; !ok {
+			order = append(order, bundle.TargetTxHash)
+		}
 		sameTargetTxHashBundles[bundle.TargetTxHash] = append(sameTargetTxHashBundles[bundle.TargetTxHash], bundle)
 	}
 
-	for _, list := range sameTargetTxHashBundles {
+	for _, key := range order {
+		list := sameTargetTxHashBundles[key]
 		if len(list) == 1 {
 			newBundles = append(newBundles, list[0])
 			continue

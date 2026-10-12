@@ -227,7 +227,7 @@ func checkNodeIterator(t *testing.T, accountTrie trieInterface, storageTries map
 func randTrie(t *testing.T, r *rand.Rand, numAccounts, maxSlotsPerAccount int) ([][2]string, [][3]string) {
 	accounts := make([][2]string, numAccounts)
 	storages := make([][3]string, 0)
-	for i := 0; i < len(accounts); i++ {
+	for i := range accounts {
 		if i%2 == 0 { // EOA
 			accounts[i] = [2]string{randAddr(r).Hex(), hexutil.Encode(randEOA(t, r))}
 			continue
@@ -244,7 +244,7 @@ func randTrie(t *testing.T, r *rand.Rand, numAccounts, maxSlotsPerAccount int) (
 
 func randStorage(r *rand.Rand, addr string, maxSlotsPerAccount int) [][3]string {
 	storage := make([][3]string, r.Intn(maxSlotsPerAccount+1)) // [0, maxSlotsPerAccount)
-	for j := 0; j < len(storage); j++ {
+	for j := range storage {
 		// value with some leading zeros
 		value := randHash(r).Bytes()
 		value = value[:r.Intn(32)]
@@ -264,7 +264,7 @@ func randStorage(r *rand.Rand, addr string, maxSlotsPerAccount int) [][3]string 
 
 func correctStorageRoot(storage [][3]string) common.Hash {
 	trie := newEmptySecureTrie()
-	for i := 0; i < len(storage); i++ {
+	for i := range storage {
 		k, v := []byte(storage[i][1]), []byte(storage[i][2])
 		trie.TryUpdate(k, v)
 	}
@@ -320,7 +320,7 @@ func randAccountKey(r *rand.Rand) accountkey.AccountKey {
 			m = r.Intn(n-1) + 1 // [1, n]
 		}
 		keys := make(accountkey.WeightedPublicKeys, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			keys[i] = accountkey.NewWeightedPublicKey(uint(r.Intn(10)), (*accountkey.PublicKeySerializable)(randPub(r)))
 		}
 		return accountkey.NewAccountKeyWeightedMultiSigWithValues(uint(m), keys)

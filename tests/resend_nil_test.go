@@ -89,7 +89,7 @@ func BenchmarkResendNilDereference(t *testing.B) {
 		// fmt.Println("creating transaction start!")
 		time.Sleep(1 * time.Nanosecond)
 		// make ring transactions
-		for i := 0; i < num; i++ {
+		for range num {
 			// fmt.Println("tx gen num", i)
 
 			tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, map[types.TxValueKeyType]interface{}{
@@ -121,7 +121,7 @@ func BenchmarkResendNilDereference(t *testing.B) {
 
 	go func(iter int) {
 		// fmt.Println("Thread1 start!")
-		for i := 0; i < iter; i++ {
+		for range iter {
 			// fmt.Println("CachedPendingTxsByCount num", i)
 			time.Sleep(1 * time.Nanosecond)
 			txpool.CachedPendingTxsByCount(20000)
@@ -132,7 +132,7 @@ func BenchmarkResendNilDereference(t *testing.B) {
 
 	go func(iter int) {
 		// fmt.Println("Thread2 start!")
-		for i := 0; i < iter; i++ {
+		for range iter {
 			// fmt.Println("Content num", i)
 			time.Sleep(1 * time.Nanosecond)
 			txpool.Content()

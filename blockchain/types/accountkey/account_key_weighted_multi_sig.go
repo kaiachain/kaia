@@ -84,7 +84,12 @@ func (a *AccountKeyWeightedMultiSig) Equal(b AccountKey) bool {
 }
 
 func (a *AccountKeyWeightedMultiSig) Validate(currentBlockNumber uint64, r RoleType, recoveredKeys []*ecdsa.PublicKey, from common.Address) bool {
-	isIstanbul := fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsIstanbul
+	rules := fork.Rules(new(big.Int).SetUint64(currentBlockNumber))
+	// Reject zero threshold, but only after Permissionless so historical blocks don't diverge.
+	if rules.IsPermissionless && a.Threshold == 0 {
+		return false
+	}
+	isIstanbul := rules.IsIstanbul
 
 	// Validation 1. if isIstanbul is true, check whether the signature number exceeds key number
 	if isIstanbul && len(recoveredKeys) > len(a.Keys) {
@@ -179,6 +184,10 @@ func (a *AccountKeyWeightedMultiSig) CheckInstallable(currentBlockNumber uint64)
 	prevSum := uint(0)
 	if len(a.Keys) == 0 {
 		return kerrors.ErrZeroLength
+	}
+	// Reject zero threshold, but only after Permissionless so historical blocks don't diverge.
+	if fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsPermissionless && a.Threshold == 0 {
+		return kerrors.ErrZeroThreshold
 	}
 	if uint64(len(a.Keys)) > MaxNumKeysForMultiSig {
 		return kerrors.ErrMaxKeysExceed

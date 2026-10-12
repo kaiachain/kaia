@@ -113,7 +113,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			}
 		}
 		// Database does not have the state for the given block, try to regenerate
-		for i := uint64(0); i < reexec; i++ {
+		for range reexec {
 			if current.NumberU64() == 0 {
 				return nil, nil, errors.New("genesis state is missing")
 			}
@@ -217,7 +217,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64,
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, err
 	}
 	// If prague hardfork, insert parent block hash in the state as per EIP-2935.
-	cn.engine.Initialize(cn.blockchain, block.Header(), statedb)
+	cn.blockchain.Processor().InitializeState(block.Header(), statedb)
 
 	if txIndex == 0 && len(block.Transactions()) == 0 {
 		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, release, nil

@@ -55,10 +55,11 @@ func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
 func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
 	auctioneer := common.Address{}
 	auctionEntryPointAddr := common.Address{}
+	auctionEntryPointVersion := ""
 	bidTxGasBuffer := uint64(0)
 
 	defer func() {
-		a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr, bidTxGasBuffer)
+		a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr, auctionEntryPointVersion, bidTxGasBuffer)
 	}()
 
 	header := a.Chain.GetHeaderByNumber(num.Uint64())
@@ -94,6 +95,12 @@ func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
 
 	// 3. Read gas buffer estimate
 	bidTxGasBuffer, err = system.ReadGasBufferEstimate(backend, auctionEntryPointAddr, num)
+	if err != nil {
+		return false
+	}
+
+	// 4. Read AUCTION_VERSION to pick the right EIP-712 typehash and ABI for bids targeting this entry point.
+	auctionEntryPointVersion, err = system.ReadAuctionVersion(backend, auctionEntryPointAddr, num)
 	if err != nil {
 		return false
 	}

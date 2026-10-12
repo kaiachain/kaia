@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -38,6 +39,7 @@ func TestNewFaker(t *testing.T) {
 	assert.Equal(t, uint64(0), f.failBlock)
 	assert.Equal(t, time.Duration(0), f.failDelay)
 	assert.False(t, f.fullFake)
+	assert.Equal(t, params.AuthorAddressForTesting, f.address)
 
 	// Test NewFakeFailer
 	f2 := NewFakeFailer(10)
@@ -54,6 +56,12 @@ func TestNewFaker(t *testing.T) {
 	f4 := NewFullFaker()
 	assert.NotNil(t, f4)
 	assert.True(t, f4.fullFake)
+
+	// Test NewFakerWithFixedSealer
+	addr := common.HexToAddress("0x1234")
+	f5 := NewFakerWithFixedSealer(addr)
+	assert.NotNil(t, f5)
+	assert.Equal(t, addr, f5.address)
 }
 
 // TestAuthor tests the Author method
@@ -66,19 +74,29 @@ func TestAuthor(t *testing.T) {
 	assert.Equal(t, params.AuthorAddressForTesting, author)
 }
 
+func TestAuthorWithFixedSealer(t *testing.T) {
+	addr := common.HexToAddress("0x1234")
+	f := NewFakerWithFixedSealer(addr)
+	header := &types.Header{Number: big.NewInt(1)}
+
+	author, err := f.Author(header)
+	assert.NoError(t, err)
+	assert.Equal(t, addr, author)
+}
+
 // TestVerifyHeader tests header verification
 func TestVerifyHeader(t *testing.T) {
 	f := NewFaker()
 
 	// Test with fullFake mode - should accept everything
 	f2 := NewFullFaker()
-	err := f2.VerifyHeader(nil, &types.Header{Number: big.NewInt(1)}, true)
+	err := f2.VerifySeals(&types.Header{Number: big.NewInt(1)})
 	assert.NoError(t, err)
 
 	// Test with failBlock
 	f3 := NewFakeFailer(5)
 	header := &types.Header{Number: big.NewInt(5)}
-	err = f3.VerifyHeader(nil, header, true)
+	err = f3.VerifySeals(header)
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 
 	// Test normal case - should pass
@@ -94,7 +112,7 @@ func TestVerifyHeader(t *testing.T) {
 		Number:     big.NewInt(1),
 		ParentHash: chain.CurrentBlock().Hash(),
 	}
-	err = f.VerifyHeader(chain, header, true)
+	err = f.VerifySeals(header)
 	assert.NoError(t, err)
 }
 
@@ -128,72 +146,26 @@ func TestSeal(t *testing.T) {
 	// Test normal seal
 	f := NewFaker()
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
-	stop := make(chan struct{})
 
-	sealed, err := f.Seal(nil, block, stop)
+	sealed, err := f.Seal(nil, block)
 	assert.NoError(t, err)
 	assert.Equal(t, block, sealed)
 
 	// Test seal with failure
 	f2 := NewFakeFailer(5)
 	block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(5)})
-	sealed, err = f2.Seal(nil, block2, stop)
+	sealed, err = f2.Seal(nil, block2)
 	assert.Error(t, err)
 	assert.Nil(t, sealed)
 
 	// Test seal with delay
 	f3 := NewFakeDelayer(100 * time.Millisecond)
 	start := time.Now()
-	sealed, err = f3.Seal(nil, block, stop)
+	sealed, err = f3.Seal(nil, block)
 	elapsed := time.Since(start)
 	assert.NoError(t, err)
 	assert.NotNil(t, sealed)
 	assert.True(t, elapsed >= 100*time.Millisecond)
-}
-
-// TestVerifySeal tests seal verification
-func TestVerifySeal(t *testing.T) {
-	f := NewFaker()
-	header := &types.Header{Number: big.NewInt(3)}
-
-	// Normal case - should pass
-	err := f.VerifySeal(nil, header)
-	assert.NoError(t, err)
-
-	// Test with failBlock
-	f2 := NewFakeFailer(5)
-	header2 := &types.Header{Number: big.NewInt(5)}
-	err = f2.VerifySeal(nil, header2)
-	assert.Error(t, err)
-}
-
-// TestVerifyHeaders tests batch header verification
-func TestVerifyHeaders(t *testing.T) {
-	f := NewFaker()
-
-	// Test with empty headers
-	headers := []*types.Header{}
-	seals := []bool{}
-	abort, results := f.VerifyHeaders(nil, headers, seals)
-	assert.NotNil(t, abort)
-	assert.NotNil(t, results)
-
-	// Test with fullFake mode
-	f2 := NewFullFaker()
-	headers = []*types.Header{
-		{Number: big.NewInt(1)},
-		{Number: big.NewInt(2)},
-	}
-	seals = []bool{true, true}
-	abort, results = f2.VerifyHeaders(nil, headers, seals)
-	assert.NotNil(t, abort)
-	assert.NotNil(t, results)
-
-	// Read results
-	for i := 0; i < len(headers); i++ {
-		err := <-results
-		assert.NoError(t, err)
-	}
 }
 
 // TestNewShared tests the NewShared constructor
@@ -271,7 +243,7 @@ func TestHeaderValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.faker.VerifyHeader(tt.chain, tt.header, true)
+			err := tt.faker.VerifySeals(tt.header)
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {

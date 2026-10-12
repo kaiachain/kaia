@@ -24,7 +24,8 @@ type voteData struct {
 
 // NewVoteData returns a valid, canonical vote data.
 // If return is not nil, the name and the value is valid.
-// The format of the value is checked, but consistency is NOT checked.
+// The format of the value is checked, but consistency and deprecation are NOT checked.
+// Deprecation (gov.DeprecatedAt) is the caller's responsibility — see Vote() and VerifyVote().
 func NewVoteData(voter common.Address, name string, value any) VoteData {
 	param, ok := gov.Params[gov.ParamName(name)]
 	if !ok {
@@ -33,11 +34,6 @@ func NewVoteData(voter common.Address, name string, value any) VoteData {
 			logger.Error("Invalid vote name", "name", name)
 			return nil
 		}
-	}
-
-	if param.VoteForbidden {
-		logger.Error("Vote is forbidden", "name", name)
-		return nil
 	}
 
 	cv, err := param.Canonicalizer(value)

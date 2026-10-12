@@ -88,7 +88,7 @@ func TestCompileSolidityOrLoad(t *testing.T) {
 	for _, version := range versions {
 		t.Logf("testing version %s", version)
 
-		path := "../../contracts/contracts/testing/compiler/UnsafeMultiply_" + version + ".sol"
+		path := "../../contracts/testing/compiler/UnsafeMultiply_" + version + ".sol"
 
 		contracts, err := CompileSolidityOrLoad("", path)
 		assert.Nil(t, err)

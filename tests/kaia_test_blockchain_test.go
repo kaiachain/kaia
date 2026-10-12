@@ -19,7 +19,6 @@
 package tests
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
@@ -35,13 +34,9 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
-	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -49,6 +44,7 @@ import (
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -72,7 +68,6 @@ type BCData struct {
 	rewardBase         *common.Address
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
-	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
 	isMiner            bool
@@ -124,17 +119,13 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
 	mGov := gov_impl.NewGovModule()
-	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     genesisAddr,
-		PrivateKey:     validatorPrivKeys[0],
-		DB:             chainDb,
-		GovModule:      mGov,
-		NodeType:       common.CONSENSUSNODE,
-	})
+	blsSecretKey, err := bls.DeriveFromECDSA(validatorPrivKeys[0])
+	if err != nil {
+		return nil, err
+	}
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, engine, chainCfg)
+	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, engine.NewSealer(chainCfg, validatorPrivKeys[0]), chainCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +136,7 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -159,6 +151,8 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 			Chain:         bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
+			Rewardbase:    genesisAddr,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			Chain:         bc,
@@ -167,24 +161,31 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 			StakingModule: mStaking,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: genesis.Config,
-			Chain:       bc,
-			Downloader:  fakeDownloader,
+			ChainConfig:  genesis.Config,
+			Chain:        bc,
+			Downloader:   fakeDownloader,
+			BlsSecretKey: blsSecretKey,
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: bc,
 		}),
 	)
 	if err != nil {
 		return nil, err
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
-	engine.RegisterConsensusModule(mReward)
-	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock); err != nil {
-		return nil, err
-	}
+	bc.RegisterKaiaxModules(
+		mGov,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mReward, mRandao},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov, false,
+		validatorPrivKeys, genesis, mGov, false,
 	}, nil
 }
 
@@ -195,7 +196,6 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 func (bcdata *BCData) Shutdown() {
 	bcdata.bc.Stop()
-	bcdata.engine.Stop()
 
 	bcdata.db.Close()
 	// Remove leveldb dir which was created for this test.
@@ -228,18 +228,18 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
 	}
 	if bcdata.bc.Config().IsMagmaForkEnabled(num) {
-		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), bcdata.bc.Config().Governance.KIP71)
+		header.BaseFee = bcdata.bc.Config().Governance.KIP71.NextMagmaBlockBaseFee(parent.Number(), parent.Header().BaseFee, parent.GasUsed())
 	}
 	if bcdata.bc.Config().IsOsakaForkEnabled(num) {
 		var excessBlobGas uint64
 		if bcdata.bc.Config().IsOsakaForkEnabled(parent.Number()) {
-			excessBlobGas = eip4844.CalcExcessBlobGas(bcdata.bc.Config(), parent.Header(), header.Number)
+			excessBlobGas = bcdata.bc.Config().LatestBlobConfig(num).CalcExcessBlobGas(parent.ExcessBlobGas(), parent.BlobGasUsed())
 		}
 		header.BlobGasUsed = new(uint64)
 		header.ExcessBlobGas = &excessBlobGas
 	}
 
-	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
+	if err := bcdata.bc.PrepareHeader(header); err != nil {
 		return nil, errors.New(fmt.Sprintf("Failed to prepare header for mining %s.\n", err))
 	}
 
@@ -291,7 +291,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
+	b, err := bcdata.bc.Processor().FinalizeState(header, statedb, newtxs, receipts)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -300,7 +300,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	////////////////////////////////////////////////////////////////////////////////
 
 	start = time.Now()
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	b, err = sealBlock(b, bcdata.bc.Sealer(), bcdata.bc.Config(), bcdata.validatorPrivKeys)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -361,14 +361,14 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
+	b, err := bcdata.bc.Processor().FinalizeState(header, statedb, newtxs, receipts)
 	if err != nil {
 		return err
 	}
 	prof.Profile("mine_finalize_block", time.Now().Sub(start))
 
 	start = time.Now()
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	b, err = sealBlock(b, bcdata.bc.Sealer(), bcdata.bc.Config(), bcdata.validatorPrivKeys)
 	if err != nil {
 		return err
 	}
@@ -391,6 +391,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
 	mGov := gov_impl.NewGovModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -403,6 +404,8 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 			Chain:         bcdata.bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
+			Rewardbase:    *bcdata.rewardBase,
 		}),
 	)
 	if err != nil {
@@ -418,6 +421,14 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 		}
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
+
+	// Adjust accountMap for actual gas used vs. the intrinsic gas estimate in Update().
+	// Execution overhead (e.g. constructor gas, code storage cost) is not captured by
+	// IntrinsicGas, causing a mismatch in Magma non-deferred mode where only half the
+	// fee reaches the rewardbase.
+	if err := accountMap.AdjustFeesByReceipts(b.Transactions(), receipts, b.NumberU64()); err != nil {
+		return err
+	}
 
 	// Verification with accountMap
 	start = time.Now()
@@ -455,9 +466,10 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 		return err
 	}
 
-	// Update accountMap
+	// Update accountMap. Update() requires the mined block number. Since mining
+	// hasn't happened yet, derive it as CurrentBlock (parent) + 1.
 	start := time.Now()
-	if err := accountMap.Update(transactions, txHashesExpectedFail, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
+	if err := accountMap.Update(transactions, txHashesExpectedFail, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()+1); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
@@ -499,6 +511,7 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
 	mGov := gov_impl.NewGovModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -511,6 +524,8 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 			Chain:         bcdata.bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
+			Rewardbase:    *bcdata.rewardBase,
 		}),
 	)
 	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.
@@ -522,6 +537,14 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 		}
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
+
+	// Adjust accountMap for actual gas used vs. the intrinsic gas estimate in Update().
+	// Execution overhead (e.g. constructor gas, code storage cost) is not captured by
+	// IntrinsicGas, causing a mismatch in Magma non-deferred mode where only half the
+	// fee reaches the rewardbase.
+	if err := accountMap.AdjustFeesByReceipts(b.Transactions(), receipts, b.NumberU64()); err != nil {
+		return err
+	}
 
 	// Verification with accountMap
 	start = time.Now()
@@ -555,37 +578,24 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	}
 }
 
-// Copied from consensus/istanbul/backend/engine.go
-func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
-	var buf bytes.Buffer
-
-	buf.Write(bytes.Repeat([]byte{0x0}, types.IstanbulExtraVanity))
-
-	ist := &types.IstanbulExtra{
-		Validators:    validators,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-	return append(buf.Bytes(), payload...), nil
-}
-
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	genesis *blockchain.Genesis, engine consensus.Engine, config *params.ChainConfig,
+	genesis *blockchain.Genesis, sealer consensus.Sealer, config *params.ChainConfig,
 ) (*blockchain.BlockChain, *blockchain.Genesis, error) {
 	if config == nil {
 		return nil, nil, errors.New("config is nil")
 	}
-	extraData, err := prepareIstanbulExtra(validators)
+	if sealer == nil {
+		return nil, nil, errors.New("sealer is nil")
+	}
 
 	if genesis == nil {
 		genesis = blockchain.DefaultTestGenesisBlock()
 		genesis.Config = config.Copy()
-		genesis.ExtraData = extraData
+		genesisHeader := &types.Header{Number: common.Big0, Extra: genesis.ExtraData}
+		if err := sealer.WriteValidators(genesisHeader, validators); err != nil {
+			return nil, nil, err
+		}
+		genesis.ExtraData = genesisHeader.Extra
 		genesis.BlockScore = big.NewInt(1)
 		genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
@@ -619,7 +629,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	genesis.Config = &cfg
 
-	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, sealer, vm.Config{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -631,7 +641,7 @@ func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, er
 	accs := make([]*common.Address, numAccounts)
 	privKeys := make([]*ecdsa.PrivateKey, numAccounts)
 
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		k, err := crypto.GenerateKey()
 		if err != nil {
 			return nil, nil, err
@@ -645,83 +655,12 @@ func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, er
 	return accs, privKeys, nil
 }
 
-// Copied from consensus/istanbul/backend/engine.go
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
-}
-
-// writeSeal writes the extra-data field of the given header with the given seals.
-// Copied from consensus/istanbul/backend/engine.go
-func writeSeal(h *types.Header, seal []byte) error {
-	if len(seal)%types.IstanbulExtraSeal != 0 {
-		return errors.New("invalid signature")
-	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
-	if err != nil {
-		return err
-	}
-
-	istanbulExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
-	return nil
-}
-
-// writeCommittedSeals writes the extra-data field of a block header with given committed seals.
-// Copied from consensus/istanbul/backend/engine.go
-func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
-	errInvalidCommittedSeals := errors.New("invalid committed seals")
-
-	if len(committedSeals) == 0 {
-		return errInvalidCommittedSeals
-	}
-
-	for _, seal := range committedSeals {
-		if len(seal) != types.IstanbulExtraSeal {
-			return errInvalidCommittedSeals
-		}
-	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
-	if err != nil {
-		return err
-	}
-
-	istanbulExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(istanbulExtra.CommittedSeal, committedSeals)
-
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
-	return nil
-}
-
-// sign implements istanbul.backend.Sign
-// Copied from consensus/istanbul/backend/backend.go
-func sign(data []byte, privkey *ecdsa.PrivateKey) ([]byte, error) {
-	hashData := crypto.Keccak256([]byte(data))
-	return crypto.Sign(hashData, privkey)
-}
-
-func makeCommittedSeal(h *types.Header, privKeys []*ecdsa.PrivateKey) ([][]byte, error) {
+func makeCommittedSeal(h *types.Header, chainConfig *params.ChainConfig, privKeys []*ecdsa.PrivateKey) ([][]byte, error) {
 	committedSeals := make([][]byte, 0, 3)
 
 	for i := 1; i < 4; i++ {
-		seal := istanbulCore.PrepareCommittedSeal(h.Hash())
-		committedSeal, err := sign(seal, privKeys[i])
+		signer := engine.NewSealer(chainConfig, privKeys[i])
+		committedSeal, err := signer.MakeCommittedSeal(h)
 		if err != nil {
 			return nil, err
 		}
@@ -731,28 +670,23 @@ func makeCommittedSeal(h *types.Header, privKeys []*ecdsa.PrivateKey) ([][]byte,
 	return committedSeals, nil
 }
 
-func sealBlock(b *types.Block, privKeys []*ecdsa.PrivateKey) (*types.Block, error) {
+func sealBlock(b *types.Block, sealer consensus.Sealer, chainConfig *params.ChainConfig, privKeys []*ecdsa.PrivateKey) (*types.Block, error) {
 	header := b.Header()
 
-	seal, err := sign(sigHash(header).Bytes(), privKeys[0])
+	authorSeal, err := sealer.MakeAuthorSeal(header)
 	if err != nil {
 		return nil, err
 	}
-
-	err = writeSeal(header, seal)
-	if err != nil {
+	if err := sealer.WriteAuthorSeal(header, authorSeal); err != nil {
 		return nil, err
 	}
 
-	committedSeals, err := makeCommittedSeal(header, privKeys)
+	committedSeals, err := makeCommittedSeal(header, chainConfig, privKeys)
 	if err != nil {
 		return nil, err
 	}
-
-	err = writeCommittedSeals(header, committedSeals)
-	if err != nil {
+	if err := sealer.WriteCommittedSeals(header, committedSeals); err != nil {
 		return nil, err
 	}
-
 	return b.WithSeal(header), nil
 }

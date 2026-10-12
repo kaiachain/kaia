@@ -107,8 +107,6 @@ var validatorTemplate = `{{ .Name }}:
         mkdir -p /klaytn
 {{- if eq .NodeType "scn" }}
         echo '{{ .SCGenesis }}' > /klaytn/genesis.json
-{{- else if eq .NodeType "spn" }}
-        echo '{{ .SCGenesis }}' > /klaytn/genesis.json
 {{- else if eq .NodeType "sen" }}
         echo '{{ .SCGenesis }}' > /klaytn/genesis.json
 {{- else }}
@@ -151,8 +149,6 @@ var validatorTemplate = `{{ .Name }}:
 {{- end}}
 {{- if eq .NodeType "cn" }}
         echo 'REWARDBASE={{ .Address }}' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-{{- else if eq .NodeType "pn" }}
-        echo 'ADDITIONAL="$$ADDITIONAL --txpool.nolocals"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- else if eq .Name "EN-0" }}
         echo 'SC_MAIN_BRIDGE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'SC_MAIN_BRIDGE_PORT=50505' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf

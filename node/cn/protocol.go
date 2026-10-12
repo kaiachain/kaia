@@ -39,16 +39,36 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// `kaia` is the default fallback protocol for all consensus engine types.
-// The name, versions, and lengths are defined in consensus/protocol.go.
 const (
 	kaia63 = 63
+	kaia64 = 64
 	kaia65 = 65
 	kaia66 = 66
 	kaia67 = 67
+	kaia68 = 68
 )
 
-const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
+// Protocol defines the P2P protocol metadata used during capability negotiation.
+type Protocol struct {
+	// Official short name of the protocol used during capability negotiation.
+	Name string
+	// Supported versions of the Kaia protocol (first is primary).
+	Versions []uint
+	// Number of implemented message corresponding to different protocol versions.
+	Lengths []uint64
+}
+
+// ConsensusProtocol is the P2P protocol used by BFT consensus nodes.
+var ConsensusProtocol = Protocol{
+	Name:     "istanbul",
+	Versions: []uint{kaia68, kaia67, kaia66, kaia65, kaia64},
+	Lengths:  []uint64{28, 26, 24, 23, 21},
+}
+
+const (
+	ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
+	maxTxMsgItems      = 4096             // Maximum transactions in one TxMsg
+)
 
 // Kaia protocol message codes
 // TODO-Klaytn-Issue751 Protocol message should be refactored. Present code is not used.
@@ -75,7 +95,7 @@ const (
 
 	// Protocol messages belonging to kaia/64
 	Unused10 = 0x10 // Skipped a number because 0x11 is already taken
-	Unused11 = 0x11 // Already used by consensus (IstanbulMsg)
+	Unused11 = 0x11 // Already used by consensus (consensus.ConsensusMsgCode)
 
 	// Protocol messages belonging to kaia/65
 	StakingInfoRequestMsg = 0x12
@@ -88,7 +108,11 @@ const (
 	BlobSidecarsRequestMsg = 0x15
 	BlobSidecarsMsg        = 0x16
 
-	MsgCodeEnd = 0x17
+	// Protocol messages belonging to kaia/68
+	VRankPreprepareMsg = 0x17
+	VRankCandidateMsg  = 0x18
+
+	MsgCodeEnd = 0x19
 )
 
 type errCode int
@@ -107,6 +131,7 @@ const (
 	ErrUnexpectedTxType
 	ErrFailedToGetStateDB
 	ErrUnsupportedEnginePolicy
+	ErrTooManyItems
 )
 
 func (e errCode) String() string {
@@ -128,6 +153,7 @@ var errorToString = map[int]string{
 	ErrUnexpectedTxType:        "Unexpected tx type",
 	ErrFailedToGetStateDB:      "Failed to get stateDB",
 	ErrUnsupportedEnginePolicy: "Unsupported engine or policy",
+	ErrTooManyItems:            "Too many items",
 }
 
 // ProtocolManagerDownloader is an interface of downloader.Downloader used by ProtocolManager.
@@ -160,6 +186,8 @@ type ProtocolManagerDownloader interface {
 //go:generate mockgen -destination=./mocks/fetcher_mock.go -package=mocks github.com/kaiachain/kaia/node/cn ProtocolManagerFetcher
 type ProtocolManagerFetcher interface {
 	Enqueue(peer string, block *types.Block) error
+	EnqueueTrusted(peer string, block *types.Block) error
+	ForgetPeer(peer string)
 	FilterBodies(peer string, transactions [][]*types.Transaction, time time.Time) [][]*types.Transaction
 	FilterHeaders(peer string, headers []*types.Header, time time.Time) []*types.Header
 	Notify(peer string, hash common.Hash, number uint64, time time.Time, headerFetcher fetcher.HeaderRequesterFn, bodyFetcher fetcher.BodyRequesterFn) error
@@ -178,10 +206,12 @@ type statusData struct {
 }
 
 // newBlockHashesData is the network packet for the block announcements.
-type newBlockHashesData []struct {
+type newBlockHashData struct {
 	Hash   common.Hash // Hash of one particular block being announced
 	Number uint64      // Number of one particular block being announced
 }
+
+type newBlockHashesData []newBlockHashData
 
 // getBlockHeadersData represents a block header query.
 type getBlockHeadersData struct {
@@ -249,6 +279,11 @@ type blobSidecarsRequestData struct {
 }
 
 type blobSidecarsData struct {
+	// BlockNum and TxIndex are deprecated: the receiver no longer reads them.
+	// SaveBlobSidecar derives the canonical storage location from TxHash, so a
+	// peer cannot dictate where the sidecar is stored. They are retained only
+	// for wire compatibility with existing peers and should be removed in a
+	// future protocol version bump.
 	BlockNum hexutil.Uint64
 	TxIndex  hexutil.Uint
 	TxHash   common.Hash

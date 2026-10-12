@@ -124,6 +124,33 @@ func TestSign(t *testing.T) {
 	}
 }
 
+// TestNonCanonicalRecoveryID ensures Ecrecover rejects v >= 2. The underlying
+// libsecp256k1 / decred secp256k1 accept v ∈ {0..3}, which would let a single
+// (r, s, hash) recover multiple distinct pubkeys (signature malleability).
+// Ethereum convention requires v ∈ {0, 1}.
+func TestNonCanonicalRecoveryID(t *testing.T) {
+	key, err := GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := Keccak256([]byte("hello"))
+	sig, err := Sign(msg, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, badV := range []byte{2, 3, 4, 27, 28, 255} {
+		tampered := make([]byte, len(sig))
+		copy(tampered, sig)
+		tampered[RecoveryIDOffset] = badV
+		if _, err := Ecrecover(msg, tampered); err == nil {
+			t.Errorf("Ecrecover: v=%d must be rejected", badV)
+		}
+		if _, err := SigToPub(msg, tampered); err == nil {
+			t.Errorf("SigToPub: v=%d must be rejected", badV)
+		}
+	}
+}
+
 func TestInvalidSign(t *testing.T) {
 	if _, err := Sign(make([]byte, 1), nil); err == nil {
 		t.Errorf("expected sign with hash 1 byte to error")
@@ -286,7 +313,7 @@ func BenchmarkParallelEcrecover(b *testing.B) {
 func generateBenchmarkMaterial(L int) (data []byte, sigs [][]byte) {
 	data = common.HexToHash("0xabcd").Bytes()
 	sigs = make([][]byte, L)
-	for i := 0; i < L; i++ {
+	for i := range L {
 		// any nonzero integer less than the order is a valid privkey
 		priv := ToECDSAUnsafe(big.NewInt(int64(i + 1)).Bytes())
 		sig, _ := Sign(data, priv)
@@ -305,7 +332,7 @@ func parallelEcrecover(data []byte, sigs [][]byte) {
 		jobs <- sig
 	}
 
-	for i := 0; i < threads; i++ {
+	for range threads {
 		go func() {
 			for sig := range jobs {
 				Ecrecover(data, sig)

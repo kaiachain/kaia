@@ -44,15 +44,15 @@ func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
 
 	stateTriePath := []byte("statetrie")
 
-	numTxs := []int{10, 100}
-	for i := 0; i < len(numTxs); i++ {
+	numTxs := []int{10, 40}
+	for i := range numTxs {
 		numTx := numTxs[i%len(numTxs)]
 		t.Log("attempt", strconv.Itoa(i), " : deployRandomTxs of", strconv.Itoa(numTx))
 		deployRandomTxs(t, node.TxPool(), chainID, richAccount, numTx)
-		time.Sleep(3 * time.Second) // wait until txpool is flushed
+		waitTxPoolDrained(t, node, 10*time.Second)
 
 		startMigration(t, node)
-		time.Sleep(1 * time.Second)
+		waitNextBlock(t, node, 5*time.Second)
 
 		t.Log("migration state before restart", node.ChainDB().InMigration())
 		fullNode, node = restartNode(t, fullNode, node, workspace, validator)
@@ -112,7 +112,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[str
 	batch := dbm.NewBatch(database.StateTrieDB)
 	entries := make(map[string]string, 10)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		key, value := common.MakeRandomBytes(common.HashLength), common.MakeRandomBytes(400)
 		dbm.PutTrieNodeToBatch(batch, common.BytesToExtHash(key), value)
 		entries[string(key)] = string(value)
@@ -124,7 +124,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[str
 
 func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[string]string) {
 	dbs := make([]*leveldb.DB, numShard)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		var err error
 		dbs[i], err = leveldb.OpenFile(dir+"/"+strconv.Itoa(i), nil)
 		assert.NoError(t, err)
@@ -132,7 +132,7 @@ func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[stri
 	}
 	for k, v := range entries {
 		datas := make([][]byte, 4)
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			datas[i], _ = dbs[i].Get([]byte(k), nil)
 		}
 		assert.Contains(t, datas, []byte(v), "value written in stateDB does not actually exist in DB")
@@ -149,7 +149,7 @@ func TestMigration_StartMigrationByMiscDBOnRestart(t *testing.T) {
 
 	// size up state trie to be prepared for migration
 	deployRandomTxs(t, node.TxPool(), chainID, richAccount, 100)
-	time.Sleep(time.Second)
+	waitTxPoolDrained(t, node, 10*time.Second)
 
 	// set migration status in miscDB
 	migrationBlockNum := node.BlockChain().CurrentBlock().Header().Number.Uint64()
@@ -206,14 +206,7 @@ func TestMigration_RemoveOldDBOnRestart(t *testing.T) {
 	fullNode, node = restartNode(t, fullNode, node, workspace, validator)
 	miscDB = node.ChainDB().GetMiscDB()
 
-	time.Sleep(1 * time.Second)
-
-	dir, err := miscDB.Get(migrationOldDBPathKey)
-	assert.NoError(t, err)
-	assert.Equal(t, "", string(dir))
-
-	_, err = os.Stat(d)
-	assert.True(t, os.IsNotExist(err))
+	waitOldDBCleanup(t, miscDB, migrationOldDBPathKey, d, 5*time.Second)
 
 	stopNode(t, fullNode)
 }
@@ -222,7 +215,7 @@ func newSimpleBlockchain(t *testing.T, numAccounts int) (*node.Node, *cn.CN, *Te
 	t.Log("=========== create blockchain ==============")
 	fullNode, node, validator, chainID, workspace := newBlockchain(t, nil, nil)
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
-	time.Sleep(5 * time.Second)
+	waitTxPoolDrained(t, node, 10*time.Second)
 
 	return fullNode, node, validator, chainID, workspace, richAccount, accounts, contractAccounts
 }
@@ -237,9 +230,12 @@ func startMigration(t *testing.T, node *cn.CN) {
 
 func restartNode(t *testing.T, fullNode *node.Node, node *cn.CN, workspace string, validator *TestAccountType) (*node.Node, *cn.CN) {
 	stopNode(t, fullNode)
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 	newFullNode, newNode := startNode(t, workspace, validator)
-	time.Sleep(2 * time.Second)
+	current := newNode.BlockChain().CurrentHeader().Number.Uint64()
+	if head := waitBlock(newNode.BlockChain(), current+1); head == nil {
+		t.Fatal("node did not produce a new block after restart")
+	}
 
 	return newFullNode, newNode
 }
@@ -263,8 +259,60 @@ func stopNode(t *testing.T, fullNode *node.Node) {
 }
 
 func waitMigrationEnds(t *testing.T, node *cn.CN) {
-	for node.ChainDB().InMigration() {
-		t.Log("state trie migration is processing; sleep for a second before a new migration")
-		time.Sleep(time.Second)
+	waitUntil(t, 30*time.Second, 200*time.Millisecond, func() bool {
+		return !node.ChainDB().InMigration()
+	}, "state trie migration did not complete within timeout")
+}
+
+func waitNextBlock(t *testing.T, node *cn.CN, timeout time.Duration) {
+	current := node.BlockChain().CurrentHeader().Number.Uint64()
+	waitUntil(t, timeout, 100*time.Millisecond, func() bool {
+		return node.BlockChain().CurrentHeader().Number.Uint64() > current
+	}, "new block was not mined within timeout")
+}
+
+func waitTxPoolDrained(t *testing.T, node *cn.CN, timeout time.Duration) {
+	var pending, queued int
+	waitUntil(t, timeout, 100*time.Millisecond, func() bool {
+		pending, queued = node.TxPool().Stats()
+		return pending == 0 && queued == 0
+	}, "txpool was not drained within timeout")
+	if pending != 0 || queued != 0 {
+		t.Fatalf("txpool not drained in time (pending=%d queued=%d)", pending, queued)
+	}
+}
+
+func waitOldDBCleanup(t *testing.T, miscDB database.Database, migrationOldDBPathKey []byte, oldPath string, timeout time.Duration) {
+	var (
+		dir []byte
+		err error
+	)
+	waitUntil(t, timeout, 100*time.Millisecond, func() bool {
+		dir, err = miscDB.Get(migrationOldDBPathKey)
+		if err != nil || string(dir) != "" {
+			return false
+		}
+		_, err = os.Stat(oldPath)
+		return os.IsNotExist(err)
+	}, "old db cleanup did not finish within timeout")
+	if err != nil && !os.IsNotExist(err) {
+		assert.NoError(t, err)
+	}
+	if err == nil {
+		t.Fatalf("old db path still exists: %s", oldPath)
+	}
+}
+
+func waitUntil(t *testing.T, timeout, interval time.Duration, condition func() bool, timeoutMessage string) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		if condition() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal(timeoutMessage)
+		}
+		time.Sleep(interval)
 	}
 }

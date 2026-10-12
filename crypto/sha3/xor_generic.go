@@ -12,7 +12,7 @@ import "encoding/binary"
 func xorInGeneric(d *state, buf []byte) {
 	n := len(buf) / 8
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		a := binary.LittleEndian.Uint64(buf)
 		d.a[i] ^= a
 		buf = buf[8:]

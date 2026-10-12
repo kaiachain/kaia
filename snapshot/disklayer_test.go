@@ -223,7 +223,7 @@ func TestDiskMerge(t *testing.T) {
 func TestDiskPartialMerge(t *testing.T) {
 	// Iterate the test a few times to ensure we pick various internal orderings
 	// for the data slots as well as the progress marker.
-	for i := 0; i < 1024; i++ {
+	for i := range 1024 {
 		// Create some accounts in the disk layer
 		db := database.NewMemoryDBManager()
 

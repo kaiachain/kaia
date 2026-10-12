@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/forkid"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
@@ -66,6 +67,40 @@ func generateRandomValue(name gov.ParamName) any {
 	return randomValue
 }
 
+func TestAPI_apiBlockNumber(t *testing.T) {
+	head := uint64(10)
+	latest, pending, explicit, future, negative := rpc.LatestBlockNumber, rpc.PendingBlockNumber, rpc.BlockNumber(3), rpc.BlockNumber(11), rpc.BlockNumber(-3)
+
+	tests := []struct {
+		name string
+		num  *rpc.BlockNumber
+		want uint64
+		err  error
+	}{
+		{name: "nil uses current block", want: head},
+		{name: "latest uses current block", num: &latest, want: head},
+		{name: "pending uses current block", num: &pending, want: head},
+		{name: "explicit block uses requested block", num: &explicit, want: 3},
+		{name: "future block is rejected", num: &future, err: gov.ErrUnknownBlock},
+		{name: "negative non-sentinel block is rejected", num: &negative, err: gov.ErrUnknownBlock},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g, mockChain, _, _ := newGovModule(t, params.TestChainConfig.Copy())
+			mockChain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(head)})).Times(1)
+
+			got, err := apiBlockNumber(g, tt.num)
+			if tt.err != nil {
+				require.ErrorIs(t, err, tt.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
 // TestAPI_kaia_getChainConfig_CompatibleBlocksCompleteness ensures that
 // no hardfork block is omitted from the API output.
 // In other words, the test fails if API has not been synced
@@ -79,10 +114,12 @@ func TestAPI_kaia_getChainConfig_CompatibleBlocksCompleteness(t *testing.T) {
 
 	mockHgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
 	mockCgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
+	mockChain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)})).Times(1)
 	mockChain.EXPECT().Config().Return(config).Times(2) // isKore, getChainConfig
 
 	// Call the API
-	apiConfig := api.GetChainConfig(&apiArg)
+	apiConfig, err := api.GetChainConfig(&apiArg)
+	require.NoError(t, err)
 	require.NotNil(t, apiConfig, "kaia_getChainConfig should not return nil")
 
 	apiForks := forkid.GatherForks(apiConfig)
@@ -112,10 +149,12 @@ func TestAPI_kaia_getChainConfig_ParameterCompleteness(t *testing.T) {
 
 		mockHgm.EXPECT().GetPartialParamSet(uint64(0)).Return(latestParams).Times(1)
 		mockCgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
+		mockChain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(0)})).Times(1)
 		mockChain.EXPECT().Config().Return(config).Times(2) // isKore, getChainConfig
 
 		// Call the API
-		apiChainConfig := api.GetChainConfig(&apiArg)
+		apiChainConfig, err := api.GetChainConfig(&apiArg)
+		require.NoError(t, err)
 		require.NotNil(t, apiChainConfig, "kaia_getChainConfig should not return nil")
 
 		// Check the values are the latest

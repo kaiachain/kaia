@@ -21,7 +21,7 @@ package cn
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,15 +48,15 @@ func TestChannelManager_ChannelSize_5(t *testing.T) {
 // message channels with the given channel size.
 func testChannelManager(t *testing.T, chSize int) {
 	cm := NewChannelManager(chSize)
-	cm.RegisterMsgCode(ConsensusChannel, backend.IstanbulMsg)
+	cm.RegisterMsgCode(ConsensusChannel, consensus.ConsensusMsgCode)
 
 	channel := make(chan p2p.Msg, channelSizePerPeer)
 	consensusChannel := make(chan p2p.Msg, channelSizePerPeer)
 
-	for chIdx := 0; chIdx < chSize; chIdx++ {
+	for chIdx := range chSize {
 		// Before calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
-		for i := StatusMsg; i < MsgCodeEnd; i++ {
+		for i := range MsgCodeEnd {
 			if i == Unused10 || i == Unused11 {
 				// skip for dummy messages
 				continue
@@ -65,7 +65,7 @@ func testChannelManager(t *testing.T, chSize int) {
 			assert.Nil(t, ch)
 			assert.NoError(t, err)
 		}
-		ch, err := cm.GetChannelWithMsgCode(chIdx, backend.IstanbulMsg)
+		ch, err := cm.GetChannelWithMsgCode(chIdx, consensus.ConsensusMsgCode)
 		assert.Nil(t, ch)
 		assert.NoError(t, err)
 
@@ -77,17 +77,17 @@ func testChannelManager(t *testing.T, chSize int) {
 	}
 
 	// Register channels with the port index.
-	for chIdx := 0; chIdx < chSize; chIdx++ {
+	for chIdx := range chSize {
 		cm.RegisterChannelWithIndex(chIdx, BlockChannel, channel)
 		cm.RegisterChannelWithIndex(chIdx, TxChannel, channel)
 		cm.RegisterChannelWithIndex(chIdx, MiscChannel, channel)
 		cm.RegisterChannelWithIndex(chIdx, ConsensusChannel, consensusChannel)
 	}
 
-	for chIdx := 0; chIdx < chSize; chIdx++ {
+	for chIdx := range chSize {
 		// After calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
-		for i := StatusMsg; i < MsgCodeEnd; i++ {
+		for i := range MsgCodeEnd {
 			if i == Unused10 || i == Unused11 {
 				// skip for dummy messages
 				continue
@@ -96,7 +96,7 @@ func testChannelManager(t *testing.T, chSize int) {
 			assert.Equal(t, channel, ch)
 			assert.NoError(t, err)
 		}
-		ch, err := cm.GetChannelWithMsgCode(chIdx, backend.IstanbulMsg)
+		ch, err := cm.GetChannelWithMsgCode(chIdx, consensus.ConsensusMsgCode)
 		assert.Equal(t, consensusChannel, ch)
 		assert.NoError(t, err)
 

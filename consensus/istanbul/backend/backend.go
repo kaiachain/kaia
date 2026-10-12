@@ -24,6 +24,8 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -31,21 +33,19 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/randao"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (
@@ -56,16 +56,12 @@ const (
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
 type BackendOpts struct {
-	IstanbulConfig *istanbul.Config // Istanbul consensus core config
-	Rewardbase     common.Address
+	IstanbulConfig *istanbul.Config  // Istanbul consensus core config
 	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
-	BlsSecretKey   bls.SecretKey     // Randao signing key. Required since Randao fork
-	DB             database.DBManager
-	GovModule      gov.GovModule
 	NodeType       common.ConnType
 }
 
-func New(opts *BackendOpts) consensus.Istanbul {
+func New(opts *BackendOpts) consensus.Engine {
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
@@ -73,20 +69,17 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		istanbulEventMux: new(event.TypeMux),
 		privateKey:       opts.PrivateKey,
 		address:          crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
-		blsSecretKey:     opts.BlsSecretKey,
 		logger:           logger.NewWith(),
-		db:               opts.DB,
 		commitCh:         make(chan *types.Result, 1),
 		candidates:       make(map[common.Address]bool),
-		coreStarted:      false,
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
-		rewardbase:       opts.Rewardbase,
-		govModule:        opts.GovModule,
+		sealer:           istanbul.NewSealerImpl(opts.PrivateKey),
 		nodetype:         opts.NodeType,
+		chainInitCh:      make(chan struct{}),
 	}
 
-	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
+	backend.currentView.Store(&bft.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
 }
@@ -98,22 +91,17 @@ type backend struct {
 	istanbulEventMux *event.TypeMux
 	privateKey       *ecdsa.PrivateKey
 	address          common.Address
-	blsSecretKey     bls.SecretKey
 	core             istanbulCore.Engine
 	logger           log.Logger
-	db               database.DBManager
 	chain            consensus.ChainReader
-	stakingModule    staking.StakingModule
-	valsetModule     valset.ValsetModule
-	consensusModules []kaiax.ConsensusModule
-	currentBlock     func() *types.Block
-	hasBadBlock      func(hash common.Hash) bool
 
 	// the channels for istanbul engine notifications
 	commitCh          chan *types.Result
 	proposedBlockHash common.Hash
 	sealMu            sync.Mutex
-	coreStarted       bool
+	sealSkippedNum    uint64 // block number that was committed before Seal started (0 = none)
+	sealNum           uint64 // block number of the Seal waiting on commitCh
+	coreStarted       atomic.Bool
 	coreMu            sync.RWMutex
 
 	// Current list of candidates we are pushing
@@ -127,29 +115,81 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	rewardbase  common.Address
-	currentView atomic.Value //*istanbul.View
+	currentView atomic.Value //*bft.View
 
-	// Reference to the governance.Engine
-	govModule gov.GovModule
+	// Reference to the kaiax modules
+	valsetModule valset.ValsetModule
+	sealer       *istanbul.IstanbulSealer
 
-	randaoModule randao.RandaoModule
+	// VRank consensus-participation collection: accepted PRE-PREPAREs are relayed
+	// to the VRank module off the consensus hot path. nil until RegisterVRankModule.
+	vrankModule       vrank.VRankModule
+	prepreparedSub    *event.TypeMuxSubscription
+	prepreparedStopCh chan struct{}
+	prepreparedWg     sync.WaitGroup
 
 	// Node type
 	nodetype common.ConnType
 
+	chainInitCh   chan struct{} // closed when engine is ready for peer registration
+	chainInitOnce sync.Once
+
 	isRestoringSnapshots atomic.Bool
+
+	// Executor for transaction execution
+	executor consensus.Executor
+}
+
+func (sb *backend) Sealer() *istanbul.IstanbulSealer {
+	return sb.sealer
 }
 
 func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
 }
 
-func (sb *backend) GetRewardBase() common.Address {
-	return sb.rewardbase
+func (sb *backend) IsPermissionlessAt(num uint64) bool {
+	return sb.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num))
 }
 
-func (sb *backend) SetCurrentView(view *istanbul.View) {
+// initSealState initializes state for Seal operation.
+// Returns the commitCh channel to wait on, or nil if the block was already committed.
+func (sb *backend) initSealState(number uint64, blockHash common.Hash) chan *types.Result {
+	sb.sealMu.Lock()
+	defer sb.sealMu.Unlock()
+
+	if sb.sealSkippedNum == number {
+		sb.sealSkippedNum = 0
+		return nil
+	}
+	if sb.commitCh != nil {
+		// A Seal for an older block that starts late leaves the current one alone.
+		if number < sb.sealNum {
+			return nil
+		}
+		// Release the previous Seal, which waits forever if this node never commits its block itself.
+		close(sb.commitCh)
+	}
+	sb.sealNum = number
+	sb.proposedBlockHash = blockHash
+	sb.commitCh = make(chan *types.Result, 1)
+	return sb.commitCh
+}
+
+// cleanupSealState cleans up state after the Seal waiting on commitCh completes.
+func (sb *backend) cleanupSealState(commitCh chan *types.Result) {
+	sb.sealMu.Lock()
+	defer sb.sealMu.Unlock()
+
+	// Keep the state of a newer Seal.
+	if sb.commitCh != nil && sb.commitCh != commitCh {
+		return
+	}
+	sb.proposedBlockHash = common.Hash{}
+	sb.commitCh = nil
+}
+
+func (sb *backend) SetCurrentView(view *bft.View) {
 	sb.currentView.Store(view)
 }
 
@@ -195,13 +235,12 @@ func (sb *backend) Gossip(payload []byte) error {
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			cmsg := &istanbul.ConsensusMsg{
+			cmsg := &bft.ConsensusMsg{
 				PrevHash: common.Hash{},
 				Payload:  payload,
 			}
 
-			// go p.Send(IstanbulMsg, payload)
-			go p.Send(IstanbulMsg, cmsg)
+			go p.Send(consensus.ConsensusMsgCode, cmsg)
 		}
 	}
 	return nil
@@ -209,25 +248,31 @@ func (sb *backend) Gossip(payload []byte) error {
 
 // getTargetReceivers returns a map of nodes which need to receive a message
 func (sb *backend) getTargetReceivers() map[common.Address]bool {
-	cv, ok := sb.currentView.Load().(*istanbul.View)
+	if sb.valsetModule == nil {
+		return nil
+	}
+	cv, ok := sb.currentView.Load().(*bft.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
 
+	num := cv.Sequence.Uint64()
 	// calculates a map of target nodes which need to receive a message
 	// committee[currentView].Union(committee[nextView]) => targets
 	targets := make(map[common.Address]bool)
 	for i := 0; i < 2; i++ {
-		roundCommittee, err := sb.GetCommitteeStateByRound(cv.Sequence.Uint64(), cv.Round.Uint64()+uint64(i))
+		round := cv.Round.Uint64() + uint64(i)
+		committee, err := sb.valsetModule.GetCommittee(num, round)
 		if err != nil {
 			return nil
 		}
+		committeeSet := valset.NewAddressSet(committee)
 		// i == 0: get current round's committee. additionally, check if the node is in the current view's committee
-		if i == 0 && !roundCommittee.Committee().Contains(sb.Address()) {
+		if i == 0 && !committeeSet.Contains(sb.Address()) {
 			return nil
 		}
-		for _, val := range roundCommittee.Committee().List() {
+		for _, val := range committee {
 			if val != sb.Address() {
 				targets[val] = true
 			}
@@ -263,31 +308,31 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			cmsg := &istanbul.ConsensusMsg{
+			cmsg := &bft.ConsensusMsg{
 				PrevHash: prevHash,
 				Payload:  payload,
 			}
 
-			go p.Send(IstanbulMsg, cmsg)
+			go p.Send(consensus.ConsensusMsgCode, cmsg)
 		}
 	}
 	return
 }
 
 // Commit implements istanbul.Backend.Commit
-func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
+func (sb *backend) Commit(proposal bft.Proposal, seals [][]byte) error {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		sb.logger.Error("Invalid proposal, %v", proposal)
-		return errInvalidProposal
+		return istanbul.ErrInvalidProposal
 	}
+	proposalHash := proposal.Hash()
 	h := block.Header()
-	round := sb.currentView.Load().(*istanbul.View).Round.Int64()
-	h = types.SetRoundToHeader(h, round)
+	round := sb.currentView.Load().(*bft.View).Round.Int64()
+	sb.sealer.WriteRound(h, round)
 	// Append seals into extra-data
-	err := writeCommittedSeals(h, seals)
-	if err != nil {
+	if err := sb.sealer.WriteCommittedSeals(h, seals); err != nil {
 		return err
 	}
 	// update block's header
@@ -300,11 +345,26 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped.
 	// -- otherwise, a error will be returned and a round change event will be fired.
-	if sb.proposedBlockHash == block.Hash() {
-		// feed block hash to Seal() and wait the Seal() result
-		sb.commitCh <- &types.Result{Block: block, Round: round}
+
+	sb.sealMu.Lock()
+	if sb.proposedBlockHash == proposalHash {
+		// Proposer: feed block hash to Seal() and wait the Seal() result
+		if sb.commitCh != nil {
+			sb.commitCh <- &types.Result{Block: block, Round: round}
+		}
+		sb.sealMu.Unlock()
 		return nil
 	}
+
+	// Non-proposer: release the waiting Seal; a Seal for this block that hasn't started returns at once.
+	number := proposal.Number().Uint64()
+	if sb.commitCh != nil {
+		sb.commitCh <- nil
+	}
+	if sb.commitCh == nil || number > sb.sealNum {
+		sb.sealSkippedNum = number
+	}
+	sb.sealMu.Unlock()
 
 	if sb.broadcaster != nil {
 		sb.broadcaster.Enqueue(fetcherID, block)
@@ -318,47 +378,85 @@ func (sb *backend) EventMux() *event.TypeMux {
 }
 
 // Verify implements istanbul.Backend.Verify
-func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
+func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		sb.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
+		return 0, istanbul.ErrInvalidProposal
 	}
 
 	// check bad block
 	if sb.HasBadProposal(block.Hash()) {
 		return 0, blockchain.ErrBlacklistedHash
 	}
+	if err := sb.VerifyProposalBody(block); err != nil {
+		return 0, err
+	}
+
+	// Verify the header of the proposed block. The proposal entry point skips the
+	// committed-seal rules by construction, so every other rule is enforced here and any
+	// failure rejects the proposal.
+	err := sb.chain.ValidateProposalHeader(block.Header())
+	if err == nil {
+		return 0, nil
+	} else if err == consensus.ErrFutureBlock {
+		return time.Unix(block.Header().Time.Int64(), 0).Sub(time.Now()), consensus.ErrFutureBlock
+	}
+	return 0, err
+}
+
+// VerifyProposalBody checks the body rules shared by ordinary PRE-PREPARE
+// validation and prepared-certificate admission. It deliberately excludes
+// local bad-block state and header validation, which are inappropriate for a
+// peer-supplied certificate and may depend on wall-clock time.
+func (sb *backend) VerifyProposalBody(proposal bft.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return istanbul.ErrInvalidProposal
+	}
+
+	// The checks below mirror BlockValidator.ValidateBody, so a bad proposal is rejected
+	// here instead of being PREPARE/COMMIT-ed and then refused on the import path.
+
+	// check EIP-7934 RLP-encoded block size cap
+	if sb.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return blockchain.ErrBlockOversized
+	}
 
 	// check block body
+	header := block.Header()
 	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
-	if txnHash != block.Header().TxHash {
-		return 0, errMismatchTxhashes
+	if txnHash != header.TxHash {
+		return istanbul.ErrMismatchTxhashes
 	}
+	baseFee := header.BaseFee
+	var blobs int
 	for _, tx := range block.Transactions() {
+		if baseFee != nil && baseFee.Cmp(tx.GasPrice()) > 0 {
+			return fmt.Errorf("invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
+		}
+		blobs += len(tx.BlobHashes())
 		if tx.Type() == types.TxTypeEthereumBlob {
 			sidecar := tx.BlobTxSidecar()
 			if sidecar == nil {
-				sb.logger.Error("No blob sidecar for blob transaction", "txHash", tx.Hash())
-				return 0, errNoBlobSidecarForBlobTx
+				sb.logger.Warn("No blob sidecar for blob transaction", "txHash", tx.Hash())
+				return istanbul.ErrNoBlobSidecarForBlobTx
 			}
 			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
-				sb.logger.Error("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
-				return 0, errInvalidBlobTxWithSidecar
+				sb.logger.Warn("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
+				return istanbul.ErrInvalidBlobTxWithSidecar
 			}
 		}
 	}
-
-	// verify the header of proposed block
-	err := sb.VerifyHeader(sb.chain, block.Header(), false)
-	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == errEmptyCommittedSeals {
-		return 0, nil
-	} else if err == consensus.ErrFutureBlock {
-		return time.Unix(block.Header().Time.Int64(), 0).Sub(now()), consensus.ErrFutureBlock
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want {
+			return fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
+		}
+	} else if blobs > 0 {
+		return errors.New("data blobs present in block body")
 	}
-	return 0, err
+	return nil
 }
 
 // Sign implements istanbul.Backend.Sign
@@ -367,32 +465,25 @@ func (sb *backend) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(hashData, sb.privateKey)
 }
 
-// CheckSignature implements istanbul.Backend.CheckSignature
-func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
-	signer, err := cacheSignatureAddresses(data, sig)
+func (sb *backend) ProposalRound(hash common.Hash, number *big.Int) (byte, bool) {
+	header := sb.chain.GetHeader(hash, number.Uint64())
+	if header == nil {
+		return 0, false
+	}
+	round, err := sb.Sealer().Round(header)
 	if err != nil {
-		logger.Error("Failed to get signer address", "err", err)
-		return err
+		return 0, false
 	}
-	// Compare derived addresses
-	if signer != address {
-		return errInvalidSignature
-	}
-	return nil
+	return round, true
 }
 
-// HasPropsal implements istanbul.Backend.HashBlock
-func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
-	return sb.chain.GetHeader(hash, number.Uint64()) != nil
-}
-
-func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
-	block := sb.currentBlock()
+func (sb *backend) LastProposal() (bft.Proposal, common.Address) {
+	block := sb.chain.CurrentBlock()
 
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
-		proposer, err = sb.Author(block.Header())
+		proposer, err = sb.sealer.Author(block.Header())
 		if err != nil {
 			sb.logger.Error("Failed to get block proposer", "err", err)
 			return nil, common.Address{}
@@ -403,83 +494,118 @@ func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	return block, proposer
 }
 
+// VerifyProposalExecution implements istanbul.Backend.VerifyProposalExecution
+func (sb *backend) VerifyProposalExecution(proposal bft.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return istanbul.ErrInvalidProposal
+	}
+	return sb.chain.ValidateProposalExecution(block)
+}
+
 func (sb *backend) HasBadProposal(hash common.Hash) bool {
-	if sb.hasBadBlock == nil {
+	if sb.chain == nil {
 		return false
 	}
-	return sb.hasBadBlock(hash)
+	return sb.chain.HasBadBlock(hash)
 }
 
-func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
-	council, err := sb.valsetModule.GetCouncil(num)
-	if err != nil {
-		return nil, err
-	}
+// SubmitTransactions executes transactions and returns the execution result.
+// This moves transaction execution responsibility from worker to consensus.
+// Returns a channel that will receive the execution result when consensus is complete.
+// In Istanbul: execute first → then consensus → finalize → send result
+// In Kaia-BFT: consensus + execute in parallel → committed → send result
+func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux) (finalizeCh <-chan *consensus.ExecutionResult) {
+	resultCh := make(chan *consensus.ExecutionResult, 1)
 
-	demoted, err := sb.valsetModule.GetDemotedValidators(num)
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("SubmitTransactions panic", "err", r)
+				resultCh <- nil
+			}
+		}()
 
-	return istanbul.NewBlockValSet(council, demoted), nil
-}
-
-func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
-	header := sb.chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-
-	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
-}
-
-func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
-	blockValSet, err := sb.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
-	}
-
-	committee, err := sb.valsetModule.GetCommittee(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	proposer, err := sb.valsetModule.GetProposer(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
-	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
-}
-
-func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
-	proposer, err := sb.valsetModule.GetProposer(num, round)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return proposer, nil
-}
-
-// GetProposer implements istanbul.Backend.GetProposer
-func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
-		a, _ := sb.Author(h)
-		return a
-	}
-	return common.Address{}
-}
-
-func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
-	sInfo, err := sb.stakingModule.GetStakingInfo(num)
-	if err != nil {
-		return common.Address{}
-	}
-
-	for idx, id := range sInfo.NodeIds {
-		if id == nodeId {
-			return sInfo.RewardAddrs[idx]
+		validators, err := sb.valsetModule.GetQualifiedValidators(header.Number.Uint64())
+		if err != nil {
+			resultCh <- nil
+			return
 		}
-	}
-	return common.Address{}
+		// Only qualified validators produce a block. Others skip here instead of
+		// doing the execute/finalize work and then failing authorization at Seal.
+		if !valset.NewAddressSet(validators).Contains(sb.address) {
+			resultCh <- nil
+			return
+		}
+		if err := sb.sealer.WriteValidators(header, validators); err != nil {
+			resultCh <- nil
+			return
+		}
+
+		// Reset executor with current state and header
+		if err := sb.executor.ResetWithState(statedb, header); err != nil {
+			resultCh <- nil
+			return
+		}
+
+		// Execute transactions
+		executeStart := time.Now()
+		result, err := sb.executor.Execute(txs, mux)
+		if err != nil {
+			resultCh <- nil
+			return
+		}
+		result.ExecuteTime = time.Since(executeStart)
+
+		// Finalize the block
+		finalizeStart := time.Now()
+		block, err := sb.executor.FinalizeState(result)
+		if err != nil {
+			resultCh <- nil
+			return
+		}
+		result.FinalizeTime = time.Since(finalizeStart)
+		result.Block = block
+
+		// Log block preparation completion (all validators log this, before seal)
+		logger.Info("Prepared new block",
+			"number", result.Block.Number(),
+			"hash", result.Block.Hash(),
+			"txs", len(result.Txs),
+			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
+			"executeTime", common.PrettyDuration(result.ExecuteTime),
+			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
+
+		// Trigger consensus (Seal) - this will run BFT consensus
+		// Seal is blocking until consensus is complete
+		// Stop signal is handled via commitCh close
+		sealStart := time.Now()
+		sealedBlock, err := sb.Seal(sb.chain, block)
+		result.SealTime = time.Since(sealStart)
+
+		if err != nil {
+			logger.Error("Failed to seal block", "err", err, "sealTime", result.SealTime)
+			resultCh <- nil
+			return
+		}
+		if sealedBlock == nil {
+			// Not the proposer - this is expected, block will be received via ChainHeadEvent
+			logger.Debug("Seal skipped. Not the proposer for block", "number", block.Number(), "sealTime", result.SealTime)
+			resultCh <- nil
+			return
+		}
+
+		logger.Info("Successfully sealed new block", "number", sealedBlock.Number(), "hash", sealedBlock.Hash(), "sealTime", result.SealTime)
+
+		result.Block = sealedBlock
+		resultCh <- result
+	}()
+
+	return resultCh
+}
+
+// SubscribeNewSequence subscribes to new sequence events.
+// When a new block sequence starts (not round change), this subscription receives a signal.
+func (sb *backend) SubscribeNewSequence() *event.TypeMuxSubscription {
+	return sb.istanbulEventMux.Subscribe(istanbul.NewSequenceEvent{})
 }

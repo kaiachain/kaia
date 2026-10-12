@@ -106,7 +106,7 @@ type Transaction struct {
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
-	markedUnexecutable int32
+	markedUnexecutable atomic.Int32
 
 	// lock for protecting fields in Transaction struct
 	mu sync.RWMutex
@@ -546,6 +546,10 @@ func (tx *Transaction) Validate(db StateDB, signer Signer, currentBlockNumber ui
 			}
 		}
 	}
+	// Range-check the fee ratio on the consensus path.
+	if feeRatio, isRatioTx := tx.FeeRatio(); isRatioTx && !feeRatio.IsValid() {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
 	return tx.data.Validate(db, currentBlockNumber, checkMutableValue)
 }
 
@@ -773,9 +777,13 @@ func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transa
 	return cpy, nil
 }
 
-// Cost returns amount + gasprice * gaslimit.
+// Cost returns the maximum transaction cost.
 func (tx *Transaction) Cost() *big.Int {
 	total := tx.Fee()
+	if blobFeeCap := tx.BlobGasFeeCap(); blobFeeCap != nil {
+		blobFee := new(big.Int).Mul(new(big.Int).SetUint64(tx.BlobGas()), blobFeeCap)
+		total.Add(total, blobFee)
+	}
 	total.Add(total, tx.data.GetValue())
 	return total
 }
@@ -873,15 +881,30 @@ func (tx *Transaction) MarkUnexecutable(b bool) {
 	if b {
 		v = 1
 	}
-	atomic.StoreInt32(&tx.markedUnexecutable, v)
+	tx.markedUnexecutable.Store(v)
 }
 
 func (tx *Transaction) IsMarkedUnexecutable() bool {
-	return atomic.LoadInt32(&tx.markedUnexecutable) == 1
+	return tx.markedUnexecutable.Load() == 1
 }
 
 func (tx *Transaction) RawSignatureValues() TxSignatures {
 	return tx.data.RawSignatureValues()
+}
+
+// ValidateSignatureListLength checks the signature-list limit applied to
+// untrusted transaction ingress. It must not be used while decoding or
+// executing blocks because pre-Istanbul blocks may contain longer lists.
+func (tx *Transaction) ValidateSignatureListLength() error {
+	if uint64(len(tx.RawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	if feePayerTx, ok := tx.data.(TxInternalDataFeePayer); ok && uint64(len(feePayerTx.GetFeePayerRawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	return nil
 }
 
 func (tx *Transaction) String() string {

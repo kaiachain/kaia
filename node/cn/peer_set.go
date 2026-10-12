@@ -25,6 +25,7 @@ package cn
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"sort"
 	"sync"
@@ -32,7 +33,6 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/node/cn/snap"
 )
@@ -151,8 +151,12 @@ func (ps *peerSet) Register(p Peer, ext *snap.Peer) error {
 		return errAlreadyRegistered
 	}
 
-	if err := peerTypeValidator.ValidatePeerType(p.GetAddr()); err != nil {
-		return fmt.Errorf("fail to validate peer type: %s", err)
+	// Trusted/static-outbound peers bypass CNPeers authorization, matching the
+	// p2p server admission check.
+	if pp := p.GetP2PPeer(); pp == nil || !pp.IsTrustedOrStatic() {
+		if err := peerTypeValidator.ValidatePeerType(p.GetAddr()); err != nil {
+			return fmt.Errorf("fail to validate peer type: %s", err)
+		}
 	}
 
 	if ext != nil {
@@ -210,9 +214,7 @@ func (ps *peerSet) Peers() map[string]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[string]Peer)
-	for id, p := range ps.peers {
-		set[id] = p
-	}
+	maps.Copy(set, ps.peers)
 	return set
 }
 
@@ -221,9 +223,7 @@ func (ps *peerSet) CNPeers() map[common.Address]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.cnpeers {
-		set[addr] = p
-	}
+	maps.Copy(set, ps.cnpeers)
 	return set
 }
 
@@ -232,9 +232,7 @@ func (ps *peerSet) ENPeers() map[common.Address]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.enpeers {
-		set[addr] = p
-	}
+	maps.Copy(set, ps.enpeers)
 	return set
 }
 
@@ -243,9 +241,7 @@ func (ps *peerSet) PNPeers() map[common.Address]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.pnpeers {
-		set[addr] = p
-	}
+	maps.Copy(set, ps.pnpeers)
 	return set
 }
 
@@ -595,7 +591,7 @@ func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType 
 func (peers *peerSet) RegisterSnapExtension(peer *snap.Peer) error {
 	// Reject the peer if it advertises `snap` without `klay` as `snap` is only a
 	// satellite protocol meaningful with the chain selection of `klay`
-	if !peer.RunningCap(backend.IstanbulProtocol.Name, backend.IstanbulProtocol.Versions) {
+	if !peer.RunningCap(ConsensusProtocol.Name, ConsensusProtocol.Versions) {
 		return errSnapWithoutIstanbul
 	}
 	// Ensure nobody can double connect

@@ -32,7 +32,7 @@ type KaiaNodeAPI struct {
 	stack *Node
 }
 
-// NewKaiaNodeAPI creates a new Web3Service instance
+// NewKaiaNodeAPI creates a new KaiaNodeAPI instance
 func NewKaiaNodeAPI(stack *Node) *KaiaNodeAPI {
 	return &KaiaNodeAPI{stack}
 }

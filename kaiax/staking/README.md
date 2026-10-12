@@ -43,6 +43,7 @@ This module is responsible for tracking validator staking amounts and their addr
   - KEF (Kaia Ecosystem Fund). Stored in the AddressBook contract's `kirContractAddress` variable. This variable previously held the KCF, KIR addresses.
   - KIF (Kaia Infrastructure Fund). Stored in the AddressBook contract's `pocContractAddress` variable. This variable previously held the KFF, KGF, PoC addresses.
   - KPF (Kaia Performance Fund). Stored in the AddressBook contract's `spareContractAddress` variable.
+- If AddressBook is not installed, is not activated, returns no entries, or returns incomplete data, the staking module returns an empty `StakingInfo` with only `SourceBlockNum` set.
 
 ## Persistent Schema
 

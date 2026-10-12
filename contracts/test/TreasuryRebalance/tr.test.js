@@ -30,9 +30,7 @@ describe("TreasuryRebalance", function() {
     kir = await KIR.deploy();
     retired2 = kir.address;
 
-    const TEST = await ethers.getContractFactory(
-      "contracts/libs/Ownable.sol:Ownable"
-    );
+    const TEST = await ethers.getContractFactory("TestReceiver");
     test = await TEST.deploy();
 
     // Send some funds to retired1 to simulate KFG funds

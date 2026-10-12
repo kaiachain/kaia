@@ -22,49 +22,9 @@ import (
 	kaiaApi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/rlp"
 )
 
-func getProposerAndValidatorsFromBlock(block *types.Block) (common.Address, []common.Address, error) {
-	blockNumber := block.NumberU64()
-	if blockNumber == 0 {
-		return common.Address{}, []common.Address{}, nil
-	}
-	// Retrieve the signature from the header extra-data
-	istanbulExtra, err := types.ExtractIstanbulExtra(block.Header())
-	if err != nil {
-		return common.Address{}, []common.Address{}, err
-	}
-
-	sigHash, err := sigHash(block.Header())
-	if err != nil {
-		return common.Address{}, []common.Address{}, err
-	}
-	proposerAddr, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
-	if err != nil {
-		return common.Address{}, []common.Address{}, err
-	}
-
-	return proposerAddr, istanbulExtra.Validators, nil
-}
-
-func sigHash(header *types.Header) (hash common.Hash, err error) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	if err := rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false)); err != nil {
-		logger.Error("fail to encode", "err", err)
-		return common.Hash{}, err
-	}
-	hasher.Sum(hash[:0])
-	return hash, nil
-}
-
-func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block, cInfo consensus.ConsensusInfo, receipts types.Receipts) map[string]interface{} {
+func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block, receipts types.Receipts) (map[string]interface{}, error) {
 	head := block.Header() // copies the header once
 	hash := head.Hash()
 
@@ -78,10 +38,15 @@ func makeBlockGroupOutput(blockchain *blockchain.BlockChain, block *types.Block,
 		rpcTransactions[i] = kaiaApi.RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], blockchain.Config())
 	}
 
+	cInfo, err := kaiaApi.GetConsensusInfo(block, blockchain.Validator().ValsetModule(), blockchain.Sealer())
+	if err != nil {
+		return nil, err
+	}
+
 	r["committee"] = cInfo.Committee
 	r["proposer"] = cInfo.Proposer
 	r["round"] = cInfo.Round
 	r["originProposer"] = cInfo.OriginProposer
 	r["transactions"] = rpcTransactions
-	return r
+	return r, nil
 }

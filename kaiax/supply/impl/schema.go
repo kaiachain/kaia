@@ -30,6 +30,9 @@ var (
 	// Using "supplyCheckpoint" for backward compatibility
 	lastAccRewardNumberKey = []byte("lastSupplyCheckpointNumber")
 	accRewardPrefix        = []byte("supplyCheckpoint")
+
+	// supplyBlobFeeFixupDoneKey is set after the one-time blob fee BurntFee fixup has been applied.
+	supplyBlobFeeFixupDoneKey = []byte("supplyBlobFeeFixupDone")
 )
 
 // accRewardStorage is the disk format for checkpoints (i.e. periodically committed AccReward).
@@ -89,5 +92,16 @@ func WriteAccReward(db database.Database, num uint64, accReward *supply.AccRewar
 func DeleteAccReward(db database.Database, num uint64) {
 	if err := db.Delete(accRewardKey(num)); err != nil {
 		logger.Crit("Failed to delete acc reward", "err", err)
+	}
+}
+
+func ReadSupplyBlobFeeFixupDone(db database.Database) bool {
+	b, err := db.Get(supplyBlobFeeFixupDoneKey)
+	return err == nil && len(b) > 0
+}
+
+func WriteSupplyBlobFeeFixupDone(db database.Database) {
+	if err := db.Put(supplyBlobFeeFixupDoneKey, []byte{1}); err != nil {
+		logger.Crit("Failed to write supply blob fee fixup done", "err", err)
 	}
 }
