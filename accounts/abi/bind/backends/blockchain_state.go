@@ -78,7 +78,8 @@ func (b *StateBlockchainContractCaller) CallContract(ctx context.Context, call k
 	if err != nil {
 		return nil, err
 	}
-	res, err := b.callContract(call, block, b.state)
+	// Run on a copy so that a read never changes the caller's state, such as the sender nonce.
+	res, err := b.callContract(call, block, b.state.Copy())
 	if err != nil {
 		return nil, err
 	}
