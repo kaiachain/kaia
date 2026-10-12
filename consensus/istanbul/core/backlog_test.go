@@ -35,14 +35,15 @@ import (
 func newTestBacklogCore() *core {
 	qualified := valset.NewAddressSet(nil)
 	return &core{
-		address:            common.HexToAddress("0xdead"),
-		state:              StateAcceptRequest,
-		logger:             logger.NewWith(),
-		backlogs:           make(map[common.Address]*prque.Prque),
-		backlogsMu:         new(sync.Mutex),
-		backlogCounts:      make(map[common.Address]int),
-		backlogPreprepares: make(map[common.Address]backlogPreprepare),
-		current:            newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil),
+		address:              common.HexToAddress("0xdead"),
+		state:                StateAcceptRequest,
+		logger:               logger.NewWith(),
+		backlogs:             make(map[common.Address]*prque.Prque),
+		backlogsMu:           new(sync.Mutex),
+		backlogCounts:        make(map[common.Address]int),
+		backlogEvidenceBytes: make(map[common.Address]uint64),
+		backlogPreprepares:   make(map[common.Address]backlogPreprepare),
+		current:              newRoundState(&bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}, qualified, common.Hash{}, nil, nil, nil, nil),
 	}
 }
 
@@ -54,12 +55,22 @@ func backlogSender(i int) common.Address {
 
 func newTestBacklogMessage(t *testing.T, sequence int64) *bft.Message {
 	t.Helper()
-	payload, err := bft.Encode(&bft.Subject{View: &bft.View{
+	payload, err := bft.Encode(&bft.Prepare{View: &bft.View{
 		Sequence: big.NewInt(sequence),
 		Round:    big.NewInt(0),
 	}})
 	require.NoError(t, err)
 	return &bft.Message{Code: bft.MsgPrepare, Msg: payload}
+}
+
+func newTestBacklogRoundChange(t *testing.T, sequence int64) *bft.Message {
+	t.Helper()
+	payload, err := bft.Encode(&bft.RoundChange{View: &bft.View{
+		Sequence: big.NewInt(sequence),
+		Round:    big.NewInt(0),
+	}})
+	require.NoError(t, err)
+	return &bft.Message{Code: bft.MsgRoundChange, Msg: payload}
 }
 
 func newTestBacklogPreprepare(t *testing.T, sequence, round int64) *bft.Message {
@@ -74,7 +85,7 @@ func newTestBacklogPreprepare(t *testing.T, sequence, round int64) *bft.Message 
 
 func setTestBacklogView(c *core, sequence, round int64) {
 	c.current = newRoundState(&bft.View{Sequence: big.NewInt(sequence), Round: big.NewInt(round)},
-		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil)
+		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil, nil)
 }
 
 func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
@@ -88,6 +99,67 @@ func TestStoreBacklogBoundsMessagesPerSender(t *testing.T) {
 
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogs[src].Size())
 	assert.Equal(t, maxBacklogMessagesPerSender, c.backlogCounts[src])
+}
+
+func TestStoreBacklogRetainsRoundChangeWithPreparedClaim(t *testing.T) {
+	src := common.HexToAddress("0x1")
+	c := newTestBacklogCore()
+	payload, err := bft.Encode(&bft.RoundChange{
+		View: &bft.View{Sequence: big.NewInt(2), Round: big.NewInt(1)},
+		Prepared: &bft.PreparedClaim{
+			Round:  big.NewInt(0),
+			Digest: common.HexToHash("0x1234"),
+		},
+	})
+	require.NoError(t, err)
+	msg := &bft.Message{Code: bft.MsgRoundChange, Msg: payload, Evidence: []byte{0xc0}}
+
+	c.storeBacklog(msg, src)
+
+	require.Contains(t, c.backlogs, src)
+	assert.Equal(t, 1, c.backlogs[src].Size())
+	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogEvidenceBytes[src])
+}
+
+func TestStoreBacklogBoundsEvidenceBytesPerSenderWithoutBlockingSmallMessages(t *testing.T) {
+	src := backlogSender(1)
+	c := newTestBacklogCore()
+	msg := newTestBacklogRoundChange(t, 2)
+	msg.Evidence = make([]byte, maxBacklogEvidenceBytesPerSender/2+1)
+	evidenceBytes := uint64(len(msg.Evidence))
+
+	c.storeBacklog(msg, src)
+	c.storeBacklog(msg, src)
+	c.storeBacklog(newTestBacklogMessage(t, 2), src)
+
+	assert.Equal(t, 2, c.backlogs[src].Size())
+	assert.Equal(t, 2, c.backlogCounts[src])
+	assert.Equal(t, evidenceBytes, c.backlogEvidenceBytes[src])
+	assert.Equal(t, evidenceBytes, c.backlogTotalEvidenceBytes)
+}
+
+func TestStoreBacklogBoundsTotalEvidenceBytesWithoutBlockingSmallMessages(t *testing.T) {
+	c := newTestBacklogCore()
+	msg := newTestBacklogRoundChange(t, 2)
+	msg.Evidence = make([]byte, maxBacklogEvidenceBytesPerSender)
+
+	for sender := 1; sender <= int(maxBacklogEvidenceBytes/maxBacklogEvidenceBytesPerSender)+1; sender++ {
+		c.storeBacklog(msg, backlogSender(sender))
+	}
+
+	accepted := int(maxBacklogEvidenceBytes / maxBacklogEvidenceBytesPerSender)
+	assert.Len(t, c.backlogs, accepted)
+	assert.Equal(t, uint64(accepted)*maxBacklogEvidenceBytesPerSender, c.backlogTotalEvidenceBytes)
+	assert.NotContains(t, c.backlogs, backlogSender(accepted+1))
+
+	// A full attachment budget must not block ordinary consensus messages,
+	// including from a sender whose own attachment budget is also full.
+	c.storeBacklog(newTestBacklogMessage(t, 2), backlogSender(1))
+	c.storeBacklog(newTestBacklogMessage(t, 2), backlogSender(accepted+1))
+	assert.Equal(t, 2, c.backlogs[backlogSender(1)].Size())
+	assert.Equal(t, 1, c.backlogs[backlogSender(accepted+1)].Size())
+	assert.Equal(t, uint64(accepted)*maxBacklogEvidenceBytesPerSender, c.backlogTotalEvidenceBytes)
 }
 
 // The message budget is per sender, so a sender that has filled its own budget
@@ -123,7 +195,7 @@ func TestBacklogRejectsSequenceOutsideUint64(t *testing.T) {
 	// admit the message; only the uint64 check may reject it.
 	c.current = newRoundState(
 		&bft.View{Sequence: new(big.Int).SetUint64(math.MaxUint64), Round: big.NewInt(0)},
-		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil)
+		valset.NewAddressSet(nil), common.Hash{}, nil, nil, nil, nil)
 	tooLarge := new(big.Int).Add(new(big.Int).SetUint64(math.MaxUint64), big.NewInt(1))
 
 	assert.True(t, c.isBacklogSequenceTooFar(tooLarge))
@@ -144,7 +216,8 @@ func TestStoreBacklogSkipsUndecodableMessage(t *testing.T) {
 func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	msg := newTestBacklogMessage(t, 2)
+	msg := newTestBacklogRoundChange(t, 2)
+	msg.Evidence = make([]byte, 1024)
 
 	for range maxBacklogMessagesPerSender {
 		c.storeBacklog(msg, src)
@@ -154,16 +227,41 @@ func TestProcessBacklogFreesCapacityForLaterMessages(t *testing.T) {
 
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
+	assert.Empty(t, c.backlogEvidenceBytes)
+	assert.Zero(t, c.backlogTotalEvidenceBytes)
 
 	c.storeBacklog(msg, src)
 	assert.Equal(t, 1, c.backlogs[src].Size())
 	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogEvidenceBytes[src])
+	assert.Equal(t, uint64(len(msg.Evidence)), c.backlogTotalEvidenceBytes)
+}
+
+func TestProcessBacklogKeepsExactEvidenceAccountingForRemainingMessages(t *testing.T) {
+	src := backlogSender(1)
+	c := newTestBacklogCore()
+	old := newTestBacklogRoundChange(t, 2)
+	old.Evidence = make([]byte, 100)
+	future := newTestBacklogRoundChange(t, 4)
+	future.Evidence = make([]byte, 200)
+	c.storeBacklog(old, src)
+	c.storeBacklog(future, src)
+
+	// The sequence-2 message becomes old, while sequence 4 is still future and
+	// is pushed back into the queue with its accounting intact.
+	setTestBacklogView(c, 3, 0)
+	c.processBacklog()
+
+	assert.Equal(t, 1, c.backlogs[src].Size())
+	assert.Equal(t, 1, c.backlogCounts[src])
+	assert.Equal(t, uint64(len(future.Evidence)), c.backlogEvidenceBytes[src])
+	assert.Equal(t, uint64(len(future.Evidence)), c.backlogTotalEvidenceBytes)
 }
 
 func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 	src := common.HexToAddress("0x1")
 	c := newTestBacklogCore()
-	payload, err := bft.Encode(&bft.Subject{})
+	payload, err := bft.Encode(&bft.Prepare{})
 	require.NoError(t, err)
 	msg := &bft.Message{Code: bft.MsgPrepare, Msg: payload}
 
@@ -174,6 +272,8 @@ func TestProcessBacklogRemovesMessageWithNilView(t *testing.T) {
 
 	assert.Empty(t, c.backlogs)
 	assert.Empty(t, c.backlogCounts)
+	assert.Empty(t, c.backlogEvidenceBytes)
+	assert.Zero(t, c.backlogTotalEvidenceBytes)
 }
 
 // A sender's slot keeps the PREPREPARE for the highest view: a higher view
@@ -279,4 +379,20 @@ func TestProcessBacklogDropsStalePreprepare(t *testing.T) {
 	c.processBacklog()
 
 	assert.Empty(t, c.backlogPreprepares)
+}
+
+// TestCheckPrevHashUsesRoundParent checks that votes and ROUND CHANGEs are bound
+// to the parent recorded when the height started, not to the live chain head:
+// a late vote for this height stays valid after its block is inserted and
+// before the next height starts. A PRE-PREPARE is left to Verify.
+func TestCheckPrevHashUsesRoundParent(t *testing.T) {
+	c := newTestBacklogCore()
+	parent, other := common.HexToHash("0xaa"), common.HexToHash("0xbb")
+	c.current.parentHash = parent
+
+	for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange} {
+		require.NoError(t, c.checkPrevHash(&bft.Message{Code: code, PrevHash: parent}))
+		require.ErrorIs(t, c.checkPrevHash(&bft.Message{Code: code, PrevHash: other}), errInconsistentPrevHash)
+	}
+	require.NoError(t, c.checkPrevHash(&bft.Message{Code: bft.MsgPreprepare, PrevHash: other}))
 }

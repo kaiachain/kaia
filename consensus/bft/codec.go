@@ -41,48 +41,75 @@ const (
 // match the address recovered from its signature.
 var ErrInvalidSigner = errors.New("message not signed by the sender")
 
-// ErrInvalidMessage indicates the message code is not recognized.
+// ErrInvalidMessage indicates a malformed envelope or payload, including an
+// unrecognized message code.
 var ErrInvalidMessage = errors.New("invalid message")
 
-// Message is the envelope transmitted between BFT validators.
+// Message is the envelope transmitted between BFT validators. PrevHash, Code,
+// Msg and Address, in that order, are authenticated by Signature. Evidence is
+// deliberately excluded from that signature; it must hash to the EvidenceHash
+// of the signed claim carried by Msg.
 type Message struct {
-	Hash          common.Hash
-	Code          uint64
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
+	PrevHash  common.Hash
+	Code      uint64
+	Msg       []byte
+	Address   common.Address
+	Signature []byte
+	Evidence  []byte
 }
 
-// EncodeRLP serializes m into the Kaia RLP format.
+// EncodeRLP serializes m into the Kaia RLP format. An empty Evidence is
+// omitted because rlp omits only a nil optional field.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []any{m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	evidence := m.Evidence
+	if len(evidence) == 0 {
+		evidence = nil
+	}
+	return rlp.Encode(w, struct {
+		PrevHash  common.Hash
+		Code      uint64
+		Msg       []byte
+		Address   common.Address
+		Signature []byte
+		Evidence  []byte `rlp:"optional"`
+	}{m.PrevHash, m.Code, m.Msg, m.Address, m.Signature, evidence})
 }
 
 // DecodeRLP loads the consensus fields from a Kaia RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Hash          common.Hash
-		Code          uint64
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
+		PrevHash  common.Hash
+		Code      uint64
+		Msg       []byte
+		Address   common.Address
+		Signature []byte
+		Evidence  []byte `rlp:"optional"`
 	}
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Hash, m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Hash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	// A missing optional field decodes as nil and an explicit empty one as
+	// []byte{}. EncodeRLP never writes the latter, so reject it: otherwise a
+	// message without Evidence would have a second valid encoding, and a relay
+	// could re-encode it past gossip deduplication.
+	if msg.Evidence != nil && len(msg.Evidence) == 0 {
+		return fmt.Errorf("%w: empty evidence field", ErrInvalidMessage)
+	}
+	m.PrevHash, m.Code, m.Msg, m.Address, m.Signature, m.Evidence = msg.PrevHash, msg.Code, msg.Msg, msg.Address, msg.Signature, msg.Evidence
 	return nil
 }
 
-// FromPayload decodes b into m and, when validateFn is non-nil, verifies the
-// signer matches m.Address.
+// FromPayload decodes b into m and, when validateFn is non-nil, verifies its
+// signer.
 func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
 	if err := rlp.DecodeBytes(b, &m); err != nil {
 		return err
 	}
-	if err := m.validateCommittedSealLength(); err != nil {
+	return m.validateAndRecover(validateFn)
+}
+
+func (m *Message) validateAndRecover(validateFn func([]byte, []byte) (common.Address, error)) error {
+	if err := m.validateEnvelope(); err != nil {
 		return err
 	}
 	if validateFn != nil {
@@ -101,17 +128,20 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 	return nil
 }
 
-// validateCommittedSealLength checks the envelope shape before signature recovery.
-func (m *Message) validateCommittedSealLength() error {
+// validateEnvelope checks the envelope shape before signature recovery.
+func (m *Message) validateEnvelope() error {
 	switch m.Code {
 	case MsgCommit:
-		if len(m.CommittedSeal) != crypto.SignatureLength {
-			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, len(m.CommittedSeal))
+		var commit *Commit
+		if err := m.Decode(&commit); err != nil || commit == nil {
+			return fmt.Errorf("%w: undecodable commit payload: %v", ErrInvalidMessage, err)
 		}
-	case MsgPreprepare, MsgPrepare, MsgRoundChange:
-		if len(m.CommittedSeal) != 0 {
-			return fmt.Errorf("%w: unexpected committed seal on message code %d", ErrInvalidMessage, m.Code)
+		if len(commit.CommittedSeal) != crypto.SignatureLength {
+			return fmt.Errorf("%w: committed seal length %d", ErrInvalidMessage, len(commit.CommittedSeal))
 		}
+	}
+	if len(m.Evidence) != 0 && m.Code != MsgRoundChange {
+		return fmt.Errorf("%w: unexpected evidence on message code %d", ErrInvalidMessage, m.Code)
 	}
 	return nil
 }
@@ -121,22 +151,33 @@ func (m *Message) Payload() ([]byte, error) {
 	return rlp.EncodeToBytes(m)
 }
 
-// PayloadNoSig returns the RLP-encoded message with Signature zeroed, used for
-// recovering the signer address from the attached Signature.
+// PayloadNoSig returns the signed preimage, used for recovering the signer
+// address from the attached Signature. Evidence is deliberately excluded: it
+// is unsigned and checked against the signed claim.
 func (m *Message) PayloadNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&Message{
-		Hash:          m.Hash,
-		Code:          m.Code,
-		Msg:           m.Msg,
-		Address:       m.Address,
-		Signature:     []byte{},
-		CommittedSeal: m.CommittedSeal,
+	return rlp.EncodeToBytes(struct {
+		PrevHash common.Hash
+		Code     uint64
+		Msg      []byte
+		Address  common.Address
+	}{
+		PrevHash: m.PrevHash,
+		Code:     m.Code,
+		Msg:      m.Msg,
+		Address:  m.Address,
 	})
 }
 
 // Decode unmarshals m.Msg into val.
 func (m *Message) Decode(val any) error {
 	return rlp.DecodeBytes(m.Msg, val)
+}
+
+// WithoutEvidence returns a shallow copy without its unsigned Evidence.
+func (m *Message) WithoutEvidence() *Message {
+	stripped := *m
+	stripped.Evidence = nil
+	return &stripped
 }
 
 func (m *Message) String() string {
@@ -153,12 +194,24 @@ func (m *Message) GetView() (*View, error) {
 			return nil, decodeErr
 		}
 		msgView = preprepare.View
-	case MsgPrepare, MsgCommit, MsgRoundChange:
-		var subject *Subject
-		if decodeErr := m.Decode(&subject); decodeErr != nil {
+	case MsgPrepare:
+		var prepare *Prepare
+		if decodeErr := m.Decode(&prepare); decodeErr != nil {
 			return nil, decodeErr
 		}
-		msgView = subject.View
+		msgView = prepare.View
+	case MsgCommit:
+		var commit *Commit
+		if decodeErr := m.Decode(&commit); decodeErr != nil {
+			return nil, decodeErr
+		}
+		msgView = commit.View
+	case MsgRoundChange:
+		var roundChange *RoundChange
+		if decodeErr := m.Decode(&roundChange); decodeErr != nil {
+			return nil, decodeErr
+		}
+		msgView = roundChange.View
 	default:
 		return nil, ErrInvalidMessage
 	}

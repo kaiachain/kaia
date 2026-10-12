@@ -36,22 +36,22 @@ func (c *core) sendPrepare() {
 	}
 
 	sub := c.current.Subject()
-	encodedSubject, err := bft.Encode(sub)
+	encodedPrepare, err := bft.Encode(&bft.Prepare{View: sub.View, Digest: sub.Digest})
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
 	c.broadcast(&bft.Message{
-		Hash: c.current.Proposal().ParentHash(),
-		Code: bft.MsgPrepare,
-		Msg:  encodedSubject,
+		PrevHash: c.current.Proposal().ParentHash(),
+		Code:     bft.MsgPrepare,
+		Msg:      encodedPrepare,
 	})
 }
 
 func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	// Decode PREPARE message
-	var prepare *bft.Subject
+	var prepare *bft.Prepare
 	err := msg.Decode(&prepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
@@ -59,7 +59,7 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	}
 
 	// logger.Error("call receive prepare","num",prepare.View.Sequence)
-	if err := c.checkMessage(bft.MsgPrepare, prepare.View); err != nil {
+	if err := c.checkMessage(msg, prepare.View); err != nil {
 		return err
 	}
 
@@ -77,12 +77,13 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 
 	c.acceptPrepare(msg, src)
 
-	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
-	// and we are in earlier state before Prepared state.
-	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in
-	// the previous round skip sending PREPARE messages.
+	// Change to Prepared state once this view has quorum evidence. Where the
+	// hash-lock shortcut applies (IsPermissionlessAt is false), a node locked
+	// on this digest commits directly; otherwise it must also contribute a
+	// PREPARE and establish a certificate for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
-		if c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
+		if !c.isPermissionlessAt(prepare.View.Sequence.Uint64()) &&
+			c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
 			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", bft.MsgPrepare)
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -100,11 +101,11 @@ func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *bft.Subject, src common.Address) error {
+func (c *core) verifyPrepare(prepare *bft.Prepare, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()
-	if !prepare.Equal(sub) {
+	if !sub.matches(prepare.View, prepare.Digest) {
 		logger.Warn("Inconsistent subjects between PREPARE and proposal", "expected", sub, "got", prepare)
 		return errInconsistentSubject
 	}

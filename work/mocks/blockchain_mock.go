@@ -539,6 +539,20 @@ func (mr *MockBlockChainMockRecorder) HasBadBlock(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBadBlock", reflect.TypeOf((*MockBlockChain)(nil).HasBadBlock), arg0)
 }
 
+// ValidateProposalExecution mocks base method.
+func (m *MockBlockChain) ValidateProposalExecution(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateProposalExecution", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateProposalExecution indicates an expected call of ValidateProposalExecution.
+func (mr *MockBlockChainMockRecorder) ValidateProposalExecution(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProposalExecution", reflect.TypeOf((*MockBlockChain)(nil).ValidateProposalExecution), arg0)
+}
+
 // HasBlock mocks base method.
 func (m *MockBlockChain) HasBlock(arg0 common.Hash, arg1 uint64) bool {
 	m.ctrl.T.Helper()

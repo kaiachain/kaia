@@ -91,6 +91,120 @@ func TestReportBlockRecordPolicy(t *testing.T) {
 	assert.NotNil(t, db.ReadBadBlock(block.Hash()))
 }
 
+// TestInsertChainBodyMismatchDoesNotMarkBadProposal checks that a block whose
+// body does not match its sealed header is refused without blacklisting the
+// hash: any peer can pair a valid header with another body, and the consensus
+// engine must still accept the genuine block under that hash.
+func TestInsertChainBodyMismatchDoesNotMarkBadProposal(t *testing.T) {
+	db, blockchain, err := newCanonical(faker.NewFaker(), 0, true)
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	genuine := MakeBlockChain(blockchain.CurrentBlock(), 1, faker.NewFaker(), db, 10)[0]
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	tx, err := types.SignTx(types.NewTransaction(0, common.Address{1}, common.Big0, 21000, common.Big0, nil),
+		types.LatestSignerForChainID(blockchain.Config().ChainID), key)
+	require.NoError(t, err)
+	forged := genuine.WithBody(types.Transactions{tx})
+	require.Equal(t, genuine.Hash(), forged.Hash(), "the body is outside the header hash")
+
+	_, err = blockchain.InsertChain(types.Blocks{forged})
+	require.ErrorContains(t, err, "transaction root hash mismatch")
+	require.False(t, blockchain.HasBadBlock(genuine.Hash()), "a mismatched body must not blacklist the hash")
+
+	_, err = blockchain.InsertChain(types.Blocks{genuine})
+	require.NoError(t, err)
+	require.Equal(t, genuine.Hash(), blockchain.CurrentBlock().Hash())
+}
+
+// TestValidateProposalExecution checks that a proposal is executed on its
+// parent state without being imported: a good block passes and leaves the
+// chain and the bad-block records untouched, a block with a wrong state root
+// fails and is recorded as a bad proposal.
+func TestValidateProposalExecution(t *testing.T) {
+	db, blockchain, err := newCanonical(faker.NewFaker(), 0, true)
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	good := MakeBlockChain(blockchain.CurrentBlock(), 1, faker.NewFaker(), db, 10)[0]
+	require.NoError(t, blockchain.ValidateProposalExecution(good))
+	require.False(t, blockchain.HasBadBlock(good.Hash()))
+	require.Equal(t, uint64(0), blockchain.CurrentBlock().NumberU64(), "nothing is imported")
+
+	// A block that builds on an unknown parent cannot be executed and is not recorded.
+	header := good.Header()
+	header.ParentHash = common.HexToHash("0xdeadbeef")
+	orphan := types.NewBlockWithHeader(header)
+	require.ErrorIs(t, blockchain.ValidateProposalExecution(orphan), consensus.ErrUnknownAncestor)
+	require.False(t, blockchain.HasBadBlock(orphan.Hash()))
+
+	// A transaction that cannot execute (unfunded sender) fails in Process and is recorded.
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	tx, err := types.SignTx(types.NewTransaction(0, common.Address{1}, big.NewInt(1), 21000, common.Big0, nil),
+		types.LatestSignerForChainID(blockchain.Config().ChainID), key)
+	require.NoError(t, err)
+	header = good.Header()
+	header.TxHash = types.DeriveTransactionsRoot(types.Transactions{tx}, header.Number)
+	unfunded := types.NewBlockWithHeader(header).WithBody(types.Transactions{tx})
+	require.Error(t, blockchain.ValidateProposalExecution(unfunded))
+	require.True(t, blockchain.HasBadBlock(unfunded.Hash()), "a transaction execution failure is recorded")
+
+	// A wrong state root fails in ValidateState and is recorded.
+	header = good.Header()
+	header.Root = common.HexToHash("0xbad")
+	bad := types.NewBlockWithHeader(header).WithBody(good.Transactions())
+	require.Error(t, blockchain.ValidateProposalExecution(bad))
+	require.True(t, blockchain.HasBadBlock(bad.Hash()), "a state validation failure is recorded")
+	require.Equal(t, uint64(0), blockchain.CurrentBlock().NumberU64())
+
+	_, err = blockchain.InsertChain(types.Blocks{good})
+	require.NoError(t, err)
+}
+
+// TestValidateProposalExecutionReadFaultNotRecorded checks that an execution
+// failure caused by a local state read fault, here a contract whose code is
+// missing from disk, is reported but not recorded as a bad proposal.
+func TestValidateProposalExecutionReadFaultNotRecorded(t *testing.T) {
+	var (
+		key, _   = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		sender   = crypto.PubkeyToAddress(key.PublicKey)
+		contract = common.Address{0xcc}
+		code     = []byte{0x60, 0x00} // PUSH1 0; runs without touching storage
+		db       = database.NewMemoryDBManager()
+		gspec    = &Genesis{
+			Config: params.TestChainConfig,
+			Alloc: GenesisAlloc{
+				sender:   {Balance: big.NewInt(1000000000000000000)},
+				contract: {Balance: common.Big0, Code: code},
+			},
+		}
+		genesis = gspec.MustCommit(db)
+		signer  = types.LatestSignerForChainID(gspec.Config.ChainID)
+	)
+	blockchain, err := NewBlockChain(db, nil, gspec.Config, faker.NewFaker(), vm.Config{})
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	tx, err := types.SignTx(types.NewTransaction(0, contract, common.Big0, 100000, big.NewInt(1), nil), signer, key)
+	require.NoError(t, err)
+	blocks, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 1, func(i int, b *BlockGen) {
+		b.AddTx(tx)
+	})
+	require.Len(t, blocks[0].Transactions(), 1, "the call executes while the code is on disk")
+
+	// The code is removed before the chain reads it, so the call executes
+	// against missing code and the resulting state no longer matches. That
+	// mismatch is a local read fault, not a fault of the block.
+	db.DeleteCode(crypto.Keccak256Hash(code))
+	header := blocks[0].Header()
+	header.Root = common.HexToHash("0xbad")
+	faulty := types.NewBlockWithHeader(header).WithBody(blocks[0].Transactions())
+	require.Error(t, blockchain.ValidateProposalExecution(faulty))
+	require.False(t, blockchain.HasBadBlock(faulty.Hash()), "a read fault must not record a bad proposal")
+}
+
 // newCanonical creates a chain database, and injects a deterministic canonical
 // chain. Depending on the full flag, if creates either a full block chain or a
 // header only chain.

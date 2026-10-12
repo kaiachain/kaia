@@ -96,7 +96,7 @@ func TestHandlePreprepareOldBlockCommitRequiresStoredRound(t *testing.T) {
 			// Already past blockNum, so the PRE-PREPARE arrives as an old message.
 			istCore.current = newRoundState(
 				&bft.View{Round: big.NewInt(0), Sequence: new(big.Int).SetUint64(blockNum + 1)},
-				valset.NewAddressSet([]common.Address{src}), common.Hash{}, nil, nil, nil)
+				valset.NewAddressSet([]common.Address{src}), common.Hash{}, nil, nil, nil, nil)
 
 			payload, err := bft.Encode(&bft.Preprepare{View: view, Proposal: proposal})
 			require.NoError(t, err)

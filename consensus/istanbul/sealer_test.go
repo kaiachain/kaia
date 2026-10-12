@@ -131,10 +131,10 @@ func TestCommittersRoundIndependent(t *testing.T) {
 	assert.Equal(t, []common.Address{addr}, got2)
 }
 
-// TestCacheSignatureAddress_BindsData checks that the cache binds data: a signature
+// TestCachedSignatureAddress_BindsData checks that the cache binds data: a signature
 // cached for one data must not be returned as the signer when queried with different
 // data (which would let a forged header reuse a cached recovery).
-func TestCacheSignatureAddress_BindsData(t *testing.T) {
+func TestCachedSignatureAddress_BindsData(t *testing.T) {
 	key, err := crypto.GenerateKey()
 	require.NoError(t, err)
 	signer := crypto.PubkeyToAddress(key.PublicKey)
@@ -144,7 +144,7 @@ func TestCacheSignatureAddress_BindsData(t *testing.T) {
 	sig, err := crypto.Sign(crypto.Keccak256(legitData), key)
 	require.NoError(t, err)
 
-	got, err := cacheSignatureAddress(legitData, sig)
+	got, err := CachedSignatureAddress(legitData, sig)
 	require.NoError(t, err)
 	require.Equal(t, signer, got) // populates the cache for sig
 
@@ -155,7 +155,7 @@ func TestCacheSignatureAddress_BindsData(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, signer, want) // sanity: different data recovers a different address
 
-	cached, err := cacheSignatureAddress(forgedData, sig)
+	cached, err := CachedSignatureAddress(forgedData, sig)
 	require.NoError(t, err)
 	assert.Equal(t, want, cached, "cache must bind data; a reused sig with different data must not return the cached signer")
 	assert.NotEqual(t, signer, cached)

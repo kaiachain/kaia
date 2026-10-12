@@ -146,11 +146,17 @@ func (c *stateObject) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, serializer)
 }
 
-// setError remembers the first non-nil error it is called with.
+// setError remembers the first non-nil error it is called with and reports
+// it to the owning StateDB, so that a storage or code read failure of any
+// object surfaces in StateDB.Error() like an account trie read failure.
 func (s *stateObject) setError(err error) {
+	if err == nil {
+		return
+	}
 	if s.dbErr == nil {
 		s.dbErr = err
 	}
+	s.db.setError(err)
 }
 
 func (s *stateObject) markSelfdestructed() {

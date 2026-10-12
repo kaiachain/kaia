@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // Start implements core.Engine.Start
@@ -114,7 +115,7 @@ func (c *core) handleEvents() {
 				}
 				// No need to check signature for internal messages
 				if err := c.handleCheckedMsg(ev.msg, ev.src); err == nil {
-					p, err := ev.msg.Payload()
+					p, err := ev.msg.PayloadForFork(c.isPermissionlessAt)
 					if err != nil {
 						c.logger.Warn("Get message payload failed", "err", err)
 						continue
@@ -156,7 +157,7 @@ func (c *core) handleMsg(payload []byte) error {
 
 	// Decode message and check its signature
 	msg := new(bft.Message)
-	if err := msg.FromPayload(payload, c.validateFn); err != nil {
+	if err := msg.FromPayloadForFork(payload, c.isPermissionlessAt, c.validateFn); err != nil {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			if err != istanbul.ErrUnauthorizedAddress {
 				logger.Error("Failed to decode message from payload", "err", err)
@@ -186,23 +187,39 @@ func (c *core) handleMsg(payload []byte) error {
 	return c.handleCheckedMsg(msg, msg.Address)
 }
 
-// maxSubjectMessageBytes bounds a PREPARE, COMMIT or ROUND CHANGE. These carry a
-// fixed-shape subject, but the envelope is not otherwise bounded: CommittedSeal
-// is only validated for COMMIT, and rlp does not cap the length of a big.Int
-// view field. The limit is far above a well-formed message, whose subject,
-// signature and committed seal take a few hundred bytes. PREPREPARE carries a
-// block and is bounded by the block size instead.
+// maxSubjectMessageBytes bounds the signed part of ROUND CHANGE, PREPARE and
+// COMMIT. These carry fixed-shape payloads, but rlp does not cap the length of
+// a big.Int view field. The limit is far above a well-formed message.
 const maxSubjectMessageBytes = 1024
 
-// checkMessageSize rejects an oversized PREPARE, COMMIT or ROUND CHANGE. It runs
-// before the retention paths diverge (backlog, roundChangeSet, messageSet), so
-// every retained copy of these messages is bounded per message.
-func checkMessageSize(msg *bft.Message) error {
-	if msg.Code == bft.MsgPreprepare {
-		return nil
-	}
-	if retainedMessageBytes(msg) > maxSubjectMessageBytes {
+// maxConsensusP2PMessageBytes matches node/cn.ProtocolMaxMsgSize. The P2P
+// message wraps the signed consensus payload in ConsensusMsg, so the payload
+// itself must be smaller than this cap.
+const maxConsensusP2PMessageBytes = 12 * 1024 * 1024
+
+// consensusP2PMessageSize is the RLP size of ConsensusMsg{PrevHash, Payload}.
+// A 32-byte PrevHash always occupies 33 RLP bytes.
+func consensusP2PMessageSize(payload []byte) uint64 {
+	return rlp.ListSize(33 + rlp.BytesSize(payload))
+}
+
+// checkMessageSize rejects an oversized consensus message before the retention
+// paths diverge (backlog, roundChangeSet, messageSet), so every retained copy
+// is bounded. A ROUND CHANGE may attach a prepared certificate, including the
+// prepared block, as its unsigned Evidence, so only the signed part is held to
+// the subject limit; the Evidence is bounded by the P2P limit below.
+func checkMessageSize(msg *bft.Message, isPermissionlessAt func(uint64) bool) error {
+	retained := retainedMessageBytes(msg)
+	if msg.Code != bft.MsgPreprepare && retained-uint64(len(msg.Evidence)) > maxSubjectMessageBytes {
 		return errMessageTooLarge
+	}
+	// Most messages are far below the P2P limit. Only encode near the boundary,
+	// where RLP headers and the ConsensusMsg wrapper can push a message over it.
+	if retained >= maxConsensusP2PMessageBytes-2048 {
+		payload, err := msg.PayloadForFork(isPermissionlessAt)
+		if err != nil || consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+			return errMessageTooLarge
+		}
 	}
 	return nil
 }
@@ -210,7 +227,7 @@ func checkMessageSize(msg *bft.Message) error {
 func (c *core) handleCheckedMsg(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
 
-	if err := checkMessageSize(msg); err != nil {
+	if err := checkMessageSize(msg, c.isPermissionlessAt); err != nil {
 		logger.Debug("Discarding oversized message", "code", msg.Code, "bytes", retainedMessageBytes(msg))
 		return err
 	}

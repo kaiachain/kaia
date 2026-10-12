@@ -22,6 +22,9 @@ var (
 	// errInconsistentSubject is returned when received subject is different from
 	// current subject.
 	errInconsistentSubject = errors.New("inconsistent subjects")
+	// errInconsistentPrevHash is returned when a message of the current
+	// sequence does not extend the parent recorded for the current height.
+	errInconsistentPrevHash = errors.New("inconsistent parent hash")
 	// errNotFromProposer is returned when received message is supposed to be from
 	// proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")
@@ -39,10 +42,11 @@ var (
 	// retained future-round window.
 	errRoundChangeTooFar = errors.New("round change is too far in the future")
 	// errRoundChangeMessageLimit is returned when a ROUND CHANGE bucket already
-	// retains a quorum of distinct senders.
+	// retains one message per committee member.
 	errRoundChangeMessageLimit = errors.New("round change message limit reached")
-	// errMessageTooLarge is returned when a PREPARE, COMMIT or ROUND CHANGE
-	// exceeds maxSubjectMessageBytes.
+	// errMessageTooLarge is returned when the signed part of a PREPARE, COMMIT
+	// or ROUND CHANGE exceeds maxSubjectMessageBytes, or when any message
+	// exceeds the P2P message size.
 	errMessageTooLarge = errors.New("message is too large")
 	// errOldMessage is returned when the received message's view is earlier
 	// than current view.
