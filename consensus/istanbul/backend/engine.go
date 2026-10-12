@@ -53,7 +53,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block) (*types
 	if commitCh == nil {
 		return nil, nil
 	}
-	defer sb.cleanupSealState()
+	defer sb.cleanupSealState(commitCh)
 
 	// post block into Istanbul engine
 	go sb.EventMux().Post(istanbul.RequestEvent{
