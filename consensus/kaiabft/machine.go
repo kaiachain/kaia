@@ -171,7 +171,7 @@ func (m *machine) runLoop() {
 					continue
 				}
 				if err := m.handleCheckedMsg(e.msg, e.src); err == nil {
-					p, err := e.msg.Payload()
+					p, err := e.msg.PayloadForFork(m.b.isPermissionlessAt)
 					if err != nil {
 						continue
 					}
@@ -205,8 +205,8 @@ func (m *machine) runLoop() {
 // ---------------------------------------------------------------------------
 
 func (m *machine) handleMsg(payload []byte) error {
-	msg := new(bft.Message)
-	if err := msg.FromPayload(payload, m.checkValidatorSignature); err != nil {
+	msg := new(wireMessage)
+	if err := msg.FromPayloadForFork(payload, m.b.isPermissionlessAt, m.checkValidatorSignature); err != nil {
 		if m.b.nodetype == common.CONSENSUSNODE && err != errUnauthorizedAddress {
 			logger.Error("Failed to decode message from payload", "err", err)
 		}
@@ -218,7 +218,7 @@ func (m *machine) handleMsg(payload []byte) error {
 	return m.handleCheckedMsg(msg, msg.Address)
 }
 
-func (m *machine) handleCheckedMsg(msg *bft.Message, src common.Address) error {
+func (m *machine) handleCheckedMsg(msg *wireMessage, src common.Address) error {
 	testBacklog := func(err error) error {
 		if err == errFutureMessage {
 			m.storeBacklog(msg, src)
@@ -266,7 +266,7 @@ func (m *machine) handleRequest(request *bft.Request) error {
 	return nil
 }
 
-func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
+func (m *machine) handlePreprepare(msg *wireMessage, src common.Address) error {
 	var pp *bft.Preprepare
 	if err := msg.Decode(&pp); err != nil {
 		return bft.ErrInvalidMessage
@@ -323,7 +323,7 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 	return nil
 }
 
-func (m *machine) handlePrepare(msg *bft.Message, src common.Address) error {
+func (m *machine) handlePrepare(msg *wireMessage, src common.Address) error {
 	var prepare *bft.Subject
 	if err := msg.Decode(&prepare); err != nil {
 		return bft.ErrInvalidMessage
@@ -353,7 +353,7 @@ func (m *machine) handlePrepare(msg *bft.Message, src common.Address) error {
 	return nil
 }
 
-func (m *machine) handleCommit(msg *bft.Message, src common.Address) error {
+func (m *machine) handleCommit(msg *wireMessage, src common.Address) error {
 	var commit *bft.Subject
 	if err := msg.Decode(&commit); err != nil {
 		return bft.ErrInvalidMessage
@@ -389,7 +389,7 @@ func (m *machine) handleCommit(msg *bft.Message, src common.Address) error {
 	return nil
 }
 
-func (m *machine) handleRoundChange(msg *bft.Message, _ common.Address) error {
+func (m *machine) handleRoundChange(msg *wireMessage, _ common.Address) error {
 	var rc *bft.Subject
 	if err := msg.Decode(&rc); err != nil {
 		return bft.ErrInvalidMessage
@@ -595,7 +595,7 @@ func (m *machine) sendPreprepare(request *bft.Request) {
 	if err != nil {
 		return
 	}
-	m.broadcastMsg(&bft.Message{
+	m.broadcastMsg(&wireMessage{
 		Hash: request.Proposal.ParentHash(),
 		Code: bft.MsgPreprepare,
 		Msg:  encoded,
@@ -614,7 +614,7 @@ func (m *machine) sendPrepare() {
 	if err != nil {
 		return
 	}
-	m.broadcastMsg(&bft.Message{
+	m.broadcastMsg(&wireMessage{
 		Hash: m.preprepare.Proposal.ParentHash(),
 		Code: bft.MsgPrepare,
 		Msg:  encoded,
@@ -641,7 +641,7 @@ func (m *machine) broadcastCommit(sub *bft.Subject) {
 	if err != nil {
 		return
 	}
-	m.broadcastMsg(&bft.Message{
+	m.broadcastMsg(&wireMessage{
 		Hash: sub.PrevHash,
 		Code: bft.MsgCommit,
 		Msg:  encoded,
@@ -678,14 +678,14 @@ func (m *machine) sendRoundChange(round *big.Int) {
 	if err != nil {
 		return
 	}
-	m.broadcastMsg(&bft.Message{
+	m.broadcastMsg(&wireMessage{
 		Hash: rc.PrevHash,
 		Code: bft.MsgRoundChange,
 		Msg:  payload,
 	})
 }
 
-func (m *machine) broadcastMsg(msg *bft.Message) {
+func (m *machine) broadcastMsg(msg *wireMessage) {
 	msg.Address = m.b.address
 	msg.CommittedSeal = []byte{}
 	if msg.Code == bft.MsgCommit && m.preprepare != nil {
@@ -696,7 +696,7 @@ func (m *machine) broadcastMsg(msg *bft.Message) {
 		}
 	}
 
-	data, err := msg.PayloadNoSig()
+	data, err := msg.PayloadNoSigForFork(m.b.isPermissionlessAt)
 	if err != nil {
 		return
 	}
@@ -705,7 +705,7 @@ func (m *machine) broadcastMsg(msg *bft.Message) {
 		return
 	}
 
-	payload, err := msg.Payload()
+	payload, err := msg.PayloadForFork(m.b.isPermissionlessAt)
 	if err != nil {
 		return
 	}
@@ -902,7 +902,7 @@ func (m *machine) getPrepareOrCommitSize() int {
 
 func (m *machine) verifySubject(sub *bft.Subject) error {
 	expected := m.subject()
-	if expected == nil || !sub.Equal(expected) {
+	if expected == nil || !(sub.Digest == expected.Digest && sub.PrevHash == expected.PrevHash && sub.View.Cmp(expected.View) == 0) {
 		return errInconsistentSubject
 	}
 	return nil
@@ -1047,7 +1047,7 @@ var msgPriority = map[uint64]int{
 	bft.MsgPrepare:    3,
 }
 
-func (m *machine) storeBacklog(msg *bft.Message, src common.Address) {
+func (m *machine) storeBacklog(msg *wireMessage, src common.Address) {
 	if src == m.b.address {
 		return
 	}
@@ -1084,7 +1084,7 @@ func (m *machine) processBacklog() {
 		isFuture := false
 		for !(backlog.Empty() || isFuture) {
 			item, prio := backlog.Pop()
-			msg := item.(*bft.Message)
+			msg := item.(*wireMessage)
 			var view *bft.View
 			var prevHash common.Hash
 			switch msg.Code {
@@ -1146,7 +1146,7 @@ func toPriority(msgCode uint64, view *bft.View) int64 {
 // Round change set
 // ---------------------------------------------------------------------------
 
-func (m *machine) addRoundChange(round *big.Int, msg *bft.Message) int {
+func (m *machine) addRoundChange(round *big.Int, msg *wireMessage) int {
 	m.roundChangesMu.Lock()
 	defer m.roundChangesMu.Unlock()
 	r := round.Uint64()
@@ -1189,18 +1189,18 @@ func (m *machine) maxRoundChangeRound(minCount int) *big.Int {
 
 type messageSet struct {
 	mu       sync.Mutex
-	messages map[common.Address]*bft.Message
+	messages map[common.Address]*wireMessage
 	allowed  *valset.AddressSet
 }
 
 func newMessageSet(allowed *valset.AddressSet) *messageSet {
 	return &messageSet{
-		messages: make(map[common.Address]*bft.Message),
+		messages: make(map[common.Address]*wireMessage),
 		allowed:  allowed,
 	}
 }
 
-func (ms *messageSet) Add(msg *bft.Message) error {
+func (ms *messageSet) Add(msg *wireMessage) error {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	if ms.allowed != nil && !ms.allowed.Contains(msg.Address) {
@@ -1210,10 +1210,10 @@ func (ms *messageSet) Add(msg *bft.Message) error {
 	return nil
 }
 
-func (ms *messageSet) Values() []*bft.Message {
+func (ms *messageSet) Values() []*wireMessage {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
-	result := make([]*bft.Message, 0, len(ms.messages))
+	result := make([]*wireMessage, 0, len(ms.messages))
 	for _, v := range ms.messages {
 		result = append(result, v)
 	}
@@ -1226,7 +1226,7 @@ func (ms *messageSet) Size() int {
 	return len(ms.messages)
 }
 
-func (ms *messageSet) Get(addr common.Address) *bft.Message {
+func (ms *messageSet) Get(addr common.Address) *wireMessage {
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
 	return ms.messages[addr]

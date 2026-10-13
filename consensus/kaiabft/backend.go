@@ -654,10 +654,15 @@ type newSequenceEvent struct{}
 
 type backlogEvent struct {
 	src  common.Address
-	msg  *bft.Message
+	msg  *wireMessage
 	Hash common.Hash
 }
 
 type timeoutEvent struct {
 	nextView *bft.View
+}
+
+// isPermissionlessAt reports whether the permissionless fork is enabled at num.
+func (b *backend) isPermissionlessAt(num uint64) bool {
+	return b.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num))
 }
