@@ -16,11 +16,10 @@
 
 // Package kaiabft implements a BFT consensus engine with speculative execution.
 //
-// KaiaBFT is wire-compatible with Istanbul BFT — they use the same message
-// format, same extra-data layout, and can reach consensus together in a mixed
-// network. The key enhancement is that non-proposer validators speculatively
-// execute the proposed block upon receiving a pre-prepare, populating a cache
-// that InsertChain can use to skip re-execution.
+// Non-proposer validators execute proposals speculatively, populating a cache
+// that InsertChain can use to skip re-execution. The network boundary uses the
+// fork-aware BFT codec. Post-Permissionless recovery rounds are refused until
+// prepared-certificate recovery is ported; this engine is not rollout-ready.
 package kaiabft
 
 import (
