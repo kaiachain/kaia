@@ -2664,7 +2664,7 @@ func (bc *BlockChain) ValidateProposalExecution(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	receipts, _, usedGas, _, _, err := bc.processor.Process(block, stateDB, bc.vmConfig)
+	receipts, _, usedGas, _, _, err := bc.processor.Process(context.Background(), block, stateDB, bc.vmConfig)
 	if err == nil {
 		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
 	}
