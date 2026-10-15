@@ -231,3 +231,23 @@ func Test_Table_Bond_recentlyBonded(t *testing.T) {
 	// ping must not be called because the node is assumed to be bonded.
 	assert.Equal(t, int32(0), udp.pingCnt.Load(), "ping should be skipped for a recently bonded node")
 }
+
+// A NEIGHBORS entry may reuse a bonded node's ID and IP with other ports. The shortcut
+// must not let it overwrite the stored endpoint, or the next revalidation pings the
+// wrong port and evicts the node.
+func Test_Table_Bond_assumedBondKeepsStoredEndpoint(t *testing.T) {
+	udp := newMockTransport()
+	tab := newTestTable2(t, udp)
+	n := newTestNode(t, NodeTypeEN)
+	tab.addNode(n)
+	tab.recordBonded(n)
+
+	forged := NewNode(n.ID, n.IP, n.UDP+1, n.TCP+1, nil, n.NType)
+	require.NoError(t, tab.Bond(false, forged))
+
+	stored := tab.storages[NodeTypeEN].all()
+	require.Len(t, stored, 1)
+	assert.Equal(t, n.UDP, stored[0].UDP)
+	assert.Equal(t, n.TCP, stored[0].TCP)
+	assert.Equal(t, int32(0), udp.pingCnt.Load())
+}

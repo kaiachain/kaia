@@ -141,8 +141,14 @@ func (tab *Table2) Bond(pinged bool, n *Node) error {
 		return errTableNotReady
 	}
 
-	// Skip if we're really sure that this node is reachable and completed the bonding process.
+	// Skip the ping-pong if we're really sure that this node is reachable and completed
+	// the bonding process. The storage may still have dropped it (e.g. SetCNPeers), so put
+	// it back from the record that passed the ping-pong: n may come from a third party's
+	// NEIGHBORS, and its ports are unchecked.
 	if tab.canAssumeBonded(n.ID, n.IP) {
+		if stored := tab.db.node(n.ID); stored != nil {
+			tab.addNode(stored)
+		}
 		return nil
 	}
 

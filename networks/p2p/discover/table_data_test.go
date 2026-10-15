@@ -224,3 +224,42 @@ func Test_Table_IsBonded_true(t *testing.T) {
 	tab.recordBonded(n)
 	assert.True(t, tab.IsBonded(n.ID, n.IP), "node with recent bond time should be bonded")
 }
+
+// A CN that leaves CNPeers is dropped from the CN storage, but its bond in the node
+// database stays fresh for a day. When it re-enters CNPeers, the lookups that return it
+// go through Bond(), which trusts that bond and returns early: the node must still be put
+// back into the storage, or the dial scheduler never sees it again until the bond expires.
+func Test_Table_SetCNPeers_readmitsBondedNode(t *testing.T) {
+	tab := newTestTable2(t, nil)
+	member, memberAddr := newTestNodeWithAddr(t, NodeTypeCN)
+	_, otherAddr := newTestNodeWithAddr(t, NodeTypeCN)
+
+	tab.SetCNPeers([]common.Address{memberAddr, otherAddr})
+	tab.addNode(member)
+	tab.recordBonded(member)
+	require.True(t, tab.canAssumeBonded(member.ID, member.IP))
+	require.Equal(t, 1, tab.storages[NodeTypeCN].len())
+
+	// Leaves the allowlist: dropped from the storage, bond still fresh.
+	tab.SetCNPeers([]common.Address{otherAddr})
+	require.Equal(t, 0, tab.storages[NodeTypeCN].len())
+	require.True(t, tab.canAssumeBonded(member.ID, member.IP))
+
+	// Re-enters it: the next lookup result that is bonded must land in the storage.
+	tab.SetCNPeers([]common.Address{memberAddr, otherAddr})
+	require.NoError(t, tab.Bond(false, member))
+	stored := tab.storages[NodeTypeCN].all()
+	require.Len(t, stored, 1, "a re-admitted CN must be stored again even though its bond is assumed")
+	assert.Equal(t, member.ID, stored[0].ID)
+
+	// The inbound half (the remote pinged us) takes the same shortcut.
+	tab.storages[NodeTypeCN].delete(member)
+	tab.init.Store(true) // inbound bonding is refused until the table has seeded itself
+	require.NoError(t, tab.Bond(true, member))
+	assert.Equal(t, 1, tab.storages[NodeTypeCN].len())
+
+	// Still outside the allowlist: the shortcut must not put an outsider back.
+	tab.SetCNPeers([]common.Address{otherAddr})
+	require.NoError(t, tab.Bond(false, member))
+	assert.Equal(t, 0, tab.storages[NodeTypeCN].len())
+}
