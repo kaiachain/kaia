@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -60,7 +61,9 @@ const (
 var (
 	logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
-	errStoppedEngine = errors.New("kaiabft: stopped engine")
+	// errStoppedEngine wraps the istanbul sentinel so the CN handler keeps
+	// peers whose consensus messages arrive while the engine is stopped.
+	errStoppedEngine = fmt.Errorf("kaiabft: %w", istanbul.ErrStoppedEngine)
 	errStartedEngine = errors.New("kaiabft: started engine")
 	errDecodeFailed  = errors.New("kaiabft: fail to decode message")
 	errNoChainReader = errors.New("kaiabft: chain is nil, --mine option might be missing")

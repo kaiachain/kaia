@@ -21,6 +21,7 @@ package cn
 import (
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -32,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
@@ -153,7 +155,9 @@ func TestHandleConsensusMsgWhileEngineStopped(t *testing.T) {
 		wantErr error
 	}{
 		{"stopped engine keeps the peer", istanbul.ErrStoppedEngine, nil},
+		{"wrapped stopped engine keeps the peer", fmt.Errorf("engine: %w", istanbul.ErrStoppedEngine), nil},
 		{"other errors drop the peer", expectedErr, expectedErr},
+		{"same text without the sentinel drops the peer", errStoppedLookalike, errStoppedLookalike},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
@@ -186,6 +190,110 @@ func TestHandleConsensusMsgWhileEngineStopped(t *testing.T) {
 			assert.Equal(t, 2, handler.calls)
 		})
 	}
+}
+
+// errStoppedLookalike carries the KaiaBFT stopped-engine text but not the
+// sentinel, so matching must not fall back to the message string.
+var errStoppedLookalike = errors.New("kaiabft: stopped engine")
+
+// newStoppedKaiaBFTEngine builds the KaiaBFT engine through the production
+// factory. It is never started, so it is in the same coreStarted=false state
+// that Stop leaves behind.
+func newStoppedKaiaBFTEngine(t *testing.T) consensus.Engine {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	return engine.NewEngine(&engine.Opts{
+		EngineType:     engine.KaiaBFT,
+		IstanbulConfig: istanbul.DefaultConfig,
+		PrivateKey:     key,
+		NodeType:       common.CONSENSUSNODE,
+	})
+}
+
+func newStoppedKaiaBFTHandler(t *testing.T) consensus.Handler {
+	handler, ok := newStoppedKaiaBFTEngine(t).(consensus.Handler)
+	require.True(t, ok, "kaiabft engine must implement consensus.Handler")
+	return handler
+}
+
+// A consensus message that reaches a stopped KaiaBFT engine must keep the peer
+// on both the single-channel and the multichannel read loops.
+func TestHandleConsensusMsgWhileKaiaBFTEngineStopped(t *testing.T) {
+	consensusMsg := func() p2p.Msg { return generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{}) }
+
+	newPeer := func(ctrl *gomock.Controller) *MockPeer {
+		p := NewMockPeer(ctrl)
+		p.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		p.EXPECT().GetP2PPeer().Return(p2p.NewPeer(nodeids[0], "cn", nil)).AnyTimes()
+		return p
+	}
+
+	t.Run("engine error matches the istanbul sentinel", func(t *testing.T) {
+		eng := newStoppedKaiaBFTEngine(t)
+		require.ErrorIs(t, eng.Stop(), istanbul.ErrStoppedEngine)
+
+		handler := eng.(consensus.Handler)
+		handled, err := handler.HandleMsg(addrs[0], consensusMsg())
+		assert.True(t, handled)
+		require.ErrorIs(t, err, istanbul.ErrStoppedEngine)
+		assert.NotSame(t, istanbul.ErrStoppedEngine, err, "kaiabft keeps its own error value")
+
+		pm := &ProtocolManager{handler: handler}
+		handled, err = pm.handleConsensusMsg(addrs[0], consensusMsg())
+		assert.True(t, handled)
+		assert.NoError(t, err)
+	})
+
+	t.Run("single channel", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		pm := &ProtocolManager{handler: newStoppedKaiaBFTHandler(t)}
+		assert.NoError(t, pm.handleMsg(newPeer(mockCtrl), addrs[0], consensusMsg()))
+	})
+
+	t.Run("single channel read loop continues", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		pm := &ProtocolManager{handler: newStoppedKaiaBFTHandler(t)}
+
+		// Two consensus messages, then a message that must drop the peer. The
+		// loop reporting ErrExtraStatusMsg proves it got past both.
+		msgCh := make(chan p2p.Msg, 3)
+		errCh := make(chan error, 1)
+		msgCh <- consensusMsg()
+		msgCh <- consensusMsg()
+		msgCh <- generateMsg(t, StatusMsg, struct{}{})
+		close(msgCh)
+		pm.processMsg(msgCh, newPeer(mockCtrl), addrs[0], errCh)
+
+		select {
+		case err := <-errCh:
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), errCode(ErrExtraStatusMsg).String())
+		default:
+			t.Fatal("status message after the consensus messages was not processed")
+		}
+	})
+
+	t.Run("multichannel", func(t *testing.T) {
+		mockCtrl := gomock.NewController(t)
+		defer mockCtrl.Finish()
+		pm := &ProtocolManager{handler: newStoppedKaiaBFTHandler(t)}
+
+		msgCh := make(chan p2p.Msg, 2)
+		errCh := make(chan error, 1)
+		msgCh <- consensusMsg()
+		msgCh <- consensusMsg()
+		close(msgCh)
+		pm.processConsensusMsg(msgCh, newPeer(mockCtrl), addrs[0], errCh)
+
+		select {
+		case err := <-errCh:
+			t.Fatalf("stopped engine dropped the peer: %v", err)
+		default:
+		}
+		assert.Zero(t, len(msgCh), "loop must consume every message")
+	})
 }
 
 func prepareDownloader(t *testing.T) (*gomock.Controller, *mocks2.MockProtocolManagerDownloader, *MockPeer, *ProtocolManager) {
