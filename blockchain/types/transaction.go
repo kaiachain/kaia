@@ -50,6 +50,7 @@ var (
 	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
 	ErrInvalidSigSender               = errors.New("invalid transaction v, r, s values of the sender")
 	ErrInvalidSigFeePayer             = errors.New("invalid transaction v, r, s values of the fee payer")
+	ErrInvalidSignatureCount          = errors.New("invalid number of transaction signatures")
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
 	ErrNotLegacyAccount               = errors.New("not a legacy account")
 	ErrInvalidAccountKey              = errors.New("invalid account key")
@@ -63,6 +64,12 @@ var (
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return LatestSignerForChainID(deriveChainId(V))
+}
+
+// errSingleSignatureOnly reports that a single-signature transaction type was
+// given a signature list of the wrong length.
+func errSingleSignatureOnly(txType TxType, got int) error {
+	return fmt.Errorf("%w: %s accepts exactly one signature, got %d", ErrInvalidSignatureCount, txType, got)
 }
 
 func ErrSender(err error) error {
@@ -757,7 +764,9 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		te.SetChainId(signer.ChainID())
 	}
 
-	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
+	if err := cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}}); err != nil {
+		return nil, err
+	}
 	return cpy, nil
 }
 
@@ -800,8 +809,7 @@ func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 		return err
 	}
 
-	tx.SetSignature(TxSignatures{sig})
-	return nil
+	return tx.SetSignature(TxSignatures{sig})
 }
 
 // SignWithKeys signs the tx with the given signer and a slice of private keys.
@@ -812,8 +820,7 @@ func (tx *Transaction) SignWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
 		return err
 	}
 
-	tx.SetSignature(sig)
-	return nil
+	return tx.SetSignature(sig)
 }
 
 // SignFeePayer signs the tx with the given signer and private key as a fee payer.
@@ -872,8 +879,11 @@ func (tx *Transaction) GetFeePayerSignatures() (TxSignatures, error) {
 	return tf.GetFeePayerRawSignatureValues(), nil
 }
 
-func (tx *Transaction) SetSignature(signature TxSignatures) {
-	tx.data.SetSignature(signature)
+// SetSignature sets the sender signatures of the transaction. It returns
+// ErrInvalidSignatureCount if the underlying transaction type cannot hold the
+// given number of signatures.
+func (tx *Transaction) SetSignature(signature TxSignatures) error {
+	return tx.data.SetSignature(signature)
 }
 
 func (tx *Transaction) MarkUnexecutable(b bool) {

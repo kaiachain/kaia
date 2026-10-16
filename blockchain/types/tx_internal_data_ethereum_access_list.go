@@ -253,14 +253,15 @@ func (t *TxInternalDataEthereumAccessList) setHashForMarshaling(hash *common.Has
 	t.Hash = hash
 }
 
-func (t *TxInternalDataEthereumAccessList) SetSignature(signatures TxSignatures) {
+func (t *TxInternalDataEthereumAccessList) SetSignature(signatures TxSignatures) error {
 	if len(signatures) != 1 {
-		logger.Crit("TxTypeEthereumAccessList can receive only single signature!")
+		return errSingleSignatureOnly(t.Type(), len(signatures))
 	}
 
 	t.V = signatures[0].V
 	t.R = signatures[0].R
 	t.S = signatures[0].S
+	return nil
 }
 
 func (t *TxInternalDataEthereumAccessList) RawSignatureValues() TxSignatures {

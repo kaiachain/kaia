@@ -241,8 +241,9 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) setHashForMarsha
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SetFeePayerSignatures(s TxSignatures) {
