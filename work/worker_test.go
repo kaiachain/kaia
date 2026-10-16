@@ -57,6 +57,7 @@ func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engin
 	// commitNewWork stops at Pending.
 	takenCh := make(chan struct{}, 1)
 	txPool := mocks.NewMockTxPool(ctrl)
+	txPool.EXPECT().CurrentBlockNumber().Return(uint64(0)).AnyTimes()
 	txPool.EXPECT().Pending().DoAndReturn(func() (map[common.Address]types.Transactions, error) {
 		takenCh <- struct{}{}
 		return nil, errors.New("no pending txs")
