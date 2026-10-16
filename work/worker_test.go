@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
@@ -51,6 +52,7 @@ func (b *testBackend) ReBroadcastTxs(types.Transactions)       {}
 // newTestWorker runs a worker's update loop on finalizeCh and mux. Each new sequence it takes is sent on taken.
 func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engine, finalizeCh <-chan *consensus.ExecutionResult, mux *event.TypeMux) (w *worker, taken <-chan struct{}) {
 	chain := mocks.NewMockBlockChain(ctrl)
+	chain.EXPECT().VMConfig().Return(vm.Config{}).AnyTimes()
 	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Time: big.NewInt(0)})).AnyTimes()
 	// commitNewWork stops at Pending.
 	takenCh := make(chan struct{}, 1)
