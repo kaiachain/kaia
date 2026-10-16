@@ -17,6 +17,7 @@
 package kaiabft
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -26,6 +27,8 @@ import (
 )
 
 // wireMessage is the internal Subject representation, not a wire envelope.
+// Prepared and Evidence carry what a post-Permissionless ROUND CHANGE adds to
+// the Subject: the signed prepared claim and the unsigned certificate proving it.
 type wireMessage struct {
 	Hash          common.Hash
 	Code          uint64
@@ -33,6 +36,8 @@ type wireMessage struct {
 	Address       common.Address
 	Signature     []byte
 	CommittedSeal []byte
+	Prepared      *bft.PreparedClaim
+	Evidence      []byte
 }
 
 // Decode unmarshals m.Msg into val.
@@ -67,11 +72,13 @@ func (m *wireMessage) GetView() (*bft.View, error) {
 }
 
 // The engine keeps its Subject representation internally. Network encoding
-// uses rc.3's fork-aware codec. Prepared-certificate recovery remains unported.
-var errUnsupportedRecovery = errors.New("kaiabft prepared-certificate recovery is not implemented")
+// uses rc.3's fork-aware codec. The signed payload is re-derived from this
+// representation whenever a message is relayed or embedded in a certificate,
+// so ingress admits only messages that the conversion reproduces byte for byte.
+var errNonCanonicalMessage = errors.New("kaiabft: message is not in canonical form")
 
 func (m *wireMessage) normalized() (*bft.Message, error) {
-	n := &bft.Message{PrevHash: m.Hash, Code: m.Code, Msg: m.Msg, Address: m.Address, Signature: m.Signature}
+	n := &bft.Message{PrevHash: m.Hash, Code: m.Code, Msg: m.Msg, Address: m.Address, Signature: m.Signature, Evidence: m.Evidence}
 	if m.Code == bft.MsgPreprepare {
 		return n, nil
 	}
@@ -86,7 +93,7 @@ func (m *wireMessage) normalized() (*bft.Message, error) {
 	case bft.MsgCommit:
 		value = &bft.Commit{View: s.View, Digest: s.Digest, CommittedSeal: m.CommittedSeal}
 	case bft.MsgRoundChange:
-		value = &bft.RoundChange{View: s.View}
+		value = &bft.RoundChange{View: s.View, Prepared: m.Prepared}
 	default:
 		return nil, bft.ErrInvalidMessage
 	}
@@ -94,19 +101,22 @@ func (m *wireMessage) normalized() (*bft.Message, error) {
 	n.Msg, err = bft.Encode(value)
 	return n, err
 }
+
+// withoutEvidence returns a shallow copy without the unsigned Evidence.
+func (m *wireMessage) withoutEvidence() *wireMessage {
+	stripped := *m
+	stripped.Evidence = nil
+	return &stripped
+}
+
 func (m *wireMessage) fromNormalized(n *bft.Message) error {
 	*m = wireMessage{Hash: n.PrevHash, Code: n.Code, Msg: n.Msg, Address: n.Address, Signature: n.Signature}
 	var s bft.Subject
 	s.PrevHash = n.PrevHash
 	switch n.Code {
 	case bft.MsgPreprepare:
-		var pp bft.Preprepare
-		if err := n.Decode(&pp); err != nil {
-			return err
-		}
-		if len(pp.RoundChangeCertificate) > 0 || len(pp.PreparedMessages) > 0 {
-			return errUnsupportedRecovery
-		}
+		// The payload, justification included, is kept as signed; the
+		// handler decodes it.
 		return nil
 	case bft.MsgPrepare:
 		var p bft.Prepare
@@ -125,10 +135,8 @@ func (m *wireMessage) fromNormalized(n *bft.Message) error {
 		if err := n.Decode(&r); err != nil {
 			return err
 		}
-		if r.Prepared != nil || n.Evidence != nil {
-			return errUnsupportedRecovery
-		}
 		s.View = r.View
+		m.Prepared, m.Evidence = r.Prepared, n.Evidence
 	default:
 		return bft.ErrInvalidMessage
 	}
@@ -136,21 +144,30 @@ func (m *wireMessage) fromNormalized(n *bft.Message) error {
 	m.Msg, err = bft.Encode(&s)
 	return err
 }
+
 func (m *wireMessage) FromPayloadForFork(data []byte, fork func(uint64) bool, validate func([]byte, []byte) (common.Address, error)) error {
 	var n bft.Message
 	if err := n.FromPayloadForFork(data, fork, validate); err != nil {
 		return err
 	}
-	// The state machine does not implement rc.3 certificate justification.
-	// Reject every post-fork recovery round, including unjustified proposals.
-	view, err := n.GetView()
+	if err := m.fromNormalized(&n); err != nil {
+		return err
+	}
+	if n.Code == bft.MsgPreprepare {
+		return nil
+	}
+	// rlp accepts a few alternative encodings of one value, such as an empty
+	// list for an absent prepared claim. A message in such a form would be
+	// relayed, or embedded in a certificate, with bytes its sender never
+	// signed, so it is refused here.
+	back, err := m.normalized()
 	if err != nil {
 		return err
 	}
-	if fork(view.Sequence.Uint64()) && view.Round.Sign() > 0 {
-		return errUnsupportedRecovery
+	if !bytes.Equal(back.Msg, n.Msg) {
+		return errNonCanonicalMessage
 	}
-	return m.fromNormalized(&n)
+	return nil
 }
 
 func (m *wireMessage) PayloadForFork(fork func(uint64) bool) ([]byte, error) {
@@ -158,26 +175,13 @@ func (m *wireMessage) PayloadForFork(fork func(uint64) bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	view, err := n.GetView()
-	if err != nil {
-		return nil, err
-	}
-	if fork(view.Sequence.Uint64()) && view.Round.Sign() > 0 {
-		return nil, errUnsupportedRecovery
-	}
 	return n.PayloadForFork(fork)
 }
+
 func (m *wireMessage) PayloadNoSigForFork(fork func(uint64) bool) ([]byte, error) {
 	n, err := m.normalized()
 	if err != nil {
 		return nil, err
-	}
-	view, err := n.GetView()
-	if err != nil {
-		return nil, err
-	}
-	if fork(view.Sequence.Uint64()) && view.Round.Sign() > 0 {
-		return nil, errUnsupportedRecovery
 	}
 	return n.PayloadNoSigForFork(fork)
 }

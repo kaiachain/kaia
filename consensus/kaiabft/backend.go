@@ -18,8 +18,8 @@
 //
 // Non-proposer validators execute proposals speculatively, populating a cache
 // that InsertChain can use to skip re-execution. The network boundary uses the
-// fork-aware BFT codec. Post-Permissionless recovery rounds are refused until
-// prepared-certificate recovery is ported; this engine is not rollout-ready.
+// fork-aware BFT codec. Post-Permissionless recovery rounds follow istanbul/core's
+// prepared-certificate rules (recovery.go).
 package kaiabft
 
 import (

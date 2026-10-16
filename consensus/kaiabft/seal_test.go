@@ -17,6 +17,7 @@
 package kaiabft
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -195,40 +197,84 @@ func TestDevParity_SelfCommitRoundTrip(t *testing.T) {
 }
 
 // A hash-locked block re-proposed in a later round is committed with seals
-// bound to the new round; the round byte stays outside the block hash.
+// bound to the new round; the round byte stays outside the block hash. After
+// the permissionless fork the re-proposal carries its round-change
+// justification and a PREPARE quorum at the new round precedes the COMMIT, as
+// in istanbul/core: there is no hash-lock shortcut there.
 func TestDevParity_HashLockedReproposalCommitBindsNewRound(t *testing.T) {
 	sealer := istanbul.NewSealerImpl(nil)
 	prev := types.HeaderHashFn
 	types.SetHeaderHashFn(sealer.HeaderHash)
 	defer types.SetHeaderHashFn(prev)
 
+	ctrl := gomock.NewController(t)
 	b, key := newTestBackend(t, &fakeChain{cfg: permissionlessConfig()})
 	self := crypto.PubkeyToAddress(key.PublicKey)
 	proposerKey, err := crypto.GenerateKey()
 	require.NoError(t, err)
 	proposer := crypto.PubkeyToAddress(proposerKey.PublicKey)
+	committee := []common.Address{self, proposer}
+	mValset := valset_mock.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCouncil(gomock.Any()).Return(committee, nil).AnyTimes()
+	mValset.EXPECT().GetDemotedValidators(gomock.Any()).Return(nil, nil).AnyTimes()
+	mValset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return(committee, nil).AnyTimes()
+	mValset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(proposer, nil).AnyTimes()
+	b.RegisterKaiaxModules(gov_mock.NewMockGovModule(ctrl), mValset)
 
 	header := newEmptyBlock(10, common.Hash{1}).Header()
-	require.NoError(t, b.sealer.WriteValidators(header, []common.Address{self, proposer}))
+	require.NoError(t, b.sealer.WriteValidators(header, committee))
 	b.sealer.WriteRound(header, 2)
 	locked := types.NewBlockWithHeader(header)
 
-	m := newTestMachine(b, 10, 3, locked, []common.Address{self, proposer})
+	m := newTestMachine(b, 10, 3, locked, committee)
 	m.preprepare.View = &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(2)}
 	m.lockedHash = locked.Hash()
 	m.state = stateAcceptRequest
 	m.proposer = proposer
+	m.parentHash = locked.ParentHash()
+	m.requiredMessageCount = 2
 
 	reHeader := locked.Header()
 	b.sealer.WriteRound(reHeader, 3)
 	reproposed := locked.WithSeal(reHeader)
 	require.Equal(t, locked.Hash(), reproposed.Hash())
 
+	// The round-3 ROUND CHANGE quorum claims the round-2 lock, and the round-2
+	// PREPAREs of both members prove it.
+	signed := func(k *ecdsa.PrivateKey, code uint64, payload any) *bft.Message {
+		msg := &bft.Message{PrevHash: locked.ParentHash(), Code: code, Msg: mustEncode(t, payload), Address: crypto.PubkeyToAddress(k.PublicKey)}
+		unsigned, err := msg.PayloadNoSig()
+		require.NoError(t, err)
+		msg.Signature = sealOver(t, k, unsigned)
+		return msg
+	}
+	lockView := &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(2)}
+	newView := &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(3)}
+	claim := &bft.PreparedClaim{Round: big.NewInt(2), Digest: locked.Hash(), EvidenceHash: common.Hash{1}}
+	var rcc, votes []*bft.Message
+	for _, k := range []*ecdsa.PrivateKey{key, proposerKey} {
+		rcc = append(rcc, signed(k, bft.MsgRoundChange, &bft.RoundChange{View: newView, Prepared: claim}))
+		votes = append(votes, signed(k, bft.MsgPrepare, &bft.Prepare{View: lockView, Digest: locked.Hash()}))
+	}
+
 	msgs, stop := captureMessages(b)
 	defer stop()
-	pp := &bft.Preprepare{View: &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(3)}, Proposal: reproposed}
+	pp := &bft.Preprepare{View: newView, Proposal: reproposed, RoundChangeCertificate: rcc, PreparedMessages: votes}
 	require.NoError(t, m.handlePreprepare(&wireMessage{Code: bft.MsgPreprepare, Msg: mustEncode(t, pp)}, proposer))
+	require.Equal(t, statePreprepared, m.state)
+	require.Equal(t, int64(2), m.preparedCertificate.View.Round.Int64(), "the justified certificate is adopted")
+
+	prepare := recvMessage(t, msgs)
+	require.Equal(t, uint64(bft.MsgPrepare), prepare.Code)
+	peerPrepare := signed(proposerKey, bft.MsgPrepare, &bft.Prepare{View: newView, Digest: locked.Hash()})
+	var peer wireMessage
+	require.NoError(t, peer.fromNormalized(peerPrepare))
+	require.NoError(t, m.handlePrepare(&peer, proposer))
+	ownPrepare, err := prepare.PayloadForFork(b.isPermissionlessAt)
+	require.NoError(t, err)
+	require.NoError(t, m.handleMsg(ownPrepare))
 	require.Equal(t, statePrepared, m.state)
+	require.Equal(t, int64(3), m.preparedCertificate.View.Round.Int64(), "the PREPARE quorum refreshes the certificate")
 
 	commit := recvMessage(t, msgs)
 	require.Equal(t, uint64(bft.MsgCommit), commit.Code)

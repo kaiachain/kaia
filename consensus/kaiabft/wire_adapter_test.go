@@ -64,22 +64,33 @@ func TestWireAdapterRoundZeroSharedCodec(t *testing.T) {
 	}
 }
 
-func TestWireAdapterRejectsPostForkRecovery(t *testing.T) {
+// Post-fork recovery messages, a prepared claim with its Evidence and a
+// justified PRE-PREPARE included, pass the adapter losslessly: the payload and
+// signed preimage the machine re-derives are the ones the sender signed, so a
+// relayed or embedded message stays verifiable. Whether such a message is
+// justified is decided by the machine (recovery_test.go), not the adapter.
+func TestWireAdapterPostForkRecoveryRoundTrip(t *testing.T) {
 	b, key := newTestBackend(t, &fakeChain{cfg: permissionlessConfig()})
 	view := &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(1)}
 	block := newEmptyBlock(10, common.Hash{1})
 	seal, err := crypto.Sign(crypto.Keccak256(b.committedSealPreimage(view, block.Hash())), key)
 	require.NoError(t, err)
+	evidence := []byte{0xc1, 0x80}
+	claim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: block.Hash(), EvidenceHash: crypto.Keccak256Hash(evidence)}
+	embedded := &bft.Message{PrevHash: block.ParentHash(), Code: bft.MsgRoundChange, Msg: mustEncode(t, &bft.RoundChange{View: view, Prepared: claim}), Address: b.address, Signature: make([]byte, 65)}
 	for _, tc := range []struct {
-		code    uint64
-		payload any
+		code     uint64
+		payload  any
+		evidence []byte
 	}{
-		{bft.MsgPreprepare, &bft.Preprepare{View: view, Proposal: block}},
-		{bft.MsgPrepare, &bft.Prepare{View: view, Digest: block.Hash()}},
-		{bft.MsgCommit, &bft.Commit{View: view, Digest: block.Hash(), CommittedSeal: seal}},
-		{bft.MsgRoundChange, &bft.RoundChange{View: view}},
+		{bft.MsgPreprepare, &bft.Preprepare{View: view, Proposal: block}, nil},
+		{bft.MsgPreprepare, &bft.Preprepare{View: view, Proposal: block, RoundChangeCertificate: []*bft.Message{embedded}, PreparedMessages: []*bft.Message{embedded}}, nil},
+		{bft.MsgPrepare, &bft.Prepare{View: view, Digest: block.Hash()}, nil},
+		{bft.MsgCommit, &bft.Commit{View: view, Digest: block.Hash(), CommittedSeal: seal}, nil},
+		{bft.MsgRoundChange, &bft.RoundChange{View: view}, nil},
+		{bft.MsgRoundChange, &bft.RoundChange{View: view, Prepared: claim}, evidence},
 	} {
-		shared := &bft.Message{PrevHash: block.ParentHash(), Code: tc.code, Msg: mustEncode(t, tc.payload), Address: b.address}
+		shared := &bft.Message{PrevHash: block.ParentHash(), Code: tc.code, Msg: mustEncode(t, tc.payload), Address: b.address, Evidence: tc.evidence}
 		preimage, err := shared.PayloadNoSigForFork(b.isPermissionlessAt)
 		require.NoError(t, err)
 		shared.Signature, err = b.sign(preimage)
@@ -87,12 +98,15 @@ func TestWireAdapterRejectsPostForkRecovery(t *testing.T) {
 		raw, err := shared.PayloadForFork(b.isPermissionlessAt)
 		require.NoError(t, err)
 		var local wireMessage
-		require.ErrorIs(t, local.FromPayloadForFork(raw, b.isPermissionlessAt, bft.GetSignatureAddress), errUnsupportedRecovery)
-		// Even an unjustified bare round-1 PRE-PREPARE cannot enter the old core.
-		require.NoError(t, local.fromNormalized(shared))
-		_, err = local.PayloadForFork(b.isPermissionlessAt)
-		require.ErrorIs(t, err, errUnsupportedRecovery)
-		_, err = local.PayloadNoSigForFork(b.isPermissionlessAt)
-		require.ErrorIs(t, err, errUnsupportedRecovery)
+		require.NoError(t, local.FromPayloadForFork(raw, b.isPermissionlessAt, bft.GetSignatureAddress))
+		encoded, err := local.PayloadForFork(b.isPermissionlessAt)
+		require.NoError(t, err)
+		require.Equal(t, raw, encoded, "code %d", tc.code)
+		unsigned, err := local.PayloadNoSigForFork(b.isPermissionlessAt)
+		require.NoError(t, err)
+		require.Equal(t, preimage, unsigned, "code %d", tc.code)
+		stripped, err := local.withoutEvidence().normalized()
+		require.NoError(t, err)
+		require.Equal(t, shared.WithoutEvidence(), stripped, "code %d", tc.code)
 	}
 }

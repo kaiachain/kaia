@@ -24,10 +24,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
@@ -83,6 +85,23 @@ type machine struct {
 	prepares   *messageSet
 	commits    *messageSet
 	lockedHash common.Hash
+	// preparedCertificate is the signed quorum behind lockedHash, kept across
+	// rounds with the lock and advertised in post-Permissionless ROUND CHANGEs.
+	preparedCertificate *bft.PreparedCertificate
+	// parentHash is the parent of the height being decided, fixed across its
+	// rounds. Post-Permissionless ROUND CHANGEs must name it.
+	parentHash common.Hash
+
+	// Prepared-certificate recovery (recovery.go). roundChangeCertificate is the
+	// stripped signed ROUND CHANGE quorum that started the current round. The
+	// caches hold verified certificates per (sequence, round, digest), each
+	// block once per digest, and the Evidence bytes already verified. All are
+	// cleared on a new height.
+	roundChangeCertificate []*bft.Message
+	preparedBlocks         map[common.Hash]*types.Block
+	preparedCertificates   map[preparedEvidenceKey]*bft.PreparedCertificate
+	verifiedEvidence       map[verifiedEvidenceKey]struct{}
+	executedProposals      map[common.Hash]struct{} // locked blocks executed by verifyLockedProposalExecution this height
 
 	// Committee state for current round
 	qualified            *valset.AddressSet
@@ -96,10 +115,12 @@ type machine struct {
 	waitingForRoundChange bool
 
 	// Backlog
-	backlogs           map[common.Address]*prque.Prque
-	backlogCounts      map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
-	backlogPreprepares map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
-	backlogsMu         sync.Mutex
+	backlogs                  map[common.Address]*prque.Prque
+	backlogCounts             map[common.Address]int               // queued PREPARE, COMMIT and ROUND CHANGE per sender
+	backlogEvidenceBytes      map[common.Address]uint64            // retained ROUND CHANGE Evidence bytes per sender
+	backlogTotalEvidenceBytes uint64                               // retained ROUND CHANGE Evidence bytes across senders
+	backlogPreprepares        map[common.Address]backlogPreprepare // the one retained PREPREPARE per sender
+	backlogsMu                sync.Mutex
 
 	// Round change
 	roundChangeSets map[uint64]*messageSet
@@ -118,14 +139,17 @@ type machine struct {
 }
 
 func newMachine(b *backend) *machine {
-	return &machine{
-		b:                  b,
-		backlogs:           make(map[common.Address]*prque.Prque),
-		backlogCounts:      make(map[common.Address]int),
-		backlogPreprepares: make(map[common.Address]backlogPreprepare),
-		roundChangeSets:    make(map[uint64]*messageSet),
-		metrics:            bft.NewCoreMetrics("consensus/istanbul/core"),
+	m := &machine{
+		b:                    b,
+		backlogs:             make(map[common.Address]*prque.Prque),
+		backlogCounts:        make(map[common.Address]int),
+		backlogEvidenceBytes: make(map[common.Address]uint64),
+		backlogPreprepares:   make(map[common.Address]backlogPreprepare),
+		roundChangeSets:      make(map[uint64]*messageSet),
+		metrics:              bft.NewCoreMetrics("consensus/istanbul/core"),
 	}
+	m.resetPreparedEvidence()
+	return m
 }
 
 // ---------------------------------------------------------------------------
@@ -327,6 +351,38 @@ func (m *machine) handlePreprepare(msg *wireMessage, src common.Address) error {
 		return errNotFromProposer
 	}
 
+	permissionless := m.b.isPermissionlessAt(pp.View.Sequence.Uint64())
+	var highestPrepared *bft.PreparedCertificate
+	if permissionless {
+		// A proposal for this view has already been accepted, or the view has
+		// moved past accepting one; verifying a further one would repeat the
+		// justification and block checks.
+		if m.state != stateAcceptRequest {
+			return errIgnored
+		}
+		// An unjustified proposal is the proposer's signed misbehaviour, like a
+		// proposal that fails verification: start the next round.
+		if pp.View.Round.Sign() == 0 {
+			if len(pp.RoundChangeCertificate) != 0 || len(pp.PreparedMessages) != 0 {
+				m.sendNextRoundChange("handlePreprepare: justification at round 0")
+				return bft.ErrInvalidMessage
+			}
+		} else {
+			var err error
+			if highestPrepared, err = m.verifyRecoveryJustification(pp); err != nil {
+				logger.Warn("Invalid round-change justification in PRE-PREPARE", "view", pp.View, "err", err)
+				m.sendNextRoundChange("handlePreprepare: invalid round-change justification")
+				return bft.ErrInvalidMessage
+			}
+		}
+		// The block hash excludes committed seals; certificate verification
+		// refuses padded bodies, so a lock on one could never be claimed.
+		if padded, err := proposalCarriesCommittedSeals(pp.Proposal.Header()); err != nil || padded {
+			m.sendNextRoundChange("handlePreprepare: proposal carries committed seals")
+			return bft.ErrInvalidMessage
+		}
+	}
+
 	// The cheap, stateless checks (bad-block blacklist and the import body
 	// rules) run first, so a body-invalid proposal is rejected before any
 	// speculative work, as dev keeps them at the top of istanbul's Verify.
@@ -354,6 +410,21 @@ func (m *machine) handlePreprepare(msg *wireMessage, src common.Address) error {
 			m.sendNextRoundChange("handlePreprepare: verification failure")
 		}
 		return err
+	}
+
+	if m.state == stateAcceptRequest && permissionless {
+		// The justification verified above already forces the proposal to any
+		// value that could have been decided, so a local lock is not compared.
+		// It is kept for the next ROUND CHANGE until a PREPARE quorum at this
+		// view replaces it; a carried certificate proves only a prior round, so
+		// a quorum is re-established here before COMMIT.
+		if highestPrepared != nil {
+			m.adoptPreparedCertificate(highestPrepared)
+		}
+		m.acceptPreprepare(pp)
+		m.setState(statePreprepared)
+		m.sendPrepare()
+		return nil
 	}
 
 	if m.state == stateAcceptRequest {
@@ -405,8 +476,12 @@ func (m *machine) handlePrepare(msg *wireMessage, src common.Address) error {
 
 	m.prepares.Add(msg)
 
+	// Where the hash-lock shortcut applies (before the permissionless fork), a
+	// node locked on this digest commits directly; otherwise it must establish
+	// a certificate for this round before committing.
 	if m.state < statePrepared {
-		if m.isHashLocked() && prepare.Digest == m.lockedHash {
+		if !m.b.isPermissionlessAt(prepare.View.Sequence.Uint64()) &&
+			m.isHashLocked() && prepare.Digest == m.lockedHash {
 			logger.Info("Received prepare matching hash-locked proposal, moving to Prepared",
 				"seq", m.sequence, "round", m.round, "from", src)
 			m.setState(statePrepared)
@@ -451,9 +526,11 @@ func (m *machine) handleCommit(msg *wireMessage, src common.Address) error {
 
 	m.commits.Add(msg)
 
-	// Both PREPARE and COMMIT messages count for the prepared quorum.
+	// Both PREPARE and COMMIT messages count for the prepared quorum. The
+	// hash-lock shortcut applies only before the permissionless fork.
 	if m.state < statePrepared {
-		if m.isHashLocked() && commit.Digest == m.lockedHash {
+		if !m.b.isPermissionlessAt(commit.View.Sequence.Uint64()) &&
+			m.isHashLocked() && commit.Digest == m.lockedHash {
 			logger.Info("Received commit matching hash-locked proposal, moving to Prepared",
 				"seq", m.sequence, "round", m.round, "from", src)
 			m.setState(statePrepared)
@@ -484,8 +561,28 @@ func (m *machine) handleRoundChange(msg *wireMessage, src common.Address) error 
 	if err := msg.Decode(&rc); err != nil {
 		return bft.ErrInvalidMessage
 	}
+	if rc == nil || rc.View == nil || rc.View.Sequence == nil || !rc.View.Sequence.IsUint64() {
+		return bft.ErrInvalidMessage
+	}
+	permissionless := m.b.isPermissionlessAt(rc.View.Sequence.Uint64())
+	// A claim or Evidence at a height that does not accept them. The decoder
+	// cannot produce one there, so this is defense in depth.
+	if !permissionless && (len(msg.Evidence) != 0 || msg.Prepared != nil) {
+		return bft.ErrInvalidMessage
+	}
+	// The Evidence must match the hash its sender signed before the envelope
+	// can be retained, so a relay cannot attach other Evidence to a claim.
+	if permissionless && !roundChangeEvidenceMatchesClaim(msg) {
+		return bft.ErrInvalidMessage
+	}
 	if err := m.checkMessage(bft.MsgRoundChange, rc.View); err != nil {
 		return err
+	}
+	// A post-Permissionless ROUND CHANGE is embedded in PRE-PREPARE
+	// justifications, which require the height's parent; one for another parent
+	// would make the proposer's certificate fail.
+	if permissionless && rc.PrevHash != m.parentHash {
+		return errInconsistentPrevHash
 	}
 	// Restrict round-change admission to committee members, mirroring
 	// handleCommit. The thresholds (requiredMessageCount, f) are
@@ -494,9 +591,23 @@ func (m *machine) handleRoundChange(msg *wireMessage, src common.Address) error 
 	if !m.committee.Contains(src) {
 		return errNotFromCommittee
 	}
+	// Reject unretainable messages before verifying the potentially large
+	// Evidence.
+	if err := m.checkRoundChange(rc.View.Round, msg); err != nil {
+		logger.Trace("Discarding ROUND CHANGE before certificate verification", "from", msg.Address, "round", rc.View.Round, "err", err)
+		return err
+	}
+	if permissionless {
+		if _, err := m.verifyRoundChangeEvidence(msg, rc.View); err != nil {
+			logger.Warn("Invalid prepared certificate in ROUND CHANGE", "from", msg.Address, "err", err)
+			return bft.ErrInvalidMessage
+		}
+	}
 
 	cv := m.currentView()
-	num, err := m.addRoundChange(rc.View.Round, msg)
+	// The Evidence has been verified and cached; retain only the signed
+	// envelope.
+	num, err := m.addRoundChange(rc.View.Round, msg.withoutEvidence())
 	if err != nil {
 		// Rejections are expected under load (round window, per-round limit),
 		// so they are not logged above Trace, as in istanbul.
@@ -516,6 +627,9 @@ func (m *machine) handleRoundChange(msg *wireMessage, src common.Address) error 
 		logger.Warn("[RC] Received 2f+1 round change messages, starting new round",
 			"seq", cv.Sequence, "currentRound", cv.Round, "newRound", rc.View.Round,
 			"proposer", m.proposer, "prepares", m.prepares.Size(), "commits", m.commits.Size())
+		if permissionless {
+			m.roundChangeCertificate = m.roundChangeMessages(rc.View.Round)
+		}
 		m.startNewRound(rc.View.Round)
 		return nil
 	}
@@ -670,14 +784,18 @@ func (m *machine) startNewRound(round *big.Int) {
 	}
 
 	if roundChange && m.isHashLocked() {
-		// Keep the locked preprepare and proposal.
+		// Keep the locked preprepare, proposal and prepared certificate.
 	} else if !roundChange {
 		m.preprepare = nil
 		m.lockedHash = common.Hash{}
+		m.preparedCertificate = nil
 		m.pendingRequest = nil
+		m.parentHash = lastProposal.Hash()
+		m.resetPreparedEvidence()
 	} else {
 		m.preprepare = nil
 		m.lockedHash = common.Hash{}
+		m.preparedCertificate = nil
 	}
 	m.prepares = newMessageSet(qualified)
 	m.commits = newMessageSet(qualified)
@@ -689,11 +807,29 @@ func (m *machine) startNewRound(round *big.Int) {
 	m.processBacklog()
 
 	if roundChange && m.isProposer() {
-		if m.isHashLocked() && m.preprepare != nil {
+		permissionless := m.b.isPermissionlessAt(seq)
+		proposedPrepared := false
+		if permissionless && len(m.roundChangeCertificate) > 0 {
+			_, prepared, err := m.roundChangeJustification(m.roundChangeCertificate, newView)
+			if err != nil {
+				logger.Error("Invalid round-change certificate selected for new round", "err", err)
+				m.sendNextRoundChange("startNewRound: invalid round-change certificate")
+				return
+			}
+			if prepared != nil {
+				m.sendPreprepare(&bft.Request{Proposal: prepared.Proposal})
+				proposedPrepared = true
+			}
+		}
+		// Before the fork a locked proposer re-proposes its lock. After it,
+		// roundChangeJustification above already selected the value.
+		switch {
+		case proposedPrepared:
+		case !permissionless && m.isHashLocked() && m.preprepare != nil:
 			m.sendPreprepare(&bft.Request{Proposal: m.preprepare.Proposal})
-		} else if m.pendingRequest != nil {
+		case m.pendingRequest != nil:
 			m.sendPreprepare(m.pendingRequest)
-		} else {
+		default:
 			// Round-change proposer with no local pendingRequest: ask worker to build lazily.
 			logger.Info("Requesting local proposal build for round-change proposer",
 				"seq", newView.Sequence.Uint64(), "round", newView.Round.Uint64(),
@@ -741,6 +877,7 @@ func (m *machine) catchUpRound(view *bft.View) {
 	} else {
 		m.preprepare = nil
 		m.lockedHash = common.Hash{}
+		m.preparedCertificate = nil
 	}
 	m.pendingRequest = oldPendingReq
 	m.clearRoundChangeSets(view.Round)
@@ -785,6 +922,26 @@ func (m *machine) sendPreprepare(request *bft.Request) {
 	}
 	curView := m.currentView()
 	pp := &bft.Preprepare{View: curView, Proposal: request.Proposal}
+	var prepared *bft.PreparedCertificate
+	if m.b.isPermissionlessAt(curView.Sequence.Uint64()) && curView.Round.Sign() > 0 {
+		certificate, highest, err := m.roundChangeJustification(m.roundChangeCertificate, curView)
+		if err != nil {
+			logger.Error("Failed to justify PRE-PREPARE", "view", curView, "err", err)
+			return
+		}
+		if highest != nil && highest.Proposal.Hash() != request.Proposal.Hash() {
+			// A late request must not be proposed with a justification that
+			// proves another value; receivers would reject it.
+			logger.Debug("Skip PRE-PREPARE that differs from the justified value", "view", curView,
+				"justified", highest.Proposal.Hash(), "requested", request.Proposal.Hash())
+			return
+		}
+		pp.RoundChangeCertificate = certificate
+		if highest != nil {
+			pp.PreparedMessages = highest.Messages
+		}
+		prepared = highest
+	}
 	encoded, err := bft.Encode(pp)
 	if err != nil {
 		return
@@ -803,7 +960,14 @@ func (m *machine) sendPreprepare(request *bft.Request) {
 		if payload == nil {
 			return
 		}
+		if consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+			logger.Error("Consensus message exceeds P2P size limit", "code", msg.Code, "bytes", consensusP2PMessageSize(payload))
+			return
+		}
 		m.b.gossipSubPeer(msg.Hash, payload)
+		// The self-loop is skipped, so adopt the justified certificate here as
+		// handlePreprepare does for a received proposal.
+		m.adoptPreparedCertificate(prepared)
 		m.acceptPreprepare(pp)
 		m.setState(statePreprepared)
 		m.sendPrepare()
@@ -884,27 +1048,52 @@ func (m *machine) sendRoundChange(round *big.Int) {
 		Sequence: new(big.Int).Set(cv.Sequence),
 	})
 
-	lastProposal, _ := m.b.lastProposal()
 	cv = m.currentView()
 	rc := &bft.Subject{
-		View:     cv,
-		Digest:   common.Hash{},
-		PrevHash: lastProposal.Hash(),
+		View:   cv,
+		Digest: common.Hash{},
+	}
+	msg := &wireMessage{Code: bft.MsgRoundChange}
+	if m.b.isPermissionlessAt(cv.Sequence.Uint64()) {
+		// The parent recorded for this height: the live chain head may already
+		// have moved on to the inserted block.
+		rc.PrevHash = m.parentHash
+		// Sign only the prepared round and digest; the certificate rides as the
+		// unsigned Evidence so a PRE-PREPARE can embed this message without
+		// repeating the block. A lock on a block known to be bad is not claimed.
+		if cert := m.preparedCertificate; cert != nil && m.isHashLocked() {
+			cert = m.canonicalPreparedCertificate(cert)
+			evidence, err := bft.Encode(cert)
+			if err != nil {
+				logger.Error("Failed to encode prepared certificate", "err", err)
+				return
+			}
+			msg.Evidence = evidence
+			msg.Prepared = &bft.PreparedClaim{
+				Round:        new(big.Int).Set(cert.View.Round),
+				Digest:       cert.Proposal.Hash(),
+				EvidenceHash: crypto.Keccak256Hash(evidence),
+			}
+		}
+	} else {
+		lastProposal, _ := m.b.lastProposal()
+		rc.PrevHash = lastProposal.Hash()
 	}
 	payload, err := bft.Encode(rc)
 	if err != nil {
 		return
 	}
-	m.broadcastMsg(&wireMessage{
-		Hash: rc.PrevHash,
-		Code: bft.MsgRoundChange,
-		Msg:  payload,
-	})
+	msg.Hash, msg.Msg = rc.PrevHash, payload
+	m.broadcastMsg(msg)
 }
 
 func (m *machine) broadcastMsg(msg *wireMessage) {
 	payload := m.signPayload(msg)
 	if payload == nil {
+		return
+	}
+	if consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+		logger.Error("Consensus message exceeds P2P size limit", "code", msg.Code, "bytes", consensusP2PMessageSize(payload))
 		return
 	}
 	if err := m.b.broadcast(msg.Hash, payload); err != nil {
@@ -1027,14 +1216,21 @@ func (m *machine) setState(s uint64) {
 	m.processBacklog()
 }
 
+// lockHash locks the accepted proposal. After the permissionless fork it also
+// keeps the quorum votes of this view as the prepared certificate behind the
+// lock, replacing an older one.
 func (m *machine) lockHash() {
 	if m.preprepare != nil {
 		m.lockedHash = m.preprepare.Proposal.Hash()
+		if m.b.isPermissionlessAt(m.sequence.Uint64()) {
+			m.preparedCertificate = m.buildPreparedCertificate()
+		}
 	}
 }
 
 func (m *machine) unlockHash() {
 	m.lockedHash = common.Hash{}
+	m.preparedCertificate = nil
 }
 
 func (m *machine) isHashLocked() bool {
@@ -1263,20 +1459,41 @@ const (
 
 // checkMessageSize rejects an oversized PREPARE, COMMIT or ROUND CHANGE before
 // any retention path. A PREPREPARE carries a block and is exempt; the single
-// backlog slot per sender bounds how many of them are retained.
+// backlog slot per sender bounds how many of them are retained. A ROUND CHANGE
+// may attach a prepared certificate as its unsigned Evidence, so only the
+// signed part is held to the subject limit; every message, Evidence included,
+// is held to the P2P limit.
 func checkMessageSize(msg *wireMessage) error {
-	if msg.Code == bft.MsgPreprepare {
-		return nil
-	}
-	if retainedMessageBytes(msg) > maxSubjectMessageBytes {
+	retained := retainedMessageBytes(msg)
+	if msg.Code != bft.MsgPreprepare && retained-uint64(len(msg.Evidence)) > maxSubjectMessageBytes {
 		return errMessageTooLarge
+	}
+	// Only encode near the boundary, where RLP headers and the ConsensusMsg
+	// wrapper can push a message over it.
+	if retained >= maxConsensusP2PMessageBytes-2048 {
+		n, err := msg.normalized()
+		if err != nil {
+			return errMessageTooLarge
+		}
+		payload, err := n.Payload()
+		if err != nil || consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+			return errMessageTooLarge
+		}
 	}
 	return nil
 }
 
-// retainedMessageBytes reports the memory a retained message occupies.
+// retainedMessageBytes reports the memory a retained message occupies. A
+// prepared claim is signed but kept outside Msg, so it is counted here.
 func retainedMessageBytes(msg *wireMessage) uint64 {
-	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal))
+	size := uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.CommittedSeal)) + uint64(len(msg.Evidence))
+	if claim := msg.Prepared; claim != nil {
+		size += 2 * common.HashLength
+		if claim.Round != nil {
+			size += uint64(len(claim.Round.Bytes()))
+		}
+	}
+	return size
 }
 
 // backlogPreprepare is the one PREPREPARE retained per sender, with its view
@@ -1314,6 +1531,17 @@ func (m *machine) storeBacklog(msg *wireMessage, src common.Address) {
 	if m.backlogCounts[src] >= maxBacklogMessagesPerSender {
 		return
 	}
+	evidenceBytes := uint64(len(msg.Evidence))
+	if evidenceBytes != 0 {
+		if evidenceBytes > maxBacklogEvidenceBytesPerSender ||
+			m.backlogEvidenceBytes[src] > maxBacklogEvidenceBytesPerSender-evidenceBytes {
+			return
+		}
+		if evidenceBytes > maxBacklogEvidenceBytes ||
+			m.backlogTotalEvidenceBytes > maxBacklogEvidenceBytes-evidenceBytes {
+			return
+		}
+	}
 	backlog := m.backlogs[src]
 	if backlog == nil {
 		backlog = prque.New()
@@ -1323,6 +1551,10 @@ func (m *machine) storeBacklog(msg *wireMessage, src common.Address) {
 	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
 	backlog.Push(msg, toPriority(msg.Code, view))
 	m.backlogCounts[src]++
+	if evidenceBytes != 0 {
+		m.backlogEvidenceBytes[src] += evidenceBytes
+		m.backlogTotalEvidenceBytes += evidenceBytes
+	}
 }
 
 func (m *machine) isBacklogSequenceTooFar(sequence *big.Int) bool {
@@ -1333,14 +1565,31 @@ func (m *machine) isBacklogSequenceTooFar(sequence *big.Int) bool {
 	return sequence.Cmp(maxSequence) > 0
 }
 
-// removeBacklogMessage releases one queued message of a sender while
-// backlogsMu is held.
-func (m *machine) removeBacklogMessage(src common.Address) {
+// removeBacklogMessage releases one queued message of a sender, and its
+// Evidence bytes, while backlogsMu is held.
+func (m *machine) removeBacklogMessage(src common.Address, msg *wireMessage) {
 	if m.backlogCounts[src] <= 1 {
 		delete(m.backlogCounts, src)
+	} else {
+		m.backlogCounts[src]--
+	}
+	evidenceBytes := uint64(len(msg.Evidence))
+	if evidenceBytes == 0 {
 		return
 	}
-	m.backlogCounts[src]--
+	senderBytes := m.backlogEvidenceBytes[src]
+	if senderBytes < evidenceBytes || m.backlogTotalEvidenceBytes < evidenceBytes {
+		// An internal invariant violation; keep the conservative accounting.
+		logger.Error("Inconsistent backlog evidence accounting", "from", src,
+			"messageBytes", evidenceBytes, "senderBytes", senderBytes, "totalBytes", m.backlogTotalEvidenceBytes)
+		return
+	}
+	if senderBytes == evidenceBytes {
+		delete(m.backlogEvidenceBytes, src)
+	} else {
+		m.backlogEvidenceBytes[src] = senderBytes - evidenceBytes
+	}
+	m.backlogTotalEvidenceBytes -= evidenceBytes
 }
 
 // backlogMessageView decodes the view a message belongs to and the parent hash
@@ -1403,7 +1652,7 @@ func (m *machine) processBacklog() {
 				backlog.Push(msg, prio)
 				break
 			}
-			m.removeBacklogMessage(src)
+			m.removeBacklogMessage(src, msg)
 		}
 		if backlog.Empty() {
 			delete(m.backlogs, src)
@@ -1460,8 +1709,13 @@ func (m *machine) addRoundChange(round *big.Int, msg *wireMessage) (int, error) 
 	if messages == nil {
 		messages = newMessageSet(m.qualified)
 	}
-	if messages.Get(msg.Address) == nil && messages.Size() >= m.requiredMessageCount {
-		return 0, errRoundChangeLimit
+	if existing := messages.Get(msg.Address); existing == nil {
+		if messages.Size() >= m.requiredMessageCount {
+			return 0, errRoundChangeLimit
+		}
+	} else if !sameRoundChange(existing, msg) && !replacesRoundChange(existing, msg) {
+		// Only a strictly higher prepared claim replaces a sender's message.
+		return 0, errIgnored
 	}
 	if err := messages.Add(msg); err != nil {
 		return 0, err
