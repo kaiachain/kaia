@@ -393,15 +393,45 @@ func TestHandleTxMsgDefersSenderRecovery(t *testing.T) {
 	}
 }
 
+// captureSenderRecovery replaces the global senderCacher with one that has no
+// workers, so the caller can list exactly which transactions were queued for
+// ecrecover. The buffer is large enough that recover never blocks here. Must
+// not be used from parallel tests: senderCacher is process-global.
+func captureSenderRecovery(t *testing.T) (queued func() []*types.Transaction) {
+	original := senderCacher
+	capture := &txSenderCacher{threads: 1, tasks: make(chan *txSenderCacherRequest, 64)}
+	senderCacher = capture
+	t.Cleanup(func() { senderCacher = original })
+
+	return func() []*types.Transaction {
+		var txs []*types.Transaction
+		for {
+			select {
+			case task := <-capture.tasks:
+				for i := 0; i < len(task.txs); i += task.inc {
+					txs = append(txs, task.txs[i])
+				}
+			default:
+				return txs
+			}
+		}
+	}
+}
+
 // TestTxPoolRejectsOversizedSignatureListsBatch covers the batch ingress path
 // (AddRemotes -> addTxs -> recoverSenders), which must apply the same
-// signature-list bound as the single-tx path.
+// signature-list bound as the single-tx path: oversized sender or fee-payer
+// lists are rejected without being queued for sender recovery, and a valid
+// transaction in the same batch is still recovered and admitted.
 func TestTxPoolRejectsOversizedSignatureListsBatch(t *testing.T) {
+	queued := captureSenderRecovery(t)
+
 	pool, senderKey := setupTxPool()
 	defer pool.Stop()
 
 	feePayerKey, err := crypto.GenerateKey()
 	require.NoError(t, err)
+	testAddBalance(pool, crypto.PubkeyToAddress(feePayerKey.PublicKey), big.NewInt(params.KAIA))
 	maxSignatures := int(accountkey.MaxNumKeysForMultiSig)
 
 	senderTx := feeDelegatedTx(0, 21000, big.NewInt(1), big.NewInt(0), senderKey, feePayerKey)
@@ -412,12 +442,25 @@ func TestTxPoolRejectsOversizedSignatureListsBatch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, feePayerTx.SetFeePayerSignatures(signaturesWithLength(feePayerSignatures[0], maxSignatures+1)))
 
-	errs := pool.AddRemotes([]*types.Transaction{senderTx, feePayerTx})
-	require.Len(t, errs, 2)
-	for _, err := range errs {
-		require.ErrorIs(t, err, kerrors.ErrMaxKeysExceed)
+	validTx := feeDelegatedTx(0, 40000, big.NewInt(1), big.NewInt(0), senderKey, feePayerKey)
+
+	require.Empty(t, queued(), "no recovery expected before the batch")
+
+	errs := pool.AddRemotes([]*types.Transaction{senderTx, feePayerTx, validTx})
+	require.Len(t, errs, 3)
+	require.ErrorIs(t, errs[0], kerrors.ErrMaxKeysExceed)
+	require.ErrorIs(t, errs[1], kerrors.ErrMaxKeysExceed)
+	require.NoError(t, errs[2])
+	require.Equal(t, 1, pool.all.Count())
+	require.NotNil(t, pool.Get(validTx.Hash()))
+
+	var recovered []common.Hash
+	for _, tx := range queued() {
+		recovered = append(recovered, tx.Hash())
 	}
-	require.Zero(t, pool.all.Count())
+	assert.NotContains(t, recovered, senderTx.Hash(), "oversized sender list was queued for ecrecover")
+	assert.NotContains(t, recovered, feePayerTx.Hash(), "oversized fee-payer list was queued for ecrecover")
+	assert.Equal(t, []common.Hash{validTx.Hash()}, recovered, "valid tx must still be queued for recovery")
 }
 
 func setupTxPoolWithBlobStorage(t *testing.T) (*TxPool, *testBlockChain, *ecdsa.PrivateKey, string) {
