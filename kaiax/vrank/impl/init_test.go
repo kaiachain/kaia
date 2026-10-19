@@ -404,6 +404,50 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	assert.Equal(t, uint64(1), cpMatrix[C1][P2], "P2 should be credited as reporter in tail block")
 }
 
+// An epoch of 60 has checkpoint interval 7, so a block's nearest checkpoint can precede its epoch.
+func TestCheckpointLookup_StaysInEpoch(t *testing.T) {
+	const epoch = uint64(60)
+	P1, C1 := numToAddr(1), numToAddr(10)
+
+	cn := newCN(t, withCandidates([]common.Address{C1}), withoutStart())
+	module := cn.VRankModule
+	module.ChainConfig.VRankEpoch = epoch
+	require.Equal(t, uint64(7), module.scoreCheckpointInterval())
+
+	WriteCheckpoint(cn.DB, 56, map[common.Address]uint64{P1: 5}, vrank.CPMatrix{C1: {P1: 5}})
+	WriteCheckpoint(cn.DB, 63, map[common.Address]uint64{P1: 1}, vrank.CPMatrix{C1: {P1: 1}})
+
+	t.Run("checkpoint in the previous epoch is ignored", func(t *testing.T) {
+		_, _, ok := module.loadPFSCheckpointInEpoch(62)
+		assert.False(t, ok)
+		_, _, ok = module.loadCPMatrixCheckpointInEpoch(62)
+		assert.False(t, ok)
+
+		start, pfs := module.lookupPFSSeed(62)
+		assert.Equal(t, epoch, start)
+		assert.Empty(t, pfs)
+		start, cpMatrix, err := module.lookupCFSSeed(62)
+		require.NoError(t, err)
+		assert.Equal(t, epoch, start)
+		assert.Equal(t, vrank.CPMatrix{C1: {}}, cpMatrix)
+	})
+
+	t.Run("checkpoint in the same epoch is used", func(t *testing.T) {
+		cpNum, pfs, ok := module.loadPFSCheckpointInEpoch(69)
+		require.True(t, ok)
+		assert.Equal(t, uint64(63), cpNum)
+		assert.Equal(t, map[common.Address]uint64{P1: 1}, pfs)
+		cpNum, cpMatrix, ok := module.loadCPMatrixCheckpointInEpoch(69)
+		require.True(t, ok)
+		assert.Equal(t, uint64(63), cpNum)
+		assert.Equal(t, vrank.CPMatrix{C1: {P1: 1}}, cpMatrix)
+
+		start, pfs := module.lookupPFSSeed(69)
+		assert.Equal(t, uint64(64), start)
+		assert.Equal(t, map[common.Address]uint64{P1: 1}, pfs)
+	})
+}
+
 func TestCheckpointRoundTrip_PreservesZeroScores(t *testing.T) {
 	checkpoint := testCheckpointInterval
 	P1, P2, C1, C2 := numToAddr(1), numToAddr(2), numToAddr(10), numToAddr(11)
