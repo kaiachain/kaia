@@ -1309,8 +1309,9 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 		return err
 	}
 
-	// Ignore maxPeers if this is a trusted peer
-	if pm.peers.Len() >= pm.maxPeers && !p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
+	// Ignore maxPeers if this is a trusted or static peer
+	exempt := p.GetP2PPeer().IsTrustedOrStatic()
+	if !exempt && pm.peers.Len() >= pm.maxPeers {
 		return p2p.DiscTooManyPeers
 	}
 	p.GetP2PPeer().Log().Debug("Kaia peer connected", "name", p.GetP2PPeer().Name())
@@ -1342,11 +1343,9 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 			}
 		}
 	}
-	// Ignore maxPeers if this is a trusted peer
-	if p.GetP2PPeer().Info().Networks[p2p.ConnDefault].Trusted {
-		if reject || pm.peers.Len() >= pm.maxPeers {
-			return p2p.DiscTooManyPeers
-		}
+	// Ignore maxPeers and the snap-sync reservation if this is a trusted or static peer
+	if !exempt && (reject || pm.peers.Len() >= pm.maxPeers) {
+		return p2p.DiscTooManyPeers
 	}
 
 	p.UpdateRWImplementationVersion()
