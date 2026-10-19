@@ -267,8 +267,10 @@ func (ctx *TransitionContext) isPassVrankTest(addr common.Address) bool {
 // Reads from BlockContext:           BlockTime.
 // Reads from VRankContext:           PFS, PfReport.
 //
-// Rule 1 — staking < MinimumStake (only fires on non-epoch blocks since
-// applyEpochTransition already demotes below-min validators to VI via T3b):
+// Rule 1 — staking < MinimumStake. On an epoch block T3b has already demoted every
+// below-min validator except those applyEpochTransition kept ValActive because the
+// epoch would otherwise leave no active validator; up to MaxSlotAvailable of those
+// exit here in address order while more than MinActiveCount remain.
 //   - ValActive → ValExiting (slot + minActiveCount floor)
 //   - ValPaused → ValExiting (slot only)
 //   - ValReady  → ValInactive (unconditional)

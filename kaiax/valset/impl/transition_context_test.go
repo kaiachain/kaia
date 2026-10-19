@@ -941,4 +941,60 @@ func TestApplyAllTransitions_RetainedActiveSetSurvives(t *testing.T) {
 	assert.Equal(t, uint64(2), result.epochVACountForWrite)
 }
 
+// A retained set is still below MinStake, so the violation pass of the same block exits
+// it in address order, as far as the slot limits recomputed for the retained count allow.
+func TestApplyAllTransitions_RetainedSetExitsWithinSlotLimits(t *testing.T) {
+	cases := []struct {
+		name                 string
+		input                NodeMap
+		expected             map[common.Address]NodeState
+		expectedEpochVACount uint64
+	}{
+		{
+			name: "four retained: one slot, the lowest address exits",
+			input: NodeMap{
+				addr1: {State: ValActive, StakingAmount: belowMinStake},
+				addr2: {State: ValActive, StakingAmount: belowMinStake},
+				addr3: {State: ValActive, StakingAmount: belowMinStake},
+				addr4: {State: ValActive, StakingAmount: belowMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValExiting,
+				addr2: ValActive,
+				addr3: ValActive,
+				addr4: ValActive,
+			},
+			expectedEpochVACount: 4,
+		},
+		{
+			name: "three retained: no slot, nobody exits",
+			input: NodeMap{
+				addr1: {State: ValActive, StakingAmount: belowMinStake},
+				addr2: {State: ValActive, StakingAmount: belowMinStake},
+				addr3: {State: ValActive, StakingAmount: belowMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValActive,
+				addr2: ValActive,
+				addr3: ValActive,
+			},
+			expectedEpochVACount: 3,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := epochCtx(t, nil, testMaxValCount)
+			ctx.IsEpoch = true
+
+			result := ctx.ApplyAllTransitions(tc.input)
+
+			require.Len(t, result.Nodes, len(tc.expected))
+			for addr, expectedState := range tc.expected {
+				assert.Equal(t, expectedState, result.Nodes[addr].State, "addr=%s", addr.Hex())
+			}
+			assert.Equal(t, tc.expectedEpochVACount, result.epochVACountForWrite)
+		})
+	}
+}
+
 //#endregion
