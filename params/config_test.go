@@ -30,6 +30,36 @@ func TestChainConfig_CheckConfigForkOrder(t *testing.T) {
 	assert.Nil(t, MainnetChainConfig.CheckConfigForkOrder())
 }
 
+func TestChainConfig_CheckPermissionlessConfig(t *testing.T) {
+	tcs := []struct {
+		name    string
+		fork    *big.Int
+		epoch   uint64
+		wantErr string
+	}{
+		{"fork unset", nil, 7, ""},
+		{"epoch of 1", big.NewInt(0), 1, "vrankEpoch 1 is below the minimum 8"},
+		{"epoch below minimum", big.NewInt(100), 7, "vrankEpoch 7 is below the minimum 8"},
+		{"epoch at minimum", big.NewInt(100), 8, ""},
+		{"zero epoch uses the default", big.NewInt(100), 0, ""},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			config := TestKaiaConfig("osaka")
+			config.PermissionlessCompatibleBlock = tc.fork
+			config.VRankEpoch = tc.epoch
+			err := config.CheckPermissionlessConfig()
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tc.wantErr)
+			}
+		})
+	}
+	assert.NoError(t, MainnetChainConfig.CheckPermissionlessConfig())
+	assert.NoError(t, KairosChainConfig.CheckPermissionlessConfig())
+}
+
 func TestChainConfig_Copy(t *testing.T) {
 	// Temporarily modify MainnetChainConfig to simulate copying `nil` field.
 	savedBlock := MainnetChainConfig.LondonCompatibleBlock

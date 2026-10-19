@@ -247,6 +247,8 @@ const (
 
 	// DefaultVRankEpoch is the default number of blocks per VRank epoch.
 	DefaultVRankEpoch = uint64(86400)
+	// MinVRankEpoch is the smallest VRank epoch with a non-zero score checkpoint interval (epoch/8).
+	MinVRankEpoch = uint64(8)
 )
 
 var (
@@ -661,6 +663,21 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		}
 	} else if c.OsakaCompatibleBlock != nil {
 		return fmt.Errorf("invalid chain configuration: missing entry for fork %q in blobSchedule", "osaka")
+	}
+	return nil
+}
+
+// CheckPermissionlessConfig rejects a VRank epoch too short for a non-zero score checkpoint interval.
+func (c *ChainConfig) CheckPermissionlessConfig() error {
+	if c.PermissionlessCompatibleBlock == nil {
+		return nil
+	}
+	epoch := c.VRankEpoch
+	if epoch == 0 {
+		epoch = DefaultVRankEpoch
+	}
+	if epoch < MinVRankEpoch {
+		return fmt.Errorf("invalid chain configuration: vrankEpoch %d is below the minimum %d", epoch, MinVRankEpoch)
 	}
 	return nil
 }
