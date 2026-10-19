@@ -50,6 +50,11 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.Vie
 		// Prior-epoch views can never be reported. The report-time prune would drop them too, but a
 		// node that keeps losing its rounds has nothing to report and never gets there.
 		v.collector.PruneReported(calcEpochStart(blockNum, v.vrankEpoch()))
+		// Candidates reject rounds above maxRound; the view stays recorded so its report is empty.
+		if view.Round.Uint64() > maxRound {
+			logger.Debug("Skip VRankPreprepare above max round", "number", blockNum, "round", view.Round)
+			return
+		}
 		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
 	}
 }
