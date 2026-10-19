@@ -19,6 +19,7 @@ package system
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/big"
 
@@ -57,6 +58,7 @@ type AllocPermissionlessConfig struct {
 	DataConfig         abv2data.IABv2DataContractInitData // ABv2DataContract constructor data.
 	EpochBlockInterval int64                              // Blocks per epoch baked into ABv2 bytecode. 0 uses DefaultEpochBlockInterval.
 	UsePD              bool                               // Deploy every validator's CnStaking with a PublicDelegation.
+	GenesisTime        uint64                             // Genesis timestamp the alloc runs at; AllocPermissionlessGenesis sets it.
 }
 
 // allocPermissionlessResult holds intermediate deployed addresses passed between internal steps.
@@ -73,6 +75,20 @@ type allocPermissionlessResult struct {
 func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, error) {
 	alloc, _, err := allocPermissionless(config, true)
 	return alloc, err
+}
+
+// AllocPermissionlessGenesis runs AllocPermissionless at g's timestamp and adds the result to g's alloc.
+func AllocPermissionlessGenesis(g *blockchain.Genesis, config *AllocPermissionlessConfig) error {
+	config.GenesisTime = g.Timestamp
+	alloc, err := AllocPermissionless(config)
+	if err != nil {
+		return err
+	}
+	if g.Alloc == nil {
+		g.Alloc = make(blockchain.GenesisAlloc, len(alloc))
+	}
+	maps.Copy(g.Alloc, alloc)
+	return nil
 }
 
 // AllocPermissionlessPrerequisites deploys the contracts needed before a
@@ -124,7 +140,7 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 		GasPrice:    new(big.Int),
 		Value:       new(big.Int),
 		BlockNumber: new(big.Int),
-		Time:        new(big.Int),
+		Time:        new(big.Int).SetUint64(config.GenesisTime),
 	}
 
 	// Step 1: Deploy implementation contracts and their UpgradeableBeacons
@@ -380,7 +396,7 @@ func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermission
 		if info.State != valActiveState {
 			nodeIds = append(nodeIds, config.NodeIds[i])
 			newStates = append(newStates, info.State)
-			timeoutAts = append(timeoutAts, new(big.Int)) // no timeout at genesis
+			timeoutAts = append(timeoutAts, initialTimeoutAt(cfg.Time, info.State, &config.DataConfig))
 		}
 	}
 	if len(nodeIds) == 0 {
@@ -400,6 +416,18 @@ func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermission
 		return fmt.Errorf("applyInitialNodeStateOverrides: %w", err)
 	}
 	return nil
+}
+
+// initialTimeoutAt returns the deadline a node entering state at genesisTime carries, or 0 if the state has none.
+func initialTimeoutAt(genesisTime *big.Int, state uint8, d *abv2data.IABv2DataContractInitData) *big.Int {
+	switch valset.NodeState(state) {
+	case valset.ValReady, valset.ValInactive:
+		return new(big.Int).Add(genesisTime, d.IdleTimeout)
+	case valset.ValPaused:
+		return new(big.Int).Add(genesisTime, d.PauseTimeout)
+	default:
+		return new(big.Int)
+	}
 }
 
 // patchRegistryActivations overwrites activation slots to 0 in Registry storage

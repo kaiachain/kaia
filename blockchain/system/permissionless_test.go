@@ -201,6 +201,61 @@ func TestAllocPermissionless_InitialStateOverrideUpdatesEpochVACount(t *testing.
 	assert.Equal(t, uint64(1), limits.MaxSlotAvailable.Uint64())
 }
 
+// ABv2 drops a later same-state write, so an overridden timed state must carry its deadline.
+func TestAllocPermissionless_InitialStateOverrideSetsDeadlines(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	const genesisTime = uint64(1_700_000_000)
+	newConfig := func() *AllocPermissionlessConfig {
+		config := makeTestPermissionlessConfig(9)
+		config.NodeInfos[6].State = valset.ValReady.ToUint8()
+		config.NodeInfos[7].State = valset.ValPaused.ToUint8()
+		config.NodeInfos[8].State = valset.ValInactive.ToUint8()
+		return config
+	}
+
+	t.Run("genesis timestamp", func(t *testing.T) {
+		config := newConfig()
+		g := &blockchain.Genesis{Timestamp: genesisTime}
+		require.NoError(t, AllocPermissionlessGenesis(g, config))
+		assertOverrideDeadlines(t, config, g.Alloc, genesisTime)
+	})
+
+	t.Run("config field", func(t *testing.T) {
+		config := newConfig()
+		config.GenesisTime = genesisTime
+		alloc, err := AllocPermissionless(config)
+		require.NoError(t, err)
+		assertOverrideDeadlines(t, config, alloc, genesisTime)
+	})
+}
+
+func assertOverrideDeadlines(t *testing.T, config *AllocPermissionlessConfig, alloc blockchain.GenesisAlloc, genesisTime uint64) {
+	t.Helper()
+	backend := backends.NewSimulatedBackend(alloc)
+	defer backend.Close()
+	caller, err := addressbookv2contract.NewAddressBookV2Caller(AddressBookAddr, backend)
+	require.NoError(t, err)
+	profiles, err := caller.GetAllProfiles(&bind.CallOpts{})
+	require.NoError(t, err)
+	require.Len(t, profiles, 9)
+
+	start := new(big.Int).SetUint64(genesisTime)
+	idleAt := new(big.Int).Add(start, config.DataConfig.IdleTimeout)
+	pausedAt := new(big.Int).Add(start, config.DataConfig.PauseTimeout)
+	want := map[common.Address]*big.Int{
+		config.NodeIds[6]: idleAt,
+		config.NodeIds[7]: pausedAt,
+		config.NodeIds[8]: idleAt,
+	}
+	for _, p := range profiles {
+		expected, ok := want[p.NodeId]
+		if !ok {
+			expected = new(big.Int)
+		}
+		assert.Equal(t, expected.String(), p.TimeoutAt.String(), "node %s state %d", p.NodeId.Hex(), p.State)
+	}
+}
+
 func TestAllocPermissionless_UsePD(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	config := makeTestPermissionlessConfig(4)

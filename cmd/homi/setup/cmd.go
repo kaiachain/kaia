@@ -554,13 +554,8 @@ func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 }
 
 func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) {
-	alloc, err := system.AllocPermissionless(makePermissionlessConfig(ctx, validatorAddrs, kip113Init))
-	if err != nil {
+	if err := system.AllocPermissionlessGenesis(genesisJson, makePermissionlessConfig(ctx, validatorAddrs, kip113Init)); err != nil {
 		log.Fatalf("Failed to allocate permissionless contracts: %v", err)
-	}
-
-	for addr, account := range alloc {
-		genesisJson.Alloc[addr] = account
 	}
 }
 

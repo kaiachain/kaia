@@ -485,6 +485,25 @@ func TestApplyViolationTransition_PFSAboveThreshold(t *testing.T) {
 	assert.Equal(t, ValPaused, out[addr2].State, "PFS(1) > 0, < threshold(2) → ValPaused (minor)")
 }
 
+func TestApplyViolationTransition_PFSMinorSetsPausedTimeout(t *testing.T) {
+	m := NodeMap{
+		addr1: {State: ValActive, StakingAmount: aboveMinStake},
+		addr2: {State: ValActive, StakingAmount: aboveMinStake},
+	}
+	ctx := violationCtx(t, ctxOpts{
+		PfsThreshold:     2,
+		PauseTimeout:     testPauseTimeout,
+		MaxSlotAvailable: noSlotLimit,
+		MinActiveCount:   noMinActive,
+		PFS:              map[common.Address]uint64{addr1: 1},
+		PfReport:         []common.Address{addr1},
+	})
+	out := ctx.applyViolationTransition(m)
+	assert.Equal(t, ValPaused, out[addr1].State)
+	assert.Equal(t, testBlockTime.Add(testPauseTimeout), out[addr1].PausedTimeout)
+	assert.True(t, out[addr2].PausedTimeout.IsZero())
+}
+
 func TestApplyViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 	m := NodeMap{
 		addr1: {State: CandReady, StakingAmount: aboveMinStake},
@@ -757,15 +776,15 @@ func TestApplyTimeoutTransition(t *testing.T) {
 		expectPausedSet     bool
 		expectIdlePreserved *time.Time
 	}{
-		{"ValInactive: set idle timeout", &Node{State: ValInactive}, ValInactive, true, false, nil},
-		{"ValReady: set idle timeout", &Node{State: ValReady}, ValReady, true, false, nil},
+		{"ValInactive: zero idle timeout stays zero", &Node{State: ValInactive}, ValInactive, false, false, nil},
+		{"ValReady: zero idle timeout stays zero", &Node{State: ValReady}, ValReady, false, false, nil},
 		{"ValInactive: preserve existing idle timeout", &Node{State: ValInactive, IdleTimeout: futureTimeout}, ValInactive, true, false, &futureTimeout},
 		{"ValReady: preserve existing idle timeout", &Node{State: ValReady, IdleTimeout: futureTimeout}, ValReady, true, false, &futureTimeout},
 		{"ValInactive: idle expired → Registered", &Node{State: ValInactive, IdleTimeout: expiredTimeout}, Registered, false, false, nil},
 		{"ValReady: idle expired → Registered", &Node{State: ValReady, IdleTimeout: expiredTimeout}, Registered, false, false, nil},
 		{"ValInactive: idle exactly at deadline → Registered", &Node{State: ValInactive, IdleTimeout: testBlockTime}, Registered, false, false, nil},
 		{"ValPaused: paused exactly at deadline → ValInactive", &Node{State: ValPaused, PausedTimeout: testBlockTime}, ValInactive, true, false, nil},
-		{"ValPaused: set paused timeout", &Node{State: ValPaused}, ValPaused, false, true, nil},
+		{"ValPaused: zero paused timeout stays zero", &Node{State: ValPaused}, ValPaused, false, false, nil},
 		{"ValPaused: preserve existing paused timeout", &Node{State: ValPaused, PausedTimeout: futureTimeout}, ValPaused, false, true, nil},
 		{"ValPaused: paused expired → ValInactive + idle set", &Node{State: ValPaused, PausedTimeout: expiredTimeout}, ValInactive, true, false, nil},
 	}
@@ -923,6 +942,28 @@ func TestApplyAllTransitions(t *testing.T) {
 			assert.Equal(t, tc.expectedEpochVACount, result.epochVACountForWrite)
 		})
 	}
+}
+
+func TestApplyAllTransitions_PFSMinorPauseKeepsDeadline(t *testing.T) {
+	m := NodeMap{
+		addr1: {State: ValActive, StakingAmount: aboveMinStake},
+		addr2: {State: ValActive, StakingAmount: aboveMinStake},
+	}
+	ctx := buildCtx(t, ctxOpts{
+		MinStake:         testMinStake,
+		PfsThreshold:     2,
+		IdleTimeout:      testIdleTimeout,
+		PauseTimeout:     testPauseTimeout,
+		MaxSlotAvailable: noSlotLimit,
+		MinActiveCount:   1,
+		PFS:              map[common.Address]uint64{addr1: 1},
+		PfReport:         []common.Address{addr1},
+	})
+
+	result := ctx.ApplyAllTransitions(m)
+
+	assert.Equal(t, ValPaused, result.Nodes[addr1].State)
+	assert.Equal(t, testBlockTime.Add(testPauseTimeout), result.Nodes[addr1].PausedTimeout)
 }
 
 // The violation and timeout passes run after the epoch one, so a set retained by the

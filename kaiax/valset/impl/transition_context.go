@@ -261,7 +261,7 @@ func (ctx *TransitionContext) isPassVrankTest(addr common.Address) bool {
 // applyViolationTransition returns a new NodeMap with min-stake and PFS violation
 // transitions applied to m. Pure: m is not mutated. Runs every block.
 //
-// Reads from ABv2TransitionParam:    PfsThreshold, IdleTimeout.
+// Reads from ABv2TransitionParam:    PfsThreshold, IdleTimeout, PauseTimeout.
 // Reads from EpochTransitionContext: MaxSlotAvailable, MinActiveCount.
 // Reads from GovContext:             MinStake.
 // Reads from BlockContext:           BlockTime.
@@ -375,6 +375,7 @@ func (ctx *TransitionContext) applyViolationTransition(m valset.NodeMap) valset.
 			if canDemoteActive(valset.ValPaused) {
 				logger.Trace("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "pfsThreshold", ctx.PfsThreshold)
 				val.State = valset.ValPaused
+				val.PausedTimeout = ctx.BlockTime.Add(ctx.PauseTimeout)
 			} else {
 				logger.Trace("PFS minor violation: slot full, skipping transition", "addr", addr, "pfs", pfs)
 			}
@@ -383,33 +384,18 @@ func (ctx *TransitionContext) applyViolationTransition(m valset.NodeMap) valset.
 	return newValidators
 }
 
-// applyTimeoutTransition returns a new NodeMap with idle/paused timeout
-// transitions applied to m. Pure: m is not mutated.
-//
-// For nodes newly entering ValReady/ValInactive or ValPaused (timeout not yet
-// set), the timeout is initialized. Existing timeouts are preserved.
-//
-// Reads from ABv2TransitionParam: IdleTimeout, PauseTimeout.
-// Reads from BlockContext: BlockTime.
-//
-// Internal use only — call via the orchestrator after applyViolationTransition.
+// applyTimeoutTransition returns a copy of m with expired idle/paused deadlines applied; a zero deadline never expires.
 func (ctx *TransitionContext) applyTimeoutTransition(m valset.NodeMap) valset.NodeMap {
 	newValidators := m.Copy()
 	for _, val := range newValidators {
 		switch val.State {
 		case valset.ValReady, valset.ValInactive:
-			if val.IdleTimeout.IsZero() {
-				val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
-			}
-			if !ctx.BlockTime.Before(val.IdleTimeout) {
+			if !val.IdleTimeout.IsZero() && !ctx.BlockTime.Before(val.IdleTimeout) {
 				val.State = valset.Registered
 				val.IdleTimeout = time.Time{}
 			}
 		case valset.ValPaused:
-			if val.PausedTimeout.IsZero() {
-				val.PausedTimeout = ctx.BlockTime.Add(ctx.PauseTimeout)
-			}
-			if !ctx.BlockTime.Before(val.PausedTimeout) {
+			if !val.PausedTimeout.IsZero() && !ctx.BlockTime.Before(val.PausedTimeout) {
 				val.State = valset.ValInactive
 				val.PausedTimeout = time.Time{}
 				val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
