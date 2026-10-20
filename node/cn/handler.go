@@ -84,7 +84,6 @@ const (
 	maxBlockHashAnnouncements = 1024
 	maxBlockHashMessageBytes  = 64 * 1024
 
-	blockReceivingPNLimit  = 5 // maximum number of PNs that a CN broadcasts block.
 	minNumPeersToSendBlock = 3 // minimum number of peers that a node broadcasts block.
 
 	// DefaultMaxResendTxCount is the number of resending transactions to peer in order to prevent the txs from missing.
@@ -1707,8 +1706,7 @@ func sampleSize(peers []Peer) int {
 }
 
 // BroadcastBlock will propagate a block to a subset of its peers.
-// If current node is CN, it will send block to all PN peers + sampled CN peers without block.
-// However, if there are more than 5 PN peers, it will sample 5 PN peers.
+// If current node is CN, it will send block to CN peers without block; PN and EN peers are announced to.
 // If current node is not CN, it will send block to sampled peers except CNs.
 func (pm *ProtocolManager) BroadcastBlock(block *types.Block) {
 	if parent := pm.blockchain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent == nil {

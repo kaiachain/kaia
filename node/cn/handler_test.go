@@ -404,6 +404,46 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 	pm.BroadcastBlock(block)
 }
 
+// A CN pushes blocks to CN peers and announces the hash to PN and EN peers alike.
+func TestBroadcastBlock_CNServesPNAsEN(t *testing.T) {
+	head := newBlock(blockNum1 - 1)
+	block := newBlock(blockNum1)
+	td := big.NewInt(100)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(head).Times(1)
+	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(td).Times(1)
+	mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true).Times(1)
+
+	pm := &ProtocolManager{nodetype: common.CONSENSUSNODE, blockchain: mockBlockChain, peers: newPeerSet()}
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	expect := func(p *MockPeer, pushes, announces int) {
+		known := false
+		p.EXPECT().KnowsBlock(block.Hash()).DoAndReturn(func(common.Hash) bool { return known }).AnyTimes()
+		p.EXPECT().AsyncSendNewBlock(block, new(big.Int).Add(block.BlockScore(), td)).
+			Do(func(*types.Block, *big.Int) { known = true }).Times(pushes)
+		p.EXPECT().AsyncSendNewBlockHash(block).Times(announces)
+	}
+	expect(cnPeer, 1, 0)
+	expect(pnPeer, 0, 1)
+	expect(enPeer, 0, 1)
+
+	for _, p := range []*MockPeer{cnPeer, pnPeer, enPeer} {
+		assert.NoError(t, pm.peers.Register(p, nil))
+	}
+
+	pm.BroadcastBlock(block)
+	pm.BroadcastBlockHash(block)
+}
+
 func TestBroadcastBlockHash(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
