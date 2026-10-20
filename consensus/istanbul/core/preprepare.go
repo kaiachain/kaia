@@ -275,7 +275,8 @@ func (c *core) verifyRecoveryJustification(preprepare *bft.Preprepare) (*bft.Pre
 // that a lock on a block this node never imported cannot refuse recovery from
 // a value that is known bad elsewhere. A definite result is kept for the
 // height: a proposer cannot repeat the cost by proposing below the claim
-// again. A failure is recorded by the chain and read back through IsHashLocked.
+// again. A failure is recorded by the chain and releases the lock together
+// with its prepared certificate.
 func (c *core) verifyLockedProposalExecution() {
 	locked := c.current.GetLockedHash()
 	var proposal bft.Proposal
@@ -294,6 +295,11 @@ func (c *core) verifyLockedProposalExecution() {
 		// A definite result; a failure to execute at all, such as the parent
 		// state being unavailable, is retried on the next occasion.
 		c.executedProposals[locked] = struct{}{}
+	}
+	if err != nil && c.backend.HasBadProposal(locked) {
+		// Release the certificate with the lock, as a failed import does, so
+		// that a lower certificate carried by the proposal can be adopted.
+		c.current.UnlockHash()
 	}
 	if err != nil {
 		c.logger.Warn("Locked proposal fails execution", "hash", locked, "released", !c.current.IsHashLocked(), "err", err)
