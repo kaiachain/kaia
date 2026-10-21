@@ -24,6 +24,7 @@ package blockchain
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"math/big"
 	"runtime"
@@ -102,6 +103,18 @@ func (s *verifySealsTestSealer) F(_ uint64, _, _ int) int {
 	return s.f
 }
 
+// errReachedSeals is returned by reachedSealsSealer so a test can tell that a header passed
+// every rule before seal verification.
+var errReachedSeals = errors.New("reached seal verification")
+
+type reachedSealsSealer struct {
+	consensus.Sealer
+}
+
+func (reachedSealsSealer) Author(*types.Header) (common.Address, error) {
+	return common.Address{}, errReachedSeals
+}
+
 func TestCountValidCommittedSeals(t *testing.T) {
 	var (
 		a = common.HexToAddress("0x0001")
@@ -155,6 +168,7 @@ func TestValidateHeader(t *testing.T) {
 	testcases := []struct {
 		name           string
 		maxHardfork    string
+		nodeInterval   int64 // overrides the node-local params.BlockGenerationInterval if non-zero
 		mutateHeader   func(header *types.Header, parent *types.Header)
 		expectedErr    error
 		expectedErrStr string
@@ -179,7 +193,25 @@ func TestValidateHeader(t *testing.T) {
 			name:        "invalid timestamp",
 			maxHardfork: "kore",
 			mutateHeader: func(header *types.Header, parent *types.Header) {
-				header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(uint64(params.BlockGenerationInterval)-1))
+				header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(uint64(params.DefaultBlockGenerationInterval)-1))
+			},
+			expectedErr: ErrInvalidTimestamp,
+		},
+		{
+			name:         "node-local interval does not tighten timestamp rule",
+			maxHardfork:  "kore",
+			nodeInterval: 2,
+			mutateHeader: func(header *types.Header, parent *types.Header) {
+				header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(uint64(params.DefaultBlockGenerationInterval)))
+			},
+			expectedErr: errReachedSeals,
+		},
+		{
+			name:         "same timestamp as parent with node-local interval",
+			maxHardfork:  "kore",
+			nodeInterval: 2,
+			mutateHeader: func(header *types.Header, parent *types.Header) {
+				header.Time = new(big.Int).Set(parent.Time)
 			},
 			expectedErr: ErrInvalidTimestamp,
 		},
@@ -213,6 +245,11 @@ func TestValidateHeader(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			if tc.nodeInterval != 0 {
+				oldInterval := params.BlockGenerationInterval
+				params.BlockGenerationInterval = tc.nodeInterval
+				t.Cleanup(func() { params.BlockGenerationInterval = oldInterval })
+			}
 			config := params.TestKaiaConfig(tc.maxHardfork).Copy()
 			var (
 				testdb  = database.NewMemoryDBManager()
@@ -247,6 +284,7 @@ func TestValidateHeader(t *testing.T) {
 				config: chain.Config(),
 				hc:     chain,
 				mGov:   mGov,
+				sealer: reachedSealsSealer{},
 			}
 
 			tc.mutateHeader(header, parent)

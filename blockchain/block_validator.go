@@ -286,7 +286,9 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time.Uint64()+uint64(params.BlockGenerationInterval) > header.Time.Uint64() {
+	// This is a consensus rule, so it must use the protocol constant rather than the
+	// node-local params.BlockGenerationInterval, which only paces block production.
+	if parent.Time.Uint64()+uint64(params.DefaultBlockGenerationInterval) > header.Time.Uint64() {
 		return ErrInvalidTimestamp
 	}
 
