@@ -114,7 +114,7 @@ var (
 		KaiaCompatibleBlock:           big.NewInt(156660000),
 		PragueCompatibleBlock:         big.NewInt(187930000),
 		OsakaCompatibleBlock:          big.NewInt(209134000),
-		PermissionlessCompatibleBlock: nil, // TODO-permissionless: set Kairos's PermissionlessCompatibleBlock
+		PermissionlessCompatibleBlock: big.NewInt(232761600),
 		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119145600),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
