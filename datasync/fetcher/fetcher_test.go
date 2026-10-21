@@ -664,6 +664,52 @@ func testInvalidNumberAnnouncement(t *testing.T, protocol int) {
 	verifyImportDone(t, imported)
 }
 
+// TestDropPeerForgetsPeerWithoutDeadlock checks that dropping a peer from inside the
+// fetcher loop does not deadlock when the drop callback calls ForgetPeer, as the
+// protocol manager's removePeer does.
+func TestDropPeerForgetsPeerWithoutDeadlock(t *testing.T) {
+	hashes, blocks := makeChain(1, 0, genesis)
+
+	tester := newTester()
+	tester.fetcher.Stop()
+
+	dropped := make(chan struct{})
+	var dropOnce sync.Once
+	tester.fetcher = New(tester.getBlock, tester.verifyHeader, tester.broadcastBlock, tester.broadcastBlockHash, tester.chainHeight, tester.insertChain,
+		func(peer string) {
+			tester.dropPeer(peer)
+			dropOnce.Do(func() { close(dropped) })
+			tester.fetcher.ForgetPeer(peer)
+		})
+	tester.fetcher.Start()
+	defer tester.fetcher.Stop()
+
+	// Announce a block with a bad number, so that the header delivery drops the announcer
+	badHeaderFetcher := tester.makeHeaderFetcher("bad", blocks, -gatherSlack)
+	badBodyFetcher := tester.makeBodyFetcher("bad", blocks, 0)
+	tester.fetcher.Notify("bad", hashes[0], 2, time.Now().Add(-arriveTimeout), badHeaderFetcher, badBodyFetcher)
+
+	select {
+	case <-dropped:
+	case <-time.After(time.Second):
+		t.Fatalf("peer with invalid numbered announcement not dropped")
+	}
+
+	// The fetcher must still serve requests after the drop
+	notified := make(chan struct{})
+	go func() {
+		goodHeaderFetcher := tester.makeHeaderFetcher("good", blocks, -gatherSlack)
+		goodBodyFetcher := tester.makeBodyFetcher("good", blocks, 0)
+		tester.fetcher.Notify("good", hashes[0], 1, time.Now().Add(-arriveTimeout), goodHeaderFetcher, goodBodyFetcher)
+		close(notified)
+	}()
+	select {
+	case <-notified:
+	case <-time.After(time.Second):
+		t.Fatalf("fetcher deadlocked after dropping a peer")
+	}
+}
+
 // Tests that if a block is empty (i.e. header only), no body request should be
 // made, and instead the header should be assembled into a whole block in itself.
 func TestEmptyBlockShortCircuit62(t *testing.T) { testEmptyBlockShortCircuit(t, 62) }

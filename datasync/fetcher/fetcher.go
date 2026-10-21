@@ -522,10 +522,11 @@ func (f *Fetcher) loop() {
 
 				// Filter fetcher-requested headers from other synchronisation algorithms
 				if announce := f.fetching[hash]; announce != nil && announce.origin == task.peer && f.fetched[hash] == nil && f.completing[hash] == nil && f.queued[hash] == nil {
-					// If the delivered header does not match the promised number, drop the announcer
+					// If the delivered header does not match the promised number, drop the announcer.
+					// Drop on a new thread: the drop calls back into ForgetPeer, which only this loop serves.
 					if header.Number.Uint64() != announce.number {
 						logger.Trace("Invalid block number fetched", "peer", announce.origin, "hash", header.Hash(), "announced", announce.number, "provided", header.Number)
-						f.dropPeer(announce.origin)
+						go f.dropPeer(announce.origin)
 						f.forgetHash(hash)
 						continue
 					}
