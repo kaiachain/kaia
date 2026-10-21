@@ -414,34 +414,55 @@ func TestHandleTxMsg(t *testing.T) {
 }
 
 func TestHandleTxMsg_ItemLimit(t *testing.T) {
-	txs := make(types.Transactions, maxTxMsgItems+1)
+	const legacyBatch = 5000 // a v2.2.2 sender puts a whole txpool promotion in one TxMsg
+	txs := make(types.Transactions, legacyBatch)
 	for i := range txs {
 		txs[i] = tx1
 	}
 
-	t.Run("at limit", func(t *testing.T) {
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
+	tcs := []struct {
+		name      string
+		version   int
+		numTxs    int
+		delivered int  // txs handed to the txpool
+		tooMany   bool // ErrTooManyItems, which disconnects the peer
+	}{
+		{"kaia67 at limit", kaia67, maxTxMsgItems, maxTxMsgItems, false},
+		{"kaia68 at limit", kaia68, maxTxMsgItems, maxTxMsgItems, false},
+		{"kaia67 under limit", kaia67, 10, 10, false},
+		{"kaia68 under limit", kaia68, 10, 10, false},
+		// Legacy peers are truncated instead of disconnected during the rolling upgrade.
+		{"kaia66 over limit", kaia66, legacyBatch, maxTxMsgItems, false},
+		{"kaia67 over limit", kaia67, legacyBatch, maxTxMsgItems, false},
+		{"kaia68 over limit", kaia68, legacyBatch, 0, true},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
-		pm := &ProtocolManager{}
-		pm.acceptTxs.Store(1)
-		mockTxPool := mocks.NewMockTxPool(mockCtrl)
-		mockTxPool.EXPECT().HandleTxMsg(gomock.Len(maxTxMsgItems)).Times(1)
-		pm.txpool = mockTxPool
+			pm := &ProtocolManager{}
+			pm.acceptTxs.Store(1)
+			mockTxPool := mocks.NewMockTxPool(mockCtrl)
+			pm.txpool = mockTxPool
 
-		peer := NewMockPeer(mockCtrl)
-		peer.EXPECT().AddToKnownTxs(gomock.Any()).Times(maxTxMsgItems)
+			peer := NewMockPeer(mockCtrl)
+			peer.EXPECT().GetVersion().Return(tc.version).AnyTimes()
+			peer.EXPECT().GetID().Return("test-peer").AnyTimes()
 
-		require.NoError(t, handleTxMsg(pm, peer, generateMsg(t, TxMsg, txs[:maxTxMsgItems])))
-	})
+			if !tc.tooMany {
+				mockTxPool.EXPECT().HandleTxMsg(gomock.Len(tc.delivered)).Times(1)
+				peer.EXPECT().AddToKnownTxs(tx1.Hash()).Times(tc.delivered)
+			}
 
-	t.Run("over limit", func(t *testing.T) {
-		pm := &ProtocolManager{}
-		pm.acceptTxs.Store(1)
-
-		err := handleTxMsg(pm, nil, generateMsg(t, TxMsg, txs))
-		require.ErrorContains(t, err, "Too many items")
-	})
+			err := handleTxMsg(pm, peer, generateMsg(t, TxMsg, txs[:tc.numTxs]))
+			if tc.tooMany {
+				require.ErrorContains(t, err, "Too many items")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 // prepareBlobTxMsg returns a protocol manager, a peer and a signed blob transaction
