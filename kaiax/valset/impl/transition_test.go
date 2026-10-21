@@ -435,6 +435,117 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 	}
 }
 
+// TestInstallABv2RegistryActivation reproduces the real HF-1 timing: the chain head is HF-2 while
+// FinalizeState(HF-1) installs ABv2. The ABv2DataContract lookup must use the HF-1 block context,
+// the same one initialize() runs in.
+func TestInstallABv2RegistryActivation(t *testing.T) {
+	type record struct {
+		data       int   // index into the deployed data contracts
+		activation int64 // relative to HF
+	}
+	for _, tc := range []struct {
+		name        string
+		records     []record
+		expectErr   error
+		expectData  int // data contract that the proxy implementation and initialize() must both come from
+		expectNodes int
+	}{
+		{"activation=HF-2", []record{{1, -2}}, nil, 1, 3},
+		{"activation=HF-1", []record{{1, -1}}, nil, 1, 3},
+		{"activation=HF", []record{{1, 0}}, system.ErrABv2DataContractNotActive, 0, 0},
+		{"two records, new one at HF-1", []record{{0, -2}, {1, -1}}, nil, 1, 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			nodes := testABv2GenesisNodes()
+			deployerKey, err := crypto.GenerateKey()
+			require.NoError(t, err)
+			deployer := bind.NewKeyedTransactor(deployerKey)
+
+			// Four deploy blocks, so head = 4 = HF-2.
+			hf := int64(6)
+			chainConfig := testPermissionlessConfig(hf, 10)
+			sim := backends.NewSimulatedBackendWithChainConfig(testABv2Alloc(deployer.From, nodes), chainConfig)
+			t.Cleanup(func() { _ = sim.Close() })
+
+			// Data contract 0 holds only the first node, data contract 1 holds all of them.
+			var implAddrs, dataAddrs [2]common.Address
+			for i, initNodes := range [][]testABv2GenesisNode{nodes[:1], nodes} {
+				implAddrs[i], _, _, err = addressbookv2contract.DeployAddressBookV2(deployer, sim, big.NewInt(10))
+				require.NoError(t, err)
+				sim.Commit()
+				dataAddrs[i], _, _, err = abv2data.DeployABv2DataContract(deployer, sim, implAddrs[i], testABv2InitData(initNodes))
+				require.NoError(t, err)
+				sim.Commit()
+			}
+
+			chain := sim.BlockChain()
+			head := chain.CurrentHeader()
+			require.EqualValues(t, hf-2, head.Number.Int64())
+			v := NewValsetModule()
+			v.Chain = chain
+
+			statedb, err := chain.StateAt(head.Root)
+			require.NoError(t, err)
+			records := make([]testRegistryRecord, len(tc.records))
+			for i, r := range tc.records {
+				records[i] = testRegistryRecord{dataAddrs[r.data], big.NewInt(hf + r.activation)}
+			}
+			installTestRegistryRecords(t, statedb, "ABv2DataContract", records)
+
+			hfMinus1 := types.CopyHeader(head)
+			hfMinus1.Number = big.NewInt(hf - 1)
+			hfMinus1.ParentHash = head.Hash()
+			hfMinus1.Time = new(big.Int).Add(head.Time, common.Big1)
+			require.True(t, chainConfig.IsPermissionlessForkBlockParent(hfMinus1.Number))
+
+			vmenv := vm.NewEVM(blockchain.NewEVMBlockContext(hfMinus1, chain, nil), vm.TxContext{}, statedb, chainConfig, &vm.Config{})
+			err = v.InstallABv2(vmenv, hfMinus1, statedb)
+			if tc.expectErr != nil {
+				require.ErrorIs(t, err, tc.expectErr)
+				return
+			}
+			require.NoError(t, err)
+
+			implAddr := common.BytesToAddress(statedb.GetState(system.AddressBookAddr, common.BytesToHash(system.ImplementationSlot)).Bytes())
+			assert.Equal(t, implAddrs[tc.expectData], implAddr, "proxy implementation")
+
+			readBackend, err := backends.NewStateBlockchainContractBackend(chain, statedb)
+			require.NoError(t, err)
+			caller, err := addressbookv2contract.NewAddressBookV2Caller(system.AddressBookAddr, readBackend)
+			require.NoError(t, err)
+			profiles, err := caller.GetAllProfiles(&bind.CallOpts{})
+			require.NoError(t, err)
+			assert.Len(t, profiles, tc.expectNodes, "initialize() data contract")
+		})
+	}
+}
+
+type testRegistryRecord struct {
+	addr       common.Address
+	activation *big.Int
+}
+
+// installTestRegistryRecords installs Registry with the given records for one name.
+// AllocRegistry only supports a single record at activation 0, so the record slots are written directly.
+func installTestRegistryRecords(t *testing.T, statedb *state.StateDB, name string, records []testRegistryRecord) {
+	t.Helper()
+	require.NoError(t, system.InstallRegistry(statedb, &params.RegistryConfig{
+		Records: map[string]common.Address{name: records[0].addr},
+	}))
+
+	// records[name].length @ keccak(name ++ pad32(0))
+	// records[name][i].{addr, activation} @ keccak(keccak(name ++ pad32(0))) + 2i + {0, 1}
+	arraySlot := crypto.Keccak256(append([]byte(name), common.LeftPadBytes(nil, 32)...))
+	statedb.SetState(system.RegistryAddr, common.BytesToHash(arraySlot), common.BigToHash(big.NewInt(int64(len(records)))))
+	base := new(big.Int).SetBytes(crypto.Keccak256(arraySlot))
+	for i, r := range records {
+		addrSlot := new(big.Int).Add(base, big.NewInt(int64(2*i)))
+		activationSlot := new(big.Int).Add(addrSlot, common.Big1)
+		statedb.SetState(system.RegistryAddr, common.BigToHash(addrSlot), common.BytesToHash(r.addr.Bytes()))
+		statedb.SetState(system.RegistryAddr, common.BigToHash(activationSlot), common.BigToHash(r.activation))
+	}
+}
+
 func TestReadAndWriteABv2Snapshot(t *testing.T) {
 	h := newABv2Harness(t)
 	v, parentHeader, statedb, nodes := h.Valset, h.Header, h.StateDB, h.Nodes

@@ -44,6 +44,9 @@ func ReadABv2Implementation(backend bind.ContractCaller, num *big.Int) (common.A
 	if err != nil {
 		return common.Address{}, err
 	}
+	if dataContractAddr == (common.Address{}) {
+		return common.Address{}, ErrABv2DataContractNotActive
+	}
 	caller, err := abv2data.NewABv2DataContractCaller(dataContractAddr, backend)
 	if err != nil {
 		return common.Address{}, err
