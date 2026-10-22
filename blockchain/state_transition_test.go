@@ -1163,52 +1163,76 @@ func TestStateTransition_EIP7623(t *testing.T) {
 	assert.Equal(t, gaslimit2, res.UsedGas)
 }
 
-// TestStateTransition_NonDeferredMagmaFeeBurn verifies that in non-deferred mode after Magma,
-// exactly half the transaction fee is credited to Rewardbase and the other half is burned
-// (i.e. not credited to anyone).
-func TestStateTransition_NonDeferredMagmaFeeBurn(t *testing.T) {
-	// TestKaiaConfig("magma") has Magma enabled and DeferredTxFee=false (the default).
-	config := params.TestKaiaConfig("magma")
-	fork.SetHardForkBlockNumberConfig(config)
-
+// TestStateTransition_NonDeferredFee verifies where the transaction fee goes in non-deferred mode
+// (reward.deferredtxfee = false) across hardforks:
+//   - before Magma: the whole fee is credited to Coinbase (the block author).
+//   - since Magma, before Permissionless: the whole fee is credited to Rewardbase. The Magma rule
+//     specifies a half burn, but it was only implemented in v3.0.0-rc.1 (#816), so blocks produced by
+//     earlier versions credited the whole fee. They must stay replayable (#1097).
+//   - since Permissionless: half the fee is credited to Rewardbase and the other half is burned.
+func TestStateTransition_NonDeferredFee(t *testing.T) {
 	var (
 		key, _     = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
 		sender     = crypto.PubkeyToAddress(key.PublicKey)
 		to         = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		coinbase   = common.HexToAddress("0x000000000000000000000000000000000000c0de")
 		rewardbase = common.HexToAddress("0x000000000000000000000000000000000000beef")
 		gasPrice   = big.NewInt(25 * params.Gkei)
 		gasLimit   = uint64(21000) // basic transfer, all gas consumed
-		signer     = types.LatestSignerForChainID(config.ChainID)
 	)
 
 	fee := new(big.Int).Mul(gasPrice, big.NewInt(int64(gasLimit)))
 	halfFee := new(big.Int).Div(fee, big.NewInt(2))
+	initialBalance := new(big.Int).Mul(fee, big.NewInt(10))
 
-	// Fund the sender with enough balance to cover gas.
-	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	statedb.AddBalance(sender, new(big.Int).Mul(fee, big.NewInt(10)))
-
-	tx, err := types.SignTx(
-		types.NewTransaction(0, to, big.NewInt(0), gasLimit, gasPrice, nil),
-		signer, key,
-	)
-	require.NoError(t, err)
-	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, 0)
-	require.NoError(t, err)
-
-	header := &types.Header{
-		Number:     big.NewInt(0),
-		Time:       big.NewInt(0),
-		BlockScore: big.NewInt(0),
-		Rewardbase: rewardbase,
+	testcases := []struct {
+		desc           string
+		maxHardfork    string // see params.TestKaiaConfig
+		wantCoinbase   *big.Int
+		wantRewardbase *big.Int
+	}{
+		{"pre-magma: whole fee to Coinbase", "ethTxType", fee, big.NewInt(0)},
+		{"magma before permissionless: whole fee to Rewardbase", "osaka", big.NewInt(0), fee},
+		{"permissionless: half fee to Rewardbase, half burned", "permissionless", big.NewInt(0), halfFee},
 	}
-	blockContext := NewEVMBlockContext(header, nil, &rewardbase)
-	txContext := NewEVMTxContext(msg, header, config)
-	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vm.Config{})
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			// TestKaiaConfig has DeferredTxFee=false (the default).
+			config := params.TestKaiaConfig(tc.maxHardfork)
+			require.False(t, config.Governance.DeferredTxFee())
+			fork.SetHardForkBlockNumberConfig(config)
+			t.Cleanup(func() { fork.SetHardForkBlockNumberConfig(params.TestChainConfig) })
+			signer := types.LatestSignerForChainID(config.ChainID)
 
-	_, err = NewStateTransition(evm, msg).TransitionDb()
-	require.NoError(t, err)
+			// Fund the sender with enough balance to cover gas.
+			statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			statedb.AddBalance(sender, initialBalance)
 
-	// Rewardbase should receive exactly F/2. The other half is burned (not credited to anyone).
-	assert.Equal(t, halfFee, statedb.GetBalance(rewardbase))
+			tx, err := types.SignTx(
+				types.NewTransaction(0, to, big.NewInt(0), gasLimit, gasPrice, nil),
+				signer, key,
+			)
+			require.NoError(t, err)
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, 0)
+			require.NoError(t, err)
+
+			header := &types.Header{
+				Number:     big.NewInt(0),
+				Time:       big.NewInt(0),
+				BlockScore: big.NewInt(0),
+				Rewardbase: rewardbase,
+			}
+			blockContext := NewEVMBlockContext(header, nil, &coinbase)
+			txContext := NewEVMTxContext(msg, header, config)
+			evm := vm.NewEVM(blockContext, txContext, statedb, config, &vm.Config{})
+
+			_, err = NewStateTransition(evm, msg).TransitionDb()
+			require.NoError(t, err)
+
+			// The sender always pays the whole fee; only the credited amount depends on the hardfork.
+			assert.Zero(t, new(big.Int).Sub(initialBalance, fee).Cmp(statedb.GetBalance(sender)), "sender balance")
+			assert.Zero(t, tc.wantCoinbase.Cmp(statedb.GetBalance(coinbase)), "coinbase balance: want %s got %s", tc.wantCoinbase, statedb.GetBalance(coinbase))
+			assert.Zero(t, tc.wantRewardbase.Cmp(statedb.GetBalance(rewardbase)), "rewardbase balance: want %s got %s", tc.wantRewardbase, statedb.GetBalance(rewardbase))
+		})
+	}
 }
