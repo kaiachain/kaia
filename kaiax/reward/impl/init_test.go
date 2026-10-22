@@ -53,6 +53,15 @@ type rewardModuleTestConfig struct {
 	// Zero value falls back to params.AuthorAddressForTesting.
 	Proposer common.Address
 
+	// NodeAddress and Rewardbase are the module's own identity and configured reward base
+	// (InitOpts.NodeAddress / InitOpts.Rewardbase), used by PrepareHeader.
+	NodeAddress common.Address
+	Rewardbase  common.Address
+	// StakingErr, when set, makes StakingModule.GetStakingInfo fail with it.
+	StakingErr error
+	// StakingInfo, when set, replaces the default makeTestStakingInfo fixture.
+	StakingInfo *staking.StakingInfo
+
 	// Block fixture. When Header is nil, block- and number-keyed mocks are
 	// replaced with gomock.Any() so the helper can be used by tests that
 	// don't fix a block (e.g. VerifyHeader).
@@ -130,8 +139,11 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 			UseFlexReward:          false,
 		}
 
-		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, cfg.IsPrague)
+		stakingInfo = cfg.StakingInfo
 	)
+	if stakingInfo == nil {
+		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, cfg.IsPrague)
+	}
 
 	r := NewRewardModule()
 	r.Init(&InitOpts{
@@ -140,10 +152,21 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		GovModule:     mGov,
 		StakingModule: mStaking,
 		ValsetModule:  mValset,
+		NodeAddress:   cfg.NodeAddress,
+		Rewardbase:    cfg.Rewardbase,
 	})
 
 	chain.EXPECT().Sealer().Return(faker.NewFakerWithFixedSealer(proposer)).AnyTimes()
-	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+	if cfg.StakingErr != nil {
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(nil, cfg.StakingErr).AnyTimes()
+	} else {
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+	}
+	// Every staking entry is a qualified validator. The reward module no longer asks, but the
+	// expectation keeps the fixture meaningful for code that does (e.g. the pre-fix FinalizeState,
+	// whose header rewrite TestFinalizeStateLeavesHeaderUntouched must observe rather than a
+	// missing-mock failure).
+	mValset.EXPECT().GetQualifiedValidators(gomock.Any()).Return(stakingInfo.NodeIds, nil).AnyTimes()
 
 	if cfg.Header != nil {
 		block := types.NewBlock(cfg.Header, cfg.Txs, cfg.Receipts)

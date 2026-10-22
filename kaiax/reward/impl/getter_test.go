@@ -1890,7 +1890,7 @@ func TestRewardDistribution(t *testing.T) {
 				BaseFee:    big.NewInt(0),
 				Rewardbase: rewardbase,
 				BlockScore: params.DefaultBlockScore,
-				Root:       common.Hash{1}, // skip reward-address path; focus on distribution amount
+				Root:       common.Hash{1}, // a processed block; focus on distribution amount
 			}
 
 			err := mReward.FinalizeState(header, stateDB, nil, nil)
