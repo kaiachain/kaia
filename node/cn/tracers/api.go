@@ -352,7 +352,7 @@ func (api *UnsafeAPI) TraceChain(ctx context.Context, start, end rpc.BlockNumber
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
 	}
 	sub := notifier.CreateSubscription()
-	_, err = api.traceChain(from, to, config, notifier, sub)
+	_, err = api.traceChain(context.Background(), from, to, config, notifier, sub)
 	return sub, err
 }
 
@@ -389,7 +389,10 @@ func (r *releaser) call() {
 // The traceChain operates in two modes: subscription mode and rpc mode
 //   - if notifier and sub is not nil, it works as a subscription mode and returns nothing
 //   - if those parameters are nil, it works as a rpc mode and returns the block trace results, so it can pass the result through rpc-call
-func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, notifier *rpc.Notifier, sub *rpc.Subscription) (map[uint64]*blockTraceResult, error) {
+//
+// In rpc mode, tracing also stops when ctx is done. ctx is only a stop signal:
+// each transaction is still traced under its own timeout.
+func (api *CommonAPI) traceChain(ctx context.Context, start, end *types.Block, config *TraceConfig, notifier *rpc.Notifier, sub *rpc.Subscription) (map[uint64]*blockTraceResult, error) {
 	// Prepare all the states for tracing. Note this procedure can take very
 	// long time. Timeout mechanism is necessary.
 	reexec := defaultTraceReexec
@@ -405,16 +408,40 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		results  = make(chan *blockTraceTask, threads)
 		localctx = context.Background()
 		reler    = new(releaser)
+		// Stop when the subscriber goes away, or in rpc mode when ctx is done.
+		subClosed <-chan interface{}
+		ctxDone   = ctx.Done()
 	)
+	if notifier != nil {
+		subClosed = notifier.Closed()
+	}
+	stopped := func() bool {
+		select {
+		case <-subClosed:
+			return true
+		case <-ctxDone:
+			return true
+		default:
+			return false
+		}
+	}
 	for range threads {
 		pend.Go(func() {
-			// Fetch and execute the block trace tasks
+			// Fetch and execute the block trace tasks. Keep draining tasks after
+			// a stop so that every task state is released.
 			for task := range tasks {
+				if stopped() {
+					reler.add(task.release)
+					continue
+				}
 				signer := types.MakeSigner(api.backend.ChainConfig(), task.block.Number())
 				blockCtx := blockchain.NewEVMBlockContext(task.block.Header(), newChainContext(localctx, api.backend), nil)
 
 				// Trace all the transactions contained within
 				for i, tx := range task.block.Transactions() {
+					if stopped() {
+						break
+					}
 					msg, err := tx.AsMessageWithAccountKeyPicker(signer, task.statedb, task.block.NumberU64())
 					if err != nil {
 						logger.Warn("Tracing failed", "hash", tx.Hash(), "block", task.block.NumberU64(), "err", err)
@@ -436,16 +463,14 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 				// Tracing state is used up, queue it for de-referencing
 				reler.add(task.release)
 
-				// Stream the result back to the result catcher or abort on teardown
-				if notifier != nil {
-					// Stream the result back to the user or abort on teardown
-					select {
-					case results <- task:
-					case <-notifier.Closed():
-						return
-					}
-				} else {
-					results <- task
+				// Stream the result back to the result catcher unless stopped
+				if stopped() {
+					continue
+				}
+				select {
+				case results <- task:
+				case <-subClosed:
+				case <-ctxDone:
 				}
 			}
 		})
@@ -484,13 +509,13 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 
 		// Feed all the blocks both into the tracer, as well as fast process concurrently
 		for number = start.NumberU64(); number < end.NumberU64(); number++ {
-			if notifier != nil {
-				// Stop tracing if interruption was requested
-				select {
-				case <-notifier.Closed():
-					return
-				default:
-				}
+			// Stop tracing if interruption was requested
+			select {
+			case <-subClosed:
+				return
+			case <-ctxDone:
+				return
+			default:
 			}
 			// Print progress logs if long enough time elapsed
 			if time.Since(logged) > log.StatsReportLimit {
@@ -527,14 +552,14 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 
 			// Send the block over to the concurrent tracers (if not in the fast-forward phase)
 			txs := next.Transactions()
-			if notifier != nil {
-				select {
-				case tasks <- &blockTraceTask{statedb: statedb.Copy(), block: next, release: release, results: make([]*txTraceResult, len(txs))}:
-				case <-notifier.Closed():
-					return
-				}
-			} else {
-				tasks <- &blockTraceTask{statedb: statedb.Copy(), block: next, release: release, results: make([]*txTraceResult, len(txs))}
+			select {
+			case tasks <- &blockTraceTask{statedb: statedb.Copy(), block: next, release: release, results: make([]*txTraceResult, len(txs))}:
+			case <-subClosed:
+				release()
+				return
+			case <-ctxDone:
+				release()
+				return
 			}
 			traced += uint64(len(txs))
 		}
@@ -579,7 +604,11 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		return nil, nil
 	}
 
-	return waitForResult(), nil
+	done := waitForResult()
+	if done == nil && ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return done, nil
 }
 
 // TraceBlockByNumber returns the structured logs created during the execution of
@@ -601,7 +630,7 @@ func (api *UnsafeAPI) TraceBlockByNumberRange(ctx context.Context, start, end rp
 	if err != nil {
 		return nil, err
 	}
-	return api.traceChain(from, to, config, nil, nil)
+	return api.traceChain(ctx, from, to, config, nil, nil)
 }
 
 // TraceBlockByHash returns the structured logs created during the execution of
