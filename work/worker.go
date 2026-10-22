@@ -561,7 +561,26 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 
 	logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 		"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
-	self.chain.PostChainEvents(events, logs)
+	// The update loop is the only reader of chainHeadCh, and the ChainHeadEvent posted here is sent to
+	// chainHeadCh too. If chainHeadCh is full, e.g. imported heads queued up during WriteBlockWithState,
+	// posting on the loop would wait on the loop itself while holding the feed's send lock, blocking every
+	// importer. So post from another goroutine while the loop keeps taking chain heads. Wait for the post
+	// to finish, so the events stay in the same order.
+	posted := make(chan struct{})
+	go func() {
+		defer close(posted)
+		self.chain.PostChainEvents(events, logs)
+	}()
+	for {
+		select {
+		case <-posted:
+			return
+		case <-self.chainHeadCh:
+			if h, ok := self.engine.(consensus.Handler); ok {
+				h.NewChainHead()
+			}
+		}
+	}
 }
 
 func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
