@@ -710,6 +710,39 @@ func TestDropPeerForgetsPeerWithoutDeadlock(t *testing.T) {
 	}
 }
 
+// TestFullInsertQueueDoesNotBlockLoop checks that the fetcher loop keeps serving events
+// when more blocks become importable at once than the insert and done queues can hold.
+func TestFullInsertQueueDoesNotBlockLoop(t *testing.T) {
+	tester := newTester()
+	defer tester.fetcher.Stop()
+
+	// Queue blocks with unknown parents one above the next head, so that they all
+	// become importable in one pass and fill both queues with quickly failing imports
+	for i := range 2*numInsertTasks + 50 {
+		header := &types.Header{Number: big.NewInt(2), ParentHash: common.BytesToHash([]byte{byte(i >> 8), byte(i), 1})}
+		tester.fetcher.Enqueue("bad", types.NewBlockWithHeader(header))
+	}
+	_, blocks := makeChain(1, 0, genesis)
+	for _, block := range blocks {
+		if block.NumberU64() == 1 {
+			tester.insertChain(types.Blocks{block})
+		}
+	}
+	// Any event makes the loop run an import pass at the new height
+	tester.fetcher.Enqueue("trigger", genesis)
+
+	forgotten := make(chan struct{})
+	go func() {
+		tester.fetcher.ForgetPeer("bad")
+		close(forgotten)
+	}()
+	select {
+	case <-forgotten:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("fetcher loop blocked by a full insert queue: len(done)=%d len(insertTasks)=%d", len(tester.fetcher.done), len(tester.fetcher.insertTasks))
+	}
+}
+
 // Tests that if a block is empty (i.e. header only), no body request should be
 // made, and instead the header should be assembled into a whole block in itself.
 func TestEmptyBlockShortCircuit62(t *testing.T) { testEmptyBlockShortCircuit(t, 62) }

@@ -334,7 +334,8 @@ func (f *Fetcher) loop() {
 		}
 		// Import any queued blocks that could potentially fit
 		height := f.chainHeight()
-		for !f.queue.Empty() {
+		insertFull := false
+		for !insertFull && !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			if op.block == nil { // released when its source peer disconnected
 				continue
@@ -369,7 +370,8 @@ func (f *Fetcher) loop() {
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
-				break
+				// Retry on the next pass: the insert workers wait on this loop to drain done
+				insertFull = true
 			}
 		}
 		// Wait for an outside event to occur
