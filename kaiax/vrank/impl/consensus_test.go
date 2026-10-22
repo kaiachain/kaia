@@ -25,6 +25,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
@@ -241,6 +242,28 @@ func TestPrepareHeader(t *testing.T) {
 		v := setupOwnProposal(t, 10, int64(vrank.MaxRound+1))
 		header := &types.Header{Number: big.NewInt(11)}
 
+		require.NoError(t, v.PrepareHeader(header))
+		payload, err := vrank.DecodeVRank(header.VRank)
+		require.NoError(t, err)
+		assert.Empty(t, payload.Report)
+	})
+
+	t.Run("high-round own proposal is not passed over for an older one", func(t *testing.T) {
+		// Block 8 (round 0) was already reported in block 10's header, so block 11 must not report it again.
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		valset.EXPECT().GetCandTesting(gomock.Any()).Return(candidates, nil).AnyTimes()
+		header8, header10 := makeHeaderWithRound(8, 0), makeHeaderWithRound(10, vrank.MaxRound+1)
+		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(map[uint64]*types.Header{
+			8:  header8,
+			10: header10,
+			11: makeHeaderWithRound(11, 0),
+		}))
+		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(cn.Addr, nil).AnyTimes()
+		v := cn.VRankModule
+		v.HandleIstanbulPreprepare(types.NewBlockWithHeader(header8), &bft.View{Sequence: big.NewInt(8), Round: common.Big0})
+		v.HandleIstanbulPreprepare(types.NewBlockWithHeader(header10), &bft.View{Sequence: big.NewInt(10), Round: big.NewInt(vrank.MaxRound + 1)})
+
+		header := &types.Header{Number: big.NewInt(11)}
 		require.NoError(t, v.PrepareHeader(header))
 		payload, err := vrank.DecodeVRank(header.VRank)
 		require.NoError(t, err)

@@ -187,6 +187,10 @@ func (v *VRankModule) catchUpScoreCaches() error {
 
 func (v *VRankModule) loadPFSCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, bool) {
 	cpNum := calcCheckpointBlock(blockNum, v.scoreCheckpointInterval())
+	// A checkpoint before the epoch start holds scores that reset at that start.
+	if cpNum < calcEpochStart(blockNum, v.vrankEpoch()) {
+		return 0, nil, false
+	}
 	pfs := ReadCheckpointPFS(v.ChainKv, cpNum)
 	if pfs == nil {
 		return 0, nil, false
@@ -196,6 +200,9 @@ func (v *VRankModule) loadPFSCheckpointInEpoch(blockNum uint64) (uint64, map[com
 
 func (v *VRankModule) loadCPMatrixCheckpointInEpoch(blockNum uint64) (uint64, vrank.CPMatrix, bool) {
 	cpNum := calcCheckpointBlock(blockNum, v.scoreCheckpointInterval())
+	if cpNum < calcEpochStart(blockNum, v.vrankEpoch()) {
+		return 0, nil, false
+	}
 	cpMatrix := ReadCheckpointCPMatrix(v.ChainKv, cpNum)
 	if cpMatrix == nil {
 		return 0, nil, false

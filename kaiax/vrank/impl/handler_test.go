@@ -291,6 +291,28 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		mustNotPop(t, nonProposer.sub)
 		mustNotPop(t, candidate.sub)
 	})
+
+	t.Run("the proposer records every round but solicits only up to maxRound", func(t *testing.T) {
+		cns, valset, _ := newCNMulti(t, 2)
+		proposer, candidate := cns[0], cns[1]
+
+		valset.EXPECT().GetProposer(uint64(1), gomock.Any()).Return(proposer.Addr, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+
+		// Broadcasts arrive in order, so the first one popped shows whether maxRound+1 was solicited.
+		for _, round := range []uint64{maxRound + 1, maxRound} {
+			view := &bft.View{Sequence: big.NewInt(1), Round: new(big.Int).SetUint64(round)}
+			proposer.VRankModule.HandleIstanbulPreprepare(block1, view)
+			prepreparedTime, _, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: uint8(round)})
+			assert.False(t, prepreparedTime.IsZero(), "round %d", round)
+		}
+		req := mustPop(t, proposer.sub)
+		assert.Equal(t, []common.Address{candidate.Addr}, req.Targets)
+		ppp, ok := req.Msg.(*vrank.VRankPreprepare)
+		require.True(t, ok)
+		assert.Equal(t, uint64(maxRound), ppp.View.Round.Uint64())
+		mustNotPop(t, proposer.sub)
+	})
 }
 
 func TestHandleVRankPreprepare(t *testing.T) {

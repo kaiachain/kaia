@@ -240,6 +240,9 @@ func SetupGenesisBlockWithOverride(db database.DBManager, genesis *Genesis, over
 		if err := overrides.apply(genesis.Config); err != nil {
 			return nil, common.Hash{}, err
 		}
+		if err := genesis.Config.CheckPermissionlessConfig(); err != nil {
+			return nil, common.Hash{}, err
+		}
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -289,6 +292,9 @@ func SetupGenesisBlockWithOverride(db database.DBManager, genesis *Genesis, over
 		if err := overrides.apply(genesis.Config); err != nil {
 			return nil, common.Hash{}, err
 		}
+		if err := genesis.Config.CheckPermissionlessConfig(); err != nil {
+			return nil, common.Hash{}, err
+		}
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -311,6 +317,9 @@ func SetupGenesisBlockWithOverride(db database.DBManager, genesis *Genesis, over
 		return nil, common.Hash{}, err
 	}
 	if err := newCfg.CheckConfigForkOrder(); err != nil {
+		return nil, common.Hash{}, err
+	}
+	if err := newCfg.CheckPermissionlessConfig(); err != nil {
 		return nil, common.Hash{}, err
 	}
 

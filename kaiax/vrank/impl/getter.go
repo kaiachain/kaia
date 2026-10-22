@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"math/big"
 	"slices"
+	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/vrank"
@@ -123,7 +124,7 @@ func (v *VRankModule) EvaluateCandidates(blockNum, round uint64) ([]common.Addre
 		if !arrived ||
 			msgWithTime.Msg == nil ||
 			msgWithTime.Msg.BlockHash != expectedBlockHash ||
-			msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds() > candidateMsgTimeoutMs {
+			msgWithTime.ReceivedAt.Sub(prepreparedAt) > candidateMsgTimeoutMs*time.Millisecond {
 			cfReport = append(cfReport, addr)
 		}
 	}

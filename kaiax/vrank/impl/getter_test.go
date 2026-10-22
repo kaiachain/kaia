@@ -249,6 +249,25 @@ func TestEvaluateCandidates(t *testing.T) {
 	assert.Equal(t, report, report2, "EvaluateCandidates must be deterministic")
 }
 
+func TestEvaluateCandidates_Deadline(t *testing.T) {
+	valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+	onTime, late := numToAddr(1), numToAddr(2)
+	valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{onTime, late}, nil).AnyTimes()
+	v := newCN(t, withValset(valset), withGenesis()).VRankModule
+
+	vk := vrank.ViewKey{N: 1, R: 0}
+	blockHash := common.Hash{0x1}
+	prepreparedAt := time.Unix(1_700_000_000, 0)
+	deadline := candidateMsgTimeoutMs * time.Millisecond
+	v.collector.AddPrepreparedTime(vk, prepreparedAt, blockHash)
+	v.collector.AddCandMsg(vk, onTime, prepreparedAt.Add(deadline), &vrank.VRankCandidate{BlockNumber: 1, BlockHash: blockHash})
+	v.collector.AddCandMsg(vk, late, prepreparedAt.Add(deadline+500*time.Microsecond), &vrank.VRankCandidate{BlockNumber: 1, BlockHash: blockHash})
+
+	report, err := v.EvaluateCandidates(1, 0)
+	require.NoError(t, err)
+	assert.Equal(t, []common.Address{late}, report)
+}
+
 func TestEvaluateCandidates_Errors(t *testing.T) {
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	view1_0 := &bft.View{Sequence: big.NewInt(1), Round: common.Big0}
