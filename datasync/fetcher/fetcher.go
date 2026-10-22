@@ -334,7 +334,8 @@ func (f *Fetcher) loop() {
 		}
 		// Import any queued blocks that could potentially fit
 		height := f.chainHeight()
-		for !f.queue.Empty() {
+		insertFull := false
+		for !insertFull && !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			if op.block == nil { // released when its source peer disconnected
 				continue
@@ -369,7 +370,8 @@ func (f *Fetcher) loop() {
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
-				break
+				// Retry on the next pass: the insert workers wait on this loop to drain done
+				insertFull = true
 			}
 		}
 		// Wait for an outside event to occur
@@ -522,10 +524,11 @@ func (f *Fetcher) loop() {
 
 				// Filter fetcher-requested headers from other synchronisation algorithms
 				if announce := f.fetching[hash]; announce != nil && announce.origin == task.peer && f.fetched[hash] == nil && f.completing[hash] == nil && f.queued[hash] == nil {
-					// If the delivered header does not match the promised number, drop the announcer
+					// If the delivered header does not match the promised number, drop the announcer.
+					// Drop on a new thread: the drop calls back into ForgetPeer, which only this loop serves.
 					if header.Number.Uint64() != announce.number {
 						logger.Trace("Invalid block number fetched", "peer", announce.origin, "hash", header.Hash(), "announced", announce.number, "provided", header.Number)
-						f.dropPeer(announce.origin)
+						go f.dropPeer(announce.origin)
 						f.forgetHash(hash)
 						continue
 					}

@@ -664,6 +664,85 @@ func testInvalidNumberAnnouncement(t *testing.T, protocol int) {
 	verifyImportDone(t, imported)
 }
 
+// TestDropPeerForgetsPeerWithoutDeadlock checks that dropping a peer from inside the
+// fetcher loop does not deadlock when the drop callback calls ForgetPeer, as the
+// protocol manager's removePeer does.
+func TestDropPeerForgetsPeerWithoutDeadlock(t *testing.T) {
+	hashes, blocks := makeChain(1, 0, genesis)
+
+	tester := newTester()
+	tester.fetcher.Stop()
+
+	dropped := make(chan struct{})
+	var dropOnce sync.Once
+	tester.fetcher = New(tester.getBlock, tester.verifyHeader, tester.broadcastBlock, tester.broadcastBlockHash, tester.chainHeight, tester.insertChain,
+		func(peer string) {
+			tester.dropPeer(peer)
+			dropOnce.Do(func() { close(dropped) })
+			tester.fetcher.ForgetPeer(peer)
+		})
+	tester.fetcher.Start()
+	defer tester.fetcher.Stop()
+
+	// Announce a block with a bad number, so that the header delivery drops the announcer
+	badHeaderFetcher := tester.makeHeaderFetcher("bad", blocks, -gatherSlack)
+	badBodyFetcher := tester.makeBodyFetcher("bad", blocks, 0)
+	tester.fetcher.Notify("bad", hashes[0], 2, time.Now().Add(-arriveTimeout), badHeaderFetcher, badBodyFetcher)
+
+	select {
+	case <-dropped:
+	case <-time.After(time.Second):
+		t.Fatalf("peer with invalid numbered announcement not dropped")
+	}
+
+	// The fetcher must still serve requests after the drop
+	notified := make(chan struct{})
+	go func() {
+		goodHeaderFetcher := tester.makeHeaderFetcher("good", blocks, -gatherSlack)
+		goodBodyFetcher := tester.makeBodyFetcher("good", blocks, 0)
+		tester.fetcher.Notify("good", hashes[0], 1, time.Now().Add(-arriveTimeout), goodHeaderFetcher, goodBodyFetcher)
+		close(notified)
+	}()
+	select {
+	case <-notified:
+	case <-time.After(time.Second):
+		t.Fatalf("fetcher deadlocked after dropping a peer")
+	}
+}
+
+// TestFullInsertQueueDoesNotBlockLoop checks that the fetcher loop keeps serving events
+// when more blocks become importable at once than the insert and done queues can hold.
+func TestFullInsertQueueDoesNotBlockLoop(t *testing.T) {
+	tester := newTester()
+	defer tester.fetcher.Stop()
+
+	// Queue blocks with unknown parents one above the next head, so that they all
+	// become importable in one pass and fill both queues with quickly failing imports
+	for i := range 2*numInsertTasks + 50 {
+		header := &types.Header{Number: big.NewInt(2), ParentHash: common.BytesToHash([]byte{byte(i >> 8), byte(i), 1})}
+		tester.fetcher.Enqueue("bad", types.NewBlockWithHeader(header))
+	}
+	_, blocks := makeChain(1, 0, genesis)
+	for _, block := range blocks {
+		if block.NumberU64() == 1 {
+			tester.insertChain(types.Blocks{block})
+		}
+	}
+	// Any event makes the loop run an import pass at the new height
+	tester.fetcher.Enqueue("trigger", genesis)
+
+	forgotten := make(chan struct{})
+	go func() {
+		tester.fetcher.ForgetPeer("bad")
+		close(forgotten)
+	}()
+	select {
+	case <-forgotten:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("fetcher loop blocked by a full insert queue: len(done)=%d len(insertTasks)=%d", len(tester.fetcher.done), len(tester.fetcher.insertTasks))
+	}
+}
+
 // Tests that if a block is empty (i.e. header only), no body request should be
 // made, and instead the header should be assembled into a whole block in itself.
 func TestEmptyBlockShortCircuit62(t *testing.T) { testEmptyBlockShortCircuit(t, 62) }
