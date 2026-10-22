@@ -59,10 +59,22 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.Vie
 	}
 }
 
-// selectReportTarget returns the most recent block this node solicited for before number in the
-// same epoch, and the round that committed it. Rounds it proposed that did not commit are skipped,
-// so a hash-locked block belongs to the round that committed it rather than to its author.
-// ok=false when none exists (first proposal, or a restart cleared the collector).
+// selectReportTarget selects T for cfReport(N), where N is number and A = author(N) is this node
+// (KIP-227, Proposer writing a cfReport, rule 2): the most recent block before N in the same epoch
+// for which GetProposer(T, R_T) == A, where R_T is the committing round recorded in A's locally
+// stored header of T. It returns T and R_T, or ok=false (an empty cfReport(N)) when:
+//   - no such T exists (first proposal of the epoch, or a restart cleared the collector);
+//   - an earlier committed block authored by A has already reported on T: A authored a block after
+//     T, and another proposer's round committed it through a hash-locked re-proposal, so that
+//     block carries A's report on T;
+//   - a header, its proposer or its author cannot be read.
+//
+// It visits only the blocks A holds a view for, newest first. This relies on A recording a view for
+// every round it proposes, when it accepts its own PRE-PREPARE: both T and a block authored by A
+// are then in the collector. A block with a view whose committing round another proposer won with
+// another block is skipped. The view can be missing when the PRE-PREPARE relay queue drops the
+// event or A does not accept its own PRE-PREPARE; the walk then passes that block and may report
+// an older target a second time.
 func (v *VRankModule) selectReportTarget(number uint64) (targetNum, round uint64, ok bool) {
 	cands := v.collector.PendingEvaluations(calcEpochStart(number, v.vrankEpoch()))
 	slices.Sort(cands)
@@ -72,23 +84,27 @@ func (v *VRankModule) selectReportTarget(number uint64) (targetNum, round uint64
 		if n >= number {
 			continue
 		}
-		proposer, r, err := v.proposerOf(n)
+		header := v.Chain.GetHeaderByNumber(n)
+		if header == nil {
+			return 0, 0, false
+		}
+		proposer, r, err := v.proposerOf(header)
 		if err != nil {
-			continue
+			return 0, 0, false
 		}
 		if proposer == v.nodeID {
 			return n, r, true
+		}
+		if author, err := v.Sealer.Author(header); err != nil || author == v.nodeID {
+			return 0, 0, false
 		}
 	}
 	return 0, 0, false
 }
 
 // proposerOf returns the proposer and final round of a committed block.
-func (v *VRankModule) proposerOf(number uint64) (common.Address, uint64, error) {
-	header := v.Chain.GetHeaderByNumber(number)
-	if header == nil {
-		return common.Address{}, 0, vrank.ErrHeaderNotFound
-	}
+func (v *VRankModule) proposerOf(header *types.Header) (common.Address, uint64, error) {
+	number := header.Number.Uint64()
 	roundByte, err := v.Sealer.Round(header)
 	if err != nil {
 		return common.Address{}, 0, err

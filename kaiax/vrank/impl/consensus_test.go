@@ -18,6 +18,7 @@ package impl
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -278,19 +279,20 @@ func TestSelectReportTarget(t *testing.T) {
 	t.Run("reports most recent own block, skips lost round, superseded by newer", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		other := numToAddr(777)
-		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(map[uint64]*types.Header{
-			7:  makeHeaderWithRound(7, 0),
-			9:  makeHeaderWithRound(9, 0),
-			11: makeHeaderWithRound(11, 0),
-		}))
+		cn := newCN(t, withValset(valset), withoutStart())
 		v := cn.VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			7:  withAuthor(makeHeaderWithRound(7, 0), cn.Addr),
+			9:  withAuthor(makeHeaderWithRound(9, 1), other), // this node's round-0 block lost to other's round-1 block
+			11: withAuthor(makeHeaderWithRound(11, 0), cn.Addr),
+		}}
 		// propose records the view exactly as HandleIstanbulPreprepare does when this node proposes.
 		propose := func(n uint64) {
 			v.collector.AddPrepreparedTime(vrank.ViewKey{N: n, R: 0}, time.Now(), common.Hash{})
 		}
 		// 7 and 11 are committed by this node; 9 is proposed by this node but committed by `other`.
 		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
-		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(other, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(9), uint64(1)).Return(other, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(11), uint64(0)).Return(cn.Addr, nil).AnyTimes()
 
 		// Block 7 is this node's first proposal in the epoch — nothing prior to report.
@@ -326,15 +328,109 @@ func TestSelectReportTarget(t *testing.T) {
 	t.Run("hash-locked block belongs to the committing round", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		reproposer := numToAddr(777)
-		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(map[uint64]*types.Header{
-			7: makeHeaderWithRound(7, 2), // proposed here at round 0, committed at round 2
-		}))
+		cn := newCN(t, withValset(valset), withoutStart())
 		v := cn.VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			7: withAuthor(makeHeaderWithRound(7, 2), cn.Addr), // proposed here at round 0, committed at round 2
+		}}
 		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 7, R: 0}, time.Now(), common.Hash{})
 		valset.EXPECT().GetProposer(uint64(7), uint64(2)).Return(reproposer, nil).AnyTimes()
 
 		_, _, ok := v.selectReportTarget(9)
 		assert.False(t, ok, "the round-0 proposer holds no view for the round that committed")
+	})
+
+	// Block 9 was built by another validator and committed in a round this node proposed, re-proposing
+	// the locked block. This node proposed the committing round, so 9 is the target at that round.
+	t.Run("another validator's block re-proposed by this node is the target", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		author := numToAddr(777)
+		cn := newCN(t, withValset(valset), withoutStart())
+		v := cn.VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			7: withAuthor(makeHeaderWithRound(7, 0), cn.Addr),
+			9: withAuthor(makeHeaderWithRound(9, 2), author), // built by author at round 0, re-proposed here at round 2
+		}}
+		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(9), uint64(2)).Return(cn.Addr, nil).AnyTimes()
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 7, R: 0}, time.Now(), common.Hash{})
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 9, R: 2}, time.Now(), common.Hash{})
+
+		target, round, ok := v.selectReportTarget(11)
+		require.True(t, ok)
+		assert.Equal(t, uint64(9), target)
+		assert.Equal(t, uint64(2), round)
+	})
+
+	// Block 9 is this node's proposal carrying its report on 7, committed in another proposer's
+	// round under a hash lock. Its header keeps this node's report, so 7 must not be reported again.
+	t.Run("own block committed by a re-proposal is not reported twice", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		reproposer := numToAddr(777)
+		cn := newCN(t, withValset(valset), withoutStart())
+		v := cn.VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			7: withAuthor(makeHeaderWithRound(7, 0), cn.Addr),
+			9: withAuthor(makeHeaderWithRound(9, 1), cn.Addr), // proposed here at round 0, committed at round 1
+		}}
+		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(9), uint64(1)).Return(reproposer, nil).AnyTimes()
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 7, R: 0}, time.Now(), common.Hash{})
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 9, R: 0}, time.Now(), common.Hash{})
+
+		_, _, ok := v.selectReportTarget(11)
+		assert.False(t, ok, "block 9 already carries this node's report on 7")
+	})
+
+	// The author of block 9 cannot be read, so it is unknown whether 9 already carries this node's
+	// report on 7. Passing it to 7 could report 7 twice, so the report is empty.
+	t.Run("unreadable author stops the search", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		other := numToAddr(777)
+		cn := newCN(t, withValset(valset), withoutStart())
+		v := cn.VRankModule
+		v.Sealer = strictSealer{}
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			7: withAuthor(makeHeaderWithRound(7, 0), cn.Addr),
+			9: makeHeaderWithRound(9, 1), // no author: strictSealer.Author fails
+		}}
+		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(9), uint64(1)).Return(other, nil).AnyTimes()
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 7, R: 0}, time.Now(), common.Hash{})
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 9, R: 0}, time.Now(), common.Hash{})
+
+		_, _, ok := v.selectReportTarget(11)
+		assert.False(t, ok, "an unreadable author must not be passed")
+	})
+
+	// Block 9 cannot be classified when its header or its proposer cannot be read. Passing it to 7
+	// could report 7 twice, so the report is empty.
+	t.Run("unreadable header or proposer stops the search", func(t *testing.T) {
+		for _, tc := range []struct {
+			name       string
+			withHeader bool
+		}{
+			{"missing header", false},
+			{"proposer lookup fails", true},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+				cn := newCN(t, withValset(valset), withoutStart())
+				v := cn.VRankModule
+				headers := map[uint64]*types.Header{7: withAuthor(makeHeaderWithRound(7, 0), cn.Addr)}
+				if tc.withHeader {
+					headers[9] = withAuthor(makeHeaderWithRound(9, 0), cn.Addr)
+				}
+				v.Chain = &testChain{headers: headers}
+				valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+				valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(common.Address{}, errors.New("no proposer")).AnyTimes()
+				v.collector.AddPrepreparedTime(vrank.ViewKey{N: 7, R: 0}, time.Now(), common.Hash{})
+				v.collector.AddPrepreparedTime(vrank.ViewKey{N: 9, R: 0}, time.Now(), common.Hash{})
+
+				_, _, ok := v.selectReportTarget(11)
+				assert.False(t, ok, "an unreadable block must not be passed")
+			})
+		}
 	})
 
 	t.Run("prior-epoch proposal is not selected", func(t *testing.T) {

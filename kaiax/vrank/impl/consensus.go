@@ -135,7 +135,8 @@ func (v *VRankModule) hasParentCertificate(num uint64) bool {
 //
 //   - At epoch-start blocks: Report is CandTesting(N).
 //   - Otherwise: Report is a cfReport about this proposer's own most recent prior proposal in
-//     the current epoch, or empty when there is no such block or no failures.
+//     the current epoch, or empty when there is no such block, it was already reported, or no
+//     candidate failed.
 //   - ParentRound and its seals are copied from this node's own stored parent header.
 func (v *VRankModule) PrepareHeader(header *types.Header) error {
 	number := header.Number.Uint64()
@@ -204,7 +205,8 @@ func (v *VRankModule) parentRoundCertificate(number uint64) (uint8, [][]byte, er
 func (v *VRankModule) evaluateCandidateFailures(number uint64) ([]common.Address, error) {
 	targetNum, round, ok := v.selectReportTarget(number)
 	if !ok {
-		// No own prior proposal this epoch (first proposal, or restart). Empty report — fail-safe.
+		// No reportable target: none this epoch, or it was already reported.
+		// Empty report — fail-safe.
 		return nil, nil
 	}
 	report, err := v.EvaluateCandidates(targetNum, round)
