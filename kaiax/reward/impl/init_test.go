@@ -68,6 +68,9 @@ type rewardModuleTestConfig struct {
 	Header   *types.Header
 	Txs      []*types.Transaction
 	Receipts []*types.Receipt
+
+	// PermissionlessBlock, when set, schedules Osaka and Permissionless at this block instead.
+	PermissionlessBlock *big.Int
 }
 
 // Make a RewardModule that works with the given block.
@@ -99,6 +102,10 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		// liquidity) expectations, which is orthogonal to the non-deferred fee burn under test.
 		osakaForkBlock = big.NewInt(60)
 		permissionlessForkBlock = big.NewInt(60)
+	}
+	if cfg.PermissionlessBlock != nil {
+		osakaForkBlock = cfg.PermissionlessBlock
+		permissionlessForkBlock = cfg.PermissionlessBlock
 	}
 	proposer := cfg.Proposer
 	if proposer == (common.Address{}) {

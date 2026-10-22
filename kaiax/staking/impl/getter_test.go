@@ -328,4 +328,15 @@ func TestGetStakingInfo_Permissionless_OnlyValActive(t *testing.T) {
 	assert.Equal(t, common.HexToAddress("0x0a01"), si.KEFAddr)
 	assert.Equal(t, common.HexToAddress("0x0a02"), si.KIFAddr)
 	assert.Equal(t, common.HexToAddress("0x0a03"), si.KPFAddr)
+
+	// The reward address of every profile is kept regardless of its state, so that a
+	// committee member that is not reward-eligible here still has a known reward address.
+	assert.Equal(t, map[common.Address]common.Address{
+		common.HexToAddress("0xF00"):  common.HexToAddress("0xF02"),
+		common.HexToAddress("0xF03"):  common.HexToAddress("0xF05"),
+		common.HexToAddress("0x1000"): common.HexToAddress("0x1002"),
+		common.HexToAddress("0x2000"): common.HexToAddress("0x2002"),
+		common.HexToAddress("0x3000"): common.HexToAddress("0x3002"),
+		common.HexToAddress("0x4000"): common.HexToAddress("0x4002"),
+	}, si.ProfileRewardAddrs)
 }

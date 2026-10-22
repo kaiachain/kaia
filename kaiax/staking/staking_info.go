@@ -50,6 +50,12 @@ type StakingInfo struct {
 	// Staking info from the consensus liquidity since Prague HF.
 	CLStakingInfos CLStakingInfos `json:"clStakingInfos"`
 
+	// Since Permissionless HF, the reward address of every AddressBookV2 profile regardless of
+	// its state. NodeIds and RewardAddrs hold only the reward-eligible nodes, but a committee
+	// member may not be one of them (e.g. promoted to ValActive by the transition for this block).
+	// Not part of the database, RPC or P2P formats.
+	ProfileRewardAddrs map[common.Address]common.Address `json:"-"`
+
 	// Computed fields
 	consolidatedNodes  *[]consolidatedNode
 	cachedGini         *float64

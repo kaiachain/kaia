@@ -50,15 +50,19 @@ import (
 // The intermediate header checks are non-fatal on purpose: on the code before this fix they
 // report the configured address, and the test then goes on to show the consequence, the
 // re-import being rejected with "invalid merkle root".
+//
+// With promoted=true the local node has an AddressBookV2 profile but is not reward-eligible at
+// the source block (e.g. promoted to ValActive by the transition for this block), so it is missing
+// from StakingInfo.NodeIds; its profile reward address must still be used.
 func TestProposerRewardbaseIsFinalBeforeExecution(t *testing.T) {
-	for _, permissionless := range []bool{false, true} {
-		t.Run(fmt.Sprintf("permissionless=%v", permissionless), func(t *testing.T) {
-			testProposerRewardbaseIsFinalBeforeExecution(t, permissionless)
+	for _, tc := range []struct{ permissionless, promoted bool }{{false, false}, {true, false}, {true, true}} {
+		t.Run(fmt.Sprintf("permissionless=%v,promoted=%v", tc.permissionless, tc.promoted), func(t *testing.T) {
+			testProposerRewardbaseIsFinalBeforeExecution(t, tc.permissionless, tc.promoted)
 		})
 	}
 }
 
-func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless bool) {
+func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless, promoted bool) {
 	const (
 		validatorCount = 4
 		minStake       = uint64(5_000_000)
@@ -68,6 +72,14 @@ func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless b
 	// Every validator is registered with a reward address that differs from its node
 	// address and from any configured rewardbase (makeTestStakingInfo draws fresh keys).
 	stakingInfo := makeTestStakingInfo([]uint64{minStake, minStake, minStake, minStake}, 0)
+	localNode, registered := stakingInfo.NodeIds[0], stakingInfo.RewardAddrs[0] // node 0 is this backend (engine.address)
+	if promoted {
+		// Keep the profile (ProfileRewardAddrs) but drop node 0 from the reward-eligible lists.
+		stakingInfo.NodeIds = stakingInfo.NodeIds[1:]
+		stakingInfo.StakingContracts = stakingInfo.StakingContracts[1:]
+		stakingInfo.RewardAddrs = stakingInfo.RewardAddrs[1:]
+		stakingInfo.StakingAmounts = stakingInfo.StakingAmounts[1:]
+	}
 
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -101,8 +113,7 @@ func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless b
 	defer chain.Stop()
 	defer engine.Stop()
 
-	registered := stakingInfo.RewardAddrs[0] // node 0 is this backend (engine.address)
-	require.Equal(t, engine.address, stakingInfo.NodeIds[0], "test setup: node 0 must be the local node")
+	require.Equal(t, engine.address, localNode, "test setup: node 0 must be the local node")
 	require.NotEqual(t, configured, registered, "test setup: the configured and registered addresses must differ")
 
 	// 1. Prepare the header as the worker does (work/worker.go commitNewWork).

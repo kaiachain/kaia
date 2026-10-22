@@ -564,7 +564,8 @@ func makeTestStakingInfo(amounts []uint64, blockNum uint64) *staking.StakingInfo
 		amounts = make([]uint64, len(nodeKeys))
 	}
 	si := &staking.StakingInfo{
-		SourceBlockNum: blockNum,
+		SourceBlockNum:     blockNum,
+		ProfileRewardAddrs: make(map[common.Address]common.Address),
 	}
 	for idx, key := range nodeKeys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -576,6 +577,7 @@ func makeTestStakingInfo(amounts []uint64, blockNum uint64) *staking.StakingInfo
 		si.StakingContracts = append(si.StakingContracts, addr)
 		si.RewardAddrs = append(si.RewardAddrs, rewardAddr)
 		si.StakingAmounts = append(si.StakingAmounts, amounts[idx])
+		si.ProfileRewardAddrs[addr] = rewardAddr
 	}
 	return si
 }
