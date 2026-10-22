@@ -1503,7 +1503,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 // handleNewBlockHashesMsg handles new block hashes message.
 func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	var (
-		maxTD         uint64
+		maxNumber     uint64
 		candidateHash *common.Hash
 	)
 	announces, err := decodeList[newBlockHashData](msg, maxBlockHashAnnouncements)
@@ -1515,19 +1515,34 @@ func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	for _, block := range announces {
 		p.AddToKnownBlocks(block.Hash)
 
-		if maxTD < block.Number {
-			maxTD = block.Number
+		if maxNumber < block.Number {
+			maxNumber = block.Number
 			candidateHash = &block.Hash
 		}
 		if !pm.blockchain.HasBlock(block.Hash, block.Number) {
 			pm.fetcher.Notify(p.GetID(), block.Hash, block.Number, time.Now(), p.FetchBlockHeader, p.FetchBlockBodies)
 		}
 	}
-	blockTD := big.NewInt(int64(maxTD))
-	if _, td := p.Head(); blockTD.Cmp(td) > 0 && candidateHash != nil {
-		p.SetHead(*candidateHash, blockTD)
+	// A number past int64 is no real height; it never moved the peer head before either.
+	if candidateHash == nil || maxNumber > math.MaxInt64 {
+		return nil
+	}
+	// Like a propagated block, the announcement proves the peer has the parent's total blockscore.
+	parentTD := pm.parentTDAt(maxNumber)
+	if _, td := p.Head(); parentTD.Cmp(td) > 0 {
+		p.SetHead(*candidateHash, parentTD)
 	}
 	return nil
+}
+
+// parentTDAt is the parent's total blockscore of the block at number; blocks after genesis score DefaultBlockScore.
+func (pm *ProtocolManager) parentTDAt(number uint64) *big.Int {
+	td := new(big.Int).SetUint64(number)
+	td.Sub(td, common.Big1).Mul(td, params.DefaultBlockScore)
+	if genesisTD := pm.blockchain.GetTd(pm.blockchain.Genesis().Hash(), 0); genesisTD != nil {
+		td.Add(td, genesisTD)
+	}
+	return td
 }
 
 // handleBlockHeaderFetchRequestMsg handles block header fetch request message.
