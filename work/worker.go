@@ -561,11 +561,12 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 
 	logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 		"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
-	// The update loop is the only reader of chainHeadCh, and the ChainHeadEvent posted here is sent to
-	// chainHeadCh too. If chainHeadCh is full, e.g. imported heads queued up during WriteBlockWithState,
-	// posting on the loop would wait on the loop itself while holding the feed's send lock, blocking every
-	// importer. So post from another goroutine while the loop keeps taking chain heads. Wait for the post
-	// to finish, so the events stay in the same order.
+	// update() is the only reader of chainHeadCh, and it is blocked until handleFinalizedBlock returns.
+	// The ChainHeadEvent posted below also goes to chainHeadCh. If chainHeadCh is already full
+	// (heads imported during WriteBlockWithState), the post waits for update() forever while holding
+	// the feed's send lock, which blocks every importer. So post from a goroutine, and read chainHeadCh
+	// here only until that post ends; update() reads it again after handleFinalizedBlock returns.
+	// Waiting for the post, instead of returning at once, keeps the events in order.
 	posted := make(chan struct{})
 	go func() {
 		defer close(posted)
