@@ -261,7 +261,7 @@ func (ctx *TransitionContext) isPassVrankTest(addr common.Address) bool {
 // applyViolationTransition returns a new NodeMap with min-stake and PFS violation
 // transitions applied to m. Pure: m is not mutated. Runs every block.
 //
-// Reads from ABv2TransitionParam:    PfsThreshold, IdleTimeout, PauseTimeout.
+// Reads from ABv2TransitionParam:    PfsThreshold, PauseTimeout.
 // Reads from EpochTransitionContext: MaxSlotAvailable, MinActiveCount.
 // Reads from GovContext:             MinStake.
 // Reads from BlockContext:           BlockTime.
@@ -270,7 +270,7 @@ func (ctx *TransitionContext) isPassVrankTest(addr common.Address) bool {
 // Rule 1 — staking < MinimumStake. On an epoch block T3b has already demoted every
 // below-min validator except those applyEpochTransition kept ValActive because the
 // epoch would otherwise leave no active validator; up to MaxSlotAvailable of those
-// exit here in address order while more than MinActiveCount remain.
+// exit here in ascending address order while more than MinActiveCount remain.
 //   - ValActive → ValExiting (slot + minActiveCount floor)
 //   - ValPaused → ValExiting (slot only)
 //   - ValReady  → ValInactive (unconditional)
