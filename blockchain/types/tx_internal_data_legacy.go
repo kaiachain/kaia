@@ -191,14 +191,15 @@ func (t *TxInternalDataLegacy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *TxInternalDataLegacy) SetSignature(s TxSignatures) {
+func (t *TxInternalDataLegacy) SetSignature(s TxSignatures) error {
 	if len(s) != 1 {
-		logger.Crit("LegacyTransaction receives a single signature only!")
+		return errSingleSignatureOnly(t.Type(), len(s))
 	}
 
 	t.V = s[0].V
 	t.R = s[0].R
 	t.S = s[0].S
+	return nil
 }
 
 func (t *TxInternalDataLegacy) RawSignatureValues() TxSignatures {

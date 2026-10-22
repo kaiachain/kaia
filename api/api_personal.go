@@ -391,7 +391,9 @@ func (s *PersonalAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTx
 	}
 	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
 	if args.TxSignatures != nil {
-		tx.SetSignature(args.TxSignatures.ToTxSignatures())
+		if err := tx.SetSignature(args.TxSignatures.ToTxSignatures()); err != nil {
+			return nil, err
+		}
 	}
 	feePayer, err := tx.FeePayer()
 	if err != nil {

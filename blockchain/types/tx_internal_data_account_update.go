@@ -254,8 +254,9 @@ func (t *TxInternalDataAccountUpdate) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *TxInternalDataAccountUpdate) SetSignature(s TxSignatures) {
+func (t *TxInternalDataAccountUpdate) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataAccountUpdate) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

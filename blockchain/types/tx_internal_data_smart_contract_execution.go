@@ -176,8 +176,9 @@ func (t *TxInternalDataSmartContractExecution) setHashForMarshaling(h *common.Ha
 	t.Hash = h
 }
 
-func (t *TxInternalDataSmartContractExecution) SetSignature(s TxSignatures) {
+func (t *TxInternalDataSmartContractExecution) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
