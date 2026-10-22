@@ -47,6 +47,28 @@ func TestKademliaStorage_AddBump(t *testing.T) {
 	assert.Equal(t, n1.ID, b.entries[0].ID, "bumped node should be at front")
 }
 
+func TestKademliaStorage_AddIfAbsent(t *testing.T) {
+	s := newTestKademliaStorage()
+	n1 := nodeAtDist(10)
+	n2 := nodeAtDist(10)
+	s.add(n1)
+	s.add(n2)
+	b := s.bucket(n1.sha)
+	require.Equal(t, []*Node{n2, n1}, b.entries)
+
+	// A stored node keeps its place and its entry, even if the given record differs.
+	record := &Node{ID: n1.ID, IP: n1.IP, UDP: n1.UDP + 1, TCP: n1.TCP + 1, NType: n1.NType, sha: n1.sha}
+	s.addIfAbsent(record)
+	assert.Equal(t, []*Node{n2, n1}, b.entries, "addIfAbsent must not reorder or replace a stored node")
+	assert.Same(t, n1, b.entries[1])
+
+	// A missing node is inserted at the front like add does.
+	n3 := nodeAtDist(10)
+	n3.IP = net.IP{172, 10, 2, 0} // another /24, to stay under the bucket IP limit
+	s.addIfAbsent(n3)
+	assert.Equal(t, []*Node{n3, n2, n1}, b.entries)
+}
+
 func TestKademliaStorage_AddBucketFull(t *testing.T) {
 	s := newTestKademliaStorage()
 	targetHash := hashAtDistance(s.selfSha, 10)
@@ -231,6 +253,27 @@ func TestFlatStorage_AddDelete(t *testing.T) {
 	// Delete the same node again - nothing to delete.
 	s.delete(n2)
 	assert.Equal(t, 1, len(s.nodes))
+}
+
+func TestFlatStorage_AddIfAbsent(t *testing.T) {
+	s := newFlatStorage(newSharedRand())
+	n1 := nodeAtDist(10)
+	n2 := nodeAtDist(10)
+	s.add(n1)
+	s.add(n2)
+	require.Equal(t, []*Node{n2, n1}, s.nodes)
+
+	// A stored node keeps its place and its entry, even if the given record differs.
+	record := &Node{ID: n1.ID, IP: n1.IP, UDP: n1.UDP + 1, TCP: n1.TCP + 1, NType: n1.NType, sha: n1.sha}
+	s.addIfAbsent(record)
+	assert.Equal(t, []*Node{n2, n1}, s.nodes, "addIfAbsent must not reorder or replace a stored node")
+	assert.Same(t, n1, s.nodes[1])
+	assert.Same(t, n1, s.oldest())
+
+	// A missing node is inserted at the front like add does.
+	n3 := nodeAtDist(10)
+	s.addIfAbsent(n3)
+	assert.Equal(t, []*Node{n3, n2, n1}, s.nodes)
 }
 
 func TestFlatStorage_Random(t *testing.T) {
