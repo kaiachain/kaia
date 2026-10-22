@@ -321,13 +321,25 @@ func TestRecoveryScenarios(t *testing.T) {
 			assert.NoError(t, err)
 			ops[tc.tokenType].dummyHandle(info, tc.handleBridge(info))
 
-			err = vtr.updateRecoveryHint()
-			assert.NoError(t, err)
-			if tc.direction == parentToChild {
-				assert.Equal(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
-				return
+			// The bridge loop may handle some of the recovered events instead of dummyHandle,
+			// so wait until all of them are handled.
+			deadline := time.Now().Add(testTimeout)
+			for {
+				info.sim.Commit()
+				err = vtr.updateRecoveryHint()
+				assert.NoError(t, err)
+				hint := vtr.child2parentHint
+				if tc.direction == parentToChild {
+					hint = vtr.parent2childHint
+				}
+				if hint.requestNonce == hint.handleNonce {
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatalf("timeout waiting for recovered events to be handled (request=%d, handle=%d)", hint.requestNonce, hint.handleNonce)
+				}
+				runtime.Gosched()
 			}
-			assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 		})
 	}
 }
@@ -541,6 +553,10 @@ func prepare(t *testing.T, vtcallback func(*testInfo), fixtureOpts recoveryFixtu
 
 	localInfo, _ := bm.GetBridgeInfo(localAddr)
 	remoteInfo, _ := bm.GetBridgeInfo(remoteAddr)
+	// Pair the bridges as SubBridgeAPI.DeployBridge does. The bridge loop can pick up
+	// recovered token events and needs the counterpart bridge to resolve the token pair.
+	localInfo.counterpartBridge = remoteInfo.bridge
+	remoteInfo.counterpartBridge = localInfo.bridge
 	sim.Commit()
 
 	var (

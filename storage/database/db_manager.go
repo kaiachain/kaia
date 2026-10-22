@@ -437,6 +437,10 @@ type databaseManager struct {
 	inMigration          bool
 	migrationBlockNumber uint64
 	migrationOldDBPath   string
+
+	// lockClose guards closed against the background RemoveOldDB writing to a closed MiscDB.
+	lockClose sync.RWMutex
+	closed    bool
 }
 
 func NewMemoryDBManager() DBManager {
@@ -895,7 +899,15 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 
 func (dbm *databaseManager) RemoveOldDB(dbPath string, endCheck chan struct{}) {
 	defer func() {
-		dbm.setMigrationOldDBPath("")
+		// The DB manager can be closed while the old DB is being removed.
+		// Then the path stays in MiscDB and the removal is retried on the next start.
+		dbm.lockClose.RLock()
+		if dbm.closed {
+			logger.Warn("Database closed before old database removal finished", "dir", dbPath)
+		} else {
+			dbm.setMigrationOldDBPath("")
+		}
+		dbm.lockClose.RUnlock()
 		if endCheck != nil {
 			close(endCheck)
 		}
@@ -1032,6 +1044,10 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 }
 
 func (dbm *databaseManager) Close() {
+	dbm.lockClose.Lock()
+	defer dbm.lockClose.Unlock()
+	dbm.closed = true
+
 	// If single DB, only close the first database.
 	if dbm.config.SingleDB {
 		dbm.dbs[0].Close()
