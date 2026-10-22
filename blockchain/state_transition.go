@@ -295,9 +295,16 @@ func (st *StateTransition) buyGas() error {
 	var (
 		validatedFeePayer = st.msg.ValidatedFeePayer()
 		validatedSender   = st.msg.ValidatedSender()
-		feeRatio, _       = st.msg.FeeRatio()
+		feeRatio, isRatio = st.msg.FeeRatio()
 		isOsaka           = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
 	)
+
+	// Transaction.Validate rejects this on the block path. Check it here too so that
+	// callers applying a message without Validate (e.g. tracers) never split the fee
+	// with a ratio above 100, which would credit the sender.
+	if isRatio && !feeRatio.IsValid() {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
 
 	// mgval is the maximum gas fee that can actually be paid in the worst case (e.g., revert)
 	// st.gasPrice = tx.gasPrice (before Magma) or effectiveGasPrice (since Magma)
