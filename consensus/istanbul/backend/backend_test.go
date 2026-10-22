@@ -75,7 +75,8 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, pragueCompatibleBlock(nil))
 	configItems = append(configItems, osakaCompatibleBlock(nil))
 	configItems = append(configItems, permissionlessCompatibleBlock(nil))
-	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
+	// Start the genesis maxBlockNum seconds in the past so that the 1-second-spaced blocks below never become future blocks.
+	configItems = append(configItems, blockPeriod(maxBlockNum))
 	configItems = append(configItems, mStaking)
 
 	chain, istBackend := newBlockChain(t, len(stakes), configItems...)
@@ -96,7 +97,9 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	var previousBlock, currentBlock *types.Block = nil, chain.CurrentBlock()
 	for range maxBlockNum {
 		previousBlock = currentBlock
-		currentBlock = makeBlockWithSeal(chain, istBackend, previousBlock)
+		currentBlock = sealBlock(istBackend, makeBlockWithoutSealAndModifiedHeader(chain, istBackend, previousBlock, func(header *types.Header) {
+			header.Time = new(big.Int).Add(previousBlock.Time(), big.NewInt(params.DefaultBlockGenerationInterval))
+		}))
 		_, err := chain.InsertChain(types.Blocks{currentBlock})
 		assert.NoError(t, err)
 	}
@@ -555,7 +558,7 @@ func TestVerifyRejectsUnauthorizedProposalAuthor(t *testing.T) {
 	config.Governance.Reward.StakingUpdateInterval = 1
 	config.Governance.Reward.ProposerUpdateInterval = 1
 
-	chain, engine := newBlockChain(t, validatorCount, config, mStaking, blockPeriod(0))
+	chain, engine := newBlockChain(t, validatorCount, config, mStaking)
 	defer chain.Stop()
 	defer engine.Stop()
 
