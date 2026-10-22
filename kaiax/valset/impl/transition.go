@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -271,13 +272,17 @@ func (v *ValsetModule) installAndInitializeABv2(
 	config := v.Chain.Config()
 
 	// Read ABv2 implementation address from ABv2DataContract (pre-deployed by governance).
-	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
+	// Read in this block's context, not CurrentBlock (the parent), so that the Registry
+	// activation check sees the same block number as initialize() below. This block isn't
+	// committed yet, so the backend takes the header directly.
+	backend, err := backends.NewStateHeaderContractBackend(v.Chain, statedb, header)
 	if err != nil {
 		return fmt.Errorf("create contract backend: %w", err)
 	}
-	// nil block number → caller uses CurrentBlock (parent), since the current
-	// block isn't committed yet.
-	implAddr, err := system.ReadABv2Implementation(backend, nil)
+	implAddr, err := system.ReadABv2Implementation(backend, header.Number)
+	if errors.Is(err, system.ErrABv2DataContractNotActive) {
+		err = fmt.Errorf("%w at block %d (its Registry activation must be <= %d)", err, header.Number.Uint64(), header.Number.Uint64())
+	}
 	if err != nil {
 		logger.Error("Failed to read ABv2 implementation", "number", header.Number, "err", err)
 		return err

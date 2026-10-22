@@ -35,8 +35,9 @@ import (
 
 // `StateBlockchainContractCaller` implements `ContractCaller` interface
 type StateBlockchainContractCaller struct {
-	bc    BlockChainForCaller
-	state *state.StateDB
+	bc     BlockChainForCaller
+	state  *state.StateDB
+	header *types.Header // if set, calls run in this header's block context instead of a chain block
 }
 
 var _ bind.ContractCaller = (*StateBlockchainContractCaller)(nil)
@@ -47,10 +48,29 @@ func NewStateBlockchainContractBackend(bc BlockChainForCaller, state *state.Stat
 	if state == nil {
 		return nil, errors.New("statedb is nil")
 	}
-	return &StateBlockchainContractCaller{bc, state}, nil
+	return &StateBlockchainContractCaller{bc: bc, state: state}, nil
+}
+
+// NewStateHeaderContractBackend creates a ContractCaller that reads from the given statedb in the
+// block context of the given header. Used for reads during block processing, when the header is
+// not in the chain yet. Calls accept only a nil block number or the header's own number.
+func NewStateHeaderContractBackend(bc BlockChainForCaller, state *state.StateDB, header *types.Header) (*StateBlockchainContractCaller, error) {
+	if state == nil {
+		return nil, errors.New("statedb is nil")
+	}
+	if header == nil || header.Number == nil {
+		return nil, errors.New("header is nil")
+	}
+	return &StateBlockchainContractCaller{bc: bc, state: state, header: header}, nil
 }
 
 func (b *StateBlockchainContractCaller) getBlock(num *big.Int) (*types.Block, error) {
+	if b.header != nil {
+		if num != nil && num.Cmp(b.header.Number) != 0 {
+			return nil, errBlockDoesNotExist
+		}
+		return types.NewBlockWithHeader(b.header), nil
+	}
 	var block *types.Block
 	if num == nil {
 		block = b.bc.CurrentBlock()
