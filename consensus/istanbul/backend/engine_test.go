@@ -268,7 +268,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		// Post-fork BLS keys come from ABv2, not KIP113 (randao.readBlsPermissionless), so the
 		// randao branch is dead here and its Registry must not overwrite this one.
 		specs := abv2SpecsFromKeys(nodeKeys)
-		alloc, err := system.AllocPermissionless(system.MakeABv2AllocConfig(common.HexToAddress("0xffff"), specs))
+		alloc, err := system.AllocPermissionless(system.MakeABv2AllocConfig(common.HexToAddress("0xffff"), specs), genesis.Timestamp)
 		if err != nil {
 			panic(err)
 		}

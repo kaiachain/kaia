@@ -69,20 +69,21 @@ type allocPermissionlessResult struct {
 }
 
 // AllocPermissionless deploys all permissionless system contracts into an in-memory
-// statedb using the EVM runtime, and returns the resulting genesis alloc.
-func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, error) {
-	alloc, _, err := allocPermissionless(config, true)
+// statedb using the EVM runtime at genesisTime, the genesis timestamp, and returns the
+// resulting genesis alloc. Overridden timed states carry deadlines counted from genesisTime.
+func AllocPermissionless(config *AllocPermissionlessConfig, genesisTime uint64) (map[common.Address]blockchain.GenesisAccount, error) {
+	alloc, _, err := allocPermissionless(config, genesisTime, true)
 	return alloc, err
 }
 
 // AllocPermissionlessPrerequisites deploys the contracts needed before a
 // delayed permissionless HF. It does not install ABv2 at 0x400; Finalize(HF-1)
 // installs and initializes ABv2 from ABv2DataContract.
-func AllocPermissionlessPrerequisites(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
-	return allocPermissionless(config, false)
+func AllocPermissionlessPrerequisites(config *AllocPermissionlessConfig, genesisTime uint64) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
+	return allocPermissionless(config, genesisTime, false)
 }
 
-func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
+func allocPermissionless(config *AllocPermissionlessConfig, genesisTime uint64, installABv2 bool) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
 	if config == nil {
 		return nil, nil, errors.New("nil permissionless config")
 	}
@@ -124,7 +125,7 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 		GasPrice:    new(big.Int),
 		Value:       new(big.Int),
 		BlockNumber: new(big.Int),
-		Time:        new(big.Int),
+		Time:        new(big.Int).SetUint64(genesisTime),
 	}
 
 	// Step 1: Deploy implementation contracts and their UpgradeableBeacons
@@ -380,7 +381,7 @@ func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermission
 		if info.State != valActiveState {
 			nodeIds = append(nodeIds, config.NodeIds[i])
 			newStates = append(newStates, info.State)
-			timeoutAts = append(timeoutAts, new(big.Int)) // no timeout at genesis
+			timeoutAts = append(timeoutAts, initialTimeoutAt(cfg.Time, info.State, &config.DataConfig))
 		}
 	}
 	if len(nodeIds) == 0 {
@@ -400,6 +401,18 @@ func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermission
 		return fmt.Errorf("applyInitialNodeStateOverrides: %w", err)
 	}
 	return nil
+}
+
+// initialTimeoutAt returns the deadline a node entering state at genesisTime carries, or 0 if the state has none.
+func initialTimeoutAt(genesisTime *big.Int, state uint8, d *abv2data.IABv2DataContractInitData) *big.Int {
+	switch valset.NodeState(state) {
+	case valset.ValReady, valset.ValInactive:
+		return new(big.Int).Add(genesisTime, d.IdleTimeout)
+	case valset.ValPaused:
+		return new(big.Int).Add(genesisTime, d.PauseTimeout)
+	default:
+		return new(big.Int)
+	}
 }
 
 // patchRegistryActivations overwrites activation slots to 0 in Registry storage
