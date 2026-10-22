@@ -317,8 +317,9 @@ type TxInternalData interface {
 	setHashForMarshaling(*common.Hash)
 
 	// SetSignature sets the sender signatures. Transaction types that carry a
-	// single signature (legacy and Ethereum typed transactions) return
-	// ErrInvalidSignatureCount unless exactly one signature is given.
+	// single signature (legacy and Ethereum typed transactions) return an error
+	// wrapping ErrInvalidSignatureCount (check with errors.Is) unless exactly one
+	// signature is given.
 	SetSignature(TxSignatures) error
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.

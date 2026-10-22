@@ -879,9 +879,9 @@ func (tx *Transaction) GetFeePayerSignatures() (TxSignatures, error) {
 	return tf.GetFeePayerRawSignatureValues(), nil
 }
 
-// SetSignature sets the sender signatures of the transaction. It returns
-// ErrInvalidSignatureCount if the underlying transaction type cannot hold the
-// given number of signatures.
+// SetSignature sets the sender signatures of the transaction. If the underlying
+// transaction type cannot hold the given number of signatures it returns an error
+// wrapping ErrInvalidSignatureCount (check with errors.Is).
 func (tx *Transaction) SetSignature(signature TxSignatures) error {
 	return tx.data.SetSignature(signature)
 }
