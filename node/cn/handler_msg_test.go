@@ -19,6 +19,7 @@
 package cn
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"math/big"
@@ -413,28 +414,95 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 }
 
+// makeMixedTxs returns n distinct signed txs rotating through legacy, Kaia typed
+// and Ethereum typed txs, which take one, two and three RLP values in a list.
+func makeMixedTxs(t *testing.T, n int) types.Transactions {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	from := crypto.PubkeyToAddress(key.PublicKey)
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+	price := big.NewInt(25 * params.Gkei)
+
+	txs := make(types.Transactions, n)
+	for i := range txs {
+		var tx *types.Transaction
+		switch nonce := uint64(i); i % 3 {
+		case 0:
+			tx = types.NewTransaction(nonce, common.Address{}, big.NewInt(1), 21000, price, nil)
+		case 1:
+			tx = types.NewTx(&types.TxInternalDataValueTransfer{
+				AccountNonce: nonce, Price: price, GasLimit: 21000, Recipient: common.Address{}, Amount: big.NewInt(1), From: from,
+			})
+		case 2:
+			tx = types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+				AccountNonce: nonce, GasTipCap: big.NewInt(1), GasFeeCap: price, GasLimit: 21000, Recipient: &common.Address{}, Amount: big.NewInt(1),
+			})
+		}
+		txs[i], err = types.SignTx(tx, signer, key)
+		require.NoError(t, err)
+	}
+	return txs
+}
+
+func txHashes(txs types.Transactions) []common.Hash {
+	hashes := make([]common.Hash, len(txs))
+	for i, tx := range txs {
+		hashes[i] = tx.Hash()
+	}
+	return hashes
+}
+
+// expectTxsDelivered expects exactly want to reach the txpool in order and to be
+// marked known. The strict mock fails on any other AddToKnownTxs call, so
+// discarded txs must not be marked known.
+func expectTxsDelivered(t *testing.T, mockCtrl *gomock.Controller, pm *ProtocolManager, peer *MockPeer, want types.Transactions) {
+	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	pm.txpool = mockTxPool
+	mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).Do(func(got types.Transactions) {
+		assert.Equal(t, txHashes(want), txHashes(got))
+	}).Times(1)
+	for _, tx := range want {
+		peer.EXPECT().AddToKnownTxs(tx.Hash()).Times(1)
+	}
+}
+
+func newTxMsgTestPeer(mockCtrl *gomock.Controller, version int) *MockPeer {
+	peer := NewMockPeer(mockCtrl)
+	peer.EXPECT().GetVersion().Return(version).AnyTimes()
+	peer.EXPECT().GetID().Return("test-peer").AnyTimes()
+	return peer
+}
+
 func TestHandleTxMsg_ItemLimit(t *testing.T) {
 	const legacyBatch = 5000 // a v2.2.2 sender puts a whole txpool promotion in one TxMsg
-	txs := make(types.Transactions, legacyBatch)
-	for i := range txs {
-		txs[i] = tx1
+	txs := makeMixedTxs(t, legacyBatch)
+	head := txs[:maxTxMsgItems]
+	plusOne := func(i int) types.Transactions {
+		return append(append(types.Transactions{}, head...), txs[i])
 	}
+	require.Equal(t, types.TxTypeValueTransfer, txs[maxTxMsgItems].Type())
+	require.Equal(t, types.TxTypeEthereumDynamicFee, txs[maxTxMsgItems+1].Type())
+	require.Equal(t, types.TxTypeLegacyTransaction, txs[maxTxMsgItems+2].Type())
 
 	tcs := []struct {
-		name      string
-		version   int
-		numTxs    int
-		delivered int  // txs handed to the txpool
-		tooMany   bool // ErrTooManyItems, which disconnects the peer
+		name    string
+		version int
+		txs     types.Transactions
+		kept    int  // leading txs handed to the txpool
+		tooMany bool // ErrTooManyItems, which disconnects the peer
 	}{
-		{"kaia67 at limit", kaia67, maxTxMsgItems, maxTxMsgItems, false},
-		{"kaia68 at limit", kaia68, maxTxMsgItems, maxTxMsgItems, false},
-		{"kaia67 under limit", kaia67, 10, 10, false},
-		{"kaia68 under limit", kaia68, 10, 10, false},
+		{"kaia67 under limit", kaia67, txs[:10], 10, false},
+		{"kaia68 under limit", kaia68, txs[:10], 10, false},
+		{"kaia67 at limit", kaia67, head, maxTxMsgItems, false},
+		{"kaia68 at limit", kaia68, head, maxTxMsgItems, false},
 		// Legacy peers are truncated instead of disconnected during the rolling upgrade.
-		{"kaia66 over limit", kaia66, legacyBatch, maxTxMsgItems, false},
-		{"kaia67 over limit", kaia67, legacyBatch, maxTxMsgItems, false},
-		{"kaia68 over limit", kaia68, legacyBatch, 0, true},
+		{"kaia67 limit+1 kaia typed tail", kaia67, plusOne(maxTxMsgItems), maxTxMsgItems, false},
+		{"kaia67 limit+1 ethereum typed tail", kaia67, plusOne(maxTxMsgItems + 1), maxTxMsgItems, false},
+		{"kaia67 limit+1 legacy tail", kaia67, plusOne(maxTxMsgItems + 2), maxTxMsgItems, false},
+		{"kaia66 legacy batch", kaia66, txs, maxTxMsgItems, false},
+		{"kaia67 legacy batch", kaia67, txs, maxTxMsgItems, false},
+		{"kaia68 limit+1", kaia68, plusOne(maxTxMsgItems), 0, true},
+		{"kaia68 legacy batch", kaia68, txs, 0, true},
 	}
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
@@ -443,25 +511,89 @@ func TestHandleTxMsg_ItemLimit(t *testing.T) {
 
 			pm := &ProtocolManager{}
 			pm.acceptTxs.Store(1)
-			mockTxPool := mocks.NewMockTxPool(mockCtrl)
-			pm.txpool = mockTxPool
-
-			peer := NewMockPeer(mockCtrl)
-			peer.EXPECT().GetVersion().Return(tc.version).AnyTimes()
-			peer.EXPECT().GetID().Return("test-peer").AnyTimes()
-
+			peer := newTxMsgTestPeer(mockCtrl, tc.version)
 			if !tc.tooMany {
-				mockTxPool.EXPECT().HandleTxMsg(gomock.Len(tc.delivered)).Times(1)
-				peer.EXPECT().AddToKnownTxs(tx1.Hash()).Times(tc.delivered)
+				expectTxsDelivered(t, mockCtrl, pm, peer, tc.txs[:tc.kept])
 			}
 
-			err := handleTxMsg(pm, peer, generateMsg(t, TxMsg, txs[:tc.numTxs]))
+			err := handleTxMsg(pm, peer, generateMsg(t, TxMsg, tc.txs))
 			if tc.tooMany {
 				require.ErrorContains(t, err, "Too many items")
 			} else {
 				require.NoError(t, err)
 			}
 		})
+	}
+}
+
+// TestHandleTxMsg_LegacyTail covers what a legacy peer's TxMsg may carry past
+// maxTxMsgItems. The tail is not read, so neither invalid txs nor malformed
+// framing there disconnects the peer; errors in the outer list or the kept head do.
+func TestHandleTxMsg_LegacyTail(t *testing.T) {
+	txs := makeMixedTxs(t, maxTxMsgItems)
+	raws := make([]rlp.RawValue, len(txs))
+	for i, tx := range txs {
+		var err error
+		raws[i], err = rlp.EncodeToBytes(tx)
+		require.NoError(t, err)
+	}
+	encode := func(head []rlp.RawValue, tail ...rlp.RawValue) []byte {
+		b, err := rlp.EncodeToBytes(append(append([]rlp.RawValue{}, head...), tail...))
+		require.NoError(t, err)
+		return b
+	}
+	notATx := rlp.RawValue{0x83, 1, 2, 3}  // a well-framed string that is not a tx
+	badFraming := rlp.RawValue{0xb8, 0xff} // claims 255 bytes past the end of the list
+	full := encode(raws)
+
+	tcs := []struct {
+		name    string
+		version int
+		payload []byte
+		kept    int    // leading txs handed to the txpool
+		errMsg  string // error that disconnects the peer
+	}{
+		{"invalid tx in tail", kaia67, encode(raws, notATx), maxTxMsgItems, ""},
+		{"malformed framing in tail", kaia67, encode(raws, badFraming), maxTxMsgItems, ""},
+		{"invalid tx in head", kaia67, encode(raws[:maxTxMsgItems-1], notATx), 0, "Invalid message"},
+		{"outer list truncated", kaia67, full[:len(full)-10], 0, "Invalid message"},
+		{"kaia68 invalid tx past limit", kaia68, encode(raws, notATx), 0, "Invalid message"},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm := &ProtocolManager{}
+			pm.acceptTxs.Store(1)
+			peer := newTxMsgTestPeer(mockCtrl, tc.version)
+			if tc.errMsg == "" {
+				expectTxsDelivered(t, mockCtrl, pm, peer, txs[:tc.kept])
+			}
+
+			msg := p2p.Msg{Code: TxMsg, Size: uint32(len(tc.payload)), Payload: bytes.NewReader(tc.payload)}
+			err := handleTxMsg(pm, peer, msg)
+			if tc.errMsg != "" {
+				require.ErrorContains(t, err, tc.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDecodeListTruncated(t *testing.T) {
+	txs := makeMixedTxs(t, 4)
+	for _, tc := range []struct {
+		n, kept   int
+		truncated bool
+	}{
+		{0, 0, false}, {2, 2, false}, {3, 3, false}, {4, 3, true},
+	} {
+		got, truncated, err := decodeListTruncated[*types.Transaction](generateMsg(t, TxMsg, txs[:tc.n]), 3)
+		require.NoError(t, err)
+		assert.Equal(t, txHashes(txs[:tc.kept]), txHashes(got), "n=%d", tc.n)
+		assert.Equal(t, tc.truncated, truncated, "n=%d", tc.n)
 	}
 }
 
