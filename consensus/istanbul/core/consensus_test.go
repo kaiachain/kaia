@@ -1982,6 +1982,101 @@ func TestConsensusLockedNodeExecutesLockBelowProvenClaim(t *testing.T) {
 	})
 }
 
+// TestConsensusLockedNodeAdoptsLowerCertificateAfterExecutionFailure checks
+// that a locked node which finds its lock bad releases the certificate with
+// the lock, so the lower certificate carried by the recovery proposal is
+// adopted. The setting is the one above, except that the round-5 votes are
+// lost: C and D must keep W@0 and claim it in the next ROUND CHANGE, rather
+// than skip it against the X@1 certificate left behind and claim nothing.
+func TestConsensusLockedNodeAdoptsLowerCertificateAfterExecutionFailure(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s := newScenarioNet(t, 4, 4, params.TestKaiaConfig("permissionless"))
+		all := s.nodes(0, 1, 2, 3)
+		honest := s.nodes(1, 2, 3)
+		a, b, c := s.validators[0], s.validators[1], s.validators[2]
+		w := a.proposal(1)
+
+		// Round 0: A proposes W; every vote is lost, nobody locks.
+		s.drop(bft.MsgPrepare, all, all, 0)
+		s.drop(bft.MsgCommit, all, all, 0)
+		// Round 1: B proposes X; the PREPARE quorum locks everyone, COMMITs are lost.
+		x := b.proposal(2)
+		newMessageRule(s, bft.MsgPreprepare, b, all, 1).proposal = x
+		s.drop(bft.MsgCommit, all, all, 1)
+		// A withholds everything from round 2 on; its claims are injected below.
+		for r := uint64(2); r <= 6; r++ {
+			for _, code := range []uint64{bft.MsgPrepare, bft.MsgCommit, bft.MsgRoundChange, bft.MsgPreprepare} {
+				s.drop(code, s.nodes(0), all, r)
+			}
+		}
+		// Round 5: B's recovery proposal is accepted, but its votes are lost.
+		s.drop(bft.MsgPrepare, honest, all, 5)
+		s.drop(bft.MsgCommit, honest, all, 5)
+		s.advanceConsensus(1, all)
+		s.timeout(all)
+		s.advanceConsensus(1, all)
+		for _, n := range all {
+			n.assertHashLocked(x.Hash())
+		}
+		b.backend.badProposals[x.Hash()] = true
+		for _, n := range s.nodes(2, 3) {
+			n.backend.badExecutions[x.Hash()] = true
+		}
+		lower := preparedCertificate(t, s.nodes(0, 2, 3), w, 0)
+		lowerClaim := &bft.PreparedClaim{Round: big.NewInt(0), Digest: w.Hash()}
+
+		// Rounds 2-4: C and D re-propose X, B refuses it; A's turn is silent.
+		// Round 5: B proposes W with W@0 votes; C and D execute X, find it bad
+		// and accept W.
+		for r := uint64(2); r <= 5; r++ {
+			for _, n := range honest {
+				synctest.Wait()
+				_ = n.core.handleMsg(signedRoundChange(t, a, r, lowerClaim, lower).Payload)
+				synctest.Wait()
+			}
+			var armed []*validator
+			for _, n := range honest {
+				if !n.core.waitingForRoundChange {
+					armed = append(armed, n)
+				}
+			}
+			s.timeout(armed)
+			settleConsensus(s, 1)
+		}
+		require.Equal(t, w.Hash(), sentPreprepare(t, s, b, 1, 5).Proposal.Hash())
+		for _, n := range s.nodes(2, 3) {
+			require.Equal(t, 1, n.backend.executions, "node %d executes its lock once", n.id)
+			require.True(t, n.backend.badProposals[x.Hash()])
+			n.assertUncommitted(1)
+			cert := n.core.current.PreparedCertificate()
+			require.NotNil(t, cert, "node %d releases X@1 and adopts W@0", n.id)
+			require.Equal(t, w.Hash(), cert.Proposal.Hash())
+			require.Zero(t, cert.View.Round.Uint64())
+			n.assertHashLocked(w.Hash())
+		}
+
+		// Round 6: C's ROUND CHANGE claims W@0, and C re-proposes W.
+		var armed []*validator
+		for _, n := range honest {
+			if !n.core.waitingForRoundChange {
+				armed = append(armed, n)
+			}
+		}
+		s.timeout(armed)
+		settleConsensus(s, 1)
+		msg, err := c.backend.decodeMessage(s.message(c, bft.MsgRoundChange, 1, 6).Payload, nil)
+		require.NoError(t, err)
+		var roundChange *bft.RoundChange
+		require.NoError(t, msg.Decode(&roundChange))
+		require.NotNil(t, roundChange.Prepared)
+		require.Equal(t, w.Hash(), roundChange.Prepared.Digest)
+		require.Zero(t, roundChange.Prepared.Round.Uint64())
+		for _, n := range honest {
+			require.Equal(t, w.Hash(), n.assertCommitted(1, 6).Hash())
+		}
+	})
+}
+
 // TestConsensusUnlockedNodeAcceptsProposalBelowProvenClaim checks that a node
 // with no lock accepts a proposal backed by a lower certificate the same way it
 // accepts a fresh one. D missed round 1, so it holds neither a lock on X nor a
