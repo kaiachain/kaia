@@ -194,7 +194,7 @@ Called when a `VRankCandidate` message is received. The handler does not try to 
 Called when this node builds block N. Before the permissionless fork `header.VRank` is left empty. Otherwise:
 
 - at epoch-start blocks, `Report` is `GetCandTesting(N)`
-- at other blocks, `Report` is `EvaluateCandidates(n, round)` for the most recent block `n < N` in the current epoch that this node proposed at its committed round and whose view is still in the collector. Views older than `n` are then dropped from the collector. If there is no such block (first proposal of the epoch, or a restart emptied the collector), the report is empty.
+- at other blocks, `Report` is `EvaluateCandidates(n, round)` for the most recent block `n < N` in the current epoch whose committed round this node proposed, found among the blocks this node holds a view for, newest first. Views older than `n` are then dropped from the collector. The report is empty when there is no such block (first proposal of the epoch, or a restart emptied the collector), or when a newer block with a view was authored by this node but committed in another proposer's round: that block already carries this node's report on `n`.
 - `ParentRound` and `ParentCommittedSeal` are the round and committed seals read from this node's stored header of block `N-1` when that round is not 0. They are omitted at epoch-start blocks and when `N-1` is before the fork.
 
 #### VerifyHeader
