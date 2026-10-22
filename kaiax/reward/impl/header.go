@@ -37,6 +37,14 @@ func (r *RewardModule) VerifyHeader(header *types.Header, _ *types.Header) error
 		return err
 	}
 	expected := r.GetRewardAddress(header.Number.Uint64(), proposer)
+	// After Permissionless, every committee member has an AddressBookV2 profile,
+	// so the proposer's reward address is always known and always enforced.
+	if r.ChainConfig.IsPermissionlessForkEnabled(header.Number) {
+		if expected == (common.Address{}) || header.Rewardbase != expected {
+			return reward.ErrInvalidRewardbase
+		}
+		return nil
+	}
 	// No staking entry for this proposer: nothing to check against. FinalizeState
 	// falls back to the node's own configured Rewardbase in this case, so do not
 	// reject the header here.
