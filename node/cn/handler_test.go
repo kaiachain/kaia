@@ -21,6 +21,7 @@ package cn
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -300,6 +301,90 @@ func TestProtocolManager_removePeer(t *testing.T) {
 		pm.removePeer(peerID)
 
 		mockCtrl.Finish()
+	}
+}
+
+func TestProtocolManager_handle_peerCap(t *testing.T) {
+	const maxPeers = 10
+	errRegistered := errors.New("registered")
+	genesis, head := blocks[0], blocks[1].Header()
+	chainConfig := params.TestChainConfig
+
+	tests := []struct {
+		name             string
+		trusted, static  bool
+		snapSync         bool
+		peers, snapPeers int
+		want             error
+	}{
+		{name: "plain peer below cap", peers: maxPeers - 1, want: errRegistered},
+		{name: "plain peer at cap", peers: maxPeers, want: p2p.DiscTooManyPeers},
+		{name: "trusted peer at cap", trusted: true, peers: maxPeers, want: errRegistered},
+		{name: "static peer at cap", static: true, peers: maxPeers, want: errRegistered},
+		{name: "plain peer within snap reservation", snapSync: true, peers: ExtraNonSnapPeers, want: errRegistered},
+		{name: "plain peer over snap reservation", snapSync: true, peers: ExtraNonSnapPeers + 1, want: p2p.DiscTooManyPeers},
+		{name: "plain peer within reservation widened by a snap peer", snapSync: true, peers: ExtraNonSnapPeers + 1, snapPeers: 1, want: errRegistered},
+		{name: "trusted peer over snap reservation", trusted: true, snapSync: true, peers: ExtraNonSnapPeers + 1, want: errRegistered},
+		{name: "static peer over snap reservation", static: true, snapSync: true, peers: ExtraNonSnapPeers + 1, want: errRegistered},
+	}
+
+	for _, tc := range tests {
+		for _, channels := range []int{1, 2} {
+			t.Run(fmt.Sprintf("%s/channels=%d", tc.name, channels), func(t *testing.T) {
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+
+				mockPeerSet := NewMockPeerSet(mockCtrl)
+				mockPeerSet.EXPECT().WaitSnapExtension(gomock.Any()).Return(nil, nil).Times(1)
+				mockPeerSet.EXPECT().Len().Return(tc.peers).AnyTimes()
+				mockPeerSet.EXPECT().SnapLen().Return(tc.snapPeers).AnyTimes()
+				mockPeerSet.EXPECT().Register(gomock.Any(), gomock.Any()).Return(errRegistered).AnyTimes()
+
+				mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
+				mockBlockChain.EXPECT().Genesis().Return(genesis).AnyTimes()
+				mockBlockChain.EXPECT().CurrentHeader().Return(head).AnyTimes()
+				mockBlockChain.EXPECT().GetTd(head.Hash(), head.Number.Uint64()).Return(td1).AnyTimes()
+				mockBlockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
+
+				pm := &ProtocolManager{networkId: 1, maxPeers: maxPeers, peers: mockPeerSet, blockchain: mockBlockChain}
+				if tc.snapSync {
+					pm.snapSync = 1
+				}
+
+				local := make([]p2p.MsgReadWriter, channels)
+				var remote *p2p.MsgPipeRW
+				for i := range local {
+					l, r := p2p.MsgPipe()
+					defer l.Close()
+					local[i] = l
+					if i == p2p.ConnDefault {
+						remote = r
+					}
+				}
+				p2pPeer := p2p.NewPeerWithFlags(nodeids[0], nodeids[0].String(), nil, tc.trusted, tc.static)
+				peer, err := newPeerWithRWs(version, p2pPeer, local)
+				assert.NoError(t, err)
+
+				// Remote side of the status handshake.
+				go func() {
+					msg, err := remote.ReadMsg()
+					if err != nil {
+						return
+					}
+					msg.Discard()
+					p2p.Send(remote, StatusMsg, &statusData{
+						ProtocolVersion: uint32(version),
+						NetworkId:       pm.networkId,
+						TD:              td1,
+						CurrentBlock:    head.Hash(),
+						GenesisBlock:    genesis.Hash(),
+						ChainID:         chainConfig.ChainID,
+					})
+				}()
+
+				assert.Equal(t, tc.want, peer.Handle(pm))
+			})
+		}
 	}
 }
 

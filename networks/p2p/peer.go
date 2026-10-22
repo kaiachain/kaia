@@ -130,8 +130,20 @@ type Peer struct {
 
 // NewPeer returns a peer for testing purposes.
 func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
+	return NewPeerWithFlags(id, name, caps, false, false)
+}
+
+// NewPeerWithFlags returns a peer for testing purposes, marked trusted and/or static-dialed.
+func NewPeerWithFlags(id discover.NodeID, name string, caps []Cap, trusted, static bool) *Peer {
+	var flags connFlag
+	if trusted {
+		flags |= trustedConn
+	}
+	if static {
+		flags |= staticDialedConn
+	}
 	pipe, _ := net.Pipe()
-	conn := []*conn{{fd: pipe, transport: nil, id: id, caps: caps, name: name}}
+	conn := []*conn{{fd: pipe, transport: nil, id: id, caps: caps, name: name, flags: flags}}
 	peer, _ := newPeer(conn, nil, defaultRWTimerConfig)
 	close(peer.closed) // ensures Disconnect doesn't block
 	return peer
