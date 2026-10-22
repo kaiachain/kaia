@@ -159,7 +159,7 @@ func TestAllocPermissionless(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	config := makeTestPermissionlessConfig(4)
 
-	alloc, err := AllocPermissionless(config)
+	alloc, err := AllocPermissionless(config, 0)
 	require.NoError(t, err)
 	verifyPermissionlessAlloc(t, config, alloc)
 }
@@ -168,7 +168,7 @@ func TestAllocPermissionless_SingleValidator(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	config := makeTestPermissionlessConfig(1)
 
-	alloc, err := AllocPermissionless(config)
+	alloc, err := AllocPermissionless(config, 0)
 	require.NoError(t, err)
 	verifyPermissionlessAlloc(t, config, alloc)
 }
@@ -180,7 +180,7 @@ func TestAllocPermissionless_InitialStateOverrideUpdatesEpochVACount(t *testing.
 	config := makeTestPermissionlessConfig(9)
 	config.NodeInfos[8].State = valset.CandReady.ToUint8()
 
-	alloc, err := AllocPermissionless(config)
+	alloc, err := AllocPermissionless(config, 0)
 	require.NoError(t, err)
 
 	backend := backends.NewSimulatedBackend(blockchain.GenesisAlloc(alloc))
@@ -213,20 +213,10 @@ func TestAllocPermissionless_InitialStateOverrideSetsDeadlines(t *testing.T) {
 		return config
 	}
 
-	t.Run("genesis timestamp", func(t *testing.T) {
-		config := newConfig()
-		g := &blockchain.Genesis{Timestamp: genesisTime}
-		require.NoError(t, AllocPermissionlessGenesis(g, config))
-		assertOverrideDeadlines(t, config, g.Alloc, genesisTime)
-	})
-
-	t.Run("config field", func(t *testing.T) {
-		config := newConfig()
-		config.GenesisTime = genesisTime
-		alloc, err := AllocPermissionless(config)
-		require.NoError(t, err)
-		assertOverrideDeadlines(t, config, alloc, genesisTime)
-	})
+	config := newConfig()
+	alloc, err := AllocPermissionless(config, genesisTime)
+	require.NoError(t, err)
+	assertOverrideDeadlines(t, config, alloc, genesisTime)
 }
 
 func assertOverrideDeadlines(t *testing.T, config *AllocPermissionlessConfig, alloc blockchain.GenesisAlloc, genesisTime uint64) {
@@ -261,7 +251,7 @@ func TestAllocPermissionless_UsePD(t *testing.T) {
 	config := makeTestPermissionlessConfig(4)
 	config.UsePD = true
 
-	alloc, err := AllocPermissionless(config)
+	alloc, err := AllocPermissionless(config, 0)
 	require.NoError(t, err)
 
 	// One PD proxy per validator on top of what the non-PD alloc holds.
@@ -288,7 +278,7 @@ func TestAllocPermissionlessPrerequisites(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	config := makeTestPermissionlessConfig(4)
 
-	alloc, records, err := AllocPermissionlessPrerequisites(config)
+	alloc, records, err := AllocPermissionlessPrerequisites(config, 0)
 	require.NoError(t, err)
 	require.NotContains(t, alloc, AddressBookAddr)
 
@@ -313,7 +303,7 @@ func TestAllocPermissionless_MismatchedLengths(t *testing.T) {
 	// Remove one stakeAmt to create mismatch
 	config.StakeAmts = config.StakeAmts[:1]
 
-	_, err := AllocPermissionless(config)
+	_, err := AllocPermissionless(config, 0)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "mismatched lengths")
 }

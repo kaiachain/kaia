@@ -110,7 +110,7 @@ func TestSignCreateNodeProof_AcceptedByAddressBookV2(t *testing.T) {
 	config, keys := makeTestPermissionlessConfigWithKeys(2)
 	// deleteNode only accepts Registered; node 0 stays active.
 	config.NodeInfos[1].State = valset.Registered.ToUint8()
-	alloc, err := AllocPermissionless(config)
+	alloc, err := AllocPermissionless(config, 0)
 	require.NoError(t, err)
 	// This manager deployed this staking contract, so createNode clears its deployer check.
 	manager, staking := config.NodeInfos[1].Manager, config.NodeInfos[1].StakingContract

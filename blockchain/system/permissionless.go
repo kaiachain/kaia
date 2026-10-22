@@ -19,7 +19,6 @@ package system
 import (
 	"errors"
 	"fmt"
-	"maps"
 	"math"
 	"math/big"
 
@@ -58,7 +57,6 @@ type AllocPermissionlessConfig struct {
 	DataConfig         abv2data.IABv2DataContractInitData // ABv2DataContract constructor data.
 	EpochBlockInterval int64                              // Blocks per epoch baked into ABv2 bytecode. 0 uses DefaultEpochBlockInterval.
 	UsePD              bool                               // Deploy every validator's CnStaking with a PublicDelegation.
-	GenesisTime        uint64                             // Genesis timestamp the alloc runs at; AllocPermissionlessGenesis sets it.
 }
 
 // allocPermissionlessResult holds intermediate deployed addresses passed between internal steps.
@@ -71,34 +69,21 @@ type allocPermissionlessResult struct {
 }
 
 // AllocPermissionless deploys all permissionless system contracts into an in-memory
-// statedb using the EVM runtime, and returns the resulting genesis alloc.
-func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, error) {
-	alloc, _, err := allocPermissionless(config, true)
+// statedb using the EVM runtime at genesisTime, the genesis timestamp, and returns the
+// resulting genesis alloc. Overridden timed states carry deadlines counted from genesisTime.
+func AllocPermissionless(config *AllocPermissionlessConfig, genesisTime uint64) (map[common.Address]blockchain.GenesisAccount, error) {
+	alloc, _, err := allocPermissionless(config, genesisTime, true)
 	return alloc, err
-}
-
-// AllocPermissionlessGenesis runs AllocPermissionless at g's timestamp and adds the result to g's alloc.
-func AllocPermissionlessGenesis(g *blockchain.Genesis, config *AllocPermissionlessConfig) error {
-	config.GenesisTime = g.Timestamp
-	alloc, err := AllocPermissionless(config)
-	if err != nil {
-		return err
-	}
-	if g.Alloc == nil {
-		g.Alloc = make(blockchain.GenesisAlloc, len(alloc))
-	}
-	maps.Copy(g.Alloc, alloc)
-	return nil
 }
 
 // AllocPermissionlessPrerequisites deploys the contracts needed before a
 // delayed permissionless HF. It does not install ABv2 at 0x400; Finalize(HF-1)
 // installs and initializes ABv2 from ABv2DataContract.
-func AllocPermissionlessPrerequisites(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
-	return allocPermissionless(config, false)
+func AllocPermissionlessPrerequisites(config *AllocPermissionlessConfig, genesisTime uint64) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
+	return allocPermissionless(config, genesisTime, false)
 }
 
-func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
+func allocPermissionless(config *AllocPermissionlessConfig, genesisTime uint64, installABv2 bool) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
 	if config == nil {
 		return nil, nil, errors.New("nil permissionless config")
 	}
@@ -140,7 +125,7 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 		GasPrice:    new(big.Int),
 		Value:       new(big.Int),
 		BlockNumber: new(big.Int),
-		Time:        new(big.Int).SetUint64(config.GenesisTime),
+		Time:        new(big.Int).SetUint64(genesisTime),
 	}
 
 	// Step 1: Deploy implementation contracts and their UpgradeableBeacons
