@@ -140,14 +140,34 @@ func TestGetRewardSummary(t *testing.T) {
 // Other branches such as hardfork and ratios are covered in smaller unit tests.
 func TestGetBlockReward(t *testing.T) {
 	testcases := []struct {
-		desc     string
-		simple   bool
-		deferred bool
-		prague   bool
-		expected *reward.RewardSpec
+		desc           string
+		simple         bool
+		deferred       bool
+		prague         bool
+		permissionless bool
+		expected       *reward.RewardSpec
 	}{
 		{
-			"simple non-deferred", true, false, false,
+			// Before Permissionless, the whole non-deferred fee is credited in state transition (#1097).
+			"simple non-deferred", true, false, false, false,
+			&reward.RewardSpec{
+				RewardSummary: reward.RewardSummary{
+					Minted:   big.NewInt(6.4e18),
+					TotalFee: big.NewInt(0.0376e18),
+					BurntFee: big.NewInt(0), // nothing burnt in state transition before Permissionless
+				},
+				Proposer: big.NewInt(6.4376e18), // M + F
+				Stakers:  big.NewInt(0),
+				KIF:      big.NewInt(0),
+				KEF:      big.NewInt(0),
+				KPF:      big.NewInt(0),
+				Rewards: map[common.Address]*big.Int{
+					common.HexToAddress("0xfff"): big.NewInt(6.4376e18),
+				},
+			},
+		},
+		{
+			"simple non-deferred since permissionless", true, false, false, true,
 			&reward.RewardSpec{
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
@@ -165,7 +185,7 @@ func TestGetBlockReward(t *testing.T) {
 			},
 		},
 		{
-			"simple deferred", true, true, false,
+			"simple deferred", true, true, false, false,
 			&reward.RewardSpec{
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
@@ -183,7 +203,31 @@ func TestGetBlockReward(t *testing.T) {
 			},
 		},
 		{
-			"full non-deferred", false, false, false,
+			// Before Permissionless, the whole non-deferred fee is credited in state transition (#1097).
+			"full non-deferred", false, false, false, false,
+			&reward.RewardSpec{
+				RewardSummary: reward.RewardSummary{
+					Minted:   big.NewInt(6.4e18),
+					TotalFee: big.NewInt(0.0376e18),
+					BurntFee: big.NewInt(0), // nothing burnt in state transition before Permissionless
+				},
+				Proposer: big.NewInt(0.6776e18 + 1), // gpM + remainder + F
+				Stakers:  big.NewInt(2.56e18 - 1),   // gsM - remainder
+				KIF:      big.NewInt(1.28e18),
+				KEF:      big.NewInt(1.92e18),
+				KPF:      big.NewInt(0),
+				Rewards: map[common.Address]*big.Int{
+					common.HexToAddress("0xfff"): big.NewInt(0.6776e18 + 1),
+					common.HexToAddress("0xd01"): big.NewInt(1.28e18),
+					common.HexToAddress("0xd02"): big.NewInt(1.92e18),
+					common.HexToAddress("0xc01"): big.NewInt(426666666666666666),
+					common.HexToAddress("0xc02"): big.NewInt(853333333333333333),
+					common.HexToAddress("0xc03"): big.NewInt(1280000000000000000),
+				},
+			},
+		},
+		{
+			"full non-deferred since permissionless", false, false, false, true,
 			&reward.RewardSpec{
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
@@ -206,7 +250,7 @@ func TestGetBlockReward(t *testing.T) {
 			},
 		},
 		{
-			"full deferred", false, true, false,
+			"full deferred", false, true, false, false,
 			&reward.RewardSpec{
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
@@ -229,7 +273,7 @@ func TestGetBlockReward(t *testing.T) {
 			},
 		},
 		{
-			"full deferred with CL", false, true, true,
+			"full deferred with CL", false, true, true, false,
 			&reward.RewardSpec{
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
@@ -259,12 +303,61 @@ func TestGetBlockReward(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		header, txs, receipts := makeTestKaiaBlock(61)
-		r := makeTestRewardModule(t, tc.simple, tc.deferred, tc.prague, header, txs, receipts)
+		r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+			Simple:           tc.simple,
+			Deferred:         tc.deferred,
+			IsPrague:         tc.prague,
+			IsPermissionless: tc.permissionless,
+			Header:           header,
+			Txs:              txs,
+			Receipts:         receipts,
+		})
 
 		spec, err := r.GetBlockReward(header.Number.Uint64())
 		require.Nil(t, err)
 		assert.Equal(t, tc.expected, spec, tc.desc)
 	}
+}
+
+// TestSpecWithNonDeferredFee_PermissionlessBoundary verifies that the non-deferred fee reported by
+// GetBlockReward follows the state transition (see StateTransition.TransitionDb):
+// nothing is burnt between Magma and Permissionless, and F/2 is burnt since Permissionless.
+func TestSpecWithNonDeferredFee_PermissionlessBoundary(t *testing.T) {
+	var (
+		rewardbase = common.HexToAddress("0xfff")
+		execFee    = big.NewInt(7e16)
+		header     = &types.Header{Rewardbase: rewardbase}
+	)
+	testcases := []struct {
+		desc         string
+		rules        params.Rules
+		wantBurnt    *big.Int
+		wantProposer *big.Int
+	}{
+		{"magma before permissionless", params.Rules{IsMagma: true}, big.NewInt(0), execFee},
+		{"permissionless", params.Rules{IsMagma: true, IsPermissionless: true}, big.NewInt(3.5e16), big.NewInt(3.5e16)},
+	}
+	for _, tc := range testcases {
+		config := &reward.RewardConfig{Rules: tc.rules, Rewardbase: rewardbase, DeferredTxFee: false}
+		spec, err := (&RewardModule{}).specWithNonDeferredFee(reward.NewRewardSpec(), config, header, execFee)
+		require.NoError(t, err, tc.desc)
+		assert.Zero(t, execFee.Cmp(spec.TotalFee), tc.desc+" TotalFee: got %s", spec.TotalFee)
+		assert.Zero(t, tc.wantBurnt.Cmp(spec.BurntFee), tc.desc+" BurntFee: want %s got %s", tc.wantBurnt, spec.BurntFee)
+		assert.Zero(t, tc.wantProposer.Cmp(spec.Proposer), tc.desc+" Proposer: want %s got %s", tc.wantProposer, spec.Proposer)
+		assert.Zero(t, tc.wantProposer.Cmp(spec.Rewards[rewardbase]), tc.desc+" Rewards[rewardbase]: want %s got %s", tc.wantProposer, spec.Rewards[rewardbase])
+		sanityCheckRewardSpec(t, spec, tc.desc)
+	}
+
+	// Odd fee since Permissionless: the burnt half is rounded down and the proposer receives the rest,
+	// matching StateTransition.TransitionDb (fee - fee/2) for a block with a single transaction.
+	// (TransitionDb rounds per transaction while the getter rounds the block total; see #1097.)
+	oddFee := big.NewInt(7e16 + 1)
+	config := &reward.RewardConfig{Rules: params.Rules{IsMagma: true, IsPermissionless: true}, Rewardbase: rewardbase}
+	spec, err := (&RewardModule{}).specWithNonDeferredFee(reward.NewRewardSpec(), config, header, oddFee)
+	require.NoError(t, err)
+	assert.Zero(t, big.NewInt(3.5e16).Cmp(spec.BurntFee), "odd fee BurntFee: got %s", spec.BurntFee)
+	assert.Zero(t, big.NewInt(3.5e16+1).Cmp(spec.Proposer), "odd fee Proposer: got %s", spec.Proposer)
+	sanityCheckRewardSpec(t, spec, "odd fee since permissionless")
 }
 
 // Test the special case of non-deferred mode and before Magma,
@@ -1460,6 +1553,17 @@ func TestGetBlobFee(t *testing.T) {
 	assert.Equal(t, big.NewInt(28311552000000000), getBlobFee(&types.Header{BlobGasUsed: &blobGasUsed, BaseFee: big.NewInt(27e9)}), "one blob")
 }
 
+// TestGetRewardSummary_NonDeferredExceptionPinned pins the deliberate exception documented in README.md:
+// getRewardSummary does not consult DeferredTxFee, so for a non-deferred chain before Permissionless it
+// still reports the deferred-mode burn (F/2) although the state credited the whole fee (#1097). Changing this
+// requires recomputing the persisted kaiax/supply checkpoints; see the follow-up of #1097.
+func TestGetRewardSummary_NonDeferredExceptionPinned(t *testing.T) {
+	execFee := big.NewInt(7e16)
+	config := &reward.RewardConfig{IsSimple: true, DeferredTxFee: false, Rules: params.Rules{IsMagma: true}, MintingAmount: big.NewInt(0)}
+	summary := getRewardSummary(config, execFee, big.NewInt(0))
+	assert.Zero(t, big.NewInt(3.5e16).Cmp(summary.BurntFee), "non-deferred before Permissionless still reports F/2: got %s", summary.BurntFee)
+}
+
 // TestGetRewardSummary_BlobFee verifies that blobFee is added to both TotalFee and BurntFee
 // without affecting the execution-fee burn ratio.
 func TestGetRewardSummary_BlobFee(t *testing.T) {
@@ -1508,26 +1612,40 @@ func TestGetBlockReward_BlobFee(t *testing.T) {
 	testcases := []struct {
 		desc             string
 		deferred         bool
+		permissionless   bool
 		expectedTotalFee *big.Int
 		expectedBurntFee *big.Int
 	}{
 		{
 			// Deferred: specWithNonDeferredFee is a no-op; values come from getDeferredReward.
-			"full deferred", true,
+			"full deferred", true, false,
 			new(big.Int).Add(execFee, blobFee),
 			new(big.Int).Add(execFee, blobFee),
 		},
 		{
-			// Non-deferred: specWithNonDeferredFee adds execFee+blobFee to TotalFee,
+			// Non-deferred before Permissionless: specWithNonDeferredFee adds execFee+blobFee to TotalFee,
+			// only blobFee to BurntFee (the exec fee burn starts at Permissionless, #1097), and F to Proposer.
+			"full non-deferred before permissionless", false, false,
+			new(big.Int).Add(execFee, blobFee),
+			new(big.Int).Set(blobFee), // blobFee only
+		},
+		{
+			// Non-deferred since Permissionless: specWithNonDeferredFee adds execFee+blobFee to TotalFee,
 			// getBurnAmountMagma(execFee)+blobFee to BurntFee, and F/2 to Proposer.
-			"full non-deferred", false,
+			"full non-deferred since permissionless", false, true,
 			new(big.Int).Add(execFee, blobFee),
 			new(big.Int).Add(big.NewInt(0.0188e18), blobFee), // F/2 + blobFee
 		},
 	}
 	for _, tc := range testcases {
 		header, txs, receipts := makeTestOsakaBlock(61)
-		r := makeTestRewardModule(t, false, tc.deferred, false, header, txs, receipts)
+		r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+			Deferred:         tc.deferred,
+			IsPermissionless: tc.permissionless,
+			Header:           header,
+			Txs:              txs,
+			Receipts:         receipts,
+		})
 
 		spec, err := r.GetBlockReward(header.Number.Uint64())
 		require.Nil(t, err, tc.desc)
@@ -1539,7 +1657,7 @@ func TestGetBlockReward_BlobFee(t *testing.T) {
 
 // TestGetDeferredReward_BlobFee tests that GetDeferredReward correctly reflects blob fees
 // in deferred mode, and correctly shows zero fees in non-deferred mode (where both exec and
-// blob fees are burned during state transition, not at finalization).
+// blob fees are processed during state transition, not at finalization).
 func TestGetDeferredReward_BlobFee(t *testing.T) {
 	// blobFee = BlobTxBlobGasPerBlob * baseFee * BlobBaseFeeMultiplier = 131072 * 27e9 * 8
 	blobFee := big.NewInt(28311552000000000)
@@ -1558,7 +1676,7 @@ func TestGetDeferredReward_BlobFee(t *testing.T) {
 			new(big.Int).Add(execFee, blobFee),
 		},
 		{
-			// Non-deferred: exec and blob fees are both burned during state transition.
+			// Non-deferred: exec and blob fees are both processed during state transition.
 			// GetDeferredReward represents what happens at finalization only (minting reward).
 			"full non-deferred", false,
 			big.NewInt(0),
@@ -1599,7 +1717,7 @@ func TestGetDeferredRewardSimple_BlobFee(t *testing.T) {
 	assert.Equal(t, new(big.Int).Add(big.NewInt(3.5e16), blobFee), spec.BurntFee, "deferred BurntFee")
 	sanityCheckRewardSpec(t, spec, "simple deferred with blob")
 
-	// Non-deferred mode: both exec and blob fees are burned during state transition, not at
+	// Non-deferred mode: both exec and blob fees are processed during state transition, not at
 	// finalization. GetDeferredReward reports neither; specWithNonDeferredFee completes the
 	// picture for GetBlockReward only.
 	config.DeferredTxFee = false
@@ -1641,7 +1759,7 @@ func TestGetDeferredRewardFull_BlobFee(t *testing.T) {
 	assert.Equal(t, big.NewInt(0.64e18+1), spec.Proposer, "kore deferred Proposer unchanged")
 	sanityCheckRewardSpec(t, spec, "kore deferred with blob")
 
-	// Kore non-deferred: both exec and blob fees are burned during state transition, not at
+	// Kore non-deferred: both exec and blob fees are processed during state transition, not at
 	// finalization. GetDeferredReward reports neither; specWithNonDeferredFee completes the
 	// picture for GetBlockReward only.
 	config.DeferredTxFee = false
@@ -1663,6 +1781,7 @@ func TestGetDeferredRewardFull_BlobFee(t *testing.T) {
 	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.BurntFee, "flex deferred BurntFee")
 	sanityCheckRewardSpec(t, spec, "flex deferred with blob")
 }
+
 func newRewardDistributionTestContext(t *testing.T, config *params.ChainConfig, mintingByBlock map[uint64]uint64) (*state.StateDB, common.Address, *RewardModule) {
 	config = config.Copy()
 	config.SetDefaults()

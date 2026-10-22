@@ -45,6 +45,9 @@ type rewardModuleTestConfig struct {
 	Simple   bool // false => WeightedRandom, true => RoundRobin
 	Deferred bool
 	IsPrague bool
+	// IsPermissionless enables Osaka and Permissionless at block 60. Non-deferred fees are burnt
+	// only since Permissionless; see StateTransition.TransitionDb.
+	IsPermissionless bool
 
 	// Proposer address returned by Chain.Sealer().Author(header).
 	// Zero value falls back to params.AuthorAddressForTesting.
@@ -75,12 +78,18 @@ func makeTestRewardModule(t *testing.T,
 
 func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *RewardModule {
 	proposerPolicy := uint64(istanbul.WeightedRandom)
-	var pragueForkBlock *big.Int
+	var pragueForkBlock, osakaForkBlock, permissionlessForkBlock *big.Int
 	if cfg.Simple {
 		proposerPolicy = uint64(istanbul.RoundRobin)
 	}
 	if cfg.IsPrague {
 		pragueForkBlock = big.NewInt(60)
+	}
+	if cfg.IsPermissionless {
+		// Prague is left to cfg.IsPrague on purpose: enabling it changes the staking (consensus
+		// liquidity) expectations, which is orthogonal to the non-deferred fee burn under test.
+		osakaForkBlock = big.NewInt(60)
+		permissionlessForkBlock = big.NewInt(60)
 	}
 	proposer := cfg.Proposer
 	if proposer == (common.Address{}) {
@@ -95,16 +104,18 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 
 		chainConfig = &params.ChainConfig{
-			ChainID:                  big.NewInt(31337),
-			IstanbulCompatibleBlock:  big.NewInt(10),
-			LondonCompatibleBlock:    big.NewInt(10),
-			EthTxTypeCompatibleBlock: big.NewInt(10),
-			MagmaCompatibleBlock:     big.NewInt(20),
-			KoreCompatibleBlock:      big.NewInt(30),
-			ShanghaiCompatibleBlock:  big.NewInt(40),
-			CancunCompatibleBlock:    big.NewInt(50),
-			KaiaCompatibleBlock:      big.NewInt(60),
-			PragueCompatibleBlock:    pragueForkBlock,
+			ChainID:                       big.NewInt(31337),
+			IstanbulCompatibleBlock:       big.NewInt(10),
+			LondonCompatibleBlock:         big.NewInt(10),
+			EthTxTypeCompatibleBlock:      big.NewInt(10),
+			MagmaCompatibleBlock:          big.NewInt(20),
+			KoreCompatibleBlock:           big.NewInt(30),
+			ShanghaiCompatibleBlock:       big.NewInt(40),
+			CancunCompatibleBlock:         big.NewInt(50),
+			KaiaCompatibleBlock:           big.NewInt(60),
+			PragueCompatibleBlock:         pragueForkBlock,
+			OsakaCompatibleBlock:          osakaForkBlock,
+			PermissionlessCompatibleBlock: permissionlessForkBlock,
 		}
 
 		paramset = gov.ParamSet{
