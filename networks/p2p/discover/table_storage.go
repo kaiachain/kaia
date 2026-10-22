@@ -34,8 +34,12 @@ var (
 )
 
 type tableStorage interface {
-	// add adds a node to the table.
+	// add adds a node to the table. A node that is already in the table is moved to
+	// the front, as if it was just seen alive.
 	add(n *Node)
+	// addIfAbsent adds a node to the table unless it is already there. Unlike add, it
+	// never reorders the stored nodes, so it fits a node that did not just pass a ping-pong.
+	addIfAbsent(n *Node)
 	// delete deletes a node from the table.
 	delete(n *Node)
 	// random fills the given slice with random nodes from the table. Returns the number of nodes added to the buffer.
@@ -87,6 +91,23 @@ func (s *kademliaStorage) add(n *Node) {
 		// n was already in the bucket.
 		return
 	}
+	s.insert(b, n)
+}
+
+func (s *kademliaStorage) addIfAbsent(n *Node) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	b := s.bucket(n.sha)
+	if hasNode(b.entries, n) {
+		return
+	}
+	s.insert(b, n)
+}
+
+// insert puts a node that is not in the bucket at its front, or into the replacements
+// if the bucket is full. The caller must hold s.mu.
+func (s *kademliaStorage) insert(b *bucket, n *Node) {
 	if len(b.entries) >= bucketSize {
 		// Bucket full, maybe add as replacement.
 		s.addReplacement(b, n)
@@ -304,6 +325,17 @@ func (s *flatStorage) add(n *Node) {
 	defer s.mu.Unlock()
 
 	if bumpNode(s.nodes, n) {
+		return
+	}
+	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64)
+	n.addedAt = time.Now()
+}
+
+func (s *flatStorage) addIfAbsent(n *Node) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if hasNode(s.nodes, n) {
 		return
 	}
 	s.nodes, _ = pushNode(s.nodes, n, math.MaxInt64)

@@ -75,21 +75,30 @@ func (tab *Table2) lenByNodeTypes() map[string]int {
 // Adds a node to one of the storages of the node's type.
 // If the node is a bootstrap node, it is added to all storages.
 func (tab *Table2) addNode(n *Node) {
+	tab.storeNode(n, tableStorage.add)
+}
+
+// Like addNode, but a node that is already stored keeps its place. For a node that is
+// trusted from its record rather than from a ping-pong it just passed.
+func (tab *Table2) addNodeIfAbsent(n *Node) {
+	tab.storeNode(n, tableStorage.addIfAbsent)
+}
+
+func (tab *Table2) storeNode(n *Node, store func(tableStorage, *Node)) {
 	if n.NType == NodeTypeBN {
 		for nType, s := range tab.storages {
 			if nType == NodeTypeCN && !tab.cnStorageAllowed(n.ID) {
 				continue
 			}
-			s.add(n)
+			store(s, n)
 		}
 		return
-	} else {
-		if n.NType == NodeTypeCN && !tab.cnStorageAllowed(n.ID) {
-			return
-		}
-		if s := tab.storages[n.NType]; s != nil {
-			s.add(n)
-		}
+	}
+	if n.NType == NodeTypeCN && !tab.cnStorageAllowed(n.ID) {
+		return
+	}
+	if s := tab.storages[n.NType]; s != nil {
+		store(s, n)
 	}
 }
 

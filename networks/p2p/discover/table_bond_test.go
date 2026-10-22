@@ -232,6 +232,26 @@ func Test_Table_Bond_recentlyBonded(t *testing.T) {
 	assert.Equal(t, int32(0), udp.pingCnt.Load(), "ping should be skipped for a recently bonded node")
 }
 
+// Being returned in another node's NEIGHBORS is not a sign of life. The shortcut must not
+// move a stored node ahead in the revalidation order, which runs from the tail.
+func Test_Table_Bond_assumedBondKeepsOrder(t *testing.T) {
+	udp := newMockTransport()
+	tab := newTestTable2(t, udp)
+	s := tab.storages[NodeTypePN]
+	older := newTestNode(t, NodeTypePN)
+	newer := newTestNode(t, NodeTypePN)
+	for _, n := range []*Node{older, newer} {
+		tab.addNode(n)
+		tab.recordBonded(n)
+	}
+	require.Same(t, older, s.oldest())
+
+	require.NoError(t, tab.Bond(false, older))
+	assert.Same(t, older, s.oldest(), "an assumed bond must not bump the node")
+	assert.Equal(t, 2, s.len())
+	assert.Equal(t, int32(0), udp.pingCnt.Load())
+}
+
 // A NEIGHBORS entry may reuse a bonded node's ID and IP with other ports. The shortcut
 // must not let it overwrite the stored endpoint, or the next revalidation pings the
 // wrong port and evicts the node.
