@@ -44,6 +44,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -51,6 +52,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -83,8 +85,12 @@ type testBackend struct {
 }
 
 func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator func(i int, b *blockchain.BlockGen)) *testBackend {
+	return newTestBackendWithConfig(t, params.TestChainConfig, n, gspec, generator)
+}
+
+func newTestBackendWithConfig(t *testing.T, chainConfig *params.ChainConfig, n int, gspec *blockchain.Genesis, generator func(i int, b *blockchain.BlockGen)) *testBackend {
 	backend := &testBackend{
-		chainConfig: params.TestChainConfig,
+		chainConfig: chainConfig,
 		sealer:      faker.NewFaker(),
 		chaindb:     database.NewMemoryDBManager(),
 	}
@@ -477,15 +483,37 @@ func TestTraceCallPrestateTracerDiffModeKeepsLogicalPostBalance(t *testing.T) {
 	assertTraceBalance(t, diff.Post[from], wantPost)
 }
 
-func TestTraceCallPrestateTracerDiffModeHidesMagmaFee(t *testing.T) {
+// TestTraceCallPrestateTracerDiffModeHidesNonDeferredFeeSincePermissionless runs with params.TestChainConfig
+// (Permissionless enabled), where half the non-deferred fee is burnt and the other half is credited to the rewardbase.
+// These tracer tests check that the hidden synthetic fee equals what the state transition credits; the absolute
+// amounts are pinned by TestStateTransition_NonDeferredFee in the blockchain package.
+func TestTraceCallPrestateTracerDiffModeHidesNonDeferredFeeSincePermissionless(t *testing.T) {
 	t.Parallel()
+	testTraceCallPrestateTracerDiffModeHidesNonDeferredFee(t, params.TestChainConfig)
+}
+
+// TestTraceCallPrestateTracerDiffModeHidesNonDeferredFeeBeforePermissionless runs with Magma enabled but
+// Permissionless disabled, where the whole non-deferred fee is credited to the rewardbase (#1097).
+// The synthetic fee hidden by the tracer must match what StateTransition.TransitionDb credits.
+func TestTraceCallPrestateTracerDiffModeHidesNonDeferredFeeBeforePermissionless(t *testing.T) {
+	// Not parallel: blockchain.NewBlockChain installs the chain config as the process-wide hardfork config,
+	// and this test uses a non-default one. Restore the default afterwards.
+	config := params.TestKaiaConfig("osaka")
+	require.True(t, config.Rules(common.Big0).IsMagma)
+	require.False(t, config.Rules(common.Big0).IsPermissionless)
+	t.Cleanup(func() { fork.SetHardForkBlockNumberConfig(params.TestChainConfig) })
+	testTraceCallPrestateTracerDiffModeHidesNonDeferredFee(t, config)
+}
+
+func testTraceCallPrestateTracerDiffModeHidesNonDeferredFee(t *testing.T, chainConfig *params.ChainConfig) {
+	require.False(t, chainConfig.Governance.DeferredTxFee(), "non-deferred mode expected")
 
 	from := common.HexToAddress("0x000000000000000000000000000000000000a121")
 	rewardbase := common.HexToAddress("0x000000000000000000000000000000000000b121")
 	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
 		from: {Balance: big.NewInt(0)},
 	}}
-	api := NewAPI(newTestBackend(t, 1, genesis, func(i int, b *blockchain.BlockGen) {
+	api := NewAPI(newTestBackendWithConfig(t, chainConfig, 1, genesis, func(i int, b *blockchain.BlockGen) {
 		b.SetRewardbase(rewardbase)
 	}))
 
@@ -505,8 +533,8 @@ func TestTraceCallPrestateTracerDiffModeHidesMagmaFee(t *testing.T) {
 	}
 
 	// The call target is also the Magma rewardbase, so it receives both the
-	// transferred value and the (half-burned) synthetic gas fee. The fee must be
-	// hidden, leaving only the value in its post balance.
+	// transferred value and the synthetic gas fee (whole before Permissionless,
+	// half since). The fee must be hidden, leaving only the value in its post balance.
 	blockNumber := rpc.LatestBlockNumber
 	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
 		From:     from,

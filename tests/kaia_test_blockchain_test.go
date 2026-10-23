@@ -424,8 +424,8 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Adjust accountMap for actual gas used vs. the intrinsic gas estimate in Update().
 	// Execution overhead (e.g. constructor gas, code storage cost) is not captured by
-	// IntrinsicGas, causing a mismatch in Magma non-deferred mode where only half the
-	// fee reaches the rewardbase.
+	// IntrinsicGas, causing a mismatch in non-deferred mode since Permissionless where only
+	// half the fee reaches the rewardbase (see StateTransition.TransitionDb).
 	if err := accountMap.AdjustFeesByReceipts(b.Transactions(), receipts, b.NumberU64()); err != nil {
 		return err
 	}
@@ -540,8 +540,8 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 
 	// Adjust accountMap for actual gas used vs. the intrinsic gas estimate in Update().
 	// Execution overhead (e.g. constructor gas, code storage cost) is not captured by
-	// IntrinsicGas, causing a mismatch in Magma non-deferred mode where only half the
-	// fee reaches the rewardbase.
+	// IntrinsicGas, causing a mismatch in non-deferred mode since Permissionless where only
+	// half the fee reaches the rewardbase (see StateTransition.TransitionDb).
 	if err := accountMap.AdjustFeesByReceipts(b.Transactions(), receipts, b.NumberU64()); err != nil {
 		return err
 	}

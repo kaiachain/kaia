@@ -146,7 +146,13 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 
 	blobFee := getBlobFee(header)
 	if config.Rules.IsMagma {
-		burntFee := getBurnAmountMagma(execFee)
+		// Half the non-deferred fee is burnt only since Permissionless; see StateTransition.TransitionDb.
+		// The ledger rounds the burn per transaction (TransitionDb) while this rounds the block total, so the
+		// reported burn can exceed the actual one by up to (number of odd-fee transactions)/2 kei.
+		burntFee := big.NewInt(0)
+		if config.Rules.IsPermissionless {
+			burntFee = getBurnAmountMagma(execFee)
+		}
 		distributedFee := new(big.Int).Sub(execFee, burntFee)
 		newSpec.TotalFee.Add(newSpec.TotalFee, new(big.Int).Add(execFee, blobFee))
 		newSpec.BurntFee.Add(newSpec.BurntFee, new(big.Int).Add(burntFee, blobFee))
@@ -240,7 +246,7 @@ func getDeferredRewardSimple(config *reward.RewardConfig, execFee, blobFee *big.
 			proposer = new(big.Int).Add(minted, execFee)
 		}
 		spec.Minted = new(big.Int).Set(minted)
-		// Both exec fees and blob fees are burned during state transition in non-deferred mode,
+		// Both exec fees and blob fees are processed during state transition in non-deferred mode,
 		// not at finalization. TotalFee/BurntFee are completed by specWithNonDeferredFee (GetBlockReward only).
 		spec.TotalFee = execFee // Note that we've set it to 0 for non-deferred + Magma (see above).
 		spec.BurntFee = big.NewInt(0)
@@ -268,7 +274,7 @@ func getDeferredRewardSimple(config *reward.RewardConfig, execFee, blobFee *big.
 // getDeferredRewardFull is for non-Simple policy.
 func getDeferredRewardFull(config *reward.RewardConfig, execFee, blobFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
 	// Non-deferred and deferred modes share most of the logic
-	// except that in non-deferred mode all fees (exec and blob) are burned during state transition,
+	// except that in non-deferred mode all fees (exec and blob) are processed during state transition,
 	// not at finalization. TotalFee/BurntFee are completed by specWithNonDeferredFee (GetBlockReward only).
 	var burntFee *big.Int
 	if !config.DeferredTxFee {

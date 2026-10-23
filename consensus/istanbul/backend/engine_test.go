@@ -104,6 +104,9 @@ type (
 	epoch                  uint64
 	subGroupSize           uint64
 	blockPeriod            uint64
+	// rewardbase is the node's configured reward base (the --rewardbase flag) handed to the
+	// reward module; the zero value mirrors a node started without the flag.
+	rewardbase common.Address
 )
 
 // Include a node from the global nodeKeys and addrs
@@ -178,9 +181,11 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	genesis.Config = params.TestChainConfig.Copy()
 
 	var (
-		period   = uint64(params.DefaultBlockGenerationInterval)
-		mStaking staking.StakingModule
-		err      error
+		period         = uint64(params.DefaultBlockGenerationInterval)
+		mStaking       staking.StakingModule
+		nodeRewardbase common.Address
+		extraAlloc     blockchain.GenesisAlloc
+		err            error
 	)
 	// force enable Istanbul engine and governance
 	for _, item := range items {
@@ -231,10 +236,22 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			genesis.Config.Governance.KIP71.UpperBoundBaseFee = uint64(v)
 		case blockPeriod:
 			period = uint64(v)
+		case rewardbase:
+			nodeRewardbase = common.Address(v)
+		case blockchain.GenesisAlloc:
+			extraAlloc = v
 		case *params.ChainConfig:
 			genesis.Config = v
 		case *mock.MockStakingModule:
 			mStaking = v
+		}
+	}
+	if len(extraAlloc) > 0 {
+		if genesis.Alloc == nil {
+			genesis.Alloc = make(blockchain.GenesisAlloc)
+		}
+		for addr, account := range extraAlloc {
+			genesis.Alloc[addr] = account
 		}
 	}
 	genesis.Config.SetDefaults()
@@ -371,9 +388,10 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			ChainConfig:   bc.Config(),
 			Chain:         bc,
 			GovModule:     mGov,
-			StakingModule: mStaking, // Irrelevant in ProposerPolicy=0. Won't inject mock.
+			StakingModule: mStaking, // RoundRobin tests leave this nil; WeightedRandom tests inject a mock (PrepareHeader reads it).
 			ValsetModule:  mValset,
 			NodeAddress:   b.address,
+			Rewardbase:    nodeRewardbase,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			Chain:         bc,

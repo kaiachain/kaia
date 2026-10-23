@@ -19,30 +19,14 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 func (r *RewardModule) InitializeState(header *types.Header, state *state.StateDB) {}
 
-// Distribute the deferred rewards at the end of block processing.
+// FinalizeState distributes the block reward after all transactions have been processed.
+// The header is read-only here: its Rewardbase was decided by PrepareHeader before the
+// transactions were executed, and the proposer must seal exactly the header it executed with.
 func (r *RewardModule) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
-	if r.GovModule.GetParamSet(header.Number.Uint64()).ProposerPolicy == uint64(istanbul.WeightedRandom) && common.EmptyHash(header.Root) {
-		qualified, err := r.ValsetModule.GetQualifiedValidators(header.Number.Uint64())
-		if err != nil {
-			return err
-		}
-		useRewardAddress := valset.NewAddressSet(qualified).Contains(r.NodeAddress)
-
-		if rewardAddr := r.GetRewardAddress(header.Number.Uint64(), r.NodeAddress); useRewardAddress && rewardAddr != (common.Address{}) {
-			header.Rewardbase = rewardAddr
-			logger.Trace("Use reward address for nodeValidator", "header.Number", header.Number.Uint64(), "nodeAddress", r.NodeAddress, "rewardbase", header.Rewardbase)
-		} else {
-			logger.Trace("No reward address for nodeValidator. Use node's rewardbase.", "header.Number", header.Number.Uint64(), "nodeAddress", r.NodeAddress, "rewardbase", header.Rewardbase)
-		}
-	}
-
 	spec, err := r.GetDeferredReward(header, txs, receipts)
 	if err != nil {
 		return err
@@ -54,18 +38,4 @@ func (r *RewardModule) FinalizeState(header *types.Header, state *state.StateDB,
 		state.AddBalance(addr, amount)
 	}
 	return nil
-}
-
-func (r *RewardModule) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
-	sInfo, err := r.StakingModule.GetStakingInfo(num)
-	if err != nil {
-		return common.Address{}
-	}
-
-	for idx, id := range sInfo.NodeIds {
-		if id == nodeId {
-			return sInfo.RewardAddrs[idx]
-		}
-	}
-	return common.Address{}
 }
