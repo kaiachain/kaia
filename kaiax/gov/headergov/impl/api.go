@@ -4,6 +4,7 @@ import (
 	"maps"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
@@ -76,10 +77,35 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", err
 	}
 
+	if vote.Name() == gov.GovernanceGovParamContract {
+		if err := api.checkGovParamContract(vote.Value().(common.Address)); err != nil {
+			return "", err
+		}
+	}
+
 	// TODO-kaiax: add removevalidator vote check
 
 	api.h.PushMyVotes(vote)
 	return "(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
+}
+
+// checkGovParamContract rejects a govparamcontract vote whose value is not a contract account in the current state.
+// VerifyVote deliberately skips this check because local state is not deterministic across nodes (#946).
+// It is enforced here at vote creation to catch operator mistakes and to stay compatible with
+// v2.2.2 validators, which still reject such votes during header verification.
+func (api *headerGovAPI) checkGovParamContract(addr common.Address) error {
+	state, err := api.h.Chain.State()
+	if err != nil {
+		return err
+	}
+
+	acc := state.GetAccount(addr)
+	if acc == nil {
+		return ErrGovParamNotAccount
+	} else if acc.Type() != account.SmartContractAccountType || acc.Empty() {
+		return ErrGovParamNotContract
+	}
+	return nil
 }
 
 func (api *headerGovAPI) IdxCache() []uint64 {
