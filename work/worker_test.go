@@ -24,6 +24,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -128,6 +129,91 @@ func TestWorkerStartStopWithPendingResult(t *testing.T) {
 			case <-taken:
 			case <-time.After(time.Second):
 				t.Fatal("update loop didn't take the new sequence")
+			}
+		})
+	}
+}
+
+// Tests that the update loop doesn't deadlock posting its own ChainHeadEvent when chainHeadCh is full.
+// The loop is the only reader of chainHeadCh, so it must not block sending to it.
+func TestWorkerPostOwnChainHeadWithFullChannel(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		queued int // ChainHeadEvents imported while the loop writes the mined block
+	}{
+		{name: "not full", queued: chainHeadChanSize - 2},
+		{name: "full", queued: chainHeadChanSize},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			engine := consensusmocks.NewMockEngine(ctrl)
+			chain := mocks.NewMockBlockChain(ctrl)
+			var txsFeed, headFeed, sideFeed event.Feed
+
+			// Like an importer holding bc.mu, WriteBlockWithState waits for release.
+			writing, release := make(chan struct{}), make(chan struct{})
+			chain.EXPECT().WriteBlockWithState(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				func(*types.Block, []*types.Receipt, *state.StateDB) (blockchain.WriteResult, error) {
+					close(writing)
+					<-release
+					return blockchain.WriteResult{Status: blockchain.CanonStatTy}, nil
+				})
+			// Like BlockChain.PostChainEvents, send the ChainHeadEvent on the head feed.
+			posted := make(chan struct{})
+			chain.EXPECT().PostChainEvents(gomock.Any(), gomock.Any()).DoAndReturn(func(events []interface{}, _ []*types.Log) {
+				for _, ev := range events {
+					if head, ok := ev.(blockchain.ChainHeadEvent); ok {
+						headFeed.Send(head)
+					}
+				}
+				close(posted)
+			})
+
+			finalizeCh := make(chan *consensus.ExecutionResult)
+			mux := new(event.TypeMux)
+			statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			header := &types.Header{Number: big.NewInt(1), Time: big.NewInt(1)}
+			w := &worker{
+				config:         params.TestChainConfig,
+				engine:         engine,
+				chain:          chain,
+				mux:            mux,
+				txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
+				chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
+				chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
+				finalizeCh:     finalizeCh,
+				newSequenceSub: mux.Subscribe(newSequenceEvent{}),
+				pendingWork:    &Task{state: statedb, header: header},
+			}
+			w.txsSub = txsFeed.Subscribe(w.txsCh)
+			w.chainHeadSub = headFeed.Subscribe(w.chainHeadCh)
+			w.chainSideSub = sideFeed.Subscribe(w.chainSideCh)
+			go w.update()
+			t.Cleanup(w.chainHeadSub.Unsubscribe)
+
+			block := types.NewBlockWithHeader(header)
+			finalizeCh <- &consensus.ExecutionResult{State: statedb, Block: block}
+			<-writing
+			for i := 0; i < tc.queued; i++ {
+				headFeed.Send(blockchain.ChainHeadEvent{Block: block})
+			}
+			close(release)
+
+			// The next import must be able to post its ChainHeadEvent.
+			done := make(chan struct{})
+			go func() {
+				headFeed.Send(blockchain.ChainHeadEvent{Block: block})
+				close(done)
+			}()
+			select {
+			case <-done:
+			case <-time.After(3 * time.Second):
+				t.Fatalf("update loop deadlocked posting its ChainHeadEvent, chainHeadCh len=%d", len(w.chainHeadCh))
+			}
+			select {
+			case <-posted:
+			case <-time.After(time.Second):
+				t.Fatal("mined block's chain events weren't posted")
 			}
 		})
 	}
