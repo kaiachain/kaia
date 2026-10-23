@@ -56,6 +56,15 @@ type rewardModuleTestConfig struct {
 	Header   *types.Header
 	Txs      []*types.Transaction
 	Receipts []*types.Receipt
+
+	// Permissionless fork block. nil leaves it unscheduled.
+	PermissionlessBlock *big.Int
+	// StakingInfo overrides the default makeTestStakingInfo result when non-nil.
+	StakingInfo *staking.StakingInfo
+	// StakingErr is returned by StakingModule.GetStakingInfo when non-nil.
+	StakingErr error
+	// Qualified is returned by ValsetModule.GetQualifiedValidators when non-nil.
+	Qualified []common.Address
 }
 
 // Make a RewardModule that works with the given block.
@@ -105,6 +114,8 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 			CancunCompatibleBlock:    big.NewInt(50),
 			KaiaCompatibleBlock:      big.NewInt(60),
 			PragueCompatibleBlock:    pragueForkBlock,
+
+			PermissionlessCompatibleBlock: cfg.PermissionlessBlock,
 		}
 
 		paramset = gov.ParamSet{
@@ -131,8 +142,18 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		ValsetModule:  mValset,
 	})
 
+	if cfg.StakingInfo != nil {
+		stakingInfo = cfg.StakingInfo
+	}
 	chain.EXPECT().Sealer().Return(faker.NewFakerWithFixedSealer(proposer)).AnyTimes()
-	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+	if cfg.StakingErr != nil {
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(nil, cfg.StakingErr).AnyTimes()
+	} else {
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+	}
+	if cfg.Qualified != nil {
+		mValset.EXPECT().GetQualifiedValidators(gomock.Any()).Return(cfg.Qualified, nil).AnyTimes()
+	}
 
 	if cfg.Header != nil {
 		block := types.NewBlock(cfg.Header, cfg.Txs, cfg.Receipts)

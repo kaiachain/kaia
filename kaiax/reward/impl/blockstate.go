@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -60,6 +62,13 @@ func (r *RewardModule) GetRewardAddress(num uint64, nodeId common.Address) commo
 	sInfo, err := r.StakingModule.GetStakingInfo(num)
 	if err != nil {
 		return common.Address{}
+	}
+
+	// After Permissionless, NodeIds lists only the reward-eligible nodes at the source block,
+	// which may not include the proposer (e.g. promoted to ValActive by the transition for
+	// this block). Look it up among all AddressBookV2 profiles.
+	if r.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return sInfo.ProfileRewardAddrs[nodeId]
 	}
 
 	for idx, id := range sInfo.NodeIds {

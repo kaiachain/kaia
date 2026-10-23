@@ -198,7 +198,9 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 	stakingContracts := make([]common.Address, 0, len(profiles))
 	rewardAddrs := make([]common.Address, 0, len(profiles))
 	stakingAmounts := make([]uint64, 0, len(profiles))
+	profileRewardAddrs := make(map[common.Address]common.Address, len(profiles))
 	for i, p := range profiles {
+		profileRewardAddrs[p.NodeId] = p.RewardAddress
 		if !valset.NodeState(p.State).IsRewardEligible() {
 			continue
 		}
@@ -221,15 +223,16 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 	}
 
 	return &staking.StakingInfo{
-		SourceBlockNum:   num,
-		NodeIds:          nodeIds,
-		StakingContracts: stakingContracts,
-		RewardAddrs:      rewardAddrs,
-		KEFAddr:          kefAddr,
-		KIFAddr:          kifAddr,
-		KPFAddr:          kpfAddr,
-		StakingAmounts:   stakingAmounts,
-		CLStakingInfos:   clStakingInfos,
+		SourceBlockNum:     num,
+		NodeIds:            nodeIds,
+		StakingContracts:   stakingContracts,
+		RewardAddrs:        rewardAddrs,
+		KEFAddr:            kefAddr,
+		KIFAddr:            kifAddr,
+		KPFAddr:            kpfAddr,
+		StakingAmounts:     stakingAmounts,
+		CLStakingInfos:     clStakingInfos,
+		ProfileRewardAddrs: profileRewardAddrs,
 	}, nil
 }
 
