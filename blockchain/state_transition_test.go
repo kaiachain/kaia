@@ -550,6 +550,36 @@ func TestStateTransition_preCheck(t *testing.T) {
 				// No calls expected in prefetching mode
 			},
 		},
+		// === Fee ratio checks ===
+		{
+			name:          "fee ratio above 100 is rejected",
+			config:        kaiaChainConfig,
+			expectedError: kerrors.ErrFeeRatioOutOfRange,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().ValidatedFeePayer().Return(to).AnyTimes()
+				mockMsg.EXPECT().FeeRatio().Return(types.FeeRatio(150), true).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				// Rejected before any balance is read or changed.
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
 		// === Nonce checks ===
 		{
 			name:          "nonce too high",

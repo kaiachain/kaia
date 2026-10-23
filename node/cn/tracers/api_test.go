@@ -44,8 +44,10 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
@@ -1062,6 +1064,60 @@ func TestTraceBlock(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestTraceBlockFeeRatioOutOfRange checks that tracing a caller-supplied block with
+// a fee ratio above 100 fails cleanly. Such a ratio credits the sender part of the
+// fee; spending that credit used to leave a negative balance that panicked the
+// tracer and leaked its worker goroutine.
+func TestTraceBlockFeeRatioOutOfRange(t *testing.T) {
+	t.Parallel()
+
+	accounts := newAccounts(3)
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[1].addr: {Balance: big.NewInt(params.KAIA)},
+		accounts[2].addr: {Balance: big.NewInt(params.KAIA)},
+	}}
+	backend := newTestBackend(t, 1, genesis, func(i int, b *blockchain.BlockGen) {})
+	api := NewAPI(backend)
+
+	var (
+		gasPrice = big.NewInt(25 * params.Gkei)
+		gasLimit = uint64(100000)
+		ratio    = types.FeeRatio(255)
+	)
+	// Send about the sender's balance plus the credited part of the fee.
+	credit := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
+	credit.Mul(credit, big.NewInt(int64(ratio)-100)).Div(credit, big.NewInt(100))
+	credit.Mul(credit, big.NewInt(9)).Div(credit, big.NewInt(10))
+	value := new(big.Int).Add(big.NewInt(params.KAIA), credit)
+
+	tx, err := types.NewTransactionWithMap(types.TxTypeFeeDelegatedValueTransferWithRatio, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:              uint64(0),
+		types.TxValueKeyFrom:               accounts[0].addr,
+		types.TxValueKeyTo:                 accounts[2].addr,
+		types.TxValueKeyAmount:             value,
+		types.TxValueKeyGasLimit:           gasLimit,
+		types.TxValueKeyGasPrice:           gasPrice,
+		types.TxValueKeyFeePayer:           accounts[1].addr,
+		types.TxValueKeyFeeRatioOfFeePayer: ratio,
+	})
+	assert.NoError(t, err)
+	signer := types.LatestSignerForChainID(backend.chainConfig.ChainID)
+	assert.NoError(t, tx.SignWithKeys(signer, []*ecdsa.PrivateKey{accounts[0].key}))
+	assert.NoError(t, tx.SignFeePayerWithKeys(signer, []*ecdsa.PrivateKey{accounts[1].key}))
+
+	head := backend.chain.CurrentBlock()
+	header := types.CopyHeader(head.Header())
+	header.ParentHash = head.Hash()
+	header.Number = new(big.Int).Add(head.Number(), common.Big1)
+	header.BaseFee = new(big.Int).Set(gasPrice)
+	blob, err := rlp.EncodeToBytes(types.NewBlock(header, types.Transactions{tx}, nil))
+	assert.NoError(t, err)
+
+	_, err = api.TraceBlock(context.Background(), blob, nil)
+	assert.ErrorIs(t, err, kerrors.ErrFeeRatioOutOfRange)
 }
 
 type Account struct {
