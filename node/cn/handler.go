@@ -1031,6 +1031,28 @@ func decodeList[T any](msg p2p.Msg, limit int) ([]T, error) {
 	}
 }
 
+// decodeListTruncated decodes at most limit items and reports whether the list
+// has more data after them. The rest of the list is not read, so malformed data
+// there is not detected; stream.List has already checked that the list fits in
+// msg.Size, and the caller discards the unread payload.
+func decodeListTruncated[T any](msg p2p.Msg, limit int) ([]T, bool, error) {
+	stream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := stream.List(); err != nil {
+		return nil, false, errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	var items []T
+	for len(items) < limit {
+		var item T
+		if err := stream.Decode(&item); err == rlp.EOL {
+			return items, false, nil
+		} else if err != nil {
+			return nil, false, errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+		items = append(items, item)
+	}
+	return items, stream.MoreDataInList(), nil
+}
+
 // handleBlockHeadersMsg handles block header response message.
 func handleBlockHeadersMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// A batch of headers arrived to one of our previous requests
@@ -1641,7 +1663,24 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return nil
 	}
 	// Transactions can be processed, parse them and deliver to the pool
-	txs, err := decodeList[*types.Transaction](msg, maxTxMsgItems)
+	var (
+		txs []*types.Transaction
+		err error
+	)
+	if p.GetVersion() <= kaia67 {
+		// Rolling-upgrade compatibility: v2.2.2 (kaia67 and below) does not split TxMsg,
+		// so a single txpool promotion can exceed maxTxMsgItems. Keep the first
+		// maxTxMsgItems instead of disconnecting the peer. The discarded txs may be
+		// recovered through resend or subsequent synchronization.
+		// Remove once kaia67 peers are gone.
+		var truncated bool
+		txs, truncated, err = decodeListTruncated[*types.Transaction](msg, maxTxMsgItems)
+		if err == nil && truncated {
+			logger.Debug("Truncated oversized TxMsg from legacy peer", "peer", p.GetID(), "version", p.GetVersion(), "kept", len(txs), "size", msg.Size)
+		}
+	} else {
+		txs, err = decodeList[*types.Transaction](msg, maxTxMsgItems)
+	}
 	if err != nil {
 		return err
 	}
