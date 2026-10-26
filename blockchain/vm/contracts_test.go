@@ -672,3 +672,27 @@ func TestValidateSenderPrecompile_ZeroSignatures(t *testing.T) {
 	assert.NoError(t, runErr)
 	assert.Equal(t, []byte{0}, out)
 }
+
+// TestValidateSenderPrecompile_HighRecoveryID verifies that the validateSender precompile
+// (0x3ff) accepts a signature with v=2 before the Permissionless fork, as v2.2.2 did,
+// and rejects it once the fork is active.
+func TestValidateSenderPrecompile_HighRecoveryID(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(10),
+	})
+
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	// [20-byte address][32-byte hash][r=2][s=1][v=2]: the address is the one recovered
+	// from this signature, and it has no account, so its key is the legacy key.
+	input := common.Hex2Bytes("a9decc34942e9f2223653e6720000de6475a364c" +
+		"f9233cfeb44d3724e2c6b95d9cb2973ba7bf6733c6d127fee68278216c1d568c" +
+		"0000000000000000000000000000000000000000000000000000000000000002" +
+		"0000000000000000000000000000000000000000000000000000000000000001" +
+		"02")
+
+	c := &validateSender{}
+	assert.NoError(t, c.validateSender(input, stateDb, 9))
+	assert.Error(t, c.validateSender(input, stateDb, 10))
+}

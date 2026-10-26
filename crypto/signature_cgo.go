@@ -34,15 +34,26 @@ import (
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
+// It accepts only the canonical Ethereum recovery id v ∈ {0, 1}.
 func Ecrecover(hash, sig []byte) ([]byte, error) {
+	return ecrecover(hash, sig, 1)
+}
+
+// EcrecoverLegacy is Ecrecover accepting v ∈ {0..3}, as libsecp256k1 did before
+// the canonical recovery id check. The validateSender precompile uses it before
+// the Permissionless hardfork so that its result does not change without a fork.
+func EcrecoverLegacy(hash, sig []byte) ([]byte, error) {
+	return ecrecover(hash, sig, 3)
+}
+
+func ecrecover(hash, sig []byte, maxRecoveryID byte) ([]byte, error) {
 	if len(sig) != SignatureLength {
 		return nil, errors.New("invalid signature")
 	}
 	if len(hash) != DigestLength {
 		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(hash))
 	}
-	// Enforce canonical Ethereum recovery id v ∈ {0, 1}.
-	if sig[RecoveryIDOffset] >= 2 {
+	if sig[RecoveryIDOffset] > maxRecoveryID {
 		return nil, errors.New("invalid signature recovery id")
 	}
 	return secp256k1.RecoverPubkey(hash, sig)
