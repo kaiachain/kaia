@@ -2718,7 +2718,10 @@ func (bc *BlockChain) logBadBlock(block *types.Block, receipts types.Receipts, e
 
 func shouldMarkBadProposal(err error) bool {
 	// Committed seals are added after proposal voting and are excluded from the proposal hash.
-	return !errors.Is(err, istanbul.ErrEmptyCommittedSeals) &&
+	// State initialization reads only the parent state and local chain data, never the
+	// transactions of the block, so its failure says nothing about the proposal.
+	return !errors.Is(err, ErrInitializeState) &&
+		!errors.Is(err, istanbul.ErrEmptyCommittedSeals) &&
 		!errors.Is(err, istanbul.ErrInvalidCommittedSeals)
 }
 

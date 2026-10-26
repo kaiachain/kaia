@@ -253,7 +253,9 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, sealer conse
 		}
 
 		processor := blockchain.Processor()
-		processor.InitializeState(b.header, stateDB)
+		if err := processor.InitializeState(b.header, stateDB); err != nil {
+			panic(fmt.Sprintf("block initialize error: %v", err))
+		}
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {

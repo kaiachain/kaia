@@ -21,7 +21,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 )
 
-func (r *RewardModule) InitializeState(header *types.Header, state *state.StateDB) {}
+func (r *RewardModule) InitializeState(header *types.Header, state *state.StateDB) error {
+	return nil
+}
 
 // FinalizeState distributes the block reward after all transactions have been processed.
 // The header is read-only here: its Rewardbase was decided by PrepareHeader before the

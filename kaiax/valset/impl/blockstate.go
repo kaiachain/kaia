@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"fmt"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -26,16 +28,17 @@ import (
 // InitializeState writes the post-fork node-state diff into the
 // AddressBookV2 contract via a system tx. No-op pre-fork. Runs before user
 // transactions.
-func (v *ValsetModule) InitializeState(header *types.Header, statedb *state.StateDB) {
+func (v *ValsetModule) InitializeState(header *types.Header, statedb *state.StateDB) error {
 	config := v.Chain.Config()
 	if !config.IsPermissionlessForkEnabled(header.Number) {
-		return
+		return nil
 	}
 	context := blockchain.NewEVMBlockContext(header, v.Chain, nil)
 	vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, config, &vm.Config{})
 	if err := v.WriteTransitionToABv2(vmenv, header, statedb); err != nil {
-		logger.Error("Failed to apply node transition to ABv2", "number", header.Number.Uint64(), "err", err)
+		return fmt.Errorf("failed to apply node transition to ABv2 at block %d: %w", header.Number.Uint64(), err)
 	}
+	return nil
 }
 
 // FinalizeState installs and initializes the AddressBookV2 proxy at the HF-1 block.

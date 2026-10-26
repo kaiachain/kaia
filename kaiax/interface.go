@@ -73,7 +73,8 @@ type HeaderModuleHost interface {
 // Header modifications and state transitions are applied in-place.
 type BlockStateModule interface {
 	// Additional changes to apply to state before tx execution begins.
-	InitializeState(header *types.Header, state *state.StateDB)
+	// An error aborts the processing of the block.
+	InitializeState(header *types.Header, state *state.StateDB) error
 
 	FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error
 }

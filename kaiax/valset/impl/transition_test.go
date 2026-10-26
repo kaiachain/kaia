@@ -237,6 +237,76 @@ func TestGetNodesVRankFailureIsNotCached(t *testing.T) {
 	require.NotEmpty(t, nodes)
 }
 
+// A failure to apply the node transition aborts Process before any transaction runs, instead of
+// leaving ABv2 behind the node states that the committee uses.
+func TestProcessReturnsTransitionError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h := newABv2Harness(t)
+
+	mockGov := gov_mock.NewMockGovModule(ctrl)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		MinimumStake: common.Big0,
+	}).AnyTimes()
+
+	vrankErr := errors.New("vrank unavailable")
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, vrankErr)
+
+	v := h.Valset
+	v.GovModule = mockGov
+	v.VRankModule = mockVRank
+
+	header := types.CopyHeader(h.Header)
+	header.ParentHash = h.Header.Hash()
+	header.Number = new(big.Int).Add(h.Header.Number, common.Big1)
+	root := h.StateDB.IntermediateRoot(true)
+
+	chain := h.Backend.BlockChain()
+	processor := blockchain.NewStateProcessor(chain.Config(), chain)
+	processor.RegisterBlockStateModule(v)
+	receipts, _, _, _, _, err := processor.Process(types.NewBlockWithHeader(header), h.StateDB, vm.Config{})
+	require.ErrorIs(t, err, blockchain.ErrInitializeState)
+	require.ErrorIs(t, err, vrankErr)
+	assert.Nil(t, receipts)
+	assert.Equal(t, root, h.StateDB.IntermediateRoot(true), "no transition is written")
+}
+
+// A reverted processSystemTransition call aborts Process, and ABv2 is left unchanged.
+func TestProcessReturnsTransitionWriteRevert(t *testing.T) {
+	h := newABv2Harness(t)
+	v := h.Valset
+
+	snapshot, err := system.ReadABv2Snapshot(h.StateDB, v.Chain, h.Header)
+	require.NoError(t, err)
+	target := h.Nodes[0].NodeID
+	nodes := snapshot.Nodes.Copy()
+	// A state outside the Solidity enum makes the ABI decoder of processSystemTransition revert.
+	nodes[target].State = 255
+
+	header := types.CopyHeader(h.Header)
+	header.ParentHash = h.Header.Hash()
+	header.Number = new(big.Int).Add(h.Header.Number, common.Big1)
+	v.transitionResultCache.Add(header.Number.Uint64(), &TransitionResult{Nodes: nodes})
+	root := h.StateDB.IntermediateRoot(true)
+
+	chain := h.Backend.BlockChain()
+	processor := blockchain.NewStateProcessor(chain.Config(), chain)
+	processor.RegisterBlockStateModule(v)
+	receipts, _, _, _, _, err := processor.Process(types.NewBlockWithHeader(header), h.StateDB, vm.Config{})
+	require.ErrorIs(t, err, blockchain.ErrInitializeState)
+	require.ErrorContains(t, err, "processSystemTransition failed")
+	require.ErrorContains(t, err, "execution reverted")
+	assert.Nil(t, receipts)
+	assert.Equal(t, root, h.StateDB.IntermediateRoot(true), "no transition is written")
+
+	// A valid transition for the same block is written.
+	nodes[target].State = ValPaused
+	require.NoError(t, processor.InitializeState(header, h.StateDB))
+	updated, err := system.ReadABv2Snapshot(h.StateDB, v.Chain, header)
+	require.NoError(t, err)
+	assert.Equal(t, ValPaused, updated.Nodes[target].State)
+}
+
 func TestWriteTransitionToABv2PreForkNoOp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockChain := chain_mock.NewMockBlockChain(ctrl)

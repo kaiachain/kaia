@@ -428,7 +428,10 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
-	self.chain.Processor().InitializeState(header, self.current.state)
+	if err := self.chain.Processor().InitializeState(header, self.current.state); err != nil {
+		logger.Error("Failed to initialize state for mining", "number", header.Number, "err", err)
+		return
+	}
 
 	// Create the current work task
 	// measure miner balance before executing txs

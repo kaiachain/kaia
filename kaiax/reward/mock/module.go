@@ -112,9 +112,11 @@ func (mr *MockRewardModuleMockRecorder) GetRewardSummary(arg0 interface{}) *gomo
 }
 
 // InitializeState mocks base method.
-func (m *MockRewardModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) {
+func (m *MockRewardModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InitializeState", arg0, arg1)
+	ret := m.ctrl.Call(m, "InitializeState", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // InitializeState indicates an expected call of InitializeState.
