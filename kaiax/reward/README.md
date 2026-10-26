@@ -61,7 +61,8 @@ The rules have changed over hardforks.
   - There has been a bug to the chains using the NDF method where the NDF and DF are both distributed to the proposer. However since those chains have already created such blocks, this is considered as the legal pre-Magma behavior. (https://github.com/klaytn/klaytn/issues/1692, https://github.com/klaytn/klaytn/pull/1709, https://github.com/klaytn/klaytn/pull/1886). This behavior only occurs in the chains with `istanbul.policy != 2` and `reward.deferredtxfee = false`. Kaia Mainnet and Kairos testnet are unaffected.
 - **Magma rule (KIP-71)**: The rule since the Magma hardfork.
   - MR: Same as the previous rule.
-  - NDF: Half the fee (F/2) is granted to the proposer. The other half is burnt.
+  - NDF: Half the fee (F/2) is granted to the proposer and the other half is burnt, since the Permissionless hardfork only; between Magma and Permissionless-1 the whole fee (F) is granted (see below).
+    - The NDF burn was not applied consistently by the implementations before v3.0.0: Klaytn v1.9.0 (Magma) to v1.10.x credited the whole fee (F) to Coinbase; Klaytn v1.11.0 to Kaia v0.8.0 credited F/2 to Rewardbase (the other half burnt); Kaia v0.9.0 to v2.2.2 credited the whole fee to Rewardbase (the burn was dropped in 2dc93539d). v3.0.0-rc.1 (https://github.com/kaiachain/kaia/pull/816) re-implemented the burn under the Magma rule, which made the blocks produced by v0.9.0 to v2.2.2 unreplayable. Since those chains have already created such blocks, crediting the whole fee to Rewardbase is considered as the legal behavior until the Permissionless hardfork, and the burn applies since the Permissionless hardfork (https://github.com/kaiachain/kaia/issues/1097). This rule reproduces the v0.9.0 to v2.2.2 history only; blocks that other implementations produced with a different NDF rule after Magma (F/2 by v1.11.0 to v0.8.0, F to Coinbase before v1.11.0, F/2 by a v3.0.0 release candidate before its Permissionless block) are not replayable by this rule and are not supported; such a chain has to be regenerated. This behavior only occurs in the chains with `reward.deferredtxfee = false`. Kaia Mainnet and Kairos testnet are unaffected. A chain that never schedules the Permissionless hardfork keeps granting the whole fee.
   - DF: Half the fee (F/2) is distributed according to the reward ratio. The other half is burnt.
 - **Kore rule (KIP-82)**: The rule since the KIP-82 hardfork.
   - MR: M is distributed according to the reward ratio and KIP-82 ratio.
@@ -95,6 +96,7 @@ The rules have changed over hardforks.
     - Remainders follow the same policy as above: reward-ratio and KIP-82 proposer/staker ratio remainders are sent to Fund1, staking allocation remainders are sent to the proposer, and consensus liquidity split remainders go to the validator's AddressBook reward address.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
+- **Permissionless hardfork**: For the chains using the NDF method, the half burn of the Magma rule takes effect from this hardfork (see the note under the Magma rule). Nothing changes for the DF method.
 
 ## Persistent schema
 
@@ -144,19 +146,29 @@ This module does not have any background threads.
 
 #### PrepareHeader
 
-This module initializes `header.Rewardbase` with the node's configured reward base.
+This module sets `header.Rewardbase`, the address that receives this node's block reward, before any transaction of the block is executed:
+
+- `istanbul.policy = 2` (WeightedRandom) and the staking info has a non-zero reward address registered for this node (the `nodeId` / `rewardAddress` entry, read from the legacy AddressBook before the Permissionless hardfork and from AddressBookV2 since): the registered reward address.
+- Otherwise (any other proposer policy, no staking entry for this node, or a zero registered address): the node's configured reward base (`--rewardbase`).
+  - The lookup uses the staking snapshot (`NodeIds` / `RewardAddrs`). Since the Permissionless hardfork that snapshot holds only the profiles that are `ValActive` in the parent state, so a committee member promoted in this very block is not in it although it has a registered AddressBookV2 reward address; this implementation then still uses the configured reward base. Resolving such a proposer's registered address (and enforcing it in VerifyHeader) is a separate change.
+
+The value must be final here because, when `reward.deferredtxfee = false`, the transaction fee is credited to `header.Rewardbase` while each transaction runs (`TransitionDb`, since Magma). A failure to read the staking info is returned (the block is not built) rather than treated as "no entry". Blocks that an unfixed node already sealed with a header naming a different address than the one it executed with stay unreplayable (every node executes with the sealed header); such a chain has to be regenerated.
+
+#### VerifyHeader
+
+Under WeightedRandom, if the staking snapshot has a non-zero reward address registered for the block's proposer, `header.Rewardbase` must be that address; otherwise (no entry in the snapshot, zero address, another policy, or an unreadable staking info) the header is accepted. Every header PrepareHeader produces passes this check because the check is looser than PrepareHeader's choice; it does not yet enforce the registered address of a proposer missing from the snapshot (see the PrepareHeader note above).
 
 ### BlockState
 
 #### FinalizeState
 
-After all transactions are processed, calculate and accredit the block reward.
+After all transactions are processed, calculate and accredit the block reward. The header is not modified.
 
 ### Execution
 
 #### PostRunTx
 
-When the non-deferred fees method is used, the transaction fees are accredited to the proposer after a transaction is executed.
+When the non-deferred fees method is used, the transaction fees are accredited to the proposer after a transaction is executed. The crediting (and, since Permissionless, the burn) is implemented in `StateTransition.TransitionDb` of the `blockchain` package, not in this module; `PostRunTx` is a no-op.
 
 ### Rewind
 
@@ -234,7 +246,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   if DeferredTxFee, return (MR + DF)
   else, return (MR)
   ```
-- GetBlockReward: retrospectively calculates the block reward distributed at the given block number. Considers both non-deferred fees and deferred fees.
+- GetBlockReward: retrospectively calculates the block reward distributed at the given block number. Considers both non-deferred fees and deferred fees. For the chains using the NDF method, blocks before Permissionless report no exec-fee burn (the whole fee in the proposer's share); v2.2.2 reported F/2 for the same blocks although its state credited the whole fee. Since Permissionless the state rounds the burn per transaction while this rounds the block total, so the reported proposer share can be lower than the ledger by up to (number of odd-fee transactions)/2 kei.
   ```
   GetBlockReward(num) -> RewardSpec
 
@@ -242,6 +254,10 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   else, return GetDeferredReward() + (NDF) = (MR + NDF)
   ```
 - GetRewardSummary: retrospectively calculates the reward summary at the given block number. It is equivalent to the Summary part of a `GetBlockReward` result, which means it considers both non-deferred fees and deferred fees.
+  - Exception: it does not consult `reward.deferredtxfee` and always reports the deferred-mode burn, so under the NDF method it differs from `GetBlockReward`:
+    - before Permissionless: F/2 (or the Kore formula) vs. no exec-fee burn;
+    - since Permissionless with `istanbul.policy == 2` and Kore: the Kore formula vs. F/2.
+  - This is kept for compatibility with the persisted `kaiax/supply` checkpoints, so `kaia_getTotalSupply` over-reports the burnt fees of such chains by the same amount until the follow-up of https://github.com/kaiachain/kaia/issues/1097 lands.
   ```
   GetRewardSummary(num) -> RewardSummary
   ```

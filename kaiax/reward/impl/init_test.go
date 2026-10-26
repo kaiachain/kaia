@@ -45,10 +45,22 @@ type rewardModuleTestConfig struct {
 	Simple   bool // false => WeightedRandom, true => RoundRobin
 	Deferred bool
 	IsPrague bool
+	// IsPermissionless enables Osaka and Permissionless at block 60. Non-deferred fees are burnt
+	// only since Permissionless; see StateTransition.TransitionDb.
+	IsPermissionless bool
 
 	// Proposer address returned by Chain.Sealer().Author(header).
 	// Zero value falls back to params.AuthorAddressForTesting.
 	Proposer common.Address
+
+	// NodeAddress and Rewardbase are the module's own identity and configured reward base
+	// (InitOpts.NodeAddress / InitOpts.Rewardbase), used by PrepareHeader.
+	NodeAddress common.Address
+	Rewardbase  common.Address
+	// StakingErr, when set, makes StakingModule.GetStakingInfo fail with it.
+	StakingErr error
+	// StakingInfo, when set, replaces the default makeTestStakingInfo fixture.
+	StakingInfo *staking.StakingInfo
 
 	// Block fixture. When Header is nil, block- and number-keyed mocks are
 	// replaced with gomock.Any() so the helper can be used by tests that
@@ -75,12 +87,18 @@ func makeTestRewardModule(t *testing.T,
 
 func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *RewardModule {
 	proposerPolicy := uint64(istanbul.WeightedRandom)
-	var pragueForkBlock *big.Int
+	var pragueForkBlock, osakaForkBlock, permissionlessForkBlock *big.Int
 	if cfg.Simple {
 		proposerPolicy = uint64(istanbul.RoundRobin)
 	}
 	if cfg.IsPrague {
 		pragueForkBlock = big.NewInt(60)
+	}
+	if cfg.IsPermissionless {
+		// Prague is left to cfg.IsPrague on purpose: enabling it changes the staking (consensus
+		// liquidity) expectations, which is orthogonal to the non-deferred fee burn under test.
+		osakaForkBlock = big.NewInt(60)
+		permissionlessForkBlock = big.NewInt(60)
 	}
 	proposer := cfg.Proposer
 	if proposer == (common.Address{}) {
@@ -95,16 +113,18 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 
 		chainConfig = &params.ChainConfig{
-			ChainID:                  big.NewInt(31337),
-			IstanbulCompatibleBlock:  big.NewInt(10),
-			LondonCompatibleBlock:    big.NewInt(10),
-			EthTxTypeCompatibleBlock: big.NewInt(10),
-			MagmaCompatibleBlock:     big.NewInt(20),
-			KoreCompatibleBlock:      big.NewInt(30),
-			ShanghaiCompatibleBlock:  big.NewInt(40),
-			CancunCompatibleBlock:    big.NewInt(50),
-			KaiaCompatibleBlock:      big.NewInt(60),
-			PragueCompatibleBlock:    pragueForkBlock,
+			ChainID:                       big.NewInt(31337),
+			IstanbulCompatibleBlock:       big.NewInt(10),
+			LondonCompatibleBlock:         big.NewInt(10),
+			EthTxTypeCompatibleBlock:      big.NewInt(10),
+			MagmaCompatibleBlock:          big.NewInt(20),
+			KoreCompatibleBlock:           big.NewInt(30),
+			ShanghaiCompatibleBlock:       big.NewInt(40),
+			CancunCompatibleBlock:         big.NewInt(50),
+			KaiaCompatibleBlock:           big.NewInt(60),
+			PragueCompatibleBlock:         pragueForkBlock,
+			OsakaCompatibleBlock:          osakaForkBlock,
+			PermissionlessCompatibleBlock: permissionlessForkBlock,
 		}
 
 		paramset = gov.ParamSet{
@@ -119,8 +139,11 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 			UseFlexReward:          false,
 		}
 
-		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, cfg.IsPrague)
+		stakingInfo = cfg.StakingInfo
 	)
+	if stakingInfo == nil {
+		stakingInfo = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, cfg.IsPrague)
+	}
 
 	r := NewRewardModule()
 	r.Init(&InitOpts{
@@ -129,10 +152,21 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		GovModule:     mGov,
 		StakingModule: mStaking,
 		ValsetModule:  mValset,
+		NodeAddress:   cfg.NodeAddress,
+		Rewardbase:    cfg.Rewardbase,
 	})
 
 	chain.EXPECT().Sealer().Return(faker.NewFakerWithFixedSealer(proposer)).AnyTimes()
-	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+	if cfg.StakingErr != nil {
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(nil, cfg.StakingErr).AnyTimes()
+	} else {
+		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+	}
+	// Every staking entry is a qualified validator. The reward module no longer asks, but the
+	// expectation keeps the fixture meaningful for code that does (e.g. the pre-fix FinalizeState,
+	// whose header rewrite TestFinalizeStateLeavesHeaderUntouched must observe rather than a
+	// missing-mock failure).
+	mValset.EXPECT().GetQualifiedValidators(gomock.Any()).Return(stakingInfo.NodeIds, nil).AnyTimes()
 
 	if cfg.Header != nil {
 		block := types.NewBlock(cfg.Header, cfg.Txs, cfg.Receipts)

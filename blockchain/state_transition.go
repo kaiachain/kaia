@@ -653,14 +653,21 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Defer transferring Tx fee when DeferredTxFee is true
 	// DeferredTxFee has never been voted, so it's ok to use the genesis value instead of the latest value from governance.
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
+		fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 		if rules.IsMagma {
-			// Since Magma, half the fee is burned and the other half goes to the proposer (Rewardbase).
-			fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
-			burnt := new(big.Int).Div(fee, big.NewInt(2)) // fee / 2
-			distributed := new(big.Int).Sub(fee, burnt)
-			st.state.AddBalance(st.evm.Context.Rewardbase, distributed)
+			// Since Magma, the fee goes to the proposer (Rewardbase) instead of Coinbase, and the Magma
+			// rule burns half of it. Kaia v0.9.0 to v2.2.2 did not burn it and credited the whole fee;
+			// #816 (v3.0.0-rc.1) re-introduced the burn. To keep the blocks of v0.9.0 to v2.2.2
+			// replayable, the burn is activated at the Permissionless hardfork (#1097); Permissionless is
+			// ordered after Magma, so IsPermissionless alone identifies the burning regime. Deferred fees
+			// (reward.deferredtxfee=true) are untouched here; their burn is applied at block finalization.
+			credited := fee
+			if rules.IsPermissionless {
+				credited = new(big.Int).Sub(fee, new(big.Int).Div(fee, big.NewInt(2))) // the burnt half is rounded down
+			}
+			st.state.AddBalance(st.evm.Context.Rewardbase, credited)
 		} else {
-			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+			st.state.AddBalance(st.evm.Context.Coinbase, fee)
 		}
 	}
 

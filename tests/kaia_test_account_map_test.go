@@ -195,18 +195,10 @@ func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []commo
 			a.SubBalance(feePayer, fee)
 		}
 
-		// In non-deferred Magma mode, only half the fee is distributed to the rewardbase;
-		// the other half is burned. Mirror that logic here.
+		// In non-deferred mode since Permissionless, half the fee is burned and only the remainder is
+		// distributed to the rewardbase (see StateTransition.TransitionDb). Mirror that logic here.
 		// currentBlockNumber is the mined block number (invariant upheld by all callers).
-		rewardFee := new(big.Int).Set(fee)
-		if a.chainConfig != nil {
-			rules := a.chainConfig.Rules(new(big.Int).SetUint64(currentBlockNumber))
-			isNonDeferred := a.chainConfig.Governance == nil || !a.chainConfig.Governance.DeferredTxFee()
-			if rules.IsMagma && isNonDeferred {
-				rewardFee.Div(rewardFee, big.NewInt(2))
-			}
-		}
-		a.AddBalance(a.rewardbase, rewardFee)
+		a.AddBalance(a.rewardbase, a.creditedFee(fee, currentBlockNumber))
 
 		a.IncNonce(from)
 
@@ -232,10 +224,6 @@ func (a *AccountMap) AdjustFeesByReceipts(txs types.Transactions, receipts types
 		return nil
 	}
 
-	blockNumBig := new(big.Int).SetUint64(blockNum)
-	rules := a.chainConfig.Rules(blockNumBig)
-	isNonDeferred := a.chainConfig.Governance == nil || !a.chainConfig.Governance.DeferredTxFee()
-
 	for i, tx := range txs {
 		cached, ok := a.txFeeCache[tx.Hash()]
 		if !ok {
@@ -249,9 +237,10 @@ func (a *AccountMap) AdjustFeesByReceipts(txs types.Transactions, receipts types
 		}
 
 		// delta > 0: actual > estimated (e.g. constructor or execution gas not in IntrinsicGas)
-		//   → deduct delta from payer, add delta/2 to rewardbase
+		//   → deduct delta from payer
 		// delta < 0: actual < estimated (e.g. EIP-7702 authorization refund > execution gas)
-		//   → refund |delta| to payer, subtract |delta|/2 from rewardbase
+		//   → refund |delta| to payer
+		// The rewardbase moves by creditedFee(actual) - creditedFee(estimated) (see below).
 		// SubBalance with a negative value adds to balance; AddBalance with negative subtracts.
 		if cached.hasFeeRatio {
 			deltaByFeePayer, deltaBySender := types.CalcFeeWithRatio(cached.feeRatio, delta)
@@ -261,14 +250,30 @@ func (a *AccountMap) AdjustFeesByReceipts(txs types.Transactions, receipts types
 			a.SubBalance(cached.feePayer, delta)
 		}
 
-		rewardDelta := new(big.Int).Set(delta)
-		if rules.IsMagma && isNonDeferred {
-			rewardDelta.Div(rewardDelta, big.NewInt(2))
-		}
+		// Rounding is per fee, so adjust by the difference of the two credited amounts rather than halving delta.
+		rewardDelta := new(big.Int).Sub(a.creditedFee(actualFee, blockNum), a.creditedFee(cached.estimatedFee, blockNum))
 		a.AddBalance(a.rewardbase, rewardDelta)
 	}
 
 	return nil
+}
+
+// creditedFee returns the part of fee that StateTransition.TransitionDb credits to the rewardbase at
+// blockNum in non-deferred mode: the whole fee, or fee - fee/2 since Permissionless (the burnt half is
+// rounded down, so the rewardbase receives the rounded-up half). In deferred mode it returns fee unchanged:
+// AccountMap does not model the finalization-time distribution. Like the rest of this helper, fee is
+// estimated with tx.GasPrice() rather than the effective gas price; the fixtures keep the two equal.
+func (a *AccountMap) creditedFee(fee *big.Int, blockNum uint64) *big.Int {
+	credited := new(big.Int).Set(fee)
+	if a.chainConfig == nil {
+		return credited
+	}
+	rules := a.chainConfig.Rules(new(big.Int).SetUint64(blockNum))
+	isNonDeferred := a.chainConfig.Governance == nil || !a.chainConfig.Governance.DeferredTxFee()
+	if rules.IsPermissionless && isNonDeferred {
+		credited.Sub(credited, new(big.Int).Div(fee, big.NewInt(2)))
+	}
+	return credited
 }
 
 func (a *AccountMap) Verify(statedb *state.StateDB) error {
