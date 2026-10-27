@@ -65,6 +65,7 @@ func (a AccountType) String() string {
 var (
 	ErrUndefinedAccountType    = errors.New("undefined account type")
 	ErrAccountKeyNotModifiable = errors.New("account key is not modifiable")
+	ErrDeprecatedLegacyAccount = errors.New("legacy account is deprecated")
 )
 
 var (
@@ -132,7 +133,7 @@ type AccountWithKey interface {
 func NewAccountWithType(t AccountType) (Account, error) {
 	switch t {
 	case LegacyAccountType:
-		return newLegacyAccount(), nil
+		return nil, ErrDeprecatedLegacyAccount
 	case ExternallyOwnedAccountType:
 		return newExternallyOwnedAccount(), nil
 	case SmartContractAccountType:
@@ -146,7 +147,7 @@ func NewAccountWithType(t AccountType) (Account, error) {
 func NewAccountWithMap(t AccountType, values map[AccountValueKeyType]interface{}) (Account, error) {
 	switch t {
 	case LegacyAccountType:
-		return newLegacyAccountWithMap(values), nil
+		return nil, ErrDeprecatedLegacyAccount
 	case ExternallyOwnedAccountType:
 		return newExternallyOwnedAccountWithMap(values), nil
 	case SmartContractAccountType:
