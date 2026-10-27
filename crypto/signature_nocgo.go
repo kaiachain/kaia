@@ -35,8 +35,21 @@ import (
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
+// It accepts only the canonical Ethereum recovery id v ∈ {0, 1}.
 func Ecrecover(hash, sig []byte) ([]byte, error) {
-	pub, err := sigToPub(hash, sig)
+	return ecrecover(hash, sig, 1)
+}
+
+// EcrecoverLegacy is Ecrecover accepting v ∈ {0..3}, as the cgo build did before
+// the canonical recovery id check. The validateSender precompile uses it and applies
+// v ∈ {0, 1} itself from the Permissionless hardfork, so that its result does not
+// change without a fork.
+func EcrecoverLegacy(hash, sig []byte) ([]byte, error) {
+	return ecrecover(hash, sig, 3)
+}
+
+func ecrecover(hash, sig []byte, maxRecoveryID byte) ([]byte, error) {
+	pub, err := sigToPub(hash, sig, maxRecoveryID)
 	if err != nil {
 		return nil, err
 	}
@@ -44,15 +57,15 @@ func Ecrecover(hash, sig []byte) ([]byte, error) {
 	return bytes, err
 }
 
-func sigToPub(hash, sig []byte) (*secp256k1.PublicKey, error) {
+func sigToPub(hash, sig []byte, maxRecoveryID byte) (*secp256k1.PublicKey, error) {
 	if len(sig) != SignatureLength {
 		return nil, errors.New("invalid signature")
 	}
 	if len(hash) != DigestLength {
 		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(hash))
 	}
-	// Enforce canonical Ethereum recovery id v ∈ {0, 1}.
-	if sig[RecoveryIDOffset] >= 2 {
+	// Bounding v also rejects 4..7, which decred reads as compressed-key recovery ids.
+	if sig[RecoveryIDOffset] > maxRecoveryID {
 		return nil, errors.New("invalid signature recovery id")
 	}
 	// Convert to secp256k1 input format with 'recovery id' v at the beginning.
@@ -66,7 +79,7 @@ func sigToPub(hash, sig []byte) (*secp256k1.PublicKey, error) {
 
 // SigToPub returns the public key that created the given signature.
 func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
-	pub, err := sigToPub(hash, sig)
+	pub, err := sigToPub(hash, sig, 1)
 	if err != nil {
 		return nil, err
 	}

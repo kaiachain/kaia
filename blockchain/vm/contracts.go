@@ -63,6 +63,7 @@ var (
 	errInputTooShort        = errors.New("input length is too short")
 	errWrongSignatureLength = errors.New("wrong signature length")
 	errNoSignatures         = errors.New("no signatures provided")
+	errInvalidRecoveryID    = errors.New("invalid signature recovery id")
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -908,13 +909,19 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 	}
 
 	numSigs := len(ptr) / common.SignatureLength
+	isPermissionless := fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsPermissionless
 	// Reject zero signatures, but only after Permissionless so historical blocks don't diverge.
-	if fork.Rules(new(big.Int).SetUint64(currentBlockNumber)).IsPermissionless && numSigs == 0 {
+	if isPermissionless && numSigs == 0 {
 		return errNoSignatures
 	}
 	pubs := make([]*ecdsa.PublicKey, numSigs)
 	for i := range numSigs {
-		p, err := crypto.Ecrecover(msg, ptr[0:common.SignatureLength])
+		sig := ptr[0:common.SignatureLength]
+		// v is passed unchecked, so the canonical v ∈ {0, 1} also applies only after Permissionless.
+		if isPermissionless && sig[crypto.RecoveryIDOffset] > 1 {
+			return errInvalidRecoveryID
+		}
+		p, err := crypto.EcrecoverLegacy(msg, sig)
 		if err != nil {
 			return err
 		}

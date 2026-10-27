@@ -151,6 +151,49 @@ func TestNonCanonicalRecoveryID(t *testing.T) {
 	}
 }
 
+// TestEcrecoverLegacy ensures EcrecoverLegacy recovers v ∈ {2, 3} as v2.2.2 did and
+// rejects v >= 4 in both the cgo and nocgo builds.
+func TestEcrecoverLegacy(t *testing.T) {
+	msg := Keccak256([]byte("A4-repro"))
+	sig := make([]byte, SignatureLength)
+	sig[31] = 2 // r = 2: the R point's x is r + n
+	sig[63] = 1 // s = 1
+
+	for _, tc := range []struct {
+		v    byte
+		want common.Address // recovered by v2.2.2
+	}{
+		{2, common.HexToAddress("0xa9DECC34942E9f2223653e6720000dE6475a364c")},
+		{3, common.HexToAddress("0x9EE133cdEf173fB2A1c010B31f6C8E2742EfFf78")},
+	} {
+		sig[RecoveryIDOffset] = tc.v
+		pub, err := EcrecoverLegacy(msg, sig)
+		if err != nil {
+			t.Fatalf("EcrecoverLegacy: v=%d must be recovered: %v", tc.v, err)
+		}
+		key, err := UnmarshalPubkey(pub)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := PubkeyToAddress(*key); got != tc.want {
+			t.Errorf("v=%d: recovered address mismatch: got %s, want %s", tc.v, got.Hex(), tc.want.Hex())
+		}
+		if _, err := Ecrecover(msg, sig); err == nil {
+			t.Errorf("Ecrecover: v=%d must be rejected", tc.v)
+		}
+		if _, err := SigToPub(msg, sig); err == nil {
+			t.Errorf("SigToPub: v=%d must be rejected", tc.v)
+		}
+	}
+
+	for _, badV := range []byte{4, 5, 6, 7, 27, 28, 255} {
+		sig[RecoveryIDOffset] = badV
+		if _, err := EcrecoverLegacy(msg, sig); err == nil {
+			t.Errorf("EcrecoverLegacy: v=%d must be rejected", badV)
+		}
+	}
+}
+
 func TestInvalidSign(t *testing.T) {
 	if _, err := Sign(make([]byte, 1), nil); err == nil {
 		t.Errorf("expected sign with hash 1 byte to error")

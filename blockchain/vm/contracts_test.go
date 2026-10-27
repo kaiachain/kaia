@@ -672,3 +672,49 @@ func TestValidateSenderPrecompile_ZeroSignatures(t *testing.T) {
 	assert.NoError(t, runErr)
 	assert.Equal(t, []byte{0}, out)
 }
+
+// TestValidateSenderPrecompile_HighRecoveryID verifies that the validateSender precompile
+// (0x3ff) accepts a signature with v ∈ {2, 3} before the Permissionless fork, as v2.2.2 did,
+// and rejects it once the fork is active.
+func TestValidateSenderPrecompile_HighRecoveryID(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(10),
+	})
+
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	// [20-byte address][32-byte hash][r=2][s=1][v]: each address is the one v2.2.2 recovers
+	// from the signature, and it has no account, so its key is the legacy key.
+	const (
+		msg = "f9233cfeb44d3724e2c6b95d9cb2973ba7bf6733c6d127fee68278216c1d568c"
+		rs  = "0000000000000000000000000000000000000000000000000000000000000002" +
+			"0000000000000000000000000000000000000000000000000000000000000001"
+	)
+	for _, tc := range []struct {
+		v    string
+		from common.Address
+	}{
+		{"02", common.HexToAddress("0xa9DECC34942E9f2223653e6720000dE6475a364c")},
+		{"03", common.HexToAddress("0x9EE133cdEf173fB2A1c010B31f6C8E2742EfFf78")},
+	} {
+		input := common.Hex2Bytes(tc.from.Hex()[2:] + msg + rs + tc.v)
+
+		c := &validateSender{}
+		assert.NoError(t, c.validateSender(input, stateDb, 9))
+		assert.ErrorIs(t, c.validateSender(input, stateDb, 10), errInvalidRecoveryID)
+
+		// Run() returns 0x01 before the fork and 0x00 after it, with no error either way.
+		for _, rc := range []struct {
+			block int64
+			want  byte
+		}{{9, 1}, {10, 0}} {
+			contract := NewContract(types.NewAccountRefWithFeePayer(tc.from, tc.from), nil, new(big.Int), 1e6, nil)
+			evm := NewEVM(BlockContext{BlockNumber: big.NewInt(rc.block)}, TxContext{}, stateDb,
+				&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
+			out, _, err := RunPrecompiledContract(c, input, contract, evm)
+			assert.NoError(t, err)
+			assert.Equal(t, []byte{rc.want}, out)
+		}
+	}
+}
