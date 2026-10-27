@@ -65,6 +65,32 @@ type CLStakingInfo struct {
 
 type CLStakingInfos []*CLStakingInfo
 
+// FilterNodes returns a copy of si whose NodeIds, StakingContracts, RewardAddrs and StakingAmounts
+// keep only the entries in nodeIds, in the original order. The other fields are shared with si.
+func (si *StakingInfo) FilterNodes(nodeIds []common.Address) *StakingInfo {
+	keep := make(map[common.Address]bool, len(nodeIds))
+	for _, id := range nodeIds {
+		keep[id] = true
+	}
+	n := &StakingInfo{
+		SourceBlockNum: si.SourceBlockNum,
+		KEFAddr:        si.KEFAddr,
+		KIFAddr:        si.KIFAddr,
+		KPFAddr:        si.KPFAddr,
+		CLStakingInfos: si.CLStakingInfos,
+	}
+	for i, id := range si.NodeIds {
+		if !keep[id] {
+			continue
+		}
+		n.NodeIds = append(n.NodeIds, id)
+		n.StakingContracts = append(n.StakingContracts, si.StakingContracts[i])
+		n.RewardAddrs = append(n.RewardAddrs, si.RewardAddrs[i])
+		n.StakingAmounts = append(n.StakingAmounts, si.StakingAmounts[i])
+	}
+	return n
+}
+
 // consolidatedNode is the refined staking information suitable for proposer selection.
 // Sometimes a node would register multiple NodeIds in AddressBook,
 // in which each entry has different StakingAddr and same RewardAddr.

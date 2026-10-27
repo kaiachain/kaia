@@ -42,6 +42,9 @@ type ValsetModule interface {
 	// GetCandTesting returns nodes in the CandTesting state at block `num`.
 	GetCandTesting(num uint64) ([]common.Address, error)
 	GetCNPeers(num uint64) ([]common.Address, error)
+	// GetRewardEligible returns the nodes eligible for the staking rewards of block `num`, decided
+	// on the same node states as the committee of `num`. It returns an error before the permissionless fork.
+	GetRewardEligible(num uint64) ([]common.Address, error)
 	// GetNodesByState returns nodes filtered by state at block `num`.
 	// It returns an error before the permissionless fork.
 	GetNodesByState(num uint64, states []NodeState) (map[common.Address]*Node, error)

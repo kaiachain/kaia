@@ -27,6 +27,30 @@ The rules determining the subsets depend on the proposer policy. Proposer policy
 
 At the genesis block (N=0), it is meaningless to define DemotedValidators, QualifiedValidators, Committee or Proposer because genesis block is not subject to consensus. But we define them nonetheless for completeness.
 
+The Council, Qualified and Demoted validators and Committee sections below describe the rules before the Permissionless hardfork. Since the Permissionless hardfork, the sets are derived from the node states instead (see [Node states](#node-states-since-permissionless)).
+
+### Node states (since Permissionless)
+
+Since the Permissionless hardfork ([KIP-286](https://kips.kaia.io/KIPs/kip-286)), every node registered in the AddressBookV2 (ABv2) has a profile with a node state (`Registered`, `CandReady`, `CandTesting`, `ValReady`, `ValActive`, `ValPaused`, `ValExiting` or `ValInactive`) and a `Suspended` flag set by the suspender. The header governance votes (`governance.addvalidator`, `governance.removevalidator`) no longer change the validators.
+
+- `Nodes(N)`: every ABv2 profile with its node state for the block N. It is the ABv2 snapshot read from the state of N-1, plus the system transitions applied for N (the epoch, violation and timeout rules of KIP-286), which use the governance parameters of N and the VRank records up to N-1.
+  ```
+  Nodes(N) = ABv2(State(N-1)) + Transitions(N)
+  ```
+  - The result is cached by block number. It is computed when the block N is initialized, which writes the changed states into ABv2 by a system transaction, and in advance for the next block after a block is inserted.
+  - The state of N already contains the transitions for N, but also the user transactions of N, so `Nodes(N+1)` is not read from it directly.
+- The sets of the block N are drawn from `Nodes(N)`:
+  - `Council(N)` = {`ValActive`, `ValPaused`}
+  - `RewardEligible(N)` = {`ValActive`}, including the suspended ones. These nodes receive the staking rewards of the block N (see [kaiax/reward](../reward/README.md)).
+  - `QualifiedValidators(N)` = {`ValActive`} − {suspended}. If every `ValActive` node is suspended, all `ValActive` nodes instead.
+  - `Committee(N,R)` = `QualifiedValidators(N)` for every round R. There is no round-based sampling.
+  - `DemotedValidators(N)` = `Council(N)` − `QualifiedValidators(N)`, i.e. {`ValPaused`} and the suspended `ValActive` nodes.
+  - `CandTesting(N)` = {`CandTesting`}
+  - `CNPeers(N)` = {`ValActive`, `ValReady`, `ValPaused`, `CandReady`, `CandTesting`}: the nodes that keep CN-CN P2P connections.
+  - So `Council(N)` ⊇ `RewardEligible(N)` ⊇ `QualifiedValidators(N)`.
+- The proposer is drawn from `QualifiedValidators(N)` by the proposer rule above.
+- The qualified validators are written into `IstanbulExtra.Validators` of the header, and VerifyHeader rejects a header whose validators differ from `QualifiedValidators(N)`.
+
 ### Council
 
 Council is the largest set that all other subsets are drawn from. Council is the set of registered validators.
@@ -506,7 +530,8 @@ type committeeContext struct {
   - ChainConfig: Holds the genesis parameters such as ProposerUpdateInterval and ProposerPolicy.
   - Chain: Provides block headers.
   - GovModule: Provides governance parameters.
-  - StakingModule: Provides staking info.
+  - StakingModule: Provides staking info (before the Permissionless hardfork).
+  - VRankModule: Provides the VRank records used by the node state transitions (since the Permissionless hardfork).
 
 ### Start and stop
 
@@ -516,19 +541,27 @@ This module maintains a background thread that migrates `istanbulSnapshot` schem
 
 ### Consensus
 
-This module does not have any consensus-related block processing logic.
+- Before the Permissionless hardfork, this module does not have any consensus-related block processing logic.
+- Since the Permissionless hardfork:
+  - VerifyHeader: the validators in the header must equal `QualifiedValidators(N)`.
+  - FinalizeState of the block before the hardfork installs and initializes the ABv2 (`InstallABv2`).
+  - InitializeState of every block since the hardfork writes the node states changed by the transitions for the block into ABv2 by a system transaction (`WriteTransitionToABv2`), before the user transactions.
 
 ### Execution
 
-This module updates persistent schema based on `header.Vote`.
+- Before the Permissionless hardfork, this module updates persistent schema based on `header.Vote`.
+- Since the Permissionless hardfork, the votes are ignored. After a block N is inserted, this module computes `Nodes(N+1)` in advance.
 
 ### Rewind
 
-Upon rewind, this module deletes the related persistent data and flushes in-memory caches.
+Upon rewind, this module deletes the related persistent data and flushes in-memory caches, including the cached `Nodes(N)` since the Permissionless hardfork.
 
 ## APIs
 
-This module does not expose APIs.
+- `kaia_getCouncil(num)`, `kaia_getCouncilSize(num)`: The council at the block `num`.
+- `kaia_getCommittee(num)`, `kaia_getCommitteeSize(num)`: The committee at the block `num`.
+- `kaia_getNodesByState(num, states)`: The nodes in one of the given states at the block `num`, with their node states. All nodes if `states` is empty. Since the Permissionless hardfork only.
+- `kaia_getAllRecordsFromRegistry(name, num)`, `kaia_getActiveAddressFromRegistry(name, num)`: The records of the system Registry at the block `num`.
 
 ## Getters
 
@@ -547,4 +580,24 @@ This module does not expose APIs.
 - `GetProposer(num, round)`: Returns the proposer at the block `num` and round `round`.
   ```
   GetProposer(num, round) -> common.Address
+  ```
+- `GetQualifiedValidators(num)`: Returns the qualified validators at the block `num`.
+  ```
+  GetQualifiedValidators(num) -> []common.Address
+  ```
+- `GetRewardEligible(num)`: Returns the nodes that receive the staking rewards of the block `num`. Since the Permissionless hardfork only; an error before it.
+  ```
+  GetRewardEligible(num) -> []common.Address
+  ```
+- `GetCandTesting(num)`: Returns the `CandTesting` nodes at the block `num`. Empty before the Permissionless hardfork.
+  ```
+  GetCandTesting(num) -> []common.Address
+  ```
+- `GetCNPeers(num)`: Returns the nodes that keep CN-CN P2P connections at the block `num`. The council before the Permissionless hardfork. Nil (no filtering) if it cannot be read.
+  ```
+  GetCNPeers(num) -> []common.Address
+  ```
+- `GetNodesByState(num, states)`: Returns the nodes in one of the given states at the block `num`. All nodes if `states` is empty. Since the Permissionless hardfork only; an error before it.
+  ```
+  GetNodesByState(num, states) -> map[common.Address]*Node
   ```

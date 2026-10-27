@@ -181,3 +181,16 @@ func Test_AddRemove(t *testing.T) {
 		}
 	}
 }
+
+// RewindTo drops the cached transition results, which are keyed by block number: after a rewind
+// the same numbers belong to the blocks that replace the rewound ones.
+func TestRewindToPurgesTransitionResults(t *testing.T) {
+	v := NewValsetModule()
+	v.ChainKv = database.NewMemDB()
+	v.transitionResultCache.Add(uint64(10), &TransitionResult{Nodes: NodeMap{}})
+
+	v.RewindTo(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(5)}))
+
+	_, ok := v.transitionResultCache.Get(uint64(10))
+	assert.False(t, ok)
+}

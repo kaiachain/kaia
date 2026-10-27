@@ -68,6 +68,14 @@ type rewardModuleTestConfig struct {
 	Header   *types.Header
 	Txs      []*types.Transaction
 	Receipts []*types.Receipt
+
+	// PermissionlessBlock, when set, schedules Osaka and Permissionless at this block instead.
+	PermissionlessBlock *big.Int
+	// RewardEligible is returned by ValsetModule.GetRewardEligible: the reward-eligible nodes at
+	// the block, after the transitions applied for it. Nil makes every staking entry eligible.
+	RewardEligible []common.Address
+	// RewardEligibleErr, when set, makes ValsetModule.GetRewardEligible fail with it.
+	RewardEligibleErr error
 }
 
 // Make a RewardModule that works with the given block.
@@ -99,6 +107,10 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		// liquidity) expectations, which is orthogonal to the non-deferred fee burn under test.
 		osakaForkBlock = big.NewInt(60)
 		permissionlessForkBlock = big.NewInt(60)
+	}
+	if cfg.PermissionlessBlock != nil {
+		osakaForkBlock = cfg.PermissionlessBlock
+		permissionlessForkBlock = cfg.PermissionlessBlock
 	}
 	proposer := cfg.Proposer
 	if proposer == (common.Address{}) {
@@ -167,6 +179,13 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 	// whose header rewrite TestFinalizeStateLeavesHeaderUntouched must observe rather than a
 	// missing-mock failure).
 	mValset.EXPECT().GetQualifiedValidators(gomock.Any()).Return(stakingInfo.NodeIds, nil).AnyTimes()
+	if cfg.RewardEligibleErr != nil {
+		mValset.EXPECT().GetRewardEligible(gomock.Any()).Return(nil, cfg.RewardEligibleErr).AnyTimes()
+	} else if cfg.RewardEligible != nil {
+		mValset.EXPECT().GetRewardEligible(gomock.Any()).Return(cfg.RewardEligible, nil).AnyTimes()
+	} else {
+		mValset.EXPECT().GetRewardEligible(gomock.Any()).Return(stakingInfo.NodeIds, nil).AnyTimes()
+	}
 
 	if cfg.Header != nil {
 		block := types.NewBlock(cfg.Header, cfg.Txs, cfg.Receipts)
@@ -202,7 +221,7 @@ func makeTestStakingInfo(stakingAmounts []uint64, isPrague bool) *staking.Stakin
 		}
 	}
 
-	return &staking.StakingInfo{
+	si := &staking.StakingInfo{
 		NodeIds:          []common.Address{common.HexToAddress("0xa01"), common.HexToAddress("0xa02"), common.HexToAddress("0xa03"), common.HexToAddress("0xa04")},
 		StakingContracts: []common.Address{common.HexToAddress("0xb01"), common.HexToAddress("0xb02"), common.HexToAddress("0xb03"), common.HexToAddress("0xb04")},
 		RewardAddrs:      []common.Address{common.HexToAddress("0xc01"), common.HexToAddress("0xc02"), common.HexToAddress("0xc03"), common.HexToAddress("0xc04")},
@@ -212,6 +231,7 @@ func makeTestStakingInfo(stakingAmounts []uint64, isPrague bool) *staking.Stakin
 		KPFAddr:          common.HexToAddress("0x0"),
 		CLStakingInfos:   clStakingInfos,
 	}
+	return si
 }
 
 // Note: totalFee = 0.025e18

@@ -18,6 +18,7 @@ package impl
 
 import (
 	"math/big"
+	"slices"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -25,9 +26,14 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
+	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	vrank_mock "github.com/kaiachain/kaia/kaiax/vrank/mock"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -68,6 +74,11 @@ func TestPermissionlessPublicGetters(t *testing.T) {
 	candTesting, err := v.GetCandTesting(testGetterBlock)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []common.Address{addr6}, candTesting)
+
+	// Suspended nodes stay reward-eligible (KIP-286).
+	rewardEligible, err := v.GetRewardEligible(testGetterBlock)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []common.Address{addr1, addr2}, rewardEligible)
 }
 
 func TestGetNodesByState(t *testing.T) {
@@ -178,6 +189,114 @@ func TestGetNodesByStatePreForkError(t *testing.T) {
 	nodes, err := v.GetNodesByState(10, nil)
 	require.Nil(t, nodes)
 	require.ErrorIs(t, err, errPermissionlessDisabled)
+}
+
+func TestGetRewardEligiblePreForkError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockChain.EXPECT().Config().Return(testPermissionlessConfig(100, 10))
+
+	v := NewValsetModule()
+	v.Chain = mockChain
+
+	eligible, err := v.GetRewardEligible(10)
+	require.Nil(t, eligible)
+	require.ErrorIs(t, err, errPermissionlessDisabled)
+}
+
+// TestRewardFollowsEpochTransition runs the real node-state transition of an epoch block E into
+// the deferred reward. ABv2 holds four ValActive nodes but three active slots, so the epoch
+// transition at E moves the lowest address to ValInactive although it meets MinimumStake.
+// StakingInfo holds every profile at both blocks; the staking rewards of E-1 and E must follow the
+// node states of each block, the same as the committee.
+func TestRewardFollowsEpochTransition(t *testing.T) {
+	const epochBlock = 4
+
+	nodes := append(testABv2GenesisNodes(), testABv2GenesisNode{
+		NodeID:          common.HexToAddress("0x1004"),
+		Manager:         common.HexToAddress("0x2004"),
+		StakingContract: common.HexToAddress("0x3004"),
+		RewardAddress:   common.HexToAddress("0x4004"),
+		VoterAddress:    common.HexToAddress("0x5004"),
+	})
+	demoted := nodes[0] // 0x1001: the epoch competition breaks the stake tie by the higher address
+	h := newABv2Harness(t,
+		withABv2Nodes(nodes),
+		withABv2ChainConfig(testPermissionlessConfig(0, epochBlock)),
+		withABv2InitData(func(d *abv2data.IABv2DataContractInitData) {
+			d.MaxValActivePausedCount = big.NewInt(3)
+		}),
+	)
+	// Blocks up to E-1, so that the node states of E can be computed from the state of E-1.
+	for range epochBlock - 1 {
+		h.Backend.Commit()
+	}
+
+	ctrl := gomock.NewController(t)
+	// One parameter set for both modules. The test ABv2 staking contracts hold no stake, so a zero
+	// MinimumStake keeps them in the transition; the staking rewards use the amounts in StakingInfo.
+	mGov := gov_mock.NewMockGovModule(ctrl)
+	mGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerPolicy:         uint64(istanbul.WeightedRandom),
+		UnitPrice:              25e9,
+		MintingAmount:          big.NewInt(6.4e18),
+		MinimumStake:           common.Big0,
+		DeferredTxFee:          true,
+		Ratio:                  "50/20/30",
+		Kip82Ratio:             "20/80",
+		StakingRewardThreshold: common.Big0,
+	}).AnyTimes()
+	mVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mVRank.EXPECT().GetCFS(gomock.Any()).Return(nil, nil).AnyTimes()
+	mVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+
+	v := h.Valset
+	v.GovModule = mGov
+	v.VRankModule = mVRank
+
+	// The staking info since Permissionless: every profile, whatever its state.
+	si := &staking.StakingInfo{}
+	for i, n := range nodes {
+		si.NodeIds = append(si.NodeIds, n.NodeID)
+		si.StakingContracts = append(si.StakingContracts, n.StakingContract)
+		si.RewardAddrs = append(si.RewardAddrs, n.RewardAddress)
+		si.StakingAmounts = append(si.StakingAmounts, uint64(5_000_000+i))
+	}
+	mStaking := staking_mock.NewMockStakingModule(ctrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+
+	r := reward_impl.NewRewardModule()
+	require.NoError(t, r.Init(&reward_impl.InitOpts{
+		ChainConfig:   h.Backend.BlockChain().Config(),
+		Chain:         chain_mock.NewMockBlockChain(ctrl),
+		GovModule:     mGov,
+		StakingModule: mStaking,
+		ValsetModule:  v,
+	}))
+
+	for _, tc := range []struct {
+		num        uint64
+		eligible   []common.Address
+		unrewarded []common.Address // reward addresses without a staking reward
+	}{
+		{epochBlock - 1, []common.Address{nodes[0].NodeID, nodes[1].NodeID, nodes[2].NodeID, nodes[3].NodeID}, nil},
+		{epochBlock, []common.Address{nodes[1].NodeID, nodes[2].NodeID, nodes[3].NodeID}, []common.Address{demoted.RewardAddress}},
+	} {
+		eligible, err := v.GetRewardEligible(tc.num)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, tc.eligible, eligible, "block %d", tc.num)
+
+		header := &types.Header{Number: new(big.Int).SetUint64(tc.num), BaseFee: big.NewInt(25e9), Rewardbase: nodes[1].RewardAddress}
+		spec, err := r.GetDeferredReward(header, nil, nil)
+		require.NoError(t, err)
+		for _, n := range nodes {
+			if slices.Contains(tc.unrewarded, n.RewardAddress) {
+				assert.Nil(t, spec.Rewards[n.RewardAddress], "block %d, %s", tc.num, n.NodeID.Hex())
+			} else {
+				assert.Positive(t, spec.Rewards[n.RewardAddress].Sign(), "block %d, %s", tc.num, n.NodeID.Hex())
+			}
+		}
+	}
 }
 
 func TestGetCNPeersFilterFallback(t *testing.T) {

@@ -149,6 +149,12 @@ func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
 	return cnPeers, nil
 }
 
+// GetRewardEligible returns the nodes eligible for the staking rewards.
+// Returns an explicit fork-disabled error pre-fork.
+func (v *ValsetModule) GetRewardEligible(num uint64) ([]common.Address, error) {
+	return v.getRewardEligible(num)
+}
+
 // GetNodesByState filters NodeMap by state. Empty states means "all".
 // Returns an explicit fork-disabled error pre-fork.
 func (v *ValsetModule) GetNodesByState(num uint64, states []valset.NodeState) (map[common.Address]*valset.Node, error) {

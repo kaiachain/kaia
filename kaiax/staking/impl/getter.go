@@ -27,7 +27,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts/bindings/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -142,7 +141,7 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		return clRes, nil
 	}
 
-	// Permissionless: read from AddressBookV2 (effective stake, reward-eligible only).
+	// Permissionless: read every profile from AddressBookV2 (effective stake).
 	if isForPermissionless {
 		res, err := contract.MultiCallStakingInfoPermissionless(callOpts)
 		if err != nil {
@@ -179,8 +178,9 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 	)
 }
 
-// parsePermissionlessCallResult converts ABv2 multicall results into StakingInfo,
-// keeping only reward-eligible nodes (KIP-286); amounts are effective stake (KIP-287).
+// parsePermissionlessCallResult converts ABv2 multicall results into StakingInfo, keeping every
+// profile regardless of its state; amounts are effective stake (KIP-287). The reward eligibility
+// is decided on the node states of the block being rewarded (KIP-286), not here.
 func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr, kpfAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
 	if len(profiles) == 0 {
 		return emptyStakingInfo(num), nil
@@ -199,9 +199,6 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 	rewardAddrs := make([]common.Address, 0, len(profiles))
 	stakingAmounts := make([]uint64, 0, len(profiles))
 	for i, p := range profiles {
-		if !valset.NodeState(p.State).IsRewardEligible() {
-			continue
-		}
 		nodeIds = append(nodeIds, p.NodeId)
 		stakingContracts = append(stakingContracts, p.StakingContract)
 		rewardAddrs = append(rewardAddrs, p.RewardAddress)

@@ -187,6 +187,21 @@ func (mr *MockValsetModuleMockRecorder) GetQualifiedValidators(arg0 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQualifiedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetQualifiedValidators), arg0)
 }
 
+// GetRewardEligible mocks base method.
+func (m *MockValsetModule) GetRewardEligible(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRewardEligible", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRewardEligible indicates an expected call of GetRewardEligible.
+func (mr *MockValsetModuleMockRecorder) GetRewardEligible(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRewardEligible", reflect.TypeOf((*MockValsetModule)(nil).GetRewardEligible), arg0)
+}
+
 // InitializeState mocks base method.
 func (m *MockValsetModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) error {
 	m.ctrl.T.Helper()

@@ -68,6 +68,7 @@ func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless b
 	// Every validator is registered with a reward address that differs from its node
 	// address and from any configured rewardbase (makeTestStakingInfo draws fresh keys).
 	stakingInfo := makeTestStakingInfo([]uint64{minStake, minStake, minStake, minStake}, 0)
+	localNode, registered := stakingInfo.NodeIds[0], stakingInfo.RewardAddrs[0] // node 0 is this backend (engine.address)
 
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -101,8 +102,7 @@ func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless b
 	defer chain.Stop()
 	defer engine.Stop()
 
-	registered := stakingInfo.RewardAddrs[0] // node 0 is this backend (engine.address)
-	require.Equal(t, engine.address, stakingInfo.NodeIds[0], "test setup: node 0 must be the local node")
+	require.Equal(t, engine.address, localNode, "test setup: node 0 must be the local node")
 	require.NotEqual(t, configured, registered, "test setup: the configured and registered addresses must differ")
 
 	// 1. Prepare the header as the worker does (work/worker.go commitNewWork).

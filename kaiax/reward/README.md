@@ -97,6 +97,7 @@ The rules have changed over hardforks.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
 - **Permissionless hardfork**: For the chains using the NDF method, the half burn of the Magma rule takes effect from this hardfork (see the note under the Magma rule). Nothing changes for the DF method.
+  - The staking info of block N holds every AddressBookV2 profile read from the state of N-1. The staking rewards of block N go to the reward-eligible nodes of N (`ValActive`, including the suspended ones), decided on the state of N-1 plus the transitions applied for N, the same node states as the committee of N. So a node promoted (or removed) by the transition for N is rewarded (or not) from N on, not from N+1.
 
 ## Persistent schema
 
@@ -148,15 +149,20 @@ This module does not have any background threads.
 
 This module sets `header.Rewardbase`, the address that receives this node's block reward, before any transaction of the block is executed:
 
-- `istanbul.policy = 2` (WeightedRandom) and the staking info has a non-zero reward address registered for this node (the `nodeId` / `rewardAddress` entry, read from the legacy AddressBook before the Permissionless hardfork and from AddressBookV2 since): the registered reward address.
-- Otherwise (any other proposer policy, no staking entry for this node, or a zero registered address): the node's configured reward base (`--rewardbase`).
-  - The lookup uses the staking snapshot (`NodeIds` / `RewardAddrs`). Since the Permissionless hardfork that snapshot holds only the profiles that are `ValActive` in the parent state, so a committee member promoted in this very block is not in it although it has a registered AddressBookV2 reward address; this implementation then still uses the configured reward base. Resolving such a proposer's registered address (and enforcing it in VerifyHeader) is a separate change.
+- `istanbul.policy != 2`: the node's configured reward base (`--rewardbase`).
+- `istanbul.policy = 2` (WeightedRandom), since the Permissionless hardfork: the reward address of this node's AddressBookV2 profile (`NodeIds` / `RewardAddrs`, which hold every profile regardless of its state, so a committee member promoted to `ValActive` in this very block is included). A node without a profile cannot be in the committee, so it returns an error instead of falling back to `--rewardbase`.
+- `istanbul.policy = 2`, before the Permissionless hardfork: the reward address registered for this node in the legacy AddressBook (`NodeIds` / `RewardAddrs`) if non-zero, otherwise `--rewardbase`.
 
 The value must be final here because, when `reward.deferredtxfee = false`, the transaction fee is credited to `header.Rewardbase` while each transaction runs (`TransitionDb`, since Magma). A failure to read the staking info is returned (the block is not built) rather than treated as "no entry". Blocks that an unfixed node already sealed with a header naming a different address than the one it executed with stay unreplayable (every node executes with the sealed header); such a chain has to be regenerated.
 
 #### VerifyHeader
 
-Under WeightedRandom, if the staking snapshot has a non-zero reward address registered for the block's proposer, `header.Rewardbase` must be that address; otherwise (no entry in the snapshot, zero address, another policy, or an unreadable staking info) the header is accepted. Every header PrepareHeader produces passes this check because the check is looser than PrepareHeader's choice; it does not yet enforce the registered address of a proposer missing from the snapshot (see the PrepareHeader note above).
+Under WeightedRandom:
+
+- Since the Permissionless hardfork, `header.Rewardbase` must be the reward address of the proposer's AddressBookV2 profile. A proposer without a profile is rejected too. A failure to read the staking info is returned as an error (not `ErrInvalidRewardbase`).
+- Before the Permissionless hardfork, if the legacy AddressBook has a non-zero reward address for the proposer, `header.Rewardbase` must be that address; otherwise (no entry, zero address, or an unreadable staking info) the header is accepted.
+
+Every header PrepareHeader produces passes this check.
 
 ### BlockState
 

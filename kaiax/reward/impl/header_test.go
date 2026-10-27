@@ -21,9 +21,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/reward"
+	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -145,5 +148,155 @@ func TestPrepareHeader(t *testing.T) {
 		header := &types.Header{Number: number}
 		require.NoError(t, r.PrepareHeader(header))
 		assert.Equal(t, configured, header.Rewardbase)
+	})
+}
+
+var (
+	testPermissionlessBlock = big.NewInt(200)
+
+	// AddressBookV2 profile that is not ValActive at the source block but in the committee of the
+	// block, e.g. promoted to ValActive by the epoch transition for it. Its reward address is a
+	// PublicDelegation.
+	promotedNode = common.HexToAddress("0xa05")
+	promotedPD   = common.HexToAddress("0xc05")
+)
+
+// makeTestPermissionlessStakingInfo returns the staking info since Permissionless, which holds
+// every AddressBookV2 profile: the four default nodes and promotedNode.
+func makeTestPermissionlessStakingInfo() *staking.StakingInfo {
+	si := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, false)
+	si.NodeIds = append(si.NodeIds, promotedNode)
+	si.StakingContracts = append(si.StakingContracts, common.HexToAddress("0xb05"))
+	si.RewardAddrs = append(si.RewardAddrs, promotedPD)
+	si.StakingAmounts = append(si.StakingAmounts, 5_000_004)
+	return si
+}
+
+func TestVerifyHeader_Permissionless(t *testing.T) {
+	var (
+		node1   = common.HexToAddress("0xa01")
+		reward1 = common.HexToAddress("0xc01")
+		local   = common.HexToAddress("0xfff") // the proposer's --rewardbase
+		unknown = common.HexToAddress("0xdead")
+	)
+
+	testcases := []struct {
+		name       string
+		num        int64
+		proposer   common.Address
+		rewardbase common.Address
+		stakingErr error
+		expected   error
+	}{
+		// Before the fork, a proposer without a staking entry is not checked (unchanged).
+		{"pre-fork, proposer not in staking info", 199, unknown, local, nil, nil},
+		{"pre-fork, staking info error", 199, node1, local, errors.New("no state"), nil},
+		{"pre-fork, mismatch", 199, node1, local, nil, reward.ErrInvalidRewardbase},
+
+		{"fork block, eligible proposer", 200, node1, reward1, nil, nil},
+		{"fork block, eligible proposer mismatch", 200, node1, local, nil, reward.ErrInvalidRewardbase},
+		{"promoted proposer, profile address", 300, promotedNode, promotedPD, nil, nil},
+		{"promoted proposer, local rewardbase", 300, promotedNode, local, nil, reward.ErrInvalidRewardbase},
+		{"proposer without profile", 300, unknown, local, nil, reward.ErrInvalidRewardbase},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+				Proposer:            tc.proposer,
+				PermissionlessBlock: testPermissionlessBlock,
+				StakingInfo:         makeTestPermissionlessStakingInfo(),
+				StakingErr:          tc.stakingErr,
+			})
+			header, _, _ := makeTestKaiaBlock(tc.num)
+			header.Rewardbase = tc.rewardbase
+			assert.ErrorIs(t, r.VerifyHeader(header, nil), tc.expected)
+		})
+	}
+
+	t.Run("post-fork, staking info error", func(t *testing.T) {
+		stakingErr := errors.New("no state")
+		r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+			Proposer:            node1,
+			PermissionlessBlock: testPermissionlessBlock,
+			StakingErr:          stakingErr,
+		})
+		header, _, _ := makeTestKaiaBlock(300)
+		header.Rewardbase = reward1
+		err := r.VerifyHeader(header, nil)
+		assert.ErrorIs(t, err, stakingErr, "the lookup failure is returned")
+		assert.NotErrorIs(t, err, reward.ErrInvalidRewardbase, "a lookup failure is not an invalid Rewardbase")
+	})
+}
+
+// After the fork a block producer, including one promoted to the committee by the transition for
+// the block, must use its AddressBookV2 reward address, not its --rewardbase. The address is
+// decided by PrepareHeader and FinalizeState pays the proposer share to it unchanged.
+func TestPrepareHeader_Permissionless_Rewardbase(t *testing.T) {
+	var (
+		node1   = common.HexToAddress("0xa01")
+		reward1 = common.HexToAddress("0xc01")
+		local   = common.HexToAddress("0xfff")
+		unknown = common.HexToAddress("0xdead")
+	)
+
+	testcases := []struct {
+		name     string
+		num      int64
+		node     common.Address
+		expected common.Address
+	}{
+		{"pre-fork, node not in staking info keeps local", 199, unknown, local},
+		{"pre-fork, eligible node", 199, node1, reward1},
+		{"post-fork, eligible node", 200, node1, reward1},
+		{"post-fork, promoted node", 200, promotedNode, promotedPD},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			header, txs, receipts := makeTestKaiaBlock(tc.num)
+			r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+				Deferred:            true,
+				Proposer:            tc.node,
+				NodeAddress:         tc.node,
+				Rewardbase:          local,
+				PermissionlessBlock: testPermissionlessBlock,
+				StakingInfo:         makeTestPermissionlessStakingInfo(),
+				Header:              header,
+				Txs:                 txs,
+				Receipts:            receipts,
+			})
+			require.NoError(t, r.PrepareHeader(header))
+			assert.Equal(t, tc.expected, header.Rewardbase)
+
+			// The prepared header passes VerifyHeader.
+			assert.NoError(t, r.VerifyHeader(header, nil))
+
+			// FinalizeState leaves the header as is and pays the proposer share to header.Rewardbase.
+			statedb, err := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			require.NoError(t, err)
+			require.NoError(t, r.FinalizeState(header, statedb, txs, receipts))
+			assert.Equal(t, tc.expected, header.Rewardbase)
+
+			spec, err := r.GetDeferredReward(header, txs, receipts)
+			require.NoError(t, err)
+			sanityCheckRewardSpec(t, spec, tc.name)
+			assert.Equal(t, spec.Rewards[tc.expected], statedb.GetBalance(tc.expected))
+			assert.True(t, statedb.GetBalance(tc.expected).Cmp(spec.Proposer) >= 0)
+			if tc.expected != local {
+				assert.Zero(t, statedb.GetBalance(local).Sign())
+			}
+		})
+	}
+
+	// After the fork a node without an AddressBookV2 profile does not fall back to --rewardbase:
+	// it cannot be in the committee, and VerifyHeader would reject any address it chose.
+	t.Run("post-fork, node without profile", func(t *testing.T) {
+		header, _, _ := makeTestKaiaBlock(300)
+		r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+			NodeAddress:         unknown,
+			Rewardbase:          local,
+			PermissionlessBlock: testPermissionlessBlock,
+			StakingInfo:         makeTestPermissionlessStakingInfo(),
+		})
+		assert.Error(t, r.PrepareHeader(header))
 	})
 }

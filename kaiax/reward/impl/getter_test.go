@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 
@@ -518,6 +519,82 @@ func TestGetDeferredReward(t *testing.T) {
 		require.Nil(t, err)
 		assert.Equal(t, tc.expected, spec, tc.desc)
 	}
+}
+
+// Since Permissionless, the staking rewards of block E go to the reward-eligible nodes of E, i.e.
+// the state of E-1 plus the transitions applied for E (the same as the committee of E), while
+// StakingInfo(E) holds every AddressBookV2 profile at E-1. Here node3 leaves and node5 is promoted at E.
+func TestGetDeferredReward_PermissionlessTransition(t *testing.T) {
+	var (
+		node3, reward3 = common.HexToAddress("0xa03"), common.HexToAddress("0xc03")
+		node5, reward5 = common.HexToAddress("0xa05"), common.HexToAddress("0xc05")
+	)
+	// Before the fork, the staking info is the legacy AddressBook, which does not have node5.
+	preForkSi := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, false)
+
+	// Since the fork, the staking info has every profile, node5 included.
+	si := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, false)
+	si.NodeIds = append(si.NodeIds, node5)
+	si.StakingContracts = append(si.StakingContracts, common.HexToAddress("0xb05"))
+	si.RewardAddrs = append(si.RewardAddrs, reward5)
+	si.StakingAmounts = append(si.StakingAmounts, 5_000_004)
+
+	// Reward-eligible nodes at E: node5 promoted to ValActive, node3 no longer ValActive.
+	var eligible []common.Address
+	for _, id := range si.NodeIds {
+		if id != node3 {
+			eligible = append(eligible, id)
+		}
+	}
+
+	for _, tc := range []struct {
+		name       string
+		num        int64
+		si         *staking.StakingInfo
+		rewarded   common.Address // receives a staking reward
+		unrewarded common.Address // receives none
+	}{
+		{"pre-fork, the staking info decides", 199, preForkSi, reward3, reward5},
+		{"post-fork, the reward-eligible nodes of the block decide", 300, si, reward5, reward3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			header, txs, receipts := makeTestKaiaBlock(tc.num)
+			r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+				Deferred:            true,
+				PermissionlessBlock: testPermissionlessBlock,
+				StakingInfo:         tc.si,
+				RewardEligible:      eligible,
+				Header:              header,
+				Txs:                 txs,
+				Receipts:            receipts,
+			})
+			spec, err := r.GetDeferredReward(header, txs, receipts)
+			require.NoError(t, err)
+			sanityCheckRewardSpec(t, spec, tc.name)
+			assert.Positive(t, spec.Rewards[tc.rewarded].Sign())
+			assert.Nil(t, spec.Rewards[tc.unrewarded])
+
+			// kaia_getRewards reports the same distribution.
+			blockReward, err := r.GetBlockReward(header.Number.Uint64())
+			require.NoError(t, err)
+			assert.Equal(t, spec.Rewards, blockReward.Rewards)
+		})
+	}
+
+	t.Run("post-fork, reward-eligible nodes unavailable", func(t *testing.T) {
+		header, txs, receipts := makeTestKaiaBlock(300)
+		r := makeTestRewardModuleWithConfig(t, rewardModuleTestConfig{
+			Deferred:            true,
+			PermissionlessBlock: testPermissionlessBlock,
+			StakingInfo:         si,
+			RewardEligibleErr:   errors.New("no state"),
+			Header:              header,
+			Txs:                 txs,
+			Receipts:            receipts,
+		})
+		_, err := r.GetDeferredReward(header, txs, receipts)
+		assert.Error(t, err)
+	})
 }
 
 func TestGetExecFee(t *testing.T) {
