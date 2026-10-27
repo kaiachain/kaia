@@ -655,6 +655,7 @@ type abv2HarnessOpt func(*abv2HarnessOpts)
 type abv2HarnessOpts struct {
 	nodes       []testABv2GenesisNode
 	chainConfig *params.ChainConfig
+	initData    func(*abv2data.IABv2DataContractInitData)
 }
 
 func withABv2Nodes(nodes []testABv2GenesisNode) abv2HarnessOpt {
@@ -663,6 +664,11 @@ func withABv2Nodes(nodes []testABv2GenesisNode) abv2HarnessOpt {
 
 func withABv2ChainConfig(config *params.ChainConfig) abv2HarnessOpt {
 	return func(o *abv2HarnessOpts) { o.chainConfig = config.Copy() }
+}
+
+// withABv2InitData modifies the ABv2DataContract init data before the deployment.
+func withABv2InitData(modify func(*abv2data.IABv2DataContractInitData)) abv2HarnessOpt {
+	return func(o *abv2HarnessOpts) { o.initData = modify }
 }
 
 func newABv2Harness(t *testing.T, options ...abv2HarnessOpt) *testABv2Harness {
@@ -696,7 +702,11 @@ func newABv2Harness(t *testing.T, options ...abv2HarnessOpt) *testABv2Harness {
 	require.NoError(t, err)
 	simBackend.Commit()
 
-	dataContractAddr, _, _, err := abv2data.DeployABv2DataContract(deployer, simBackend, implAddr, testABv2InitData(opts.nodes))
+	initData := testABv2InitData(opts.nodes)
+	if opts.initData != nil {
+		opts.initData(&initData)
+	}
+	dataContractAddr, _, _, err := abv2data.DeployABv2DataContract(deployer, simBackend, implAddr, initData)
 	require.NoError(t, err)
 	simBackend.Commit()
 

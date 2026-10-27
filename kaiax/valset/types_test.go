@@ -138,17 +138,6 @@ func TestCNPeers(t *testing.T) {
 	assert.Nil(t, peers[addr7], "Registered not in CNPeers")
 }
 
-func TestIsRewardEligible(t *testing.T) {
-	assert.True(t, ValActive.IsRewardEligible())
-	assert.False(t, ValPaused.IsRewardEligible())
-	assert.False(t, ValReady.IsRewardEligible())
-	assert.False(t, ValInactive.IsRewardEligible())
-	assert.False(t, ValExiting.IsRewardEligible())
-	assert.False(t, CandReady.IsRewardEligible())
-	assert.False(t, CandTesting.IsRewardEligible())
-	assert.False(t, Registered.IsRewardEligible())
-}
-
 func TestNodeCopy(t *testing.T) {
 	var nilNode *Node
 	assert.Nil(t, nilNode.Copy())

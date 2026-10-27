@@ -200,8 +200,25 @@ func (r *RewardModule) getDeferredReward(config *reward.RewardConfig, header *ty
 		if err != nil {
 			return nil, err
 		}
+		if config.Rules.IsPermissionless {
+			if si, err = r.rewardEligibleStakingInfo(header.Number.Uint64(), si); err != nil {
+				return nil, err
+			}
+		}
 		return getDeferredRewardFull(config, execFee, blobFee, si)
 	}
+}
+
+// rewardEligibleStakingInfo narrows si to the nodes reward-eligible at block num. Since
+// Permissionless, StakingInfo(num) holds every AddressBookV2 profile read from the state of num-1,
+// while the reward eligibility follows the node states of num, i.e. the state of num-1 plus the
+// transitions applied for num, the same as the committee of num.
+func (r *RewardModule) rewardEligibleStakingInfo(num uint64, si *staking.StakingInfo) (*staking.StakingInfo, error) {
+	eligible, err := r.ValsetModule.GetRewardEligible(num)
+	if err != nil {
+		return nil, err
+	}
+	return si.FilterNodes(eligible), nil
 }
 
 // getExecFee calculates the total execution gas fees in the block (excludes blob fees).

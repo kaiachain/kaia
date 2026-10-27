@@ -279,20 +279,19 @@ func TestSourceBlockNum(t *testing.T) {
 }
 
 // Post-permissionless-fork, GetStakingInfo must source effective stake from
-// AddressBookV2 (MultiCallStakingInfoPermissionless) and keep only reward-eligible
-// (ValActive) nodes per KIP-286/287. The mock returns 6 profiles across states;
-// only the two ValActive ones (0xF00 5M, 0x4000 9M) should remain.
-func TestGetStakingInfo_Permissionless_OnlyValActive(t *testing.T) {
+// AddressBookV2 (MultiCallStakingInfoPermissionless) and keep every profile regardless of
+// its state, in the AddressBookV2 order. The reward eligibility (KIP-286) is decided by the
+// reward module on the node states of the rewarded block, not here.
+func TestGetStakingInfo_Permissionless_AllProfiles(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	// MultiCallContractMockPermissionless.multiCallStakingInfoPermissionless returns 6 profiles:
-	//   [0] node=0xF00  staking=0xF01  reward=0xF02  ValActive    5M  <- kept
+	//   [0] node=0xF00  staking=0xF01  reward=0xF02  ValActive    5M
 	//   [1] node=0xF03  staking=0xF04  reward=0xF05  ValPaused   10M
 	//   [2] node=0x1000 staking=0x1001 reward=0x1002 ValReady     8M
 	//   [3] node=0x2000 staking=0x2001 reward=0x2002 ValExiting   7M
 	//   [4] node=0x3000 staking=0x3001 reward=0x3002 CandReady    6M
-	//   [5] node=0x4000 staking=0x4001 reward=0x4002 ValActive    9M  <- kept
-	// Only the two ValActive entries are reward-eligible (KIP-286).
+	//   [5] node=0x4000 staking=0x4001 reward=0x4002 ValActive    9M
 	originCode := system.MultiCallCode
 	system.MultiCallCode = system.MultiCallPermlessMockCode
 	defer func() { system.MultiCallCode = originCode }()
@@ -315,16 +314,19 @@ func TestGetStakingInfo_Permissionless_OnlyValActive(t *testing.T) {
 	si, err := mStaking.GetStakingInfo(0)
 	assert.NoError(t, err)
 
-	// ValPaused / ValReady / ValExiting / CandReady are all excluded.
-	assert.Len(t, si.NodeIds, 2)
-	assert.Equal(t, common.HexToAddress("0xF00"), si.NodeIds[0])
-	assert.Equal(t, common.HexToAddress("0x4000"), si.NodeIds[1])
-	assert.Equal(t, common.HexToAddress("0xF01"), si.StakingContracts[0])
-	assert.Equal(t, common.HexToAddress("0x4001"), si.StakingContracts[1])
-	assert.Equal(t, common.HexToAddress("0xF02"), si.RewardAddrs[0])
-	assert.Equal(t, common.HexToAddress("0x4002"), si.RewardAddrs[1])
-	assert.Equal(t, uint64(5_000_000), si.StakingAmounts[0])
-	assert.Equal(t, uint64(9_000_000), si.StakingAmounts[1])
+	assert.Equal(t, []common.Address{
+		common.HexToAddress("0xF00"), common.HexToAddress("0xF03"), common.HexToAddress("0x1000"),
+		common.HexToAddress("0x2000"), common.HexToAddress("0x3000"), common.HexToAddress("0x4000"),
+	}, si.NodeIds)
+	assert.Equal(t, []common.Address{
+		common.HexToAddress("0xF01"), common.HexToAddress("0xF04"), common.HexToAddress("0x1001"),
+		common.HexToAddress("0x2001"), common.HexToAddress("0x3001"), common.HexToAddress("0x4001"),
+	}, si.StakingContracts)
+	assert.Equal(t, []common.Address{
+		common.HexToAddress("0xF02"), common.HexToAddress("0xF05"), common.HexToAddress("0x1002"),
+		common.HexToAddress("0x2002"), common.HexToAddress("0x3002"), common.HexToAddress("0x4002"),
+	}, si.RewardAddrs)
+	assert.Equal(t, []uint64{5_000_000, 10_000_000, 8_000_000, 7_000_000, 6_000_000, 9_000_000}, si.StakingAmounts)
 	assert.Equal(t, common.HexToAddress("0x0a01"), si.KEFAddr)
 	assert.Equal(t, common.HexToAddress("0x0a02"), si.KIFAddr)
 	assert.Equal(t, common.HexToAddress("0x0a03"), si.KPFAddr)

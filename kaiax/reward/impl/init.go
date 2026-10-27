@@ -46,12 +46,9 @@ type InitOpts struct {
 	Chain         blockChain
 	GovModule     reward.GovModule // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
 	StakingModule staking.StakingModule
-	// ValsetModule is no longer consulted by this module (the Rewardbase decision in PrepareHeader
-	// does not depend on the qualified set); it is kept in InitOpts so that the wiring in node/cn and
-	// the test harnesses stay unchanged. Removing it is a separate cleanup.
-	ValsetModule valset.ValsetModule
-	NodeAddress  common.Address
-	Rewardbase   common.Address
+	ValsetModule  valset.ValsetModule // since Permissionless, decides the reward eligibility
+	NodeAddress   common.Address
+	Rewardbase    common.Address
 }
 
 type RewardModule struct {

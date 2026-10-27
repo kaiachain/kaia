@@ -331,3 +331,38 @@ func TestResponse(t *testing.T) {
 		assert.Equal(t, tc.expectedGini, sr.Gini)
 	}
 }
+
+func TestFilterNodes(t *testing.T) {
+	var (
+		n1, n2, n3 = common.HexToAddress("0xa01"), common.HexToAddress("0xa02"), common.HexToAddress("0xa03")
+		cl         = CLStakingInfos{{CLNodeId: n1, CLPoolAddr: common.HexToAddress("0xe01"), CLStakingAmount: 1}}
+	)
+	si := &StakingInfo{
+		SourceBlockNum:   9,
+		NodeIds:          []common.Address{n1, n2, n3},
+		StakingContracts: []common.Address{common.HexToAddress("0xb01"), common.HexToAddress("0xb02"), common.HexToAddress("0xb03")},
+		RewardAddrs:      []common.Address{common.HexToAddress("0xc01"), common.HexToAddress("0xc02"), common.HexToAddress("0xc03")},
+		KEFAddr:          common.HexToAddress("0xd01"),
+		KIFAddr:          common.HexToAddress("0xd02"),
+		KPFAddr:          common.HexToAddress("0xd03"),
+		StakingAmounts:   []uint64{1, 2, 3},
+		CLStakingInfos:   cl,
+	}
+
+	// The original order is kept regardless of the order of nodeIds; unknown ids are ignored.
+	filtered := si.FilterNodes([]common.Address{n3, common.HexToAddress("0xdead"), n1})
+	assert.Equal(t, &StakingInfo{
+		SourceBlockNum:   9,
+		NodeIds:          []common.Address{n1, n3},
+		StakingContracts: []common.Address{common.HexToAddress("0xb01"), common.HexToAddress("0xb03")},
+		RewardAddrs:      []common.Address{common.HexToAddress("0xc01"), common.HexToAddress("0xc03")},
+		KEFAddr:          common.HexToAddress("0xd01"),
+		KIFAddr:          common.HexToAddress("0xd02"),
+		KPFAddr:          common.HexToAddress("0xd03"),
+		StakingAmounts:   []uint64{1, 3},
+		CLStakingInfos:   cl,
+	}, filtered)
+	assert.Len(t, si.NodeIds, 3, "si must be left unchanged")
+
+	assert.Empty(t, si.FilterNodes(nil).NodeIds)
+}

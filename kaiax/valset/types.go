@@ -69,11 +69,6 @@ func (s NodeState) ToUint8() uint8 {
 	return uint8(s)
 }
 
-// IsRewardEligible returns true if the state is eligible for block rewards.
-func (s NodeState) IsRewardEligible() bool {
-	return s == ValActive
-}
-
 // String returns the human-readable name of the state.
 func (s NodeState) String() string {
 	switch s {
@@ -274,6 +269,12 @@ func (v NodeMap) Council() NodeMap {
 // {ValActive} excluding suspended nodes.
 func (v NodeMap) Committee() NodeMap {
 	return v.FilterByState(ValActive).ExcludeSuspended()
+}
+
+// RewardEligible returns nodes eligible for the staking rewards.
+// {ValActive} including suspended nodes.
+func (v NodeMap) RewardEligible() NodeMap {
+	return v.FilterByState(ValActive)
 }
 
 // CNPeers returns nodes that should maintain CN-CN P2P connections.

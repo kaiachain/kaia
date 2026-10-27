@@ -18,6 +18,7 @@ package impl
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -25,13 +26,12 @@ import (
 	"github.com/kaiachain/kaia/kaiax/reward"
 )
 
-// VerifyHeader checks header.Rewardbase against the reward address this chain expects for
-// the block's proposer. Under WeightedRandom the proposer must use its staking-registered
-// reward address whenever the staking snapshot has a non-zero one for it; otherwise (no entry
-// in the snapshot, zero address, a policy other than WeightedRandom, or an unreadable staking
-// info) the header is accepted as is. Every header PrepareHeader produces passes this check
-// because the check is looser than PrepareHeader's choice (see lookupRewardAddress for what
-// "no entry" means since Permissionless).
+// VerifyHeader checks header.Rewardbase against the reward address registered for the block's
+// proposer under WeightedRandom.
+//   - Since Permissionless: every committee member has an AddressBookV2 profile, so the profile's
+//     reward address is always enforced. A staking lookup failure is returned as is, not as an
+//     invalid Rewardbase.
+//   - Before: enforced only when the staking snapshot has a non-zero entry for the proposer.
 func (r *RewardModule) VerifyHeader(header *types.Header, _ *types.Header) error {
 	if header.Number.Sign() == 0 {
 		return nil
@@ -43,12 +43,18 @@ func (r *RewardModule) VerifyHeader(header *types.Header, _ *types.Header) error
 	if err != nil {
 		return err
 	}
-	// A staking lookup failure is treated like "no entry" here on purpose (the behavior
-	// predating the move of the decision into PrepareHeader): a node that cannot read the
-	// staking info does not reject headers for that reason alone.
-	expected, _ := r.lookupRewardAddress(header.Number.Uint64(), proposer)
-	if expected == (common.Address{}) {
-		// No staking entry for this proposer: nothing to check against.
+	expected, err := r.lookupRewardAddress(header.Number.Uint64(), proposer)
+	if r.ChainConfig.IsPermissionlessForkEnabled(header.Number) {
+		if err != nil {
+			return fmt.Errorf("reward address lookup for block %d: %w", header.Number.Uint64(), err)
+		}
+		if expected == (common.Address{}) || header.Rewardbase != expected {
+			return reward.ErrInvalidRewardbase
+		}
+		return nil
+	}
+	// Before Permissionless, a lookup failure or a proposer without an entry is not checked.
+	if err != nil || expected == (common.Address{}) {
 		return nil
 	}
 	if header.Rewardbase != expected {
@@ -72,16 +78,18 @@ func (r *RewardModule) PrepareHeader(header *types.Header) error {
 	return nil
 }
 
-// effectiveRewardbase is the reward address of a block this node builds at num: under the
-// WeightedRandom proposer policy the staking-registered reward address of this node when the
-// staking snapshot has a non-zero one, otherwise (any other policy, no entry in the snapshot,
-// zero address) the configured Rewardbase (the --rewardbase flag). VerifyHeader accepts every
-// value chosen here.
+// effectiveRewardbase is the reward address of a block this node builds at num. It always
+// passes VerifyHeader:
+//   - Not WeightedRandom: the configured Rewardbase (--rewardbase).
+//   - Since Permissionless: the reward address of this node's AddressBookV2 profile. Without one
+//     the node cannot be in the committee, and a block with any other address would be rejected,
+//     so an error is returned instead of falling back to --rewardbase.
+//   - Before: the registered reward address if the staking snapshot has a non-zero one, otherwise
+//     the configured Rewardbase.
+//
 // The lookup is keyed by NodeAddress, which must be the address the node seals with (the
 // author VerifyHeader recovers from the seal); node/cn wires both from the same node key.
-// A staking lookup failure is returned rather than treated as "no entry": a block built with
-// the fallback address while the other nodes can resolve the registered one would only be
-// rejected later with ErrInvalidRewardbase.
+// A staking lookup failure is returned rather than treated as "no entry".
 func (r *RewardModule) effectiveRewardbase(num uint64) (common.Address, error) {
 	if r.GovModule.GetParamSet(num).ProposerPolicy != uint64(istanbul.WeightedRandom) {
 		return r.Rewardbase, nil
@@ -91,6 +99,9 @@ func (r *RewardModule) effectiveRewardbase(num uint64) (common.Address, error) {
 		return common.Address{}, fmt.Errorf("reward address lookup for block %d: %w", num, err)
 	}
 	if registered == (common.Address{}) {
+		if r.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+			return common.Address{}, fmt.Errorf("no AddressBookV2 reward address for node %s at block %d", r.NodeAddress.Hex(), num)
+		}
 		logger.Trace("No reward address in the staking snapshot. Use node's rewardbase.", "number", num, "nodeAddress", r.NodeAddress, "rewardbase", r.Rewardbase)
 		return r.Rewardbase, nil
 	}
@@ -98,12 +109,9 @@ func (r *RewardModule) effectiveRewardbase(num uint64) (common.Address, error) {
 	return registered, nil
 }
 
-// lookupRewardAddress returns the reward address registered for nodeId in the staking snapshot
-// used for block num (the zero address when there is no entry), or the staking lookup error.
-// NodeIds and RewardAddrs describe the reward-eligible snapshot: since Permissionless they hold
-// only the profiles that are ValActive in the parent state, so a node missing here (e.g.
-// promoted to ValActive by the transition for this block) may still have a registered
-// AddressBookV2 reward address. Resolving those is left to a separate change.
+// lookupRewardAddress returns the reward address registered for nodeId in the staking info used
+// for block num (the zero address when there is none), or the staking lookup error.
+// Since Permissionless, the staking info holds every AddressBookV2 profile regardless of its state.
 func (r *RewardModule) lookupRewardAddress(num uint64, nodeId common.Address) (common.Address, error) {
 	sInfo, err := r.StakingModule.GetStakingInfo(num)
 	if err != nil {
