@@ -554,7 +554,7 @@ This module maintains a background thread that migrates `istanbulSnapshot` schem
 
 ### Rewind
 
-Upon rewind, this module deletes the related persistent data and flushes in-memory caches.
+Upon rewind, this module deletes the related persistent data and flushes in-memory caches, including the cached `Nodes(N)` since the Permissionless hardfork.
 
 ## APIs
 
