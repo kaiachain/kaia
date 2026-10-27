@@ -41,8 +41,9 @@ func Ecrecover(hash, sig []byte) ([]byte, error) {
 }
 
 // EcrecoverLegacy is Ecrecover accepting v ∈ {0..3}, as the cgo build did before
-// the canonical recovery id check. The validateSender precompile uses it before
-// the Permissionless hardfork so that its result does not change without a fork.
+// the canonical recovery id check. The validateSender precompile uses it and applies
+// v ∈ {0, 1} itself from the Permissionless hardfork, so that its result does not
+// change without a fork.
 func EcrecoverLegacy(hash, sig []byte) ([]byte, error) {
 	return ecrecover(hash, sig, 3)
 }

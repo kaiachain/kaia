@@ -158,22 +158,32 @@ func TestEcrecoverLegacy(t *testing.T) {
 	sig := make([]byte, SignatureLength)
 	sig[31] = 2 // r = 2: the R point's x is r + n
 	sig[63] = 1 // s = 1
-	sig[RecoveryIDOffset] = 2
 
-	pub, err := EcrecoverLegacy(msg, sig)
-	if err != nil {
-		t.Fatalf("EcrecoverLegacy: v=2 must be recovered: %v", err)
-	}
-	key, err := UnmarshalPubkey(pub)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := common.HexToAddress("0xa9DECC34942E9f2223653e6720000dE6475a364c") // recovered by v2.2.2
-	if got := PubkeyToAddress(*key); got != want {
-		t.Errorf("recovered address mismatch: got %s, want %s", got.Hex(), want.Hex())
-	}
-	if _, err := Ecrecover(msg, sig); err == nil {
-		t.Errorf("Ecrecover: v=2 must be rejected")
+	for _, tc := range []struct {
+		v    byte
+		want common.Address // recovered by v2.2.2
+	}{
+		{2, common.HexToAddress("0xa9DECC34942E9f2223653e6720000dE6475a364c")},
+		{3, common.HexToAddress("0x9EE133cdEf173fB2A1c010B31f6C8E2742EfFf78")},
+	} {
+		sig[RecoveryIDOffset] = tc.v
+		pub, err := EcrecoverLegacy(msg, sig)
+		if err != nil {
+			t.Fatalf("EcrecoverLegacy: v=%d must be recovered: %v", tc.v, err)
+		}
+		key, err := UnmarshalPubkey(pub)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := PubkeyToAddress(*key); got != tc.want {
+			t.Errorf("v=%d: recovered address mismatch: got %s, want %s", tc.v, got.Hex(), tc.want.Hex())
+		}
+		if _, err := Ecrecover(msg, sig); err == nil {
+			t.Errorf("Ecrecover: v=%d must be rejected", tc.v)
+		}
+		if _, err := SigToPub(msg, sig); err == nil {
+			t.Errorf("SigToPub: v=%d must be rejected", tc.v)
+		}
 	}
 
 	for _, badV := range []byte{4, 5, 6, 7, 27, 28, 255} {
