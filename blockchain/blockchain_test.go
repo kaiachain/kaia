@@ -72,6 +72,7 @@ func TestShouldMarkBadProposal(t *testing.T) {
 		{istanbul.ErrEmptyCommittedSeals, false},
 		{istanbul.ErrInvalidCommittedSeals, false},
 		{fmt.Errorf("wrapped: %w", istanbul.ErrInvalidCommittedSeals), false},
+		{fmt.Errorf("%w: %w", ErrInitializeState, errors.New("vrank unavailable")), false},
 	}
 
 	for _, test := range tests {

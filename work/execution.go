@@ -153,7 +153,9 @@ func (e *DefaultExecutor) ExecuteTransactions(txs []*types.Transaction) (*consen
 	}
 
 	// Pre-tx hooks (EIP-2935, kaiax module pre-hooks, etc.)
-	e.chain.Processor().InitializeState(e.header, e.state)
+	if err := e.chain.Processor().InitializeState(e.header, e.state); err != nil {
+		return nil, err
+	}
 
 	// Extract the block proposer from the header seal — must match
 	// StateProcessor.Process so COINBASE and reward distribution are identical.

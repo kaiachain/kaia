@@ -24,7 +24,9 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-func (m *SystemModule) InitializeState(header *types.Header, state *state.StateDB) {}
+func (m *SystemModule) InitializeState(header *types.Header, state *state.StateDB) error {
+	return nil
+}
 
 func (m *SystemModule) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
 	chainConfig := m.Chain.Config()

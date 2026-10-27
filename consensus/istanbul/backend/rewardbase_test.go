@@ -118,7 +118,7 @@ func testProposerRewardbaseIsFinalBeforeExecution(t *testing.T, permissionless b
 	// 2. Execute one fee-paying transfer against the prepared header (work/worker.go commitTransaction).
 	state, err := chain.StateAt(parent.Root())
 	require.NoError(t, err)
-	chain.Processor().InitializeState(header, state)
+	require.NoError(t, chain.Processor().InitializeState(header, state))
 
 	recipient := common.HexToAddress("0x000000000000000000000000000000000000dead")
 	gasPrice := big.NewInt(25e9)

@@ -294,13 +294,14 @@ func (e *eestAdaptor) ValidateState(block, parent *types.Block, state *state.Sta
 }
 
 // kaiax.BlockStateModule implementation.
-func (e *eestAdaptor) InitializeState(header *types.Header, state *state.StateDB) {
+func (e *eestAdaptor) InitializeState(header *types.Header, state *state.StateDB) error {
 	if !e.config.IsPragueForkEnabled(header.Number) || e.chain == nil {
-		return
+		return nil
 	}
 	context := blockchain.NewEVMBlockContext(header, e.chain, &common.Address{})
 	vmenv := vm.NewEVM(context, vm.TxContext{}, state, e.config, &vm.Config{})
 	blockchain.ProcessParentBlockHash(header, vmenv, state, e.config.Rules(header.Number))
+	return nil
 }
 
 func (e *eestAdaptor) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {

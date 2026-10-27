@@ -70,7 +70,7 @@ type Prefetcher interface {
 // Processor is an interface for processing blocks using a given initial state.
 type Processor interface {
 	// InitializeState runs pre-transaction state modifications.
-	InitializeState(header *types.Header, stateDB *state.StateDB)
+	InitializeState(header *types.Header, stateDB *state.StateDB) error
 
 	// RegisterBlockStateModule registers state transition modules.
 	RegisterBlockStateModule(modules ...kaiax.BlockStateModule)

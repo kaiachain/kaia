@@ -24,6 +24,7 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -75,7 +76,9 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
-	p.InitializeState(header, statedb)
+	if err := p.InitializeState(header, statedb); err != nil {
+		return nil, nil, 0, nil, processStats, fmt.Errorf("%w: %w", ErrInitializeState, err)
+	}
 
 	// Extract author from the header
 	author, _ := p.bc.sealer.Author(header) // Ignore error, we're past header validation
@@ -104,7 +107,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 }
 
 // InitializeState runs pre-transaction state modifications.
-func (p *StateProcessor) InitializeState(header *types.Header, statedb *state.StateDB) {
+func (p *StateProcessor) InitializeState(header *types.Header, statedb *state.StateDB) error {
 	// [EIP-2935] stores the parent block hash in the history storage contract.
 	if p.bc.chainConfig.IsPragueForkEnabled(header.Number) {
 		context := NewEVMBlockContext(header, p.bc, nil)
@@ -113,8 +116,11 @@ func (p *StateProcessor) InitializeState(header *types.Header, statedb *state.St
 	}
 
 	for _, module := range p.blockStateModules {
-		module.InitializeState(header, statedb)
+		if err := module.InitializeState(header, statedb); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // RegisterBlockStateModule registers state transition modules handled by this processor.

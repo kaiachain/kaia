@@ -413,7 +413,7 @@ func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.B
 		header := makeSupplyHeader(chain, parent, stateDB)
 		require.NoError(t, chain.Sealer().WriteValidators(header, nil))
 		require.NoError(t, mReward.PrepareHeader(header))
-		chain.Processor().InitializeState(header, stateDB)
+		require.NoError(t, chain.Processor().InitializeState(header, stateDB))
 
 		num := header.Number.Uint64()
 		var gasPrice *big.Int
