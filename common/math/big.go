@@ -30,12 +30,9 @@ import (
 )
 
 var (
-	tt255     = BigPow(2, 255)
 	tt256     = BigPow(2, 256)
 	tt256m1   = new(big.Int).Sub(tt256, common.Big1)
 	MaxBig256 = new(big.Int).Set(tt256m1)
-	tt63      = BigPow(2, 63)
-	MaxBig63  = new(big.Int).Sub(tt63, common.Big1)
 )
 
 const (
@@ -116,16 +113,6 @@ func BigMin(x, y *big.Int) *big.Int {
 	return x
 }
 
-// FirstBitSet returns the index of the first 1 bit in v, counting from LSB.
-func FirstBitSet(v *big.Int) int {
-	for i := 0; i < v.BitLen(); i++ {
-		if v.Bit(i) > 0 {
-			return i
-		}
-	}
-	return v.BitLen()
-}
-
 // PaddedBigBytes encodes a big integer as a big-endian byte slice. The length
 // of the slice is at least n bytes.
 func PaddedBigBytes(bigint *big.Int, n int) []byte {
@@ -135,33 +122,6 @@ func PaddedBigBytes(bigint *big.Int, n int) []byte {
 	ret := make([]byte, n)
 	ReadBits(bigint, ret)
 	return ret
-}
-
-// bigEndianByteAt returns the byte at position n,
-// in Big-Endian encoding
-// So n==0 returns the least significant byte
-func bigEndianByteAt(bigint *big.Int, n int) byte {
-	words := bigint.Bits()
-	// Check word-bucket the byte will reside in
-	i := n / wordBytes
-	if i >= len(words) {
-		return byte(0)
-	}
-	word := words[i]
-	// Offset of the byte
-	shift := 8 * uint(n%wordBytes)
-
-	return byte(word >> shift)
-}
-
-// Byte returns the byte at position n in the padlength-byte big-endian
-// representation of bigint. Position 0 is the most significant byte.
-// Example: bigint '5', padlength 32, n=31 => 5
-func Byte(bigint *big.Int, padlength, n int) byte {
-	if n >= padlength {
-		return byte(0)
-	}
-	return bigEndianByteAt(bigint, padlength-1-n)
 }
 
 // ReadBits encodes the absolute value of bigint as big-endian bytes. Callers must ensure
@@ -186,39 +146,4 @@ func U256(x *big.Int) *big.Int {
 // This operation is destructive.
 func U256Bytes(n *big.Int) []byte {
 	return PaddedBigBytes(U256(n), 32)
-}
-
-// S256 interprets x as a two's complement number.
-// x must not exceed 256 bits (the result is undefined if it does) and is not modified.
-//
-//	S256(0)        = 0
-//	S256(1)        = 1
-//	S256(2**255)   = -2**255
-//	S256(2**256-1) = -1
-func S256(x *big.Int) *big.Int {
-	if x.Cmp(tt255) < 0 {
-		return x
-	}
-	return new(big.Int).Sub(x, tt256)
-}
-
-// Exp implements exponentiation by squaring.
-// Exp returns a newly-allocated big integer truncated to 256 bits.
-// It modifies base during the calculation; callers that need to preserve base
-// must pass a copy.
-//
-// Courtesy @karalabe and @chfast
-func Exp(base, exponent *big.Int) *big.Int {
-	result := big.NewInt(1)
-
-	for _, word := range exponent.Bits() {
-		for range wordBits {
-			if word&1 == 1 {
-				U256(result.Mul(result, base))
-			}
-			U256(base.Mul(base, base))
-			word >>= 1
-		}
-	}
-	return result
 }
