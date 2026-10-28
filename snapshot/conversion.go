@@ -216,7 +216,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 	// processing and gathering results.
 	threads := runtime.NumCPU()
 	results := make(chan error, threads)
-	for i := 0; i < threads; i++ {
+	for range threads {
 		results <- nil // fill the semaphore
 	}
 	// stop is a helper function to shutdown the background threads
@@ -224,7 +224,7 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 	stop := func(fail error) (common.Hash, error) {
 		close(in)
 		result := <-out
-		for i := 0; i < threads; i++ {
+		for range threads {
 			if err := <-results; err != nil && fail == nil {
 				fail = err
 			}

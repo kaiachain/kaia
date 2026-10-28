@@ -333,7 +333,7 @@ func TestStacktrieNotModifyValues(t *testing.T) {
 			return big.NewInt(int64(i)).Bytes()
 		}
 	}
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		key := common.BigToHash(keyB)
 		value := getValue(i)
 		st.TryUpdate(key.Bytes(), value)
@@ -342,7 +342,7 @@ func TestStacktrieNotModifyValues(t *testing.T) {
 		keyDelta.Add(keyDelta, common.Big1)
 	}
 	st.Hash()
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		want := getValue(i)
 
 		have := vals[i]
@@ -371,7 +371,7 @@ func TestStacktrieSerialization(t *testing.T) {
 			return big.NewInt(int64(i)).Bytes()
 		}
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		vals = append(vals, getValue(i))
 		keys = append(keys, common.BigToHash(keyB).Bytes())
 		keyB = keyB.Add(keyB, keyDelta)

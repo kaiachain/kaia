@@ -73,7 +73,7 @@ func TestHashing(t *testing.T) {
 	t.Parallel()
 
 	bytecodes := make([][]byte, 10)
-	for i := 0; i < len(bytecodes); i++ {
+	for i := range bytecodes {
 		buf := make([]byte, 100)
 		rand.Read(buf)
 		bytecodes[i] = buf
@@ -81,7 +81,7 @@ func TestHashing(t *testing.T) {
 	var want, got string
 	old := func() {
 		hasher := sha3.NewLegacyKeccak256()
-		for i := 0; i < len(bytecodes); i++ {
+		for i := range bytecodes {
 			hasher.Reset()
 			hasher.Write(bytecodes[i])
 			hash := hasher.Sum(nil)
@@ -91,7 +91,7 @@ func TestHashing(t *testing.T) {
 	new := func() {
 		hasher := sha3.NewLegacyKeccak256().(statedb.KeccakState)
 		hash := make([]byte, 32)
-		for i := 0; i < len(bytecodes); i++ {
+		for i := range bytecodes {
 			hasher.Reset()
 			hasher.Write(bytecodes[i])
 			hasher.Read(hash)
@@ -107,14 +107,14 @@ func TestHashing(t *testing.T) {
 
 func BenchmarkHashing(b *testing.B) {
 	bytecodes := make([][]byte, 10000)
-	for i := 0; i < len(bytecodes); i++ {
+	for i := range bytecodes {
 		buf := make([]byte, 100)
 		rand.Read(buf)
 		bytecodes[i] = buf
 	}
 	old := func() {
 		hasher := sha3.NewLegacyKeccak256()
-		for i := 0; i < len(bytecodes); i++ {
+		for i := range bytecodes {
 			hasher.Reset()
 			hasher.Write(bytecodes[i])
 			hasher.Sum(nil)
@@ -123,7 +123,7 @@ func BenchmarkHashing(b *testing.B) {
 	new := func() {
 		hasher := sha3.NewLegacyKeccak256().(statedb.KeccakState)
 		hash := make([]byte, 32)
-		for i := 0; i < len(bytecodes); i++ {
+		for i := range bytecodes {
 			hasher.Reset()
 			hasher.Write(bytecodes[i])
 			hasher.Read(hash)
@@ -364,13 +364,14 @@ func createStorageRequestResponse(t *testPeer, root common.Hash, accounts []comm
 				break
 			}
 		}
-		hashes = append(hashes, keys)
-		slots = append(slots, vals)
-
+		if len(keys) > 0 {
+			hashes = append(hashes, keys)
+			slots = append(slots, vals)
+		}
 		// Generate the Merkle proofs for the first and last storage slot, but
 		// only if the response was capped. If the entire storage trie included
 		// in the response, no need for any proofs.
-		if originHash != (common.Hash{}) || abort {
+		if originHash != (common.Hash{}) || (abort && len(keys) > 0) {
 			// If we're aborting, we need to prove the first and last item
 			// This terminates the response (and thus the loop)
 			proof := NewNodeSet()
@@ -1570,7 +1571,7 @@ func makeUnevenStorageTrie(slots int, db *statedb.Database) (*statedb.Trie, entr
 		trie, _ = statedb.NewTrie(types.EmptyRootHash, db, nil)
 		chosen  = make(map[byte]struct{})
 	)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var n int
 		for {
 			n = mrand.Intn(15) // the last range is set empty deliberately

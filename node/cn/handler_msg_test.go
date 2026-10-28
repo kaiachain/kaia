@@ -19,24 +19,30 @@
 package cn
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"math/big"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
+	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	mocks2 "github.com/kaiachain/kaia/node/cn/mocks"
 	"github.com/kaiachain/kaia/params"
@@ -61,6 +67,24 @@ func generateMsg(t *testing.T, msgCode uint64, data interface{}) p2p.Msg {
 	}
 }
 
+func TestHandleNewBlockHashesMsgRejectsLargeBatch(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	announces := make(newBlockHashesData, maxBlockHashAnnouncements+1)
+	err := handleNewBlockHashesMsg(&ProtocolManager{}, NewMockPeer(mockCtrl), generateMsg(t, NewBlockHashesMsg, announces))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errCode(ErrTooManyItems).String())
+}
+
+func TestValidateInboundMessageSizeRejectsLargeBlockHashMessage(t *testing.T) {
+	msg := p2p.Msg{Code: NewBlockHashesMsg, Size: maxBlockHashMessageBytes + 1}
+	require.Error(t, validateInboundMessageSize(msg))
+
+	msg.Code = NewBlockMsg
+	require.NoError(t, validateInboundMessageSize(msg))
+}
+
 // prepareTestHandleNewBlockMsg creates structs for TestHandleNewBlockMsg_ tests.
 func prepareTestHandleNewBlockMsg(t *testing.T, mockCtrl *gomock.Controller, blockNum int) (*types.Block, p2p.Msg, *MockPeer, *mocks2.MockProtocolManagerFetcher) {
 	mockPeer := NewMockPeer(mockCtrl)
@@ -76,6 +100,93 @@ func prepareTestHandleNewBlockMsg(t *testing.T, mockCtrl *gomock.Controller, blo
 	mockFetcher.EXPECT().Enqueue(nodeids[0].String(), newBlock).Times(1)
 
 	return newBlock, msg, mockPeer, mockFetcher
+}
+
+// countingConsensusHandler records how many messages reached the consensus engine and fails each with err.
+type countingConsensusHandler struct {
+	calls int
+	err   error
+}
+
+func (h *countingConsensusHandler) NewChainHead() error                  { return nil }
+func (h *countingConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
+
+func (h *countingConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) {
+	h.calls++
+	return true, h.err
+}
+
+func TestHandleConsensusMsgFromNonCNPeer(t *testing.T) {
+	tcs := []struct {
+		name      string
+		connType  common.ConnType
+		wantErr   bool
+		wantCalls int
+	}{
+		{"cn", common.CONSENSUSNODE, false, 1},
+		{"en", common.ENDPOINTNODE, true, 0},
+		{"pn", common.PROXYNODE, true, 0},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().ConnType().Return(tc.connType).AnyTimes()
+
+			handler := &countingConsensusHandler{}
+			pm := &ProtocolManager{handler: handler}
+			msg := generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{})
+
+			err := pm.handleMsg(mockPeer, addrs[0], msg)
+			assert.Equal(t, tc.wantErr, err != nil, "err: %v", err)
+			assert.Equal(t, tc.wantCalls, handler.calls)
+		})
+	}
+}
+
+// A consensus message that reaches a stopped engine (e.g. while syncing) must not drop the peer.
+func TestHandleConsensusMsgWhileEngineStopped(t *testing.T) {
+	tcs := []struct {
+		name    string
+		err     error
+		wantErr error
+	}{
+		{"stopped engine keeps the peer", istanbul.ErrStoppedEngine, nil},
+		{"other errors drop the peer", expectedErr, expectedErr},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+			mockPeer.EXPECT().GetP2PPeer().Return(p2p.NewPeer(nodeids[0], "cn", nil)).AnyTimes()
+
+			handler := &countingConsensusHandler{err: tc.err}
+			pm := &ProtocolManager{handler: handler}
+
+			// Single-channel peers
+			err := pm.handleMsg(mockPeer, addrs[0], generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{}))
+			assert.Equal(t, tc.wantErr, err)
+
+			// Multichannel peers
+			msgCh := make(chan p2p.Msg, 1)
+			errCh := make(chan error, 1)
+			msgCh <- generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{})
+			close(msgCh)
+			pm.processConsensusMsg(msgCh, mockPeer, addrs[0], errCh)
+			select {
+			case err := <-errCh:
+				assert.Equal(t, tc.wantErr, err)
+			default:
+				assert.Nil(t, tc.wantErr)
+			}
+			assert.Equal(t, 2, handler.calls)
+		})
+	}
 }
 
 func prepareDownloader(t *testing.T) (*gomock.Controller, *mocks2.MockProtocolManagerDownloader, *MockPeer, *ProtocolManager) {
@@ -239,6 +350,19 @@ func TestHandleNewBlockMsg_LargeLocalPeerBlockScore(t *testing.T) {
 	assert.NoError(t, handleNewBlockMsg(pm, mockPeer, msg))
 }
 
+// TestHandleNewBlockMsg_RejectsOversizedTD checks that an absurd total blockscore is
+// refused before the peer retains it.
+func TestHandleNewBlockMsg_RejectsOversizedTD(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	td := new(big.Int).Lsh(big.NewInt(1), maxPropagatedTDBits+1)
+	msg := generateMsg(t, NewBlockMsg, newBlockData{Block: newBlock(blockNum1), TD: td})
+
+	err := handleNewBlockMsg(&ProtocolManager{}, NewMockPeer(mockCtrl), msg)
+	assert.ErrorContains(t, err, "total blockscore")
+}
+
 func TestHandleNewBlockMsg_SmallLocalPeerBlockScore_NoSynchronise(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -277,7 +401,7 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 	// If pm.acceptTxs == 1, TxPool.HandleTxMsg is called.
 	{
-		atomic.StoreUint32(&pm.acceptTxs, 1)
+		pm.acceptTxs.Store(1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 
 		// The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
@@ -290,33 +414,228 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 }
 
-func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+// makeMixedTxs returns n distinct signed txs rotating through legacy, Kaia typed
+// and Ethereum typed txs, which take one, two and three RLP values in a list.
+func makeMixedTxs(t *testing.T, n int) types.Transactions {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	from := crypto.PubkeyToAddress(key.PublicKey)
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+	price := big.NewInt(25 * params.Gkei)
 
-	pm := &ProtocolManager{}
-	atomic.StoreUint32(&pm.acceptTxs, 1)
+	txs := make(types.Transactions, n)
+	for i := range txs {
+		var tx *types.Transaction
+		switch nonce := uint64(i); i % 3 {
+		case 0:
+			tx = types.NewTransaction(nonce, common.Address{}, big.NewInt(1), 21000, price, nil)
+		case 1:
+			tx = types.NewTx(&types.TxInternalDataValueTransfer{
+				AccountNonce: nonce, Price: price, GasLimit: 21000, Recipient: common.Address{}, Amount: big.NewInt(1), From: from,
+			})
+		case 2:
+			tx = types.NewTx(&types.TxInternalDataEthereumDynamicFee{
+				AccountNonce: nonce, GasTipCap: big.NewInt(1), GasFeeCap: price, GasLimit: 21000, Recipient: &common.Address{}, Amount: big.NewInt(1),
+			})
+		}
+		txs[i], err = types.SignTx(tx, signer, key)
+		require.NoError(t, err)
+	}
+	return txs
+}
+
+func txHashes(txs types.Transactions) []common.Hash {
+	hashes := make([]common.Hash, len(txs))
+	for i, tx := range txs {
+		hashes[i] = tx.Hash()
+	}
+	return hashes
+}
+
+// expectTxsDelivered expects exactly want to reach the txpool in order and to be
+// marked known. The strict mock fails on any other AddToKnownTxs call, so
+// discarded txs must not be marked known.
+func expectTxsDelivered(t *testing.T, mockCtrl *gomock.Controller, pm *ProtocolManager, peer *MockPeer, want types.Transactions) {
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	pm.txpool = mockTxPool
+	mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).Do(func(got types.Transactions) {
+		assert.Equal(t, txHashes(want), txHashes(got))
+	}).Times(1)
+	for _, tx := range want {
+		peer.EXPECT().AddToKnownTxs(tx.Hash()).Times(1)
+	}
+}
+
+func newTxMsgTestPeer(mockCtrl *gomock.Controller, version int) *MockPeer {
+	peer := NewMockPeer(mockCtrl)
+	peer.EXPECT().GetVersion().Return(version).AnyTimes()
+	peer.EXPECT().GetID().Return("test-peer").AnyTimes()
+	return peer
+}
+
+func TestHandleTxMsg_ItemLimit(t *testing.T) {
+	const legacyBatch = 5000 // a v2.2.2 sender puts a whole txpool promotion in one TxMsg
+	txs := makeMixedTxs(t, legacyBatch)
+	head := txs[:maxTxMsgItems]
+	plusOne := func(i int) types.Transactions {
+		return append(append(types.Transactions{}, head...), txs[i])
+	}
+	require.Equal(t, types.TxTypeValueTransfer, txs[maxTxMsgItems].Type())
+	require.Equal(t, types.TxTypeEthereumDynamicFee, txs[maxTxMsgItems+1].Type())
+	require.Equal(t, types.TxTypeLegacyTransaction, txs[maxTxMsgItems+2].Type())
+
+	tcs := []struct {
+		name    string
+		version int
+		txs     types.Transactions
+		kept    int  // leading txs handed to the txpool
+		tooMany bool // ErrTooManyItems, which disconnects the peer
+	}{
+		{"kaia67 under limit", kaia67, txs[:10], 10, false},
+		{"kaia68 under limit", kaia68, txs[:10], 10, false},
+		{"kaia67 at limit", kaia67, head, maxTxMsgItems, false},
+		{"kaia68 at limit", kaia68, head, maxTxMsgItems, false},
+		// Legacy peers are truncated instead of disconnected during the rolling upgrade.
+		{"kaia67 limit+1 kaia typed tail", kaia67, plusOne(maxTxMsgItems), maxTxMsgItems, false},
+		{"kaia67 limit+1 ethereum typed tail", kaia67, plusOne(maxTxMsgItems + 1), maxTxMsgItems, false},
+		{"kaia67 limit+1 legacy tail", kaia67, plusOne(maxTxMsgItems + 2), maxTxMsgItems, false},
+		{"kaia66 legacy batch", kaia66, txs, maxTxMsgItems, false},
+		{"kaia67 legacy batch", kaia67, txs, maxTxMsgItems, false},
+		{"kaia68 limit+1", kaia68, plusOne(maxTxMsgItems), 0, true},
+		{"kaia68 legacy batch", kaia68, txs, 0, true},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm := &ProtocolManager{}
+			pm.acceptTxs.Store(1)
+			peer := newTxMsgTestPeer(mockCtrl, tc.version)
+			if !tc.tooMany {
+				expectTxsDelivered(t, mockCtrl, pm, peer, tc.txs[:tc.kept])
+			}
+
+			err := handleTxMsg(pm, peer, generateMsg(t, TxMsg, tc.txs))
+			if tc.tooMany {
+				require.ErrorContains(t, err, "Too many items")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestHandleTxMsg_LegacyTail covers what a legacy peer's TxMsg may carry past
+// maxTxMsgItems. The tail is not read, so neither invalid txs nor malformed
+// framing there disconnects the peer; errors in the outer list or the kept head do.
+func TestHandleTxMsg_LegacyTail(t *testing.T) {
+	txs := makeMixedTxs(t, maxTxMsgItems)
+	raws := make([]rlp.RawValue, len(txs))
+	for i, tx := range txs {
+		var err error
+		raws[i], err = rlp.EncodeToBytes(tx)
+		require.NoError(t, err)
+	}
+	encode := func(head []rlp.RawValue, tail ...rlp.RawValue) []byte {
+		b, err := rlp.EncodeToBytes(append(append([]rlp.RawValue{}, head...), tail...))
+		require.NoError(t, err)
+		return b
+	}
+	notATx := rlp.RawValue{0x83, 1, 2, 3}  // a well-framed string that is not a tx
+	badFraming := rlp.RawValue{0xb8, 0xff} // claims 255 bytes past the end of the list
+	full := encode(raws)
+
+	tcs := []struct {
+		name    string
+		version int
+		payload []byte
+		kept    int    // leading txs handed to the txpool
+		errMsg  string // error that disconnects the peer
+	}{
+		{"invalid tx in tail", kaia67, encode(raws, notATx), maxTxMsgItems, ""},
+		{"malformed framing in tail", kaia67, encode(raws, badFraming), maxTxMsgItems, ""},
+		{"invalid tx in head", kaia67, encode(raws[:maxTxMsgItems-1], notATx), 0, "Invalid message"},
+		{"outer list truncated", kaia67, full[:len(full)-10], 0, "Invalid message"},
+		{"kaia68 invalid tx past limit", kaia68, encode(raws, notATx), 0, "Invalid message"},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm := &ProtocolManager{}
+			pm.acceptTxs.Store(1)
+			peer := newTxMsgTestPeer(mockCtrl, tc.version)
+			if tc.errMsg == "" {
+				expectTxsDelivered(t, mockCtrl, pm, peer, txs[:tc.kept])
+			}
+
+			msg := p2p.Msg{Code: TxMsg, Size: uint32(len(tc.payload)), Payload: bytes.NewReader(tc.payload)}
+			err := handleTxMsg(pm, peer, msg)
+			if tc.errMsg != "" {
+				require.ErrorContains(t, err, tc.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDecodeListTruncated(t *testing.T) {
+	txs := makeMixedTxs(t, 4)
+	for _, tc := range []struct {
+		n, kept   int
+		truncated bool
+	}{
+		{0, 0, false}, {2, 2, false}, {3, 3, false}, {4, 3, true},
+	} {
+		got, truncated, err := decodeListTruncated[*types.Transaction](generateMsg(t, TxMsg, txs[:tc.n]), 3)
+		require.NoError(t, err)
+		assert.Equal(t, txHashes(txs[:tc.kept]), txHashes(got), "n=%d", tc.n)
+		assert.Equal(t, tc.truncated, truncated, "n=%d", tc.n)
+	}
+}
+
+// prepareBlobTxMsg returns a protocol manager, a peer and a signed blob transaction
+// with a valid v1 sidecar. Callers corrupt the sidecar via blobTx.BlobTxSidecar().
+func prepareBlobTxMsg(t *testing.T, mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *types.Transaction) {
+	pm := &ProtocolManager{verifiedBlobTxs: newKnownHashSet(maxVerifiedBlobTxs)}
+	pm.acceptTxs.Store(1)
+	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).AnyTimes()
 	pm.txpool = mockTxPool
 
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 	mockPeer.EXPECT().GetID().Return("test-peer").AnyTimes()
+	mockPeer.EXPECT().AddToKnownTxs(gomock.Any()).AnyTimes()
 
-	// Generate a blob transaction with invalid KZG proof
-	var (
-		addr          = crypto.PubkeyToAddress(keys[0].PublicKey)
-		signer        = types.MakeSigner(params.TestChainConfig, common.Big0)
-		blob          = kzg4844.Blob{}
-		commitment, _ = kzg4844.BlobToCommitment(&blob)
-		proofs, _     = kzg4844.ComputeCellProofs(&blob)
-		blobhash      = common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
-	)
-	// corrupt a byte in the commitment
-	commitment[0] = commitment[0] ^ 0xFF
-	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, map[types.TxValueKeyType]interface{}{
-		types.TxValueKeyNonce:      uint64(0),
-		types.TxValueKeyTo:         addr,
+	sidecar, hashes := newBlobSidecar(t)
+	return pm, mockPeer, newBlobTx(t, 0, hashes, sidecar)
+}
+
+// newBlobSidecar returns a valid v1 sidecar and the blob hashes it commits to.
+func newBlobSidecar(t *testing.T) (*types.BlobTxSidecar, []common.Hash) {
+	blob := kzg4844.Blob{}
+	commitment, err := kzg4844.BlobToCommitment(&blob)
+	require.NoError(t, err)
+	proofs, err := kzg4844.ComputeCellProofs(&blob)
+	require.NoError(t, err)
+	return &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{blob},
+		Commitments: []kzg4844.Commitment{commitment},
+		Proofs:      proofs,
+	}, []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))}
+}
+
+// newBlobTx signs a blob transaction carrying the given hashes and sidecar. The nonce is
+// a parameter so a caller can replay one sidecar under a different transaction hash.
+func newBlobTx(t *testing.T, nonce uint64, hashes []common.Hash, sidecar *types.BlobTxSidecar) *types.Transaction {
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      nonce,
+		types.TxValueKeyTo:         crypto.PubkeyToAddress(keys[0].PublicKey),
 		types.TxValueKeyAmount:     big.NewInt(0),
 		types.TxValueKeyGasLimit:   uint64(10000000),
 		types.TxValueKeyGasFeeCap:  big.NewInt(25),
@@ -324,25 +643,98 @@ func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
 		types.TxValueKeyData:       []byte{},
 		types.TxValueKeyAccessList: types.AccessList{},
 		types.TxValueKeyBlobFeeCap: big.NewInt(25),
-		types.TxValueKeyBlobHashes: []common.Hash{blobhash},
-		types.TxValueKeySidecar: &types.BlobTxSidecar{
-			Version:     types.BlobSidecarVersion1,
-			Blobs:       []kzg4844.Blob{blob},
-			Commitments: []kzg4844.Commitment{commitment},
-			Proofs:      proofs,
-		},
-		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+		types.TxValueKeyBlobHashes: hashes,
+		types.TxValueKeySidecar:    sidecar,
+		types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
 	})
 	require.NoError(t, err)
-	require.NoError(t, blobTx.Sign(signer, keys[0]))
+	require.NoError(t, tx.Sign(types.MakeSigner(params.TestChainConfig, common.Big0), keys[0]))
+	return tx
+}
 
-	txs := types.Transactions{blobTx}
-	msg := generateMsg(t, TxMsg, txs)
+func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+	blobTx.BlobTxSidecar().Commitments[0][0] ^= 0xFF
 
 	// Should return error and disconnect peer
-	err = handleTxMsg(pm, mockPeer, msg)
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errKZGVerificationError.Error())
+}
+
+func TestHandleTxMsg_BlobSidecarVerifiedOnce(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+	require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx})))
+	require.Equal(t, 1, pm.verifiedBlobTxs.Len())
+
+	// The same sidecar under a different transaction hash must reuse the entry, or a
+	// sender replays one sidecar for free by bumping the nonce.
+	replay := newBlobTx(t, 1, blobTx.BlobHashes(), blobTx.BlobTxSidecar())
+	require.NotEqual(t, blobTx.Hash(), replay.Hash())
+	require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{replay})))
+	assert.Equal(t, 1, pm.verifiedBlobTxs.Len(), "the replay was verified again")
+
+	// A sidecar swapped under an already verified transaction hash must not reuse the
+	// entry, whichever input of the verification was altered.
+	for name, tamper := range map[string]func(*types.BlobTxSidecar){
+		"blob":       func(sc *types.BlobTxSidecar) { sc.Blobs[0][0] ^= 0xFF },
+		"proof":      func(sc *types.BlobTxSidecar) { sc.Proofs[0][0] ^= 0xFF },
+		"version":    func(sc *types.BlobTxSidecar) { sc.Version = 0 },
+		"commitment": func(sc *types.BlobTxSidecar) { sc.Commitments[0][0] ^= 0xFF },
+	} {
+		t.Run(name, func(t *testing.T) {
+			pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+			require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx})))
+
+			tamper(blobTx.BlobTxSidecar())
+			err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx}))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), errKZGVerificationError.Error())
+		})
+	}
+}
+
+func TestHandleTxMsg_BloblessBlobTx(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, _ := prepareBlobTxMsg(t, mockCtrl)
+
+	// Every check in ValidateWithBlobHashes compares against the declared hashes, so
+	// it passes vacuously when there are none. The pool rejects such a transaction
+	// unconditionally, so the handler must not forward it.
+	sidecar, _ := newBlobSidecar(t)
+	sidecar.Blobs, sidecar.Commitments, sidecar.Proofs = nil, nil, nil
+	blobless := newBlobTx(t, 0, nil, sidecar)
+	require.NoError(t, sidecar.ValidateWithBlobHashes(nil), "expected the vacuous pass this guards")
+
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobless}))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errBloblessBlobTx.Error())
+}
+
+func TestHandleTxMsg_BlobLimit(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, _ := prepareBlobTxMsg(t, mockCtrl)
+	sidecar, hashes := newBlobSidecar(t)
+	sidecar.Blobs = append(sidecar.Blobs, sidecar.Blobs[0])
+	sidecar.Commitments = append(sidecar.Commitments, sidecar.Commitments[0])
+	sidecar.Proofs = append(sidecar.Proofs, sidecar.Proofs...)
+	hashes = append(hashes, hashes[0])
+	tx := newBlobTx(t, 0, hashes, sidecar)
+
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{tx}))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "blob limit exceeded")
+	assert.Equal(t, 0, pm.verifiedBlobTxs.Len())
 }
 
 func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks.MockBlockChain, *ProtocolManager) {
@@ -741,13 +1133,98 @@ func TestHandleBidMsg(t *testing.T) {
 
 	msg := generateMsg(t, BidMsg, testBid)
 
-	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(9)
+	mockPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(11)
 	assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg), "should return error when protocol version is not kaia66")
 
 	mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()
 	assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg), "should not return error when protocol version is kaia66")
 
 	mockCtrl.Finish()
+
+	// The size gate runs before msg.Decode, so an oversized bid never reaches the pool.
+	for _, tc := range []struct {
+		name     string
+		dataLen  int
+		wantCall bool
+	}{
+		{"max legal data reaches the pool", int(auction_impl.BidTxMaxDataSize), true},
+		{"oversized data is refused", int(maxBidMsgSize) + 1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			module := auction_mock.NewMockAuctionModule(ctrl)
+			peer := NewMockPeer(ctrl)
+			peer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+			if tc.wantCall {
+				peer.EXPECT().GetID().Return(nodeids[0].String()).Times(1)
+				module.EXPECT().HandleBid(gomock.Any(), gomock.Any()).Times(1)
+			}
+
+			sized := &auction.Bid{BidData: bidData}
+			sized.Data = make([]byte, tc.dataLen)
+			err := handleBidMsg(&ProtocolManager{auctionModule: module}, peer, generateMsg(t, BidMsg, sized))
+
+			if tc.wantCall {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, "Message too long")
+			}
+		})
+	}
+}
+
+func TestHandleBidMsgFromNonCNPeer(t *testing.T) {
+	tcs := []struct {
+		name       string
+		connType   common.ConnType
+		auctionOff bool
+		wantErr    bool
+		wantCalls  int
+	}{
+		{"cn", common.CONSENSUSNODE, false, false, 1},
+		{"en", common.ENDPOINTNODE, false, true, 0},
+		{"pn", common.PROXYNODE, false, true, 0},
+		{"en without auction", common.ENDPOINTNODE, true, false, 0},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().ConnType().Return(tc.connType).AnyTimes()
+			mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+			mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+			pm := &ProtocolManager{}
+			if !tc.auctionOff {
+				mockAuction := auction_mock.NewMockAuctionModule(mockCtrl)
+				mockAuction.EXPECT().HandleBid(gomock.Any(), gomock.Any()).Times(tc.wantCalls)
+				pm.auctionModule = mockAuction
+			}
+			msg := generateMsg(t, BidMsg, &auction.Bid{BidData: auction.BidData{Bid: common.Big0}})
+
+			err := pm.handleMsg(mockPeer, addrs[0], msg)
+			assert.Equal(t, tc.wantErr, err != nil, "err: %v", err)
+		})
+	}
+}
+
+func TestHandleVRankPreprepareRejectsNonCN(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peer := NewMockPeer(mockCtrl)
+	peer.EXPECT().GetVersion().Return(kaia68).AnyTimes()
+	peer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+
+	msg := generateMsg(t, VRankPreprepareMsg, &vrank.VRankPreprepare{})
+	err := (&ProtocolManager{}).handleMsg(peer, common.Address{}, msg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errCode(ErrInvalidMsgCode).String())
 }
 
 func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
@@ -981,8 +1458,6 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		// Setup expected save call
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
-			big.NewInt(int64(d.BlockNum)),
-			int(d.TxIndex),
 			d.TxHash,
 			d.Sidecar,
 		).Return(nil).Times(1)
@@ -1017,8 +1492,6 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		}
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
-			big.NewInt(int64(d.BlockNum)),
-			int(d.TxIndex),
 			d.TxHash,
 			d.Sidecar,
 		).Return(errors.New("expected error")).Times(1)
@@ -1030,6 +1503,128 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		assert.NotNil(t, req, "should not be deleted from blobSidecarReqManager even on error")
 		mockCtrl.Finish()
 	}
+}
+
+// makePhantomHashes returns n distinct hashes whose i-th byte is i+1, suitable
+// for phantom-flood tests where every lookup is expected to miss.
+func makePhantomHashes(n int) []common.Hash {
+	out := make([]common.Hash, n)
+	for i := range out {
+		out[i][0] = byte(i & 0xff)
+		out[i][1] = byte((i >> 8) & 0xff)
+		out[i][2] = byte((i >> 16) & 0xff)
+	}
+	return out
+}
+
+// The next set of tests verifies the per-iteration lookup counter that bounds
+// DB work when a peer floods the handler with hashes that all miss on disk.
+// Each test sends 4*cap phantom hashes and asserts the handler runs at most
+// 2*cap iterations before returning, matching the pattern geth adopted in
+// eth/66.
+
+func TestHandleBlockBodiesRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxBlockFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, BlockBodiesRequestMsg, hashes)
+
+	// With the fix, lookups (incremented once per iteration) stops at 2*cap,
+	// so GetBodyRLP is invoked exactly 2*cap times for all-miss input.
+	mockBlockChain.EXPECT().GetBodyRLP(gomock.Any()).Return(nil).Times(2 * cap)
+
+	bodies, err := handleBlockBodiesRequest(pm, mockPeer, msg)
+	assert.NoError(t, err)
+	assert.Empty(t, bodies)
+}
+
+func TestHandleNodeDataRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxStateFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, NodeDataRequestMsg, hashes)
+
+	// lookups increments once per iteration, capped at 2*cap. Every miss falls
+	// through TrieNode to ContractCodeWithPrefix, so both fire 2*cap times.
+	mockBlockChain.EXPECT().TrieNode(gomock.Any()).Return(nil, nil).Times(2 * cap)
+	mockBlockChain.EXPECT().ContractCodeWithPrefix(gomock.Any()).Return(nil, nil).Times(2 * cap)
+	mockPeer.EXPECT().SendNodeData([][]byte(nil)).Return(nil).Times(1)
+
+	assert.NoError(t, handleNodeDataRequestMsg(pm, mockPeer, msg))
+}
+
+func TestHandleReceiptsRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxReceiptFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, ReceiptsRequestMsg, hashes)
+
+	// lookups increments once per iteration, capped at 2*cap. Every miss falls
+	// through GetReceiptsByBlockHash to GetHeaderByHash, so both fire 2*cap times.
+	mockBlockChain.EXPECT().GetReceiptsByBlockHash(gomock.Any()).Return(nil).Times(2 * cap)
+	mockBlockChain.EXPECT().GetHeaderByHash(gomock.Any()).Return(nil).Times(2 * cap)
+	mockPeer.EXPECT().SendReceiptsRLP(gomock.Any()).Return(nil).Times(1)
+
+	assert.NoError(t, handleReceiptsRequestMsg(pm, mockPeer, msg))
+}
+
+func TestHandleStakingInfoRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxStakingInfoFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	cfg := params.TestChainConfig.Copy()
+	cfg.Istanbul = &params.IstanbulConfig{ProposerPolicy: uint64(istanbul.WeightedRandom)}
+	cfg.Governance = params.GetDefaultGovernanceConfig()
+	pm.chainconfig = cfg
+
+	msg := generateMsg(t, StakingInfoRequestMsg, hashes)
+
+	// lookups increments once per iteration, capped at 2*cap. Phantom header
+	// triggers `continue`, so only GetHeaderByHash fires (2*cap times).
+	mockBlockChain.EXPECT().GetHeaderByHash(gomock.Any()).Return(nil).Times(2 * cap)
+	mockPeer.EXPECT().SendStakingInfoRLP(gomock.Any()).Return(nil).Times(1)
+
+	assert.NoError(t, handleStakingInfoRequestMsg(pm, mockPeer, msg))
+}
+
+func TestHandleBlobSidecarsRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxBlobSidecarsFetch
+	hashes := makePhantomHashes(4 * cap)
+	requestData := make([]blobSidecarsRequestData, 4*cap)
+	for i := range requestData {
+		requestData[i] = blobSidecarsRequestData{
+			BlockNum: hexutil.Uint64(i + 1),
+			TxIndex:  hexutil.Uint(i),
+			Hash:     hashes[i],
+		}
+	}
+
+	mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, BlobSidecarsRequestMsg, requestData)
+
+	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	// lookups increments once per iteration, capped at 2*cap. Every miss falls
+	// through storage to pool, so both fire 2*cap times.
+	mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2 * cap)
+	mockTxPool.EXPECT().GetBlobSidecarFromPool(gomock.Any()).Return(nil, nil).Times(2 * cap)
+	pm.txpool = mockTxPool
+	mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Any()).Return(nil).Times(1)
+
+	assert.NoError(t, handleBlobSidecarsRequestMsg(pm, mockPeer, msg))
 }
 
 // generateTestSidecar generates a test BlobTxSidecar for a given transaction hash.
@@ -1046,5 +1641,115 @@ func generateTestSidecar(hash common.Hash) *types.BlobTxSidecar {
 		Blobs:       []kzg4844.Blob{blob},
 		Commitments: []kzg4844.Commitment{commitment},
 		Proofs:      []kzg4844.Proof{proof},
+	}
+}
+
+// TestHandleResponseMsg_ListLimit checks each response handler against the number of
+// items we may request: that many is delivered, one more is refused.
+func TestHandleResponseMsg_ListLimit(t *testing.T) {
+	headers := func(n int) interface{} {
+		out := make([]*types.Header, n)
+		for i := range out {
+			out[i] = &types.Header{}
+		}
+		return out
+	}
+	bodies := func(n int) interface{} {
+		out := make(blockBodiesData, n)
+		for i := range out {
+			out[i] = &blockBody{}
+		}
+		return out
+	}
+	stakingInfos := func(n int) interface{} {
+		out := make([]*staking.P2PStakingInfo, n)
+		for i := range out {
+			out[i] = &staking.P2PStakingInfo{}
+		}
+		return out
+	}
+	blobSidecars := func(n int) interface{} {
+		sidecar := generateTestSidecar(common.HexToHash("0x1"))
+		out := make([]*blobSidecarsData, n)
+		for i := range out {
+			out[i] = &blobSidecarsData{Sidecar: sidecar}
+		}
+		return out
+	}
+	nodeData := func(n int) interface{} { return make([][]byte, n) }
+	receipts := func(n int) interface{} { return make([][]*types.Receipt, n) }
+
+	testcases := []struct {
+		name    string
+		code    uint64
+		limit   int
+		payload func(n int) interface{}
+		deliver func(*mocks2.MockProtocolManagerDownloader, *mocks2.MockProtocolManagerFetcher)
+	}{
+		{"BlockHeadersMsg", BlockHeadersMsg, downloader.MaxHeaderFetch, headers, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverHeaders(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"BlockBodiesMsg", BlockBodiesMsg, downloader.MaxBlockFetch, bodies, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverBodies(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"BlockBodiesFetchResponseMsg", BlockBodiesFetchResponseMsg, downloader.MaxBlockFetch, bodies, func(_ *mocks2.MockProtocolManagerDownloader, f *mocks2.MockProtocolManagerFetcher) {
+			f.EXPECT().FilterBodies(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"NodeDataMsg", NodeDataMsg, downloader.MaxStateFetch, nodeData, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverNodeData(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"ReceiptsMsg", ReceiptsMsg, downloader.MaxReceiptFetch, receipts, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverReceipts(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		{"StakingInfoMsg", StakingInfoMsg, downloader.MaxStakingInfoFetch, stakingInfos, func(d *mocks2.MockProtocolManagerDownloader, _ *mocks2.MockProtocolManagerFetcher) {
+			d.EXPECT().DeliverStakingInfos(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		}},
+		// Sidecars are delivered through the txpool, not through these two, and they
+		// carry no pending request, so the handler drops them before reaching it.
+		{"BlobSidecarsMsg", BlobSidecarsMsg, downloader.MaxBlobSidecarsFetch, blobSidecars, nil},
+	}
+	for _, tc := range testcases {
+		newPM := func(mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *mocks2.MockProtocolManagerDownloader, *mocks2.MockProtocolManagerFetcher) {
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().GetVersion().Return(kaia68).AnyTimes()
+			mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+
+			chainConfig := params.TestChainConfig.Copy()
+			chainConfig.Istanbul = params.GetDefaultIstanbulConfig()
+			chainConfig.Istanbul.ProposerPolicy = uint64(istanbul.WeightedRandom)
+
+			mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
+			mockFetcher := mocks2.NewMockProtocolManagerFetcher(mockCtrl)
+			return &ProtocolManager{
+				downloader:            mockDownloader,
+				fetcher:               mockFetcher,
+				chainconfig:           chainConfig,
+				blobSidecarReqManager: &sidecarReqManager{list: map[common.Hash]*sidecarReq{}},
+			}, mockPeer, mockDownloader, mockFetcher
+		}
+
+		t.Run(tc.name+"/at limit", func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm, mockPeer, mockDownloader, mockFetcher := newPM(mockCtrl)
+			if tc.deliver != nil {
+				tc.deliver(mockDownloader, mockFetcher)
+			}
+
+			msg := generateMsg(t, tc.code, tc.payload(tc.limit))
+			assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
+		})
+
+		// The delivery mocks carry no expectations here, so reaching them fails the test.
+		t.Run(tc.name+"/over limit", func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			pm, mockPeer, _, _ := newPM(mockCtrl)
+
+			msg := generateMsg(t, tc.code, tc.payload(tc.limit+1))
+			assert.ErrorContains(t, pm.handleMsg(mockPeer, addrs[0], msg), "Too many items")
+		})
 	}
 }

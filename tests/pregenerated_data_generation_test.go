@@ -106,7 +106,7 @@ func makeTxsWithNonceMap(isGenerate bool, nonceMap map[common.Address]uint64, fr
 		transferValue = new(big.Int).Mul(big.NewInt(1e3), big.NewInt(params.Kei))
 	}
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		fromIdx := indexPicker(i, lenFromAddrs)
 		toIdx := indexPicker(i, lenToAddrs)
 

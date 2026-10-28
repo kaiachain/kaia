@@ -163,11 +163,13 @@ func (gkc *gKaiaClient) handleBiCall(stream KlaytnNode_BiCallClient, request fun
 			if err := stream.RecvMsg(&recv); err != nil {
 				logger.Warn("fail to recv response", "err", err)
 				waitGroup.Done()
+				return
 			}
 
 			if err := handle(&recv); err != nil {
 				logger.Warn("fail to handle response", "err", err)
 				waitGroup.Done()
+				return
 			}
 		}
 	}()

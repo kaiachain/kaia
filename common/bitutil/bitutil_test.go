@@ -17,16 +17,16 @@ import (
 
 // Tests that bitwise XOR works for various alignments.
 func TestXOR(t *testing.T) {
-	for alignP := 0; alignP < 2; alignP++ {
-		for alignQ := 0; alignQ < 2; alignQ++ {
-			for alignD := 0; alignD < 2; alignD++ {
+	for alignP := range 2 {
+		for alignQ := range 2 {
+			for alignD := range 2 {
 				p := make([]byte, 1023)[alignP:]
 				q := make([]byte, 1023)[alignQ:]
 
-				for i := 0; i < len(p); i++ {
+				for i := range p {
 					p[i] = byte(i)
 				}
-				for i := 0; i < len(q); i++ {
+				for i := range q {
 					q[i] = byte(len(q) - i)
 				}
 				d1 := make([]byte, 1023+alignD)[alignD:]
@@ -44,16 +44,16 @@ func TestXOR(t *testing.T) {
 
 // Tests that bitwise AND works for various alignments.
 func TestAND(t *testing.T) {
-	for alignP := 0; alignP < 2; alignP++ {
-		for alignQ := 0; alignQ < 2; alignQ++ {
-			for alignD := 0; alignD < 2; alignD++ {
+	for alignP := range 2 {
+		for alignQ := range 2 {
+			for alignD := range 2 {
 				p := make([]byte, 1023)[alignP:]
 				q := make([]byte, 1023)[alignQ:]
 
-				for i := 0; i < len(p); i++ {
+				for i := range p {
 					p[i] = byte(i)
 				}
-				for i := 0; i < len(q); i++ {
+				for i := range q {
 					q[i] = byte(len(q) - i)
 				}
 				d1 := make([]byte, 1023+alignD)[alignD:]
@@ -71,16 +71,16 @@ func TestAND(t *testing.T) {
 
 // Tests that bitwise OR works for various alignments.
 func TestOR(t *testing.T) {
-	for alignP := 0; alignP < 2; alignP++ {
-		for alignQ := 0; alignQ < 2; alignQ++ {
-			for alignD := 0; alignD < 2; alignD++ {
+	for alignP := range 2 {
+		for alignQ := range 2 {
+			for alignD := range 2 {
 				p := make([]byte, 1023)[alignP:]
 				q := make([]byte, 1023)[alignQ:]
 
-				for i := 0; i < len(p); i++ {
+				for i := range p {
 					p[i] = byte(i)
 				}
-				for i := 0; i < len(q); i++ {
+				for i := range q {
 					q[i] = byte(len(q) - i)
 				}
 				d1 := make([]byte, 1023+alignD)[alignD:]
@@ -98,7 +98,7 @@ func TestOR(t *testing.T) {
 
 // Tests that bit testing works for various alignments.
 func TestTest(t *testing.T) {
-	for align := 0; align < 2; align++ {
+	for align := range 2 {
 		// Test for bits set in the bulk part
 		p := make([]byte, 1023)[align:]
 		p[100] = 1

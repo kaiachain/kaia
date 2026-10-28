@@ -248,7 +248,7 @@ func TestWalletNotifierLifecycle(t *testing.T) {
 	updates := make(chan accounts.WalletEvent)
 
 	subs := make([]event.Subscription, 2)
-	for i := 0; i < len(subs); i++ {
+	for i := range subs {
 		// Create a new subscription
 		subs[i] = ks.Subscribe(updates)
 
@@ -263,12 +263,12 @@ func TestWalletNotifierLifecycle(t *testing.T) {
 		}
 	}
 	// Unsubscribe and ensure the updater terminates eventually
-	for i := 0; i < len(subs); i++ {
+	for i := range subs {
 		// Close an existing subscription
 		subs[i].Unsubscribe()
 
 		// Ensure the notifier shuts down at and only at the last close
-		for k := 0; k < int(walletRefreshCycle/(250*time.Millisecond))+2; k++ {
+		for range int(walletRefreshCycle/(250*time.Millisecond)) + 2 {
 			ks.mu.RLock()
 			updating = ks.updating
 			ks.mu.RUnlock()
@@ -351,7 +351,7 @@ func TestImportRace(t *testing.T) {
 	var errCnt uint32
 	var wg sync.WaitGroup
 	wg.Add(2)
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		go func() {
 			defer wg.Done()
 			if _, err := ks2.Import(json, "new", "new"); err != nil {
@@ -400,7 +400,7 @@ func TestWalletNotifications(t *testing.T) {
 		live       = make(map[common.Address]accounts.Account)
 		wantEvents []walletEvent
 	)
-	for i := 0; i < 1024; i++ {
+	for range 1024 {
 		if create := len(live) == 0 || rand.Int()%4 > 0; create {
 			// Add a new account and ensure wallet notifications arrives
 			account, err := ks.NewAccount("")

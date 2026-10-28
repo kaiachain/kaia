@@ -165,7 +165,7 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 		if onRoot {
 			var wg sync.WaitGroup
 			wg.Add(16)
-			for i := 0; i < 16; i++ {
+			for i := range 16 {
 				if n.Children[i] != nil {
 					go func(i int) {
 						childHasher := newHasher(&h.hasherOpts)
@@ -179,7 +179,7 @@ func (h *hasher) hashChildren(original node, db *Database, onRoot bool) (node, n
 			}
 			wg.Wait()
 		} else {
-			for i := 0; i < 16; i++ {
+			for i := range 16 {
 				if n.Children[i] != nil {
 					collapsed.Children[i], cached.Children[i] = h.hash(n.Children[i], db, false)
 				}
@@ -242,7 +242,7 @@ func (h *hasher) store(n node, db *Database, force bool, onRoot bool) (node, uin
 					h.onleaf(nil, nil, child, hash, 0)
 				}
 			case *fullNode:
-				for i := 0; i < 16; i++ {
+				for i := range 16 {
 					if child, ok := n.Children[i].(valueNode); ok {
 						h.onleaf(nil, nil, child, hash, 0)
 					}

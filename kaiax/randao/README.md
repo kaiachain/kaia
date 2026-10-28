@@ -30,6 +30,10 @@ This module does not have any background threads.
 
 ## Block processing
 
+### Header
+
+This module prepares and verifies randao header fields (`RandomReveal`, `MixHash`).
+
 ### Execution
 
 #### PostInsertBlock

@@ -59,18 +59,6 @@ func TestCN_CheckSyncMode(t *testing.T) {
 	assert.Equal(t, errCNLightSync, checkSyncMode(c))
 }
 
-func TestCN_SetEngineType(t *testing.T) {
-	cc := &params.ChainConfig{}
-	originalEngineType := types.EngineType
-
-	setEngineType(cc)
-	assert.Equal(t, originalEngineType, types.EngineType)
-
-	cc.Istanbul = &params.IstanbulConfig{}
-	setEngineType(cc)
-	assert.Equal(t, types.Engine_IBFT, types.EngineType)
-}
-
 func TestCN_SetAcceptTxs(t *testing.T) {
 	{
 		mockCtrl, _, _, cn := newCN(t)

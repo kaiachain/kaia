@@ -313,7 +313,7 @@ func (es *EventSystem) eventLoop() {
 	}()
 
 	index := make(filterIndex)
-	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
+	for i := range LastIndexSubscription {
 		index[i] = make(map[rpc.ID]*subscription)
 	}
 

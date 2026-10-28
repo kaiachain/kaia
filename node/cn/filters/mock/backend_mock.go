@@ -87,18 +87,18 @@ func (mr *MockBackendMockRecorder) ChainDB() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainDB", reflect.TypeOf((*MockBackend)(nil).ChainDB))
 }
 
-// Engine mocks base method.
-func (m *MockBackend) Engine() consensus.Engine {
+// Sealer mocks base method.
+func (m *MockBackend) Sealer() consensus.Sealer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Engine")
-	ret0, _ := ret[0].(consensus.Engine)
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(consensus.Sealer)
 	return ret0
 }
 
-// Engine indicates an expected call of Engine.
-func (mr *MockBackendMockRecorder) Engine() *gomock.Call {
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBackendMockRecorder) Sealer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBackend)(nil).Engine))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBackend)(nil).Sealer))
 }
 
 // EventMux mocks base method.

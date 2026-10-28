@@ -65,7 +65,7 @@ func TestMergeBasics(t *testing.T) {
 		storage   = make(map[common.Hash]map[common.Hash][]byte)
 	)
 	// Fill up a parent
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		h := randomHash()
 		data := randomAccount()
 

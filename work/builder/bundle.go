@@ -17,6 +17,8 @@
 package builder
 
 import (
+	"slices"
+
 	"github.com/kaiachain/kaia/common"
 )
 
@@ -82,10 +84,8 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 	}
 
 	// 2-2. Check for overlapping txs
-	for _, txOrGen := range newBundle.BundleTxs {
-		if b.Has(txOrGen) {
-			return true
-		}
+	if slices.ContainsFunc(newBundle.BundleTxs, b.Has) {
+		return true
 	}
 
 	// 2-3. Check for TargetTxHash breaking current bundle.

@@ -177,8 +177,9 @@ func (t *TxInternalDataChainDataAnchoring) setHashForMarshaling(h *common.Hash) 
 	t.Hash = h
 }
 
-func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) {
+func (t *TxInternalDataChainDataAnchoring) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

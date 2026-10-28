@@ -24,9 +24,9 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
-	proxycontracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
-	testcontracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/kip113"
+	proxycontracts "github.com/kaiachain/kaia/contracts/bindings/proxyv4"
+	testcontracts "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"
@@ -136,6 +136,47 @@ func TestAllocKip113(t *testing.T) {
 	// 3. Compare the two states
 	compareStorage(t, backend, contractAddr, allocStorage)
 	compareStorage(t, backend, kip113Addr, allocLogicStorage)
+}
+
+// The verification result is memoized per key, so an AddressBookV2 write unrelated to
+// BLS does not re-verify the whole validator set.
+func TestVerifyBlsPublicKeyInfoCached(t *testing.T) {
+	_, pub, pop := makeBlsKey()
+
+	t.Run("populates", func(t *testing.T) {
+		blsPopCache.Purge()
+		assert.NoError(t, newBlsPublicKeyInfo(pub, pop).VerifyErr)
+		assert.Equal(t, 1, blsPopCache.Len())
+		assert.NoError(t, newBlsPublicKeyInfo(pub, pop).VerifyErr)
+		assert.Equal(t, 1, blsPopCache.Len())
+	})
+
+	// A poisoned entry must win over the real verification of a valid pair.
+	t.Run("is consulted", func(t *testing.T) {
+		blsPopCache.Purge()
+		blsPopCache.Add(string(crypto.Keccak256(pub, pop)), assert.AnError)
+		assert.ErrorIs(t, newBlsPublicKeyInfo(pub, pop).VerifyErr, assert.AnError)
+	})
+
+	// Distinct keys must not share an entry, whatever their results are.
+	t.Run("keys are isolated", func(t *testing.T) {
+		blsPopCache.Purge()
+		_, pub2, pop2 := makeBlsKey()
+		for range 2 { // twice, so the second pass is served from the cache
+			assert.NoError(t, newBlsPublicKeyInfo(pub, pop).VerifyErr)
+			assert.NoError(t, newBlsPublicKeyInfo(pub2, pop2).VerifyErr)
+			assert.ErrorIs(t, newBlsPublicKeyInfo(pub, pop2).VerifyErr, ErrKip113BadPop)
+		}
+		assert.Equal(t, 3, blsPopCache.Len())
+	})
+
+	t.Run("caches failure", func(t *testing.T) {
+		blsPopCache.Purge()
+		_, _, otherPop := makeBlsKey()
+		assert.ErrorIs(t, newBlsPublicKeyInfo(pub, otherPop).VerifyErr, ErrKip113BadPop)
+		assert.Equal(t, 1, blsPopCache.Len())
+		assert.ErrorIs(t, newBlsPublicKeyInfo(pub, otherPop).VerifyErr, ErrKip113BadPop)
+	})
 }
 
 func deployKip113Mock(t *testing.T, sender *bind.TransactOpts, backend *backends.SimulatedBackend, params ...interface{}) (*testcontracts.KIP113MockTransactor, common.Address) {

@@ -50,6 +50,7 @@ var (
 	ErrInvalidSig                     = errors.New("invalid transaction v, r, s values")
 	ErrInvalidSigSender               = errors.New("invalid transaction v, r, s values of the sender")
 	ErrInvalidSigFeePayer             = errors.New("invalid transaction v, r, s values of the fee payer")
+	ErrInvalidSignatureCount          = errors.New("invalid number of transaction signatures")
 	ErrInvalidTxTypeForAnchoredData   = errors.New("invalid transaction type for anchored data")
 	ErrNotLegacyAccount               = errors.New("not a legacy account")
 	ErrInvalidAccountKey              = errors.New("invalid account key")
@@ -63,6 +64,12 @@ var (
 // deriveSigner makes a *best* guess about which signer to use.
 func deriveSigner(V *big.Int) Signer {
 	return LatestSignerForChainID(deriveChainId(V))
+}
+
+// errSingleSignatureOnly reports that a single-signature transaction type was
+// given a signature list of the wrong length.
+func errSingleSignatureOnly(txType TxType, got int) error {
+	return fmt.Errorf("%w: %s accepts exactly one signature, got %d", ErrInvalidSignatureCount, txType, got)
 }
 
 func ErrSender(err error) error {
@@ -106,7 +113,7 @@ type Transaction struct {
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
-	markedUnexecutable int32
+	markedUnexecutable atomic.Int32
 
 	// lock for protecting fields in Transaction struct
 	mu sync.RWMutex
@@ -546,6 +553,10 @@ func (tx *Transaction) Validate(db StateDB, signer Signer, currentBlockNumber ui
 			}
 		}
 	}
+	// Range-check the fee ratio on the consensus path.
+	if feeRatio, isRatioTx := tx.FeeRatio(); isRatioTx && !feeRatio.IsValid() {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
 	return tx.data.Validate(db, currentBlockNumber, checkMutableValue)
 }
 
@@ -753,7 +764,9 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 		te.SetChainId(signer.ChainID())
 	}
 
-	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
+	if err := cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}}); err != nil {
+		return nil, err
+	}
 	return cpy, nil
 }
 
@@ -773,9 +786,13 @@ func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transa
 	return cpy, nil
 }
 
-// Cost returns amount + gasprice * gaslimit.
+// Cost returns the maximum transaction cost.
 func (tx *Transaction) Cost() *big.Int {
 	total := tx.Fee()
+	if blobFeeCap := tx.BlobGasFeeCap(); blobFeeCap != nil {
+		blobFee := new(big.Int).Mul(new(big.Int).SetUint64(tx.BlobGas()), blobFeeCap)
+		total.Add(total, blobFee)
+	}
 	total.Add(total, tx.data.GetValue())
 	return total
 }
@@ -792,8 +809,7 @@ func (tx *Transaction) Sign(s Signer, prv *ecdsa.PrivateKey) error {
 		return err
 	}
 
-	tx.SetSignature(TxSignatures{sig})
-	return nil
+	return tx.SetSignature(TxSignatures{sig})
 }
 
 // SignWithKeys signs the tx with the given signer and a slice of private keys.
@@ -804,8 +820,7 @@ func (tx *Transaction) SignWithKeys(s Signer, prv []*ecdsa.PrivateKey) error {
 		return err
 	}
 
-	tx.SetSignature(sig)
-	return nil
+	return tx.SetSignature(sig)
 }
 
 // SignFeePayer signs the tx with the given signer and private key as a fee payer.
@@ -864,8 +879,11 @@ func (tx *Transaction) GetFeePayerSignatures() (TxSignatures, error) {
 	return tf.GetFeePayerRawSignatureValues(), nil
 }
 
-func (tx *Transaction) SetSignature(signature TxSignatures) {
-	tx.data.SetSignature(signature)
+// SetSignature sets the sender signatures of the transaction. If the underlying
+// transaction type cannot hold the given number of signatures it returns an error
+// wrapping ErrInvalidSignatureCount (check with errors.Is).
+func (tx *Transaction) SetSignature(signature TxSignatures) error {
+	return tx.data.SetSignature(signature)
 }
 
 func (tx *Transaction) MarkUnexecutable(b bool) {
@@ -873,15 +891,30 @@ func (tx *Transaction) MarkUnexecutable(b bool) {
 	if b {
 		v = 1
 	}
-	atomic.StoreInt32(&tx.markedUnexecutable, v)
+	tx.markedUnexecutable.Store(v)
 }
 
 func (tx *Transaction) IsMarkedUnexecutable() bool {
-	return atomic.LoadInt32(&tx.markedUnexecutable) == 1
+	return tx.markedUnexecutable.Load() == 1
 }
 
 func (tx *Transaction) RawSignatureValues() TxSignatures {
 	return tx.data.RawSignatureValues()
+}
+
+// ValidateSignatureListLength checks the signature-list limit applied to
+// untrusted transaction ingress. It must not be used while decoding or
+// executing blocks because pre-Istanbul blocks may contain longer lists.
+func (tx *Transaction) ValidateSignatureListLength() error {
+	if uint64(len(tx.RawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	if feePayerTx, ok := tx.data.(TxInternalDataFeePayer); ok && uint64(len(feePayerTx.GetFeePayerRawSignatureValues())) > accountkey.MaxNumKeysForMultiSig {
+		return kerrors.ErrMaxKeysExceed
+	}
+
+	return nil
 }
 
 func (tx *Transaction) String() string {

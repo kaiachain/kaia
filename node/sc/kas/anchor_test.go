@@ -153,7 +153,7 @@ func testBlockToAnchoringDataInternalType0(t *testing.T, period uint64) {
 	pastCnt := [100]uint64{}
 	txCnt := uint64(0)
 
-	for blkNum := uint64(0); blkNum < testBlkN; blkNum++ {
+	for blkNum := range testBlkN {
 		// Gen random block
 		header := &types.Header{Number: big.NewInt(int64(blkNum))}
 		block := types.NewBlockWithHeader(header)
@@ -185,7 +185,7 @@ func genTransactions(n uint64) (types.Transactions, error) {
 
 	txs := types.Transactions{}
 
-	for i := uint64(0); i < n; i++ {
+	for range n {
 		tx, _ := types.SignTx(
 			types.NewTransaction(0, addr,
 				big.NewInt(int64(n)), 0, big.NewInt(int64(n)), nil), signer, key)

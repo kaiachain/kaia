@@ -84,12 +84,6 @@ var (
 		Value:   0,
 		Aliases: []string{"topology.validators-num"},
 	}
-	numOfPNsFlag = &cli.IntFlag{
-		Name:    "pn-num",
-		Usage:   "Number of proxy node",
-		Value:   0,
-		Aliases: []string{"topology.pn-num"},
-	}
 	numOfENsFlag = &cli.IntFlag{
 		Name:    "en-num",
 		Usage:   "Number of end-point node",
@@ -101,12 +95,6 @@ var (
 		Usage:   "Number of service chain nodes",
 		Value:   0,
 		Aliases: []string{"topology.scn-num"},
-	}
-	numOfSPNsFlag = &cli.IntFlag{
-		Name:    "spn-num",
-		Usage:   "Number of service chain proxy nodes",
-		Value:   0,
-		Aliases: []string{"topology.spn-num"},
 	}
 	numOfSENsFlag = &cli.IntFlag{
 		Name:    "sen-num",
@@ -142,12 +130,6 @@ var (
 	cnNodeKeyDirFlag = &cli.StringFlag{
 		Name:  "cn-nodekey-dir",
 		Usage: "CN nodekey dir containing nodekey*",
-		Value: "",
-	}
-
-	pnNodeKeyDirFlag = &cli.StringFlag{
-		Name:  "pn-nodekey-dir",
-		Usage: "PN nodekey dir containing nodekey*",
 		Value: "",
 	}
 
@@ -384,7 +366,7 @@ var (
 	rewardMinimumStakeFlag = &cli.StringFlag{
 		Name:    "reward-minimum-stake",
 		Usage:   "reward minimum stake flag",
-		Value:   "2000000",
+		Value:   "5000000",
 		Aliases: []string{"genesis.reward.minimum-stake"},
 	}
 
@@ -547,6 +529,52 @@ var (
 		Usage:   "osakaCompatible blockNumber",
 		Value:   0,
 		Aliases: []string{"genesis.hardfork.osaka-compatible-blocknumber"},
+	}
+
+	permissionlessCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "permissionless-compatible-blocknumber",
+		Usage:   "permissionlessCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.permissionless-compatible-blocknumber"},
+	}
+
+	vrankEpochFlag = &cli.Uint64Flag{
+		Name:    "vrank-epoch",
+		Usage:   "VRank epoch block interval for permissionless mode (default: 86400)",
+		Value:   params.DefaultVRankEpoch,
+		Aliases: []string{"genesis.vrank-epoch"},
+	}
+
+	publicDelegationFlag = &cli.BoolFlag{
+		Name:    "public-delegation",
+		Usage:   "deploy each validator's CnStaking with a PublicDelegation in permissionless mode",
+		Aliases: []string{"genesis.public-delegation"},
+	}
+
+	pfsThresholdFlag = &cli.Int64Flag{
+		Name:    "pfs-threshold",
+		Usage:   "PFS threshold for severe violation in permissionless mode (default: 2)",
+		Value:   defaultPfsThreshold,
+		Aliases: []string{"genesis.pfs-threshold"},
+	}
+
+	cfsThresholdFlag = &cli.Int64Flag{
+		Name:    "cfs-threshold",
+		Usage:   "CFS threshold for candidate testing in permissionless mode (default: 300)",
+		Value:   defaultCfsThreshold,
+		Aliases: []string{"genesis.cfs-threshold"},
+	}
+
+	permissionlessGenesisDeployerFlag = &cli.StringFlag{
+		Name:    "permissionless-genesis-deployer",
+		Usage:   "Genesis-only deployer address for permissionless system contract CREATE deployments",
+		Value:   defaultPermissionlessGenesisDeployer,
+		Aliases: []string{"genesis.permissionless-genesis-deployer"},
+	}
+
+	allocPermissionlessPrerequisitesFlag = &cli.BoolFlag{
+		Name:  "alloc-permissionless-prerequisites",
+		Usage: "Allocate permissionless prerequisite contracts and Registry records in genesis.json for a delayed hardfork",
 	}
 
 	kip113ProxyAddressFlag = &cli.StringFlag{

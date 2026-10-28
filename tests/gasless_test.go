@@ -34,12 +34,13 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
-	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
-	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
-	gaslessContract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip247"
-	testingContracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
-	testingGaslessContracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts/gasless"
+	kip149contract "github.com/kaiachain/kaia/contracts/bindings/kip149"
+	gaslessContract "github.com/kaiachain/kaia/contracts/bindings/kip247"
+	testingContracts "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
+	testingGaslessContracts "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts/gasless"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/router"
+	"github.com/kaiachain/kaia/crypto"
 	gaslessImpl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -55,6 +56,13 @@ var (
 
 func TestGasless(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlError)
+
+	// Bytecode regression: pin the keccak256 of Uniswap runtime bytecode used in gasless.
+	// DO NOT MODIFY THE EXPECTED HASHES BELOW.
+	assert.Equal(t, "0xbab145d02e7005f0d84c6c1639d39b799b0ea16df99ebbdaf5a14d9da820b4e0",
+		crypto.Keccak256Hash(common.Hex2Bytes(uniswapFactoryContracts.UniswapV2FactoryBinRuntime)).Hex())
+	assert.Equal(t, "0x8078c0090b05e0bee0587064947604e217146cc295dcb119a2c0217d6e88dac5",
+		crypto.Keccak256Hash(common.Hex2Bytes(uniswapRouterContracts.UniswapV2Router02BinRuntime)).Hex())
 
 	// prepare chain configuration
 	config := params.MainnetChainConfig.Copy()
@@ -98,7 +106,7 @@ func TestGasless(t *testing.T) {
 
 	/* ------------- Register GaslessSwapRouter address in Registry ------------- */
 	// send register tx
-	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentHeader().Number, big.NewInt(10))
+	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentHeader().Number, big.NewInt(4))
 	registry, err := kip149contract.NewRegistry(system.RegistryAddr, transactor)
 	if err != nil {
 		t.Fatal(err)

@@ -387,7 +387,7 @@ var dbConfigRatio = [databaseEntryTypeSize]int{
 // If it isn't, logger.Crit is called.
 func checkDBEntryConfigRatio() {
 	entryConfigRatioSum := 0
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
+	for i := range int(databaseEntryTypeSize) {
 		entryConfigRatioSum += dbConfigRatio[i]
 	}
 	if entryConfigRatioSum != 100 {
@@ -437,6 +437,10 @@ type databaseManager struct {
 	inMigration          bool
 	migrationBlockNumber uint64
 	migrationOldDBPath   string
+
+	// lockClose guards closed against the background RemoveOldDB writing to a closed MiscDB.
+	lockClose sync.RWMutex
+	closed    bool
 }
 
 func NewMemoryDBManager() DBManager {
@@ -493,7 +497,7 @@ func singleDatabaseDBManager(dbc *DBConfig) (DBManager, error) {
 	}
 
 	db.Meter(dbMetricPrefix)
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
+	for i := range int(databaseEntryTypeSize) {
 		dbm.dbs[i] = db
 	}
 	return dbm, nil
@@ -895,7 +899,15 @@ func (dbm *databaseManager) FinishStateMigration(succeed bool) chan struct{} {
 
 func (dbm *databaseManager) RemoveOldDB(dbPath string, endCheck chan struct{}) {
 	defer func() {
-		dbm.setMigrationOldDBPath("")
+		// The DB manager can be closed while the old DB is being removed.
+		// Then the path stays in MiscDB and the removal is retried on the next start.
+		dbm.lockClose.RLock()
+		if dbm.closed {
+			logger.Warn("Database closed before old database removal finished", "dir", dbPath)
+		} else {
+			dbm.setMigrationOldDBPath("")
+		}
+		dbm.lockClose.RUnlock()
 		if endCheck != nil {
 			close(endCheck)
 		}
@@ -968,23 +980,23 @@ func (dbm *databaseManager) TryCatchUpWithPrimary() error {
 }
 
 func (dbm *databaseManager) Stat(property string) (string, error) {
-	stats := ""
-	errs := ""
+	var stats strings.Builder
+	var errs strings.Builder
 	for idx, db := range dbm.dbs {
 		if db != nil {
 			stat, err := db.Stat(property)
 			headInfo := fmt.Sprintf(" [%s:%s]\n", DBEntryType(idx), db.Type())
 			if err == nil {
-				stats += headInfo + stat
+				stats.WriteString(headInfo + stat)
 			} else {
-				errs += headInfo + err.Error()
+				errs.WriteString(headInfo + err.Error())
 			}
 		}
 	}
-	if errs == "" {
-		return stats, nil
+	if errs.String() == "" {
+		return stats.String(), nil
 	} else {
-		return stats, errors.New(errs)
+		return stats.String(), errors.New(errs.String())
 	}
 }
 
@@ -1032,6 +1044,10 @@ func (dbm *databaseManager) getDatabase(dbEntryType DBEntryType) Database {
 }
 
 func (dbm *databaseManager) Close() {
+	dbm.lockClose.Lock()
+	defer dbm.lockClose.Unlock()
+	dbm.closed = true
+
 	// If single DB, only close the first database.
 	if dbm.config.SingleDB {
 		dbm.dbs[0].Close()

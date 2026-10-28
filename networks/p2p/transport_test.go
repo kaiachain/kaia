@@ -19,6 +19,7 @@ package p2p
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -39,6 +40,7 @@ func TestProtocolHandshake(t *testing.T) {
 		pub1    = crypto.FromECDSAPub(&prv1.PublicKey)[1:]
 		id1, _  = discover.BytesID(pub1)
 		hs1     = &protoHandshake{Version: 3, ID: id1, ListenPort: []uint64{}, Caps: []Cap{{"c", 1}, {"d", 3}}}
+		large   = make([]byte, baseProtocolMaxMsgSize+1)
 
 		wg sync.WaitGroup
 	)
@@ -73,6 +75,10 @@ func TestProtocolHandshake(t *testing.T) {
 			t.Errorf("dial side proto handshake mismatch:\ngot: %s\nwant: %s\n", spew.Sdump(phs), spew.Sdump(hs1))
 			return
 		}
+		if err := Send(frame, 42, large); err != nil {
+			t.Errorf("dial side large message error: %v", err)
+			return
+		}
 		frame.close(DiscQuitting)
 	}()
 	go func() {
@@ -97,6 +103,10 @@ func TestProtocolHandshake(t *testing.T) {
 		phs.Rest = nil
 		if !reflect.DeepEqual(phs, hs0) {
 			t.Errorf("listen side proto handshake mismatch:\ngot: %s\nwant: %s\n", spew.Sdump(phs), spew.Sdump(hs0))
+			return
+		}
+		if err := ExpectMsg(rlpx, 42, large); err != nil {
+			t.Errorf("error receiving large message: %v", err)
 			return
 		}
 
@@ -147,5 +157,50 @@ func TestProtocolHandshakeErrors(t *testing.T) {
 		if !reflect.DeepEqual(err, test.err) {
 			t.Errorf("test %d: error mismatch: got %q, want %q", i, err, test.err)
 		}
+	}
+}
+
+func TestProtocolHandshakeFrameLimit(t *testing.T) {
+	prv0, _ := crypto.GenerateKey()
+	prv1, _ := crypto.GenerateKey()
+	pub1 := crypto.FromECDSAPub(&prv1.PublicKey)[1:]
+	id1, _ := discover.BytesID(pub1)
+
+	fd0, fd1, err := pipes.TCPPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer fd0.Close()
+	defer fd1.Close()
+
+	client := newRLPX(fd0, &prv1.PublicKey)
+	server := newRLPX(fd1, nil)
+	encDone := make(chan error, 1)
+	go func() {
+		_, err := server.doEncHandshake(prv1)
+		encDone <- err
+	}()
+	if _, err := client.doEncHandshake(prv0); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-encDone; err != nil {
+		t.Fatal(err)
+	}
+
+	protoDone := make(chan error, 1)
+	go func() {
+		_, err := server.doProtoHandshake(&protoHandshake{Version: 3, ID: id1})
+		protoDone <- err
+	}()
+	writeDone := make(chan error, 1)
+	go func() { writeDone <- Send(client, handshakeMsg, make([]byte, 4096)) }()
+	if _, err := client.ReadMsg(); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-writeDone; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-protoDone; err == nil || !strings.Contains(err.Error(), "frame too large") {
+		t.Fatalf("unexpected handshake error: %v", err)
 	}
 }

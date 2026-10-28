@@ -318,7 +318,7 @@ func createTestSidecar(t *testing.T, numBlobs int) *types.BlobTxSidecar {
 	proofs := make([]kzg4844.Proof, numBlobs)
 
 	// Fill with test data (simple pattern for testing)
-	for i := 0; i < numBlobs; i++ {
+	for i := range numBlobs {
 		// Create a simple blob with pattern
 		var blob kzg4844.Blob
 		for j := 0; j < len(blob) && j < 100; j++ {
@@ -329,7 +329,7 @@ func createTestSidecar(t *testing.T, numBlobs int) *types.BlobTxSidecar {
 		// Create simple commitment and proof
 		var commitment kzg4844.Commitment
 		var proof kzg4844.Proof
-		for j := 0; j < len(commitment); j++ {
+		for j := range len(commitment) {
 			commitment[j] = byte(i + j)
 			proof[j] = byte(i + j + 10)
 		}

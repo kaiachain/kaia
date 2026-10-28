@@ -1,0 +1,136 @@
+// Copyright 2026 The Kaia Authors
+// This file is part of the Kaia library.
+//
+// The Kaia library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The Kaia library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
+
+package vrank
+
+import (
+	"testing"
+	"time"
+
+	"github.com/kaiachain/kaia/common"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestCollector_GetViewData_UnknownView(t *testing.T) {
+	c := NewCollector()
+	at, _, m := c.GetViewData(ViewKey{N: 1, R: 0})
+	assert.True(t, at.IsZero())
+	assert.Nil(t, m)
+}
+
+func TestCollector_GetViewData_NoCandMsgAdded(t *testing.T) {
+	var (
+		c   = NewCollector()
+		vk  = ViewKey{N: 1, R: 0}
+		now = time.Now()
+	)
+	c.AddPrepreparedTime(vk, now, common.Hash{})
+	at, _, m := c.GetViewData(vk)
+	assert.False(t, at.IsZero())
+	assert.Equal(t, now.UnixNano(), at.UnixNano())
+	assert.Nil(t, m)
+}
+
+func TestCollector_AddCandMsg_DuplicateRejected(t *testing.T) {
+	var (
+		c    = NewCollector()
+		vk   = ViewKey{N: 1, R: 0}
+		addr = common.HexToAddress("0x01")
+		msg  = &VRankCandidate{BlockNumber: 1, Round: 0}
+		when = time.Now()
+	)
+
+	ok := c.AddCandMsg(vk, addr, when, msg)
+	assert.True(t, ok)
+	_, _, m := c.GetViewData(vk)
+	assert.Len(t, m, 1)
+	assert.Equal(t, msg, m[addr].Msg)
+
+	ok = c.AddCandMsg(vk, addr, when.Add(time.Second), msg)
+	assert.False(t, ok)
+	_, _, m = c.GetViewData(vk)
+	assert.Len(t, m, 1)
+}
+
+func TestCollector_GetViewData_ReturnsSnapshotCopy(t *testing.T) {
+	var (
+		c     = NewCollector()
+		vk    = ViewKey{N: 1, R: 0}
+		addr1 = common.HexToAddress("0x01")
+		addr2 = common.HexToAddress("0x02")
+		msg   = &VRankCandidate{BlockNumber: 1, Round: 0}
+		when  = time.Now()
+	)
+
+	c.AddCandMsg(vk, addr1, when, msg)
+	_, _, m1 := c.GetViewData(vk)
+	require.Len(t, m1, 1)
+
+	// Mutate returned map; this must not affect collector internals.
+	m1[addr2] = CandidateMsg{ReceivedAt: when, Msg: msg}
+	delete(m1, addr1)
+
+	_, _, m2 := c.GetViewData(vk)
+	assert.Len(t, m2, 1)
+	assert.Contains(t, m2, addr1)
+	assert.NotContains(t, m2, addr2)
+}
+
+func TestCollector_PruneReported(t *testing.T) {
+	var (
+		c = NewCollector()
+		// Pruning is per sequence: every round of block 1 goes, every round of block 2 stays.
+		views    = []ViewKey{{N: 1, R: 0}, {N: 1, R: 8}, {N: 2, R: 0}, {N: 2, R: 1}, {N: 3, R: 0}}
+		wantGone = []bool{true, true, false, false, false}
+	)
+
+	for _, v := range views {
+		c.AddPrepreparedTime(v, time.Now(), common.Hash{})
+		c.AddCandMsg(v, common.HexToAddress("0x01"), time.Now(), &VRankCandidate{BlockNumber: v.N, Round: v.R})
+	}
+
+	c.PruneReported(2)
+	for i, v := range views {
+		at, _, m := c.GetViewData(v)
+		if wantGone[i] {
+			assert.True(t, at.IsZero(), "view %v should be removed", v)
+			assert.Nil(t, m)
+		} else {
+			assert.False(t, at.IsZero(), "view %v should remain", v)
+			assert.NotNil(t, m)
+		}
+	}
+}
+
+func TestCollector_PendingEvaluations(t *testing.T) {
+	c := NewCollector()
+	for _, v := range []ViewKey{{N: 1, R: 0}, {N: 5, R: 0}, {N: 5, R: 2}} {
+		c.AddPrepreparedTime(v, time.Now(), common.Hash{})
+	}
+
+	assert.ElementsMatch(t, []uint64{1, 5}, c.PendingEvaluations(0)) // both rounds of 5 collapse
+	assert.Equal(t, []uint64{5}, c.PendingEvaluations(2))
+}
+
+func TestViewKey_Cmp(t *testing.T) {
+	a, b, c := ViewKey{N: 1, R: 0}, ViewKey{N: 2, R: 0}, ViewKey{N: 1, R: 1}
+	assert.Less(t, a.Cmp(b), 0)
+	assert.Greater(t, b.Cmp(a), 0)
+	assert.Equal(t, 0, a.Cmp(a))
+	assert.Less(t, a.Cmp(c), 0)
+	assert.Greater(t, c.Cmp(a), 0)
+}

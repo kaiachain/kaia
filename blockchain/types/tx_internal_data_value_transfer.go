@@ -169,8 +169,9 @@ func (t *TxInternalDataValueTransfer) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *TxInternalDataValueTransfer) SetSignature(s TxSignatures) {
+func (t *TxInternalDataValueTransfer) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

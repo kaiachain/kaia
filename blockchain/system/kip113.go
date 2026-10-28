@@ -23,12 +23,14 @@ import (
 	"encoding/json"
 	"maps"
 	"math/big"
-	"sort"
+	"slices"
 	"strings"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/kip113"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 )
 
@@ -38,12 +40,31 @@ type BlsPublicKeyInfo struct {
 	VerifyErr error // Nil if valid. Must check before use.
 }
 
+// Has to hold AddressBookV2's whole node set at once, or every read evicts what the
+// next one needs. maxNodeCount is configurable, so this is a ceiling, not a bound.
+const blsPopCacheSize = 1024
+
+// Memoizes verifyBlsPublicKeyInfo, whose inputs stay put while the AddressBookV2
+// storage root moves, so an unrelated write does not re-verify the whole set.
+var blsPopCache, _ = lru.NewARC(blsPopCacheSize)
+
 func newBlsPublicKeyInfo(publicKey []byte, pop []byte) BlsPublicKeyInfo {
 	return BlsPublicKeyInfo{
 		PublicKey: publicKey,
 		Pop:       pop,
-		VerifyErr: verifyBlsPublicKeyInfo(publicKey, pop),
+		VerifyErr: verifyBlsPublicKeyInfoCached(publicKey, pop),
 	}
+}
+
+func verifyBlsPublicKeyInfoCached(publicKey []byte, pop []byte) error {
+	cacheKey := string(crypto.Keccak256(publicKey, pop))
+	if cached, ok := blsPopCache.Get(cacheKey); ok {
+		err, _ := cached.(error) // a nil error is stored as a nil interface
+		return err
+	}
+	err := verifyBlsPublicKeyInfo(publicKey, pop)
+	blsPopCache.Add(cacheKey, err)
+	return err
 }
 
 func verifyBlsPublicKeyInfo(publicKey []byte, pop []byte) error {
@@ -108,8 +129,8 @@ func AllocKip113Proxy(init AllocKip113Init) map[common.Hash]common.Hash {
 	for addr := range init.Infos {
 		addrs = append(addrs, addr)
 	}
-	sort.Slice(addrs, func(i, j int) bool {
-		return strings.Compare(addrs[i].Hex(), addrs[j].Hex()) > 0
+	slices.SortFunc(addrs, func(a, b common.Address) int {
+		return strings.Compare(b.Hex(), a.Hex())
 	})
 
 	// slot[201]: address[] allNodeIds;
@@ -152,29 +173,30 @@ func AllocKip113Logic() map[common.Hash]common.Hash {
 }
 
 func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num *big.Int) (BlsPublicKeyInfos, error) {
-	caller, err := contracts.NewIKIP113Caller(contractAddr, backend)
+	caller, err := contracts.NewSimpleBlsRegistryCaller(contractAddr, backend)
 	if err != nil {
 		return nil, err
 	}
-
 	opts := &bind.CallOpts{BlockNumber: num}
 	ret, err := caller.GetAllBlsInfo(opts)
 	if err != nil {
 		return nil, err
 	}
+	return buildBlsPublicKeyInfos(ret.NodeIdList, len(ret.PubkeyList), func(i int) ([]byte, []byte) {
+		return ret.PubkeyList[i].PublicKey, ret.PubkeyList[i].Pop
+	})
+}
 
-	if len(ret.NodeIdList) != len(ret.PubkeyList) {
+// buildBlsPublicKeyInfos assembles a BlsPublicKeyInfos map from parallel
+// nodeId / pubkey lists returned by KIP113 or AddressBookV2 BLS getters.
+func buildBlsPublicKeyInfos(nodeIdList []common.Address, pubkeyLen int, getKeyPop func(i int) ([]byte, []byte)) (BlsPublicKeyInfos, error) {
+	if len(nodeIdList) != pubkeyLen {
 		return nil, ErrKip113BadResult
 	}
-
-	infos := make(BlsPublicKeyInfos)
-	for i := 0; i < len(ret.NodeIdList); i++ {
-		addr := ret.NodeIdList[i]
-		infos[addr] = newBlsPublicKeyInfo(
-			ret.PubkeyList[i].PublicKey,
-			ret.PubkeyList[i].Pop,
-		)
+	infos := make(BlsPublicKeyInfos, len(nodeIdList))
+	for i, addr := range nodeIdList {
+		pub, pop := getKeyPop(i)
+		infos[addr] = newBlsPublicKeyInfo(pub, pop)
 	}
-
-	return infos, err
+	return infos, nil
 }

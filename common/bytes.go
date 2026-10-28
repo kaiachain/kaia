@@ -194,7 +194,7 @@ type Entry struct {
 // CreateEntries creates random key/value pairs.
 func CreateEntries(entryNum int) []Entry {
 	entries := make([]Entry, entryNum)
-	for i := 0; i < entryNum; i++ {
+	for i := range entryNum {
 		entries[i] = Entry{Key: MakeRandomBytes(256), Val: MakeRandomBytes(300)}
 	}
 	return entries

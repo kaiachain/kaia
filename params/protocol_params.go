@@ -242,7 +242,8 @@ var (
 	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
 	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
-	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+	DefaultBlockScore      = big.NewInt(1)
+	DurationLimit          = big.NewInt(13) // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
 
 	// SystemAddress is where the system-transaction is sent from as per EIP-4788
 	SystemAddress = common.HexToAddress("0xfffffffffffffffffffffffffffffffffffffffe")

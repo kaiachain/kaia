@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
@@ -50,20 +49,6 @@ func (m *MockGovModule) APIs() []rpc.API {
 func (mr *MockGovModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockGovModule)(nil).APIs))
-}
-
-// FinalizeHeader mocks base method.
-func (m *MockGovModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeHeader", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FinalizeHeader indicates an expected call of FinalizeHeader.
-func (mr *MockGovModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockGovModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
 }
 
 // GetParamSet mocks base method.
@@ -159,15 +144,15 @@ func (mr *MockGovModuleMockRecorder) Stop() *gomock.Call {
 }
 
 // VerifyHeader mocks base method.
-func (m *MockGovModule) VerifyHeader(arg0 *types.Header) error {
+func (m *MockGovModule) VerifyHeader(arg0, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0)
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockGovModuleMockRecorder) VerifyHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockGovModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockGovModule)(nil).VerifyHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockGovModule)(nil).VerifyHeader), arg0, arg1)
 }

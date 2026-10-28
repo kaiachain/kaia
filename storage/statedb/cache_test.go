@@ -59,7 +59,7 @@ func TestFastCache_SaveAndLoad(t *testing.T) {
 	// Generate test data
 	var keys [][]byte
 	var vals [][]byte
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		keys = append(keys, common.MakeRandomBytes(128))
 		vals = append(vals, common.MakeRandomBytes(128))
 	}

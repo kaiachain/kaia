@@ -726,12 +726,62 @@ func TestSetupGenesis(t *testing.T) {
 	}
 }
 
+func TestSetupGenesisRejectsShortVRankEpoch(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	const wantErr = "vrankEpoch 7 is below the minimum 8"
+	newGenesis := func(fork *big.Int, epoch uint64) *Genesis {
+		config := params.TestKaiaConfig("osaka")
+		config.PermissionlessCompatibleBlock = fork
+		config.VRankEpoch = epoch
+		genesis := &Genesis{Config: config}
+		genesis.Governance = SetGenesisGovernance(genesis)
+		return genesis
+	}
+
+	t.Run("fresh db", func(t *testing.T) {
+		db := database.NewMemoryDBManager()
+		_, _, err := SetupGenesisBlock(db, newGenesis(big.NewInt(100), 7))
+		assert.ErrorContains(t, err, wantErr)
+		assert.Equal(t, common.Hash{}, db.ReadCanonicalHash(0))
+	})
+
+	t.Run("fresh db, override", func(t *testing.T) {
+		db := database.NewMemoryDBManager()
+		_, _, err := SetupGenesisBlockWithOverride(db, newGenesis(nil, 7), &ChainOverrides{OverridePermissionless: big.NewInt(100)})
+		assert.ErrorContains(t, err, wantErr)
+		assert.Equal(t, common.Hash{}, db.ReadCanonicalHash(0))
+	})
+
+	t.Run("stored chain, override", func(t *testing.T) {
+		db := database.NewMemoryDBManager()
+		_, ghash, err := SetupGenesisBlock(db, newGenesis(nil, 7))
+		require.NoError(t, err)
+
+		_, _, err = SetupGenesisBlockWithOverride(db, nil, &ChainOverrides{OverridePermissionless: big.NewInt(100)})
+		assert.ErrorContains(t, err, wantErr)
+		storedCfg, err := db.ReadChainConfig(ghash)
+		require.NoError(t, err)
+		assert.Nil(t, storedCfg.PermissionlessCompatibleBlock)
+	})
+
+	t.Run("stored chain, minimum epoch", func(t *testing.T) {
+		db := database.NewMemoryDBManager()
+		_, _, err := SetupGenesisBlock(db, newGenesis(nil, 8))
+		require.NoError(t, err)
+
+		config, _, err := SetupGenesisBlockWithOverride(db, nil, &ChainOverrides{OverridePermissionless: big.NewInt(100)})
+		require.NoError(t, err)
+		assert.Equal(t, big.NewInt(100), config.PermissionlessCompatibleBlock)
+	})
+}
+
 // Test that SetupGenesisBlock writes the genesis state trie if not present.
 func TestGenesisRestoreState(t *testing.T) {
 	db := database.NewMemoryDBManager()
+	genesis := DefaultGenesisBlock()
 
 	// Setup first to Commit the Genesis block
-	_, hash, err := SetupGenesisBlock(db, nil)
+	_, hash, err := SetupGenesisBlock(db, genesis)
 	assert.Nil(t, err)
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 
@@ -741,7 +791,7 @@ func TestGenesisRestoreState(t *testing.T) {
 	db.DeleteTrieNode(root)
 
 	// Setup again to restore the state trie
-	_, hash, err = SetupGenesisBlock(db, nil)
+	_, hash, err = SetupGenesisBlock(db, genesis)
 	assert.Nil(t, err)
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 	ok, _ := db.HasTrieNode(root)

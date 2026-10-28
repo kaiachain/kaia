@@ -39,7 +39,7 @@ func TestTCPPipe(t *testing.T) {
 	go func() {
 		msgs := 50
 		size := 1024
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			msg := make([]byte, size)
 			_ = binary.PutUvarint(msg, uint64(i))
 
@@ -50,7 +50,7 @@ func TestTCPPipe(t *testing.T) {
 			}
 		}
 
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			msg := make([]byte, size)
 			_ = binary.PutUvarint(msg, uint64(i))
 
@@ -87,7 +87,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 	go func() {
 		msgs := 50
 		size := 7
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			msg := fmt.Appendf(nil, "ping %02d", i)
 
 			_, err := c1.Write(msg)
@@ -97,7 +97,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 			}
 		}
 
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			expected := fmt.Appendf(nil, "ping %02d", i)
 
 			out := make([]byte, size)
@@ -120,7 +120,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 			}
 		}
 
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			expected := fmt.Appendf(nil, "pong %02d", i)
 
 			out := make([]byte, size)
@@ -158,7 +158,7 @@ func TestNetPipe(t *testing.T) {
 		size := 1024
 		// netPipe is blocking, so writes are emitted asynchronously
 		go func() {
-			for i := 0; i < msgs; i++ {
+			for i := range msgs {
 				msg := make([]byte, size)
 				_ = binary.PutUvarint(msg, uint64(i))
 
@@ -170,7 +170,7 @@ func TestNetPipe(t *testing.T) {
 			}
 		}()
 
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			msg := make([]byte, size)
 			_ = binary.PutUvarint(msg, uint64(i))
 
@@ -213,7 +213,7 @@ func TestNetPipeBidirections(t *testing.T) {
 
 		// netPipe is blocking, so writes are emitted asynchronously
 		go func() {
-			for i := 0; i < msgs; i++ {
+			for i := range msgs {
 				msg := fmt.Appendf(nil, pingTemplate, i)
 
 				_, err := c1.Write(msg)
@@ -226,7 +226,7 @@ func TestNetPipeBidirections(t *testing.T) {
 
 		// netPipe is blocking, so reads for pong are emitted asynchronously
 		go func() {
-			for i := 0; i < msgs; i++ {
+			for i := range msgs {
 				expected := fmt.Appendf(nil, pongTemplate, i)
 
 				out := make([]byte, size)
@@ -246,7 +246,7 @@ func TestNetPipeBidirections(t *testing.T) {
 		}()
 
 		// expect to read pings, and respond with pongs to the alternate connection
-		for i := 0; i < msgs; i++ {
+		for i := range msgs {
 			expected := fmt.Appendf(nil, pingTemplate, i)
 
 			out := make([]byte, size)

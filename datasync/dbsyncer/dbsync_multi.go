@@ -89,7 +89,7 @@ func (ds *DBSyncer) parallelSyncBlockHeader(block *types.Block) ([]*BulkInsertQu
 
 	bulkInsertQuerys := []*BulkInsertQuery{}
 
-	proposerAddr, committeeAddrs, err := getProposerAndValidatorsFromBlock(block)
+	proposerAddr, committeeAddrs, err := getProposerAndValidatorsFromBlock(ds.blockchain.Sealer(), block)
 	if err != nil {
 		return nil, err
 	}

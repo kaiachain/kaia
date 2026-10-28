@@ -225,7 +225,7 @@ func (pm *ProtocolManager) synchronise(peer Peer) {
 		logger.Info("Snap sync complete, auto disabling")
 		atomic.StoreUint32(&pm.snapSync, 0)
 	}
-	atomic.StoreUint32(&pm.acceptTxs, 1) // Mark initial sync done
+	pm.acceptTxs.Store(1) // Mark initial sync done
 	if head := pm.blockchain.CurrentBlock(); head.NumberU64() > 0 {
 		// We've completed a sync cycle, notify all peers of new state. This path is
 		// essential in star-topology networks where a gateway node needs to notify

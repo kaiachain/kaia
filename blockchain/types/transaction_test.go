@@ -123,6 +123,21 @@ var testKaiaChainConfig = &params.ChainConfig{
 	UnitPrice:                25000000000, // 25 ston
 }
 
+func TestBlobTransactionCost(t *testing.T) {
+	tx := NewTx(&TxInternalDataEthereumBlob{
+		GasFeeCap:  uint256.NewInt(3),
+		GasLimit:   2,
+		Amount:     uint256.NewInt(5),
+		BlobFeeCap: uint256.NewInt(7),
+		BlobHashes: []common.Hash{{1}},
+	})
+	want := new(big.Int).SetUint64(params.BlobTxBlobGasPerBlob)
+	want.Mul(want, big.NewInt(7))
+	want.Add(want, big.NewInt(11))
+
+	assert.Equal(t, want, tx.Cost())
+}
+
 func TestTransactionSigHash(t *testing.T) {
 	signer := LatestSignerForChainID(common.Big1)
 	if signer.Hash(emptyTx) != common.HexToHash("a715f8447b97e3105d2cc0a8aca1466fa3a02f7cc6d2f9a3fe89f2581c9111c5") {
@@ -476,7 +491,7 @@ func TestRecipientNormal(t *testing.T) {
 func TestTransactionPriceNonceSort(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 25)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 
@@ -485,7 +500,7 @@ func TestTransactionPriceNonceSort(t *testing.T) {
 	groups := map[common.Address]Transactions{}
 	for start, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for i := 0; i < 25; i++ {
+		for i := range 25 {
 			tx, _ := SignTx(NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
 			groups[addr] = append(groups[addr], tx)
 		}
@@ -661,7 +676,7 @@ func TestIntrinsicGas(t *testing.T) {
 func TestTransactionTimeSort(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 5)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := LatestSignerForChainID(big.NewInt(1))
@@ -709,7 +724,7 @@ func TestTransactionTimeSort(t *testing.T) {
 func TestTransactionTimeSortDifferentGasPrice(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 5)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := LatestSignerForChainID(big.NewInt(1))
@@ -879,7 +894,7 @@ func TestTransactionCoding(t *testing.T) {
 			},
 		}
 	)
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		txData := txDataList[i%len(txDataList)](uint64(i))
 		transaction := Transaction{data: txData}
 		tx, err := SignTx(&transaction, signer, key)
@@ -947,7 +962,7 @@ func TestIsSorted(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	batches := make(txByPriceAndTime, 10)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		tx, _ := SignTx(NewTransaction(uint64(i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(i)), nil), signer, key)
 		txWithFee, _ := newTxWithMinerFee(tx, common.Address{}, big.NewInt(int64(i)))
 		batches[i] = txWithFee
@@ -968,7 +983,7 @@ func TestFilterTransactionWithBaseFee(t *testing.T) {
 	pending := make(map[common.Address]Transactions)
 	keys := make([]*ecdsa.PrivateKey, 3)
 
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 
@@ -1061,7 +1076,7 @@ func benchmarkTxSortByPriceAndTime(b *testing.B, size int) {
 	key, _ := crypto.GenerateKey()
 	batches := make(txByPriceAndTime, size)
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		gasFeeCap := rand.Int63n(50)
 		tx, _ := SignTx(NewTx(&TxInternalDataEthereumDynamicFee{
 			AccountNonce: uint64(i),
@@ -1104,7 +1119,7 @@ func TestTransactionPriceNonceSort1559(t *testing.T) {
 func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 25)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := LatestSignerForChainID(common.Big1)
@@ -1115,7 +1130,7 @@ func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
 	for start, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		count := 25
-		for i := 0; i < 25; i++ {
+		for i := range 25 {
 			var tx *Transaction
 			gasFeeCap := rand.Intn(50)
 			if baseFee == nil {
@@ -1197,7 +1212,7 @@ func TestEmptyHeap(t *testing.T) {
 func TestHeapCopy(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 25)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	baseFee := common.Big0
@@ -1207,7 +1222,7 @@ func TestHeapCopy(t *testing.T) {
 	groups := map[common.Address]Transactions{}
 	for start, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for i := 0; i < 25; i++ {
+		for i := range 25 {
 			tx, _ := SignTx(NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
 			groups[addr] = append(groups[addr], tx)
 		}
@@ -1219,7 +1234,7 @@ func TestHeapCopy(t *testing.T) {
 
 	assert.False(t, txset.Empty())
 	assert.False(t, txsetCopy.Empty())
-	for i := 0; i < 25; i++ {
+	for range 25 {
 		txset.Pop()
 	}
 	assert.True(t, txset.Empty())

@@ -30,8 +30,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/api"
+	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -697,20 +699,26 @@ func BenchmarkRPCOutput(t *testing.B) {
 		t.Fatal(err)
 	}
 
-	// Get KaiaBlockChainAPI to execute GetBlockWithConsensusInfoByNumber.
-	apis := bcdata.bc.Engine().APIs(bcdata.bc)
-	var kaiaAPI *api.KaiaBlockChainAPI
-	for _, apiItem := range apis {
-		if apiItem.Namespace == "kaia" {
-			if kAPI, ok := apiItem.Service.(*api.KaiaBlockChainAPI); ok {
-				kaiaAPI = kAPI
-				break
-			}
-		}
-	}
-	if kaiaAPI == nil {
-		t.Fatalf("KaiaBlockChainAPI not found in APIs")
-	}
+	// Build KaiaBlockChainAPI with the minimal backend methods used by this benchmark.
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockBackend := mock_api.NewMockBackend(mockCtrl)
+	mockBackend.EXPECT().ChainConfig().Return(bcdata.bc.Config()).AnyTimes()
+	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, blockNr rpc.BlockNumber) (*types.Block, error) {
+			return bcdata.bc.GetBlockByNumber(uint64(blockNr)), nil
+		},
+	).AnyTimes()
+	mockBackend.EXPECT().Sealer().Return(bcdata.bc.Sealer()).AnyTimes()
+	mockBackend.EXPECT().GetBlockReceiptsInCache(gomock.Any()).Return(nil).AnyTimes()
+	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, hash common.Hash) types.Receipts {
+			return bcdata.bc.GetReceiptsByBlockHash(hash)
+		},
+	).AnyTimes()
+
+	kaiaAPI := api.NewKaiaBlockChainAPI(mockBackend)
 
 	// Print the JSON output of the first block.
 	blkNum := rpc.BlockNumber(1)

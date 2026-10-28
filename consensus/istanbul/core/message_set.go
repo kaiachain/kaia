@@ -29,32 +29,34 @@ import (
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // Construct a new message set to accumulate messages for given sequence/view number.
-func newMessageSet(valSet *istanbul.BlockValSet) *messageSet {
+func newMessageSet(qualified *valset.AddressSet) *messageSet {
 	return &messageSet{
-		view: &istanbul.View{
+		view: &bft.View{
 			Round:    new(big.Int),
 			Sequence: new(big.Int),
 		},
 		messagesMu: new(sync.Mutex),
-		messages:   make(map[common.Address]*message),
-		valSet:     valSet,
+		messages:   make(map[common.Address]*bft.Message),
+		qualified:  qualified,
 	}
 }
 
 // ----------------------------------------------------------------------------
 
 type messageSet struct {
-	view       *istanbul.View
-	valSet     *istanbul.BlockValSet
+	view       *bft.View
+	qualified  *valset.AddressSet
 	messagesMu *sync.Mutex
-	messages   map[common.Address]*message
+	messages   map[common.Address]*bft.Message
 }
 
-func (ms *messageSet) View() *istanbul.View {
+func (ms *messageSet) View() *bft.View {
 	return ms.view
 }
 
@@ -69,7 +71,7 @@ func (ms *messageSet) GetMessages() string {
 	return ret
 }
 
-func (ms *messageSet) Add(msg *message) error {
+func (ms *messageSet) Add(msg *bft.Message) error {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 
@@ -80,7 +82,7 @@ func (ms *messageSet) Add(msg *message) error {
 	return ms.addVerifiedMessage(msg)
 }
 
-func (ms *messageSet) Values() (result []*message) {
+func (ms *messageSet) Values() (result []*bft.Message) {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 
@@ -97,7 +99,7 @@ func (ms *messageSet) Size() int {
 	return len(ms.messages)
 }
 
-func (ms *messageSet) Get(addr common.Address) *message {
+func (ms *messageSet) Get(addr common.Address) *bft.Message {
 	ms.messagesMu.Lock()
 	defer ms.messagesMu.Unlock()
 	return ms.messages[addr]
@@ -105,9 +107,9 @@ func (ms *messageSet) Get(addr common.Address) *message {
 
 // ----------------------------------------------------------------------------
 
-func (ms *messageSet) verify(msg *message) error {
+func (ms *messageSet) verify(msg *bft.Message) error {
 	// verify if the message comes from one of the validators
-	if !ms.valSet.Qualified().Contains(msg.Address) {
+	if !ms.qualified.Contains(msg.Address) {
 		return istanbul.ErrUnauthorizedAddress
 	}
 
@@ -116,7 +118,7 @@ func (ms *messageSet) verify(msg *message) error {
 	return nil
 }
 
-func (ms *messageSet) addVerifiedMessage(msg *message) error {
+func (ms *messageSet) addVerifiedMessage(msg *bft.Message) error {
 	ms.messages[msg.Address] = msg
 	return nil
 }

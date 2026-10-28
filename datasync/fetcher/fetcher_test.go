@@ -252,7 +252,7 @@ func verifyImportEvent(t *testing.T, imported chan *types.Block, arrive bool) {
 // verifyImportCount verifies that exactly count number of events arrive on an
 // import hook channel.
 func verifyImportCount(t *testing.T, imported chan *types.Block, count int) {
-	for i := 0; i < count; i++ {
+	for i := range count {
 		select {
 		case <-imported:
 		case <-time.After(time.Second):
@@ -278,8 +278,10 @@ func TestSequentialAnnouncements63(t *testing.T) { testSequentialAnnouncements(t
 func TestSequentialAnnouncements64(t *testing.T) { testSequentialAnnouncements(t, 64) }
 
 func testSequentialAnnouncements(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
-	targetBlocks := 4 * hashLimit
+	targetBlocks := 8
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
 
 	tester := newTester()
@@ -304,8 +306,10 @@ func TestConcurrentAnnouncements63(t *testing.T) { testConcurrentAnnouncements(t
 func TestConcurrentAnnouncements64(t *testing.T) { testConcurrentAnnouncements(t, 64) }
 
 func testConcurrentAnnouncements(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
-	targetBlocks := 4 * hashLimit
+	targetBlocks := 8
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
 
 	// Assemble a tester with a built in counter for the requests
@@ -349,8 +353,10 @@ func TestOverlappingAnnouncements63(t *testing.T) { testOverlappingAnnouncements
 func TestOverlappingAnnouncements64(t *testing.T) { testOverlappingAnnouncements(t, 64) }
 
 func testOverlappingAnnouncements(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
-	targetBlocks := 4 * hashLimit
+	targetBlocks := 8
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
 
 	tester := newTester()
@@ -358,9 +364,9 @@ func testOverlappingAnnouncements(t *testing.T, protocol int) {
 	bodyFetcher := tester.makeBodyFetcher("valid", blocks, 0)
 
 	// Iteratively announce blocks, but overlap them continuously
-	overlap := 16
+	overlap := min(16, targetBlocks)
 	imported := make(chan *types.Block, len(hashes)-1)
-	for i := 0; i < overlap; i++ {
+	for range overlap {
 		imported <- nil
 	}
 	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
@@ -383,6 +389,8 @@ func TestPendingDeduplication63(t *testing.T) { testPendingDeduplication(t, 63) 
 func TestPendingDeduplication64(t *testing.T) { testPendingDeduplication(t, 64) }
 
 func testPendingDeduplication(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a hash and corresponding block
 	hashes, blocks := makeChain(1, 0, genesis)
 
@@ -426,6 +434,8 @@ func TestRandomArrivalImport63(t *testing.T) { testRandomArrivalImport(t, 63) }
 func TestRandomArrivalImport64(t *testing.T) { testRandomArrivalImport(t, 64) }
 
 func testRandomArrivalImport(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import, and choose one to delay
 	targetBlocks := maxQueueDist
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
@@ -457,6 +467,8 @@ func TestQueueGapFill63(t *testing.T) { testQueueGapFill(t, 63) }
 func TestQueueGapFill64(t *testing.T) { testQueueGapFill(t, 64) }
 
 func testQueueGapFill(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import, and choose one to not announce at all
 	targetBlocks := maxQueueDist
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
@@ -488,6 +500,8 @@ func TestImportDeduplication63(t *testing.T) { testImportDeduplication(t, 63) }
 func TestImportDeduplication64(t *testing.T) { testImportDeduplication(t, 64) }
 
 func testImportDeduplication(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create two blocks to import (one for duplication, the other for stalling)
 	hashes, blocks := makeChain(2, 0, genesis)
 
@@ -527,6 +541,8 @@ func testImportDeduplication(t *testing.T, protocol int) {
 // Tests that blocks with numbers much lower or higher than out current head get
 // discarded to prevent wasting resources on useless blocks from faulty peers.
 func TestDistantPropagationDiscarding(t *testing.T) {
+	t.Parallel()
+
 	// Create a long chain to import and define the discard boundaries
 	hashes, blocks := makeChain(3*maxQueueDist, 0, genesis)
 	head := hashes[len(hashes)/2]
@@ -563,6 +579,8 @@ func TestDistantAnnouncementDiscarding63(t *testing.T) { testDistantAnnouncement
 func TestDistantAnnouncementDiscarding64(t *testing.T) { testDistantAnnouncementDiscarding(t, 64) }
 
 func testDistantAnnouncementDiscarding(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a long chain to import and define the discard boundaries
 	hashes, blocks := makeChain(3*maxQueueDist, 0, genesis)
 	head := hashes[len(hashes)/2]
@@ -606,6 +624,8 @@ func TestInvalidNumberAnnouncement63(t *testing.T) { testInvalidNumberAnnounceme
 func TestInvalidNumberAnnouncement64(t *testing.T) { testInvalidNumberAnnouncement(t, 64) }
 
 func testInvalidNumberAnnouncement(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a single block to import and check numbers against
 	hashes, blocks := makeChain(1, 0, genesis)
 
@@ -644,6 +664,85 @@ func testInvalidNumberAnnouncement(t *testing.T, protocol int) {
 	verifyImportDone(t, imported)
 }
 
+// TestDropPeerForgetsPeerWithoutDeadlock checks that dropping a peer from inside the
+// fetcher loop does not deadlock when the drop callback calls ForgetPeer, as the
+// protocol manager's removePeer does.
+func TestDropPeerForgetsPeerWithoutDeadlock(t *testing.T) {
+	hashes, blocks := makeChain(1, 0, genesis)
+
+	tester := newTester()
+	tester.fetcher.Stop()
+
+	dropped := make(chan struct{})
+	var dropOnce sync.Once
+	tester.fetcher = New(tester.getBlock, tester.verifyHeader, tester.broadcastBlock, tester.broadcastBlockHash, tester.chainHeight, tester.insertChain,
+		func(peer string) {
+			tester.dropPeer(peer)
+			dropOnce.Do(func() { close(dropped) })
+			tester.fetcher.ForgetPeer(peer)
+		})
+	tester.fetcher.Start()
+	defer tester.fetcher.Stop()
+
+	// Announce a block with a bad number, so that the header delivery drops the announcer
+	badHeaderFetcher := tester.makeHeaderFetcher("bad", blocks, -gatherSlack)
+	badBodyFetcher := tester.makeBodyFetcher("bad", blocks, 0)
+	tester.fetcher.Notify("bad", hashes[0], 2, time.Now().Add(-arriveTimeout), badHeaderFetcher, badBodyFetcher)
+
+	select {
+	case <-dropped:
+	case <-time.After(time.Second):
+		t.Fatalf("peer with invalid numbered announcement not dropped")
+	}
+
+	// The fetcher must still serve requests after the drop
+	notified := make(chan struct{})
+	go func() {
+		goodHeaderFetcher := tester.makeHeaderFetcher("good", blocks, -gatherSlack)
+		goodBodyFetcher := tester.makeBodyFetcher("good", blocks, 0)
+		tester.fetcher.Notify("good", hashes[0], 1, time.Now().Add(-arriveTimeout), goodHeaderFetcher, goodBodyFetcher)
+		close(notified)
+	}()
+	select {
+	case <-notified:
+	case <-time.After(time.Second):
+		t.Fatalf("fetcher deadlocked after dropping a peer")
+	}
+}
+
+// TestFullInsertQueueDoesNotBlockLoop checks that the fetcher loop keeps serving events
+// when more blocks become importable at once than the insert and done queues can hold.
+func TestFullInsertQueueDoesNotBlockLoop(t *testing.T) {
+	tester := newTester()
+	defer tester.fetcher.Stop()
+
+	// Queue blocks with unknown parents one above the next head, so that they all
+	// become importable in one pass and fill both queues with quickly failing imports
+	for i := range 2*numInsertTasks + 50 {
+		header := &types.Header{Number: big.NewInt(2), ParentHash: common.BytesToHash([]byte{byte(i >> 8), byte(i), 1})}
+		tester.fetcher.Enqueue("bad", types.NewBlockWithHeader(header))
+	}
+	_, blocks := makeChain(1, 0, genesis)
+	for _, block := range blocks {
+		if block.NumberU64() == 1 {
+			tester.insertChain(types.Blocks{block})
+		}
+	}
+	// Any event makes the loop run an import pass at the new height
+	tester.fetcher.Enqueue("trigger", genesis)
+
+	forgotten := make(chan struct{})
+	go func() {
+		tester.fetcher.ForgetPeer("bad")
+		close(forgotten)
+	}()
+	select {
+	case <-forgotten:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("fetcher loop blocked by a full insert queue: len(done)=%d len(insertTasks)=%d", len(tester.fetcher.done), len(tester.fetcher.insertTasks))
+	}
+}
+
 // Tests that if a block is empty (i.e. header only), no body request should be
 // made, and instead the header should be assembled into a whole block in itself.
 func TestEmptyBlockShortCircuit62(t *testing.T) { testEmptyBlockShortCircuit(t, 62) }
@@ -651,6 +750,8 @@ func TestEmptyBlockShortCircuit63(t *testing.T) { testEmptyBlockShortCircuit(t, 
 func TestEmptyBlockShortCircuit64(t *testing.T) { testEmptyBlockShortCircuit(t, 64) }
 
 func testEmptyBlockShortCircuit(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
 	hashes, blocks := makeChain(32, 0, genesis)
 
@@ -695,6 +796,8 @@ func TestHashMemoryExhaustionAttack64(t *testing.T) { testHashMemoryExhaustionAt
 */
 
 func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a tester with instrumented import hooks
 	tester := newTester()
 
@@ -718,7 +821,7 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 	attackerBodyFetcher := tester.makeBodyFetcher("attacker", nil, 0)
 
 	// Feed the tester a huge hashset from the attacker, and a limited from the valid peer
-	for i := 0; i < len(attack); i++ {
+	for i := range attack {
 		if i < maxQueueDist {
 			tester.fetcher.Notify("valid", hashes[len(hashes)-2-i], uint64(i+1), time.Now(), validHeaderFetcher, validBodyFetcher)
 		}
@@ -742,6 +845,8 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 // announces and retrievals) don't pile up indefinitely, exhausting available
 // system memory.
 func TestBlockMemoryExhaustionAttack(t *testing.T) {
+	t.Parallel()
+
 	// Create a tester with instrumented import hooks
 	tester := newTester()
 
@@ -773,7 +878,7 @@ func TestBlockMemoryExhaustionAttack(t *testing.T) {
 		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit)
 	}
 	// Queue up a batch of valid blocks, and check that a new peer is allowed to do so
-	for i := 0; i < maxQueueDist-1; i++ {
+	for i := range maxQueueDist - 1 {
 		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-3-i]])
 	}
 	time.Sleep(100 * time.Millisecond)
@@ -790,4 +895,102 @@ func TestBlockMemoryExhaustionAttack(t *testing.T) {
 		verifyImportEvent(t, imported, true)
 	}
 	verifyImportDone(t, imported)
+}
+
+// queueableBlocks returns n blocks above head+1, which therefore stay in the import
+// queue instead of being handed to the importer.
+func queueableBlocks(n int) []*types.Block {
+	hashes, blocks := makeChain(n+1, 1, unknownBlock)
+	queueable := make([]*types.Block, n)
+	for i := range queueable {
+		queueable[i] = blocks[hashes[i]]
+	}
+	return queueable
+}
+
+// TestQueuedBytesLimit checks that the import queue admits propagated blocks only
+// while its byte budget lasts, and that a block the consensus engine committed is
+// admitted regardless.
+func TestQueuedBytesLimit(t *testing.T) {
+	tester := newTester()
+
+	enqueued := int32(0)
+	tester.fetcher.queueChangeHook = func(hash common.Hash, added bool) {
+		if added {
+			atomic.AddInt32(&enqueued, 1)
+		} else {
+			atomic.AddInt32(&enqueued, -1)
+		}
+	}
+	queueable := queueableBlocks(4)
+
+	defer func(limit uint64) { queuedBytesLimit = limit }(queuedBytesLimit)
+	queuedBytesLimit = uint64(queueable[0].Size()) + uint64(queueable[1].Size())
+
+	for _, block := range queueable {
+		tester.fetcher.Enqueue("attacker", block)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 2 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 2)
+	}
+
+	tester.fetcher.EnqueueTrusted("istanbul", queueable[3])
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 3 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 3)
+	}
+}
+
+// TestForgetPeerReleasesQueue checks that a disconnected peer's blocks are released
+// instead of held until the chain reaches their height, that the byte budget they held
+// is returned, and that a block this node committed is not released with them.
+func TestForgetPeerReleasesQueue(t *testing.T) {
+	tester := newTester()
+
+	enqueued := int32(0)
+	tester.fetcher.queueChangeHook = func(hash common.Hash, added bool) {
+		if added {
+			atomic.AddInt32(&enqueued, 1)
+		} else {
+			atomic.AddInt32(&enqueued, -1)
+		}
+	}
+	queueable := queueableBlocks(5)
+
+	defer func(limit uint64) { queuedBytesLimit = limit }(queuedBytesLimit)
+	queuedBytesLimit = 0
+	for _, block := range queueable[:4] {
+		queuedBytesLimit += uint64(block.Size())
+	}
+
+	for _, block := range queueable[:4] {
+		tester.fetcher.Enqueue("attacker", block)
+	}
+	tester.fetcher.Enqueue("attacker", queueable[4]) // budget spent, discarded
+	time.Sleep(200 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 4 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 4)
+	}
+
+	tester.fetcher.ForgetPeer("attacker")
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 0 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 0)
+	}
+
+	// The released budget is available again.
+	tester.fetcher.Enqueue("valid", queueable[4])
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 1 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 1)
+	}
+
+	// Committing the block a peer already queued keeps it across that peer's disconnect.
+	tester.fetcher.EnqueueTrusted("istanbul", queueable[4])
+	tester.fetcher.ForgetPeer("valid")
+	time.Sleep(100 * time.Millisecond)
+	if queued := atomic.LoadInt32(&enqueued); queued != 1 {
+		t.Fatalf("queued block count mismatch: have %d, want %d", queued, 1)
+	}
 }

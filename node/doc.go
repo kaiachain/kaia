@@ -39,8 +39,7 @@ about other hosts is persisted.
 
 JSON-RPC servers which run HTTP, WebSocket or IPC can be started on a Node. RPC modules
 offered by registered services will be offered on those endpoints. Users can restrict any
-endpoint to a subset of RPC modules. Node itself offers the "debug", "admin" and "web3"
-modules.
+endpoint to a subset of RPC modules. Node itself offers the "debug" and "admin" modules.
 
 Service implementations can open LevelDB databases through the service context. Package
 node chooses the file system location of each database. If the node is configured to run

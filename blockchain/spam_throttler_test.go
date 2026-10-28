@@ -110,3 +110,52 @@ func TestThrottler_updateThrottlerState(t *testing.T) {
 		assert.Equal(t, tc.throttledWeight, th.throttled[toFail])
 	}
 }
+
+func TestThrottler_classifyTxsPartitionIntegrity(t *testing.T) {
+	throttledAddr := common.HexToAddress("0x00000000000000000000000000000000000000AA")
+	allowedAddr := common.HexToAddress("0x00000000000000000000000000000000000000BB")
+
+	mkTx := func(nonce uint64, to common.Address) *types.Transaction {
+		return types.NewTransaction(nonce, to, big.NewInt(1), 21000, big.NewInt(int64(params.Gkei)), nil)
+	}
+
+	testCases := []struct {
+		name string
+		txs  types.Transactions
+	}{
+		{
+			name: "allowed before throttled",
+			txs:  types.Transactions{mkTx(0, allowedAddr), mkTx(1, throttledAddr)},
+		},
+		{
+			name: "throttled before allowed",
+			txs:  types.Transactions{mkTx(0, throttledAddr), mkTx(1, allowedAddr)},
+		},
+		{
+			name: "interleaved",
+			txs: types.Transactions{
+				mkTx(0, allowedAddr), mkTx(1, throttledAddr),
+				mkTx(2, allowedAddr), mkTx(3, throttledAddr),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			th := newTestThrottler(DefaultSpamThrottlerConfig)
+			th.throttled[throttledAddr] = 10
+
+			allow, throttle := th.classifyTxs(tc.txs)
+
+			for _, tx := range allow {
+				assert.NotNil(t, tx.To())
+				assert.Equal(t, allowedAddr, *tx.To(), "allow set must not contain throttled destinations")
+			}
+			for _, tx := range throttle {
+				assert.NotNil(t, tx.To())
+				assert.Equal(t, throttledAddr, *tx.To(), "throttle set must not contain allowed destinations")
+			}
+			assert.Equal(t, len(tc.txs), len(allow)+len(throttle), "partition must cover the full input")
+		})
+	}
+}

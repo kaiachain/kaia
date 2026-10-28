@@ -75,7 +75,7 @@ func (mode *SyncMode) UnmarshalText(text []byte) error {
 	case "light":
 		*mode = LightSync
 	default:
-		return fmt.Errorf(`unknown sync mode %q, want "full", "fast" or "light"`, text)
+		return fmt.Errorf(`unknown sync mode %q, want "full"`, text)
 	}
 	return nil
 }

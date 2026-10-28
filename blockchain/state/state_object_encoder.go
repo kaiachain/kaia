@@ -50,7 +50,7 @@ func newStateObjectEncoder(numGoRoutines, tasksChSize int) *stateObjectEncoder {
 		tasksCh: make(chan *stateObject, tasksChSize),
 	}
 
-	for i := 0; i < numGoRoutines; i++ {
+	for range numGoRoutines {
 		go encodeStateObject(soe.tasksCh)
 	}
 

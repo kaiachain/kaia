@@ -82,7 +82,7 @@ func newMeteredConn(conn net.Conn, ingress bool) net.Conn {
 func (c *meteredConn) Read(b []byte) (n int, err error) {
 	n, err = c.TCPConn.Read(b)
 	ingressTrafficMeter.Mark(int64(n))
-	return
+	return n, err
 }
 
 // Write delegates a network write to the underlying connection, bumping the
@@ -90,5 +90,5 @@ func (c *meteredConn) Read(b []byte) (n int, err error) {
 func (c *meteredConn) Write(b []byte) (n int, err error) {
 	n, err = c.TCPConn.Write(b)
 	egressTrafficMeter.Mark(int64(n))
-	return
+	return n, err
 }

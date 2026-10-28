@@ -26,7 +26,7 @@ A module also must implement the `BaseModule` interface.
   - At `CNAPIBackend.SetHead()` where modules are restarted after a chain rewind.
 - `Stop()`: stops any background goroutines. Similar to `Start()`.
 
-A module may implement other `Module` interfaces such as `JsonRpcModule` and `ConsensusModule`.
+A module may implement other `Module` interfaces such as `JsonRpcModule`, `HeaderModule`, `BlockStateModule`, and `ExecutionModule`.
 
 A non-kaiax component (such as BlockChain, CN, consensus.Engine) may implement `ModuleHost` interface to interact with kaiax modules.
 
@@ -37,4 +37,3 @@ blockChain.RegisterExecutionModule(mGov)
 ## Modules list
 
 - [staking](./staking): responsible for tracking validator staking amounts and their address configurations.
-

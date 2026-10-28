@@ -163,11 +163,11 @@ commands:
             if [[ << parameters.package-type >> = "tar" ]]; then
               second_parameter=<< parameters.os-network >>
             fi
-            for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            for item in kcn ken kgen kscn kbn ksen homi; do
               ./build/package-<< parameters.package-type >>.sh $second_parameter $item
             done
-            
-            for item in kcn kpn ken; do
+
+            for item in kcn ken; do
               ./build/package-<< parameters.package-type >>.sh -b $second_parameter $item
             done
       - when:
@@ -181,7 +181,7 @@ commands:
                 KAIA_VERSION=$(go run build/rpm/main.go version)
                 PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
                          
-                for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+                for item in kcn ken kcn-kairos ken-kairos kgen kscn kbn ksen homi; do
                   if [[ << parameters.package-type >> = "tar" ]]; then
                     aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
                   elif [[ << parameters.package-type >> = "rpm" ]]; then

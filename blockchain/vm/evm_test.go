@@ -1,10 +1,12 @@
 package vm
 
 import (
+	"encoding/binary"
 	"errors"
 	"math"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
@@ -130,5 +132,69 @@ func TestBn256GasCost(t *testing.T) {
 		{"0x006", bn256AddInput, true, Block5, params.Bn256AddGasIstanbul, bn256AddOutput, nil},
 		{"0x007", bn256ScalarMulInput, true, Block5, params.Bn256ScalarMulGasIstanbul, bn256ScalarMulOutput, nil},
 		{"0x008", bn256PairingInput, true, Block5, params.Bn256PairingBaseGasIstanbul + params.Bn256PairingPerPointGasIstanbul*uint64(len(bn256PairingInput)/192), bn256PairingOutput, nil},
+	})
+}
+
+func blake2FInput(rounds uint32) []byte {
+	input := make([]byte, blake2FInputLength)
+	binary.BigEndian.PutUint32(input[0:4], rounds)
+	input[212] = blake2FFinalBlockBytes
+	return input
+}
+
+// callBlake2F calls blake2F (0x09) with the given rounds. Both its gas (== rounds)
+// and its computation cost (10000 + 10*rounds) scale with rounds, so a single call
+// can be made arbitrarily expensive.
+func callBlake2F(config *params.ChainConfig, rounds uint32) (usedGas, computationCost uint64, err error) {
+	callerAddr := common.BytesToAddress([]byte("caller"))
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	// Post-Istanbul caller, so 0x09 maps to blake2F rather than vmLog.
+	statedb.CreateSmartContractAccount(callerAddr, params.CodeFormatEVM, params.Rules{IsIstanbul: true})
+
+	blockCtx := BlockContext{
+		CanTransfer: func(StateDB, common.Address, *big.Int) bool { return true },
+		Transfer:    func(StateDB, common.Address, common.Address, *big.Int) {},
+		BlockNumber: big.NewInt(0),
+	}
+	evm := NewEVM(blockCtx, TxContext{}, statedb, config, &Config{})
+
+	_, leftOverGas, err := evm.Call(AccountRef(callerAddr), common.BytesToAddress([]byte{9}),
+		blake2FInput(rounds), math.MaxUint64, new(big.Int))
+	return math.MaxUint64 - leftOverGas, evm.GetOpCodeComputationCost(), err
+}
+
+// TestPrecompileComputationCostLimit checks that the computation cost limit bounds
+// precompiles, not just opcodes.
+func TestPrecompileComputationCostLimit(t *testing.T) {
+	const (
+		hugeRounds         = uint32(4_000_000_000) // would take ~40s to run
+		overBudgetRounds   = uint32(20_000_000)    // cost 200M, over the 150M limit
+		withinBudgetRounds = uint32(1_000_000)     // cost 10M
+	)
+
+	t.Run("over budget is rejected before running", func(t *testing.T) {
+		start := time.Now()
+		_, _, err := callBlake2F(params.TestKaiaConfig("permissionless"), hugeRounds)
+
+		assert.Equal(t, ErrOpcodeComputationCostLimitReached, err)
+		// Gas cannot be the signal here since Call burns it all on error. Elapsed time
+		// is, and it also catches a check misplaced after execution.
+		assert.Less(t, time.Since(start), 5*time.Second)
+	})
+
+	t.Run("within budget still runs", func(t *testing.T) {
+		usedGas, computationCost, err := callBlake2F(params.TestKaiaConfig("permissionless"), withinBudgetRounds)
+
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(withinBudgetRounds), usedGas)
+		assert.Equal(t, uint64(10_010_000), computationCost)
+	})
+
+	t.Run("unenforced before the fork", func(t *testing.T) {
+		usedGas, computationCost, err := callBlake2F(params.TestKaiaConfig("osaka"), overBudgetRounds)
+
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(overBudgetRounds), usedGas)
+		assert.Greater(t, computationCost, uint64(params.OpcodeComputationCostLimitCancun))
 	})
 }

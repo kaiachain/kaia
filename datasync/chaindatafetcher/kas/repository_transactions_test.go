@@ -151,7 +151,7 @@ func createChainEventsWithTooManyTxs() ([]blockchain.ChainEvent, error) {
 	// make a chain event including a value transfer transaction
 	numBlocks := 1
 	return makeChainEventsWithInternalTraces(numBlocks, func(i int, block *blockchain.BlockGen) {
-		for idx := 0; idx < maxPlaceholders/placeholdersPerTxItem+1; idx++ {
+		for range maxPlaceholders/placeholdersPerTxItem + 1 {
 			nonce := new(big.Int).SetUint64(block.TxNonce(from))
 			tx := genNewValueTransfer(from, to, nonce, amount, gasLimit, gasPrice)
 			block.AddTx(tx)

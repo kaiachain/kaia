@@ -42,7 +42,7 @@ func makeTestTrie() (*Database, *SecureTrie, map[string][]byte) {
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		// Map the same data under multiple keys
 		key, val := common.LeftPadBytes([]byte{1, i}, 32), []byte{i}
 		content[string(key)] = val
@@ -110,6 +110,77 @@ func TestEmptyTrieSync(t *testing.T) {
 		if nodes, paths, codes := sync.Missing(1); len(nodes) != 0 || len(paths) != 0 || len(codes) != 0 {
 			t.Errorf("test %d: content requested for empty trie: %v, %v, %v", i, nodes, paths, codes)
 		}
+	}
+}
+
+func TestTrieSyncExistCacheSeparatesNodesAndCode(t *testing.T) {
+	hash := common.HexToHash("0x01")
+
+	tests := []struct {
+		name        string
+		populate    func(*TrieSync)
+		schedule    func(*TrieSync)
+		wantPending int
+	}{
+		{
+			name: "code does not hide node",
+			populate: func(sync *TrieSync) {
+				sync.membatch.codes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddSubTrie(hash, nil, 0, common.Hash{}, nil)
+			},
+			wantPending: 1,
+		},
+		{
+			name: "node does not hide code",
+			populate: func(sync *TrieSync) {
+				sync.membatch.nodes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddCodeEntry(hash, nil, 0, common.Hash{})
+			},
+			wantPending: 1,
+		},
+		{
+			name: "cached node is not scheduled again",
+			populate: func(sync *TrieSync) {
+				sync.membatch.nodes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddSubTrie(hash, nil, 0, common.Hash{}, nil)
+			},
+			wantPending: 0,
+		},
+		{
+			name: "cached code is not scheduled again",
+			populate: func(sync *TrieSync) {
+				sync.membatch.codes[hash] = []byte{0x01}
+			},
+			schedule: func(sync *TrieSync) {
+				sync.AddCodeEntry(hash, nil, 0, common.Hash{})
+			},
+			wantPending: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			dbm := database.NewMemoryDBManager()
+			cache, err := lru.New(10)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sync := NewTrieSync(types.EmptyRootHash, dbm, nil, nil, cache)
+			test.populate(sync)
+			if _, err := sync.Commit(dbm.GetMemDB().NewBatch()); err != nil {
+				t.Fatal(err)
+			}
+			test.schedule(sync)
+			if sync.Pending() != test.wantPending {
+				t.Fatalf("pending requests = %d, want %d", sync.Pending(), test.wantPending)
+			}
+		})
 	}
 }
 

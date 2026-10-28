@@ -44,7 +44,7 @@ It contains a JSON object of `{name: value}` for each ratified parameter.
 The ratification condition is determined by the `governance.governancemode` parameter. Mainnet and Kairos both operate in `single` mode. There are two governance modes:
 
 - `none` mode: all members of the GC can vote. For each governance parameter, the last vote in the epoch will be ratified.
-- `single` mode: only one member of the GC, stipulated in the parameter `governance.governingnode`, can vote. The vote will be ratified if it is the only vote in the epoch.
+- `single` mode: only one member of the GC, stipulated in the parameter `governance.governingnode`, can vote. All valid votes from the governing node in the epoch are ratified in block order. For each governance parameter, the last vote in the epoch will be ratified.
 
 Parameter change ratified at `k*epoch` block takes effect starting from `(k+1)*epoch` block.
 It is worth noting that the effective time of the ratification is `(k+1)*epoch + 1` before Kore.
@@ -119,7 +119,7 @@ See [vote.go](./vote.go).
 
 `GovData` is used for storing header's `Governance` in memory.
 All `GovData` values are canonicalized and format-checked.
-Unlike `VoteData`, vote-forbidden parameters are allowed for parsing the genesis block.
+Unlike `VoteData`, deprecated parameters (per `gov.DeprecatedAt`) are allowed for parsing the genesis block.
 
 See [gov.go](./gov.go).
 
@@ -171,7 +171,7 @@ If migration was already completed (`lowestVoteScannedEpochIdx == 0`), the gorou
 
 ## Block processing
 
-### Consensus
+### Header
 
 #### PrepareHeader
 
@@ -192,10 +192,6 @@ It checks the following for `header.Governance` if it exists:
 
 - The block is an epoch block.
 - The ratification is built based on the votes in the previous epoch.
-
-#### FinalizeHeader
-
-This module does not have any block processing logic at `FinalizeHeader`.
 
 ### Execution
 

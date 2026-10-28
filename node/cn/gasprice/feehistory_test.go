@@ -26,6 +26,11 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	mock_api "github.com/kaiachain/kaia/api/mocks"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -59,17 +64,17 @@ func TestFeeHistory(t *testing.T) {
 		{true, 1000, 1000, 2, rpc.PendingBlockNumber, nil, 32, 2, nil},
 		{true, 1000, 1000, 2, rpc.PendingBlockNumber, []float64{0, 10}, 32, 2, nil},
 	}
-	magmaBlock, kaiaBlock := int64(16), int64(20)
+	magmaBlock, kaiaBlock, osakaBlock := int64(16), int64(20), int64(28)
 	for i, c := range cases {
 		config := Config{
 			MaxHeaderHistory: c.maxHeader,
 			MaxBlockHistory:  c.maxBlock,
 			MaxPrice:         big.NewInt(500000000000),
 		}
-		backend, govModule := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock), c.pending)
+		backend, govModule := newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock), nil, c.pending)
 		oracle := NewOracle(backend, config, nil, govModule)
 
-		first, reward, baseFee, ratio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
+		first, reward, baseFee, ratio, blobRatio, err := oracle.FeeHistory(context.Background(), c.count, c.last, c.percent)
 
 		expReward := c.expCount
 		if len(c.percent) == 0 {
@@ -84,6 +89,10 @@ func TestFeeHistory(t *testing.T) {
 		assert.Equal(t, expReward, len(reward), "Test case %d: reward array length mismatch, want %d, got %d", i, expReward, len(reward))
 		assert.Equal(t, expBaseFee, len(baseFee), "Test case %d: baseFee array length mismatch, want %d, got %d", i, expBaseFee, len(baseFee))
 		assert.Equal(t, c.expCount, len(ratio), "Test case %d: baseFee array length mismatch, want %d, got %d", i, c.expCount, len(ratio))
+		assert.Equal(t, c.expCount, len(blobRatio), "Test case %d: blobGasUsedRatio array length mismatch, want %d, got %d", i, c.expCount, len(blobRatio))
+		for j, v := range blobRatio {
+			assert.Equal(t, 0.0, v, "Test case %d: blobGasUsedRatio[%d] should be zero when blob fork is inactive, got %v", i, j, v)
+		}
 		assert.Equal(t, c.expErr, err, "Test case %d: error mismatch, want %v, got %v", i, c.expErr, err)
 	}
 
@@ -94,7 +103,7 @@ func TestFeeHistory(t *testing.T) {
 			MaxBlockHistory:  1000,
 			MaxPrice:         big.NewInt(500000000000),
 		}
-		backend, govModule = newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock), false)
+		backend, govModule = newTestBackend(t, big.NewInt(magmaBlock), big.NewInt(kaiaBlock), big.NewInt(osakaBlock), false)
 		oracle             = NewOracle(backend, config, nil, govModule)
 
 		atMagmaPset    = oracle.govModule.GetParamSet(uint64(magmaBlock))
@@ -109,7 +118,7 @@ func TestFeeHistory(t *testing.T) {
 		afterMagmaExpectedGasUsedRatio  = float64(21000) / float64(afterMagmaPset.MaxBlockGasUsedForBaseFee)
 	)
 
-	first, _, baseFee, ratio, err := oracle.FeeHistory(context.Background(), 32, rpc.LatestBlockNumber, nil)
+	first, _, baseFee, ratio, blobRatio, err := oracle.FeeHistory(context.Background(), 32, rpc.LatestBlockNumber, nil)
 	assert.Equal(t, first, big.NewInt(1))
 	assert.Nil(t, err)
 
@@ -117,7 +126,78 @@ func TestFeeHistory(t *testing.T) {
 	assert.Equal(t, []*big.Int{beforeMagmaExpectedBaseFee, atMagmaExpectedBaseFee, afterMagmaExpectedBaseFee}, baseFee[14:17])
 	assert.Equal(t, []float64{beforeMagmaExpectedGasUsedRatio, atMagmaExpectedGasUsedRatio, afterMagmaExpectedGasUsedRatio}, ratio[14:17])
 
+	// osaka hardfork
+	atOsakaExpectedBlobRatio := 1.0 / float64(params.DefaultOsakaBlobConfig.Max)
+	assert.Equal(t, []float64{0.0, atOsakaExpectedBlobRatio, atOsakaExpectedBlobRatio}, blobRatio[26:29])
+
 	// kaia hardfork
 	// check the value of reward
 	// assert.Equal(t, <impl>, gasTip[18:21])
 }
+
+// TestProcessBlock_BlobGasUsedRatio verifies processBlock computes
+// blobGasUsedRatio = BlobGasUsed / MaxBlobGasPerBlock when the Osaka
+// blob schedule is active (zero with no blobs, partial with one blob,
+// 1.0 at maximum), and stays zero for blocks before the Osaka fork.
+func TestProcessBlock_BlobGasUsedRatio(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	const osakaBlock = 5
+
+	config := params.TestChainConfig.Copy()
+	config.MagmaCompatibleBlock = big.NewInt(0)
+	config.KaiaCompatibleBlock = big.NewInt(0)
+	config.OsakaCompatibleBlock = big.NewInt(osakaBlock)
+	config.BlobScheduleConfig = &params.BlobScheduleConfig{Osaka: params.DefaultOsakaBlobConfig}
+	config.Governance = params.GetDefaultGovernanceConfig()
+	config.Istanbul = params.GetDefaultIstanbulConfig()
+
+	mockBackend := mock_api.NewMockBackend(mockCtrl)
+	mockBackend.EXPECT().ChainConfig().Return(config).AnyTimes()
+
+	mockGov := mock_gov.NewMockGovModule(mockCtrl)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		LowerBoundBaseFee:         uint64(config.Governance.KIP71.LowerBoundBaseFee),
+		UpperBoundBaseFee:         uint64(config.Governance.KIP71.UpperBoundBaseFee),
+		GasTarget:                 uint64(config.Governance.KIP71.GasTarget),
+		MaxBlockGasUsedForBaseFee: uint64(config.Governance.KIP71.MaxBlockGasUsedForBaseFee),
+		BaseFeeDenominator:        uint64(config.Governance.KIP71.BaseFeeDenominator),
+	}).AnyTimes()
+
+	oracle := NewOracle(mockBackend, Config{MaxHeaderHistory: 1, MaxBlockHistory: 1, MaxPrice: big.NewInt(500000000000)}, nil, mockGov)
+
+	maxBlobGas := uint64(params.DefaultOsakaBlobConfig.Max) * params.BlobTxBlobGasPerBlob
+
+	cases := []struct {
+		name        string
+		blockNum    int64
+		blobGasUsed *uint64
+		expected    float64
+	}{
+		{"pre-osaka", osakaBlock - 1, uint64Ptr(params.BlobTxBlobGasPerBlob), 0},
+		{"no-blob", osakaBlock, nil, 0},
+		{"one-blob", osakaBlock, uint64Ptr(params.BlobTxBlobGasPerBlob), float64(params.BlobTxBlobGasPerBlob) / float64(maxBlobGas)},
+		{"max-blob", osakaBlock, uint64Ptr(maxBlobGas), 1.0}, // in case the max blob count increases
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			bf := &blockFees{
+				blockNumber: uint64(tc.blockNum),
+				header: &types.Header{
+					Number:      big.NewInt(tc.blockNum),
+					BaseFee:     big.NewInt(25 * params.Gkei),
+					GasUsed:     21000,
+					BlobGasUsed: tc.blobGasUsed,
+				},
+			}
+			oracle.processBlock(bf, nil)
+			assert.Equal(t, tc.expected, bf.results.blobGasUsedRatio)
+		})
+	}
+}
+
+func uint64Ptr(v uint64) *uint64 { return &v }

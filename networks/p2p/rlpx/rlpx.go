@@ -61,6 +61,8 @@ type Conn struct {
 	conn     net.Conn
 	session  *sessionState
 
+	readFrameLimit uint32
+
 	// These are the buffers for snappy compression.
 	// Compression is enabled if they are non-nil.
 	snappyReadBuffer  []byte
@@ -120,6 +122,12 @@ func (c *Conn) SetSnappy(snappy bool) {
 	}
 }
 
+// SetReadFrameLimit limits encrypted frame content before it is allocated.
+// A zero limit allows the full RLPx frame size.
+func (c *Conn) SetReadFrameLimit(limit uint32) {
+	c.readFrameLimit = limit
+}
+
 // SetReadDeadline sets the deadline for all future read operations.
 func (c *Conn) SetReadDeadline(time time.Time) error {
 	return c.conn.SetReadDeadline(time)
@@ -142,7 +150,7 @@ func (c *Conn) Read() (code uint64, data []byte, err error) {
 		panic("can't ReadMsg before handshake")
 	}
 
-	frame, err := c.session.readFrame(c.conn)
+	frame, err := c.session.readFrame(c.conn, c.readFrameLimit)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -167,7 +175,7 @@ func (c *Conn) Read() (code uint64, data []byte, err error) {
 	return code, data, err
 }
 
-func (h *sessionState) readFrame(conn io.Reader) ([]byte, error) {
+func (h *sessionState) readFrame(conn io.Reader, limit uint32) ([]byte, error) {
 	h.rbuf.reset()
 
 	// Read the frame header.
@@ -185,6 +193,9 @@ func (h *sessionState) readFrame(conn io.Reader) ([]byte, error) {
 	// Decrypt the frame header to get the frame size.
 	h.dec.XORKeyStream(header[:16], header[:16])
 	fsize := readUint24(header[:16])
+	if limit != 0 && fsize > limit {
+		return nil, errFrameTooLarge
+	}
 	// Frame size rounded up to 16 byte boundary for padding.
 	rsize := fsize
 	if padding := fsize % 16; padding > 0 {
@@ -405,6 +416,7 @@ var (
 	// errPlainMessageTooLarge is returned if a decompressed message length exceeds
 	// the allowed 24 bits (i.e. length >= 16MB).
 	errPlainMessageTooLarge = errors.New("message length >= 16MB")
+	errFrameTooLarge        = errors.New("frame too large")
 )
 
 // Secrets represents the connection secrets which are negotiated during the handshake.

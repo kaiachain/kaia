@@ -110,6 +110,8 @@ var (
 	errUndefinedTxType                        = errors.New("undefined tx type")
 	errCannotBeSignedByFeeDelegator           = errors.New("this transaction type cannot be signed by a fee delegator")
 	errUndefinedKeyRemains                    = errors.New("undefined key remains")
+	errEmptyTxSignatures                      = errors.New("tx signatures must not be empty")
+	errInvalidTxSignatureJSON                 = errors.New("invalid tx signature JSON")
 
 	errValueKeyHumanReadableMustBool     = errors.New("HumanReadable must be a type of bool")
 	errValueKeyAccountKeyMustAccountKey  = errors.New("AccountKey must be a type of AccountKey")
@@ -313,7 +315,12 @@ type TxInternalData interface {
 	GetData() []byte
 
 	setHashForMarshaling(*common.Hash)
-	SetSignature(TxSignatures)
+
+	// SetSignature sets the sender signatures. Transaction types that carry a
+	// single signature (legacy and Ethereum typed transactions) return an error
+	// wrapping ErrInvalidSignatureCount (check with errors.Is) unless exactly one
+	// signature is given.
+	SetSignature(TxSignatures) error
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.

@@ -542,13 +542,12 @@ func (s *StateDB) SetCodeToEOA(addr common.Address, code []byte, r params.Rules)
 		if pa == nil {
 			return nil
 		}
+		// Journal CodeInfo via the stateObject so it is restored on revert.
 		if bytes.Equal(code, []byte{}) {
-			pa.SetCodeInfo(params.CodeInfo(0))
+			stateObject.SetCodeInfo(params.CodeInfo(0))
 		} else {
-			pa.SetCodeInfo(params.NewCodeInfoWithRules(params.CodeFormatEVM, r))
+			stateObject.SetCodeInfo(params.NewCodeInfoWithRules(params.CodeFormatEVM, r))
 		}
-		// If it is not a program account, SetCode will return an error,
-		// but that is handled above so there is no need to roll back SetCodeInfo.
 		return stateObject.SetCode(crypto.Keccak256Hash(code), code)
 	}
 
@@ -1108,8 +1107,7 @@ func (stateDB *StateDB) Finalise(deleteEmptyObjects bool, setStorageRoot bool) {
 
 	if setStorageRoot && len(stateDB.stateObjectsDirtyStorage) > 0 {
 		for addr := range stateDB.stateObjectsDirtyStorage {
-			so, exist := stateDB.stateObjects[addr]
-			if exist {
+			if so := stateDB.getStateObject(addr); so != nil {
 				so.updateStorageRoot(stateDB.db)
 				stateDB.updateStateObject(so)
 			}

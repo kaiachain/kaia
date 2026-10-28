@@ -141,7 +141,7 @@ func (api *FilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 				var header map[string]interface{}
 				var err error
 				if api.ethHead {
-					header, err = kaiaApi.RpcMarshalEthHeader(h, api.backend.Engine(), api.backend.ChainConfig(), true)
+					header, err = kaiaApi.RpcMarshalEthHeader(h, api.backend.Sealer(), api.backend.ChainConfig(), true)
 					if err != nil {
 						logger.Error("Failed to marshal header during newHeads subscription", "err", err)
 						headersSub.Unsubscribe()

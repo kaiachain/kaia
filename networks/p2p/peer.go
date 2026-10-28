@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -129,8 +130,20 @@ type Peer struct {
 
 // NewPeer returns a peer for testing purposes.
 func NewPeer(id discover.NodeID, name string, caps []Cap) *Peer {
+	return NewPeerWithFlags(id, name, caps, false, false)
+}
+
+// NewPeerWithFlags returns a peer for testing purposes, marked trusted and/or static-dialed.
+func NewPeerWithFlags(id discover.NodeID, name string, caps []Cap, trusted, static bool) *Peer {
+	var flags connFlag
+	if trusted {
+		flags |= trustedConn
+	}
+	if static {
+		flags |= staticDialedConn
+	}
 	pipe, _ := net.Pipe()
-	conn := []*conn{{fd: pipe, transport: nil, id: id, caps: caps, name: name}}
+	conn := []*conn{{fd: pipe, transport: nil, id: id, caps: caps, name: name, flags: flags}}
 	peer, _ := newPeer(conn, nil, defaultRWTimerConfig)
 	close(peer.closed) // ensures Disconnect doesn't block
 	return peer
@@ -151,10 +164,8 @@ func (p *Peer) Name() string {
 // versions is supported by both this node and the peer p.
 func (p *Peer) RunningCap(protocol string, versions []uint) bool {
 	if protos, ok := p.running[protocol]; ok {
-		for _, ver := range versions {
-			if protos[ConnDefault].Version == ver {
-				return true
-			}
+		if slices.Contains(versions, protos[ConnDefault].Version) {
+			return true
 		}
 	}
 	return false
@@ -193,6 +204,12 @@ func (p *Peer) String() string {
 // Inbound returns true if the peer is an inbound connection
 func (p *Peer) Inbound() bool {
 	return p.rws[ConnDefault].flags&inboundConn != 0
+}
+
+// IsTrustedOrStatic reports whether the peer's default connection is a trusted peer
+// or a static outbound dial. See (*conn).isTrustedOrStatic.
+func (p *Peer) IsTrustedOrStatic() bool {
+	return p.rws[ConnDefault].isTrustedOrStatic()
 }
 
 // GetNumberInboundAndOutbound returns the number of
@@ -602,7 +619,7 @@ type protoRW struct {
 	werr   chan<- error    // for write results
 	offset uint64
 	w      MsgWriter
-	count  uint64 // count the number of WriteMsg calls
+	count  atomic.Uint64 // count the number of WriteMsg calls
 	tc     RWTimerConfig
 }
 
@@ -611,7 +628,7 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 		return newPeerError(errInvalidMsgCode, "not handled, (code %x) (size %d)", msg.Code, msg.Size)
 	}
 	msg.Code += rw.offset
-	rwCount := atomic.AddUint64(&rw.count, 1)
+	rwCount := rw.count.Add(1)
 	if rwCount%rw.tc.Interval == 0 {
 		timer := time.NewTimer(rw.tc.WaitTime)
 		defer timer.Stop()
@@ -623,18 +640,18 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 			// otherwise. The calling protocol code should exit for errors
 			// as well but we don't want to rely on that.
 		case <-rw.closed:
-			err = fmt.Errorf("shutting down")
+			err = errors.New("shutting down")
 			return err
 		case <-timer.C:
 			writeMsgTimeOutCounter.Inc(1)
-			err = fmt.Errorf("failed to write message for %v", rw.tc.WaitTime)
+			err = errors.New(fmt.Sprintf("failed to write message for %v", rw.tc.WaitTime))
 		}
 	} else {
 		select {
 		case <-rw.wstart:
 			err = rw.w.WriteMsg(msg)
 		case <-rw.closed:
-			err = fmt.Errorf("shutting down")
+			err = errors.New("shutting down")
 			return err
 		}
 	}
@@ -679,7 +696,7 @@ type PeerInfo struct {
 // Info gathers and returns a collection of metadata known about a peer.
 func (p *Peer) Info() *PeerInfo {
 	// Gather the protocol capabilities
-	var caps []string
+	caps := make([]string, 0, len(p.Caps()))
 	for _, cap := range p.Caps() {
 		caps = append(caps, cap.String())
 	}

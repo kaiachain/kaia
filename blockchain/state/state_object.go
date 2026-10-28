@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kerrors"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -145,11 +146,17 @@ func (c *stateObject) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, serializer)
 }
 
-// setError remembers the first non-nil error it is called with.
+// setError remembers the first non-nil error it is called with and reports
+// it to the owning StateDB, so that a storage or code read failure of any
+// object surfaces in StateDB.Error() like an account trie read failure.
 func (s *stateObject) setError(err error) {
+	if err == nil {
+		return
+	}
 	if s.dbErr == nil {
 		s.dbErr = err
 	}
+	s.db.setError(err)
 }
 
 func (s *stateObject) markSelfdestructed() {
@@ -542,6 +549,26 @@ func (s *stateObject) setCode(codeHash common.Hash, code []byte) error {
 	acc.SetCodeHash(codeHash[:])
 	s.dirtyCode = true
 	return nil
+}
+
+// SetCodeInfo journals the previous CodeInfo so it is restored on revert.
+func (s *stateObject) SetCodeInfo(codeInfo params.CodeInfo) {
+	acc := account.GetProgramAccount(s.account)
+	if acc == nil {
+		logger.Error("SetCodeInfo() should be called only to a ProgramAccount!", "account address", s.address)
+		return
+	}
+	s.db.journal.append(codeInfoChange{
+		account:      &s.address,
+		prevCodeInfo: params.NewCodeInfo(acc.GetCodeFormat(), acc.GetVmVersion()),
+	})
+	s.setCodeInfo(codeInfo)
+}
+
+func (s *stateObject) setCodeInfo(codeInfo params.CodeInfo) {
+	if acc := account.GetProgramAccount(s.account); acc != nil {
+		acc.SetCodeInfo(codeInfo)
+	}
 }
 
 // IncNonce increases the nonce of the account by one with making a journal of the previous nonce.

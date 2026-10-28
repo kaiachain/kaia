@@ -33,7 +33,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -229,7 +228,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
 	if tx.Type() == types.TxTypeEthereumBlob {
 		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
-		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(header.BaseFee).Uint64())
+		fields["blobGasPrice"] = hexutil.Uint64(params.CalcBlobFee(header.BaseFee).Uint64())
 	}
 
 	if receipt.Logs == nil {
@@ -368,7 +367,7 @@ func (s *KaiaTransactionAPI) SendTransactionAsFeePayer(ctx context.Context, args
 		return common.Hash{}, errTxArgNilGasPrice
 	}
 
-	if args.TxSignatures == nil {
+	if len(args.TxSignatures) == 0 {
 		return common.Hash{}, errTxArgNilSenderSig
 	}
 
@@ -500,9 +499,14 @@ func (s *KaiaTransactionAPI) SignTransactionAsFeePayer(ctx context.Context, args
 	if err != nil {
 		return nil, err
 	}
+	if err := validateSenderSignatures(tx.Type(), args.TxSignatures); err != nil {
+		return nil, err
+	}
 	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
 	if args.TxSignatures != nil {
-		tx.SetSignature(args.TxSignatures.ToTxSignatures())
+		if err := tx.SetSignature(args.TxSignatures.ToTxSignatures()); err != nil {
+			return nil, err
+		}
 	}
 	feePayer, err := tx.FeePayer()
 	if err != nil {
@@ -614,6 +618,11 @@ func (s *KaiaTransactionAPI) RecoverFromTransaction(ctx context.Context, encoded
 
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
+		return common.Address{}, err
+	}
+	// NOTE: Deliberately not fork-gated because the block number is
+	// caller-supplied, so gating on it would let the caller bypass the limit.
+	if err := tx.ValidateSignatureListLength(); err != nil {
 		return common.Address{}, err
 	}
 

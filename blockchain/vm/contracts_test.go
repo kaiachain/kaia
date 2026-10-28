@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -132,6 +133,12 @@ func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	txhash := common.HexToHash("0xc6a37e155d3fa480faea012a68ad35fd53c8cc3cd8263a434c697755985a6577")
 	stateDb.SetTxContext(txhash, common.Hash{}, 0)
 	evm := NewEVM(BlockContext{BlockNumber: big.NewInt(0)}, TxContext{}, stateDb, &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
+
+	// validateSender consults fork.Rules, so the global hardfork config must be initialized.
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(0),
+	})
 
 	// Only stdout logging is tested to avoid file handling. It is used at vmLog test.
 	params.VMLogTarget = params.VMLogToStdout
@@ -374,7 +381,7 @@ func TestPrecompiledModExpOverflow(t *testing.T) {
 	modLen := make([]byte, 32)
 
 	// Set all bytes to 0xFF to get maximum values
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		baseLen[i] = 0xFF
 		expLen[i] = 0xFF
 		modLen[i] = 0xFF
@@ -579,12 +586,12 @@ func TestConsoleLog(t *testing.T) {
 					if len(paramType) > 5 && paramType[:5] == "Bytes" {
 						size, _ := strconv.Atoi(string(paramType[5:]))
 						b := make([]byte, size)
-						for i := 0; i < size; i++ {
+						for i := range size {
 							b[i] = byte(i)
 						}
 						arrayType := reflect.ArrayOf(size, reflect.TypeFor[byte]())
 						array := reflect.New(arrayType).Elem()
-						for i := 0; i < size; i++ {
+						for i := range size {
 							array.Index(i).Set(reflect.ValueOf(byte(i)))
 						}
 						inputs = append(inputs, array.Interface())
@@ -624,5 +631,90 @@ func TestConsoleLog(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, expected, decoded)
 		})
+	}
+}
+
+// TestValidateSenderPrecompile_ZeroSignatures verifies that the validateSender precompile
+// (0x3ff) rejects inputs that carry no signatures once the Permissionless fork is active.
+func TestValidateSenderPrecompile_ZeroSignatures(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(0),
+	})
+
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	require.NoError(t, err)
+	addr := crypto.PubkeyToAddress(k.PublicKey)
+	stateDb.CreateEOA(addr, false, accountkey.NewAccountKeyPublicWithValue(&k.PublicKey))
+
+	// Build input: [20-byte address][32-byte hash] with no trailing signature bytes.
+	input := make([]byte, common.AddressLength+common.HashLength)
+	copy(input[:common.AddressLength], addr.Bytes())
+
+	c := &validateSender{}
+	assert.ErrorIs(t, c.validateSender(input, stateDb, 0), errNoSignatures)
+
+	// Run() swallows the error and returns 0x00 (failure indicator).
+	contract := NewContract(
+		types.NewAccountRefWithFeePayer(addr, addr),
+		nil, new(big.Int), 1e6, nil,
+	)
+	evm := NewEVM(
+		BlockContext{BlockNumber: big.NewInt(0)},
+		TxContext{},
+		stateDb,
+		&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)},
+		&Config{},
+	)
+	out, _, runErr := RunPrecompiledContract(c, input, contract, evm)
+	assert.NoError(t, runErr)
+	assert.Equal(t, []byte{0}, out)
+}
+
+// TestValidateSenderPrecompile_HighRecoveryID verifies that the validateSender precompile
+// (0x3ff) accepts a signature with v ∈ {2, 3} before the Permissionless fork, as v2.2.2 did,
+// and rejects it once the fork is active.
+func TestValidateSenderPrecompile_HighRecoveryID(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{
+		IstanbulCompatibleBlock:       big.NewInt(0),
+		PermissionlessCompatibleBlock: big.NewInt(10),
+	})
+
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	// [20-byte address][32-byte hash][r=2][s=1][v]: each address is the one v2.2.2 recovers
+	// from the signature, and it has no account, so its key is the legacy key.
+	const (
+		msg = "f9233cfeb44d3724e2c6b95d9cb2973ba7bf6733c6d127fee68278216c1d568c"
+		rs  = "0000000000000000000000000000000000000000000000000000000000000002" +
+			"0000000000000000000000000000000000000000000000000000000000000001"
+	)
+	for _, tc := range []struct {
+		v    string
+		from common.Address
+	}{
+		{"02", common.HexToAddress("0xa9DECC34942E9f2223653e6720000dE6475a364c")},
+		{"03", common.HexToAddress("0x9EE133cdEf173fB2A1c010B31f6C8E2742EfFf78")},
+	} {
+		input := common.Hex2Bytes(tc.from.Hex()[2:] + msg + rs + tc.v)
+
+		c := &validateSender{}
+		assert.NoError(t, c.validateSender(input, stateDb, 9))
+		assert.ErrorIs(t, c.validateSender(input, stateDb, 10), errInvalidRecoveryID)
+
+		// Run() returns 0x01 before the fork and 0x00 after it, with no error either way.
+		for _, rc := range []struct {
+			block int64
+			want  byte
+		}{{9, 1}, {10, 0}} {
+			contract := NewContract(types.NewAccountRefWithFeePayer(tc.from, tc.from), nil, new(big.Int), 1e6, nil)
+			evm := NewEVM(BlockContext{BlockNumber: big.NewInt(rc.block)}, TxContext{}, stateDb,
+				&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}, &Config{})
+			out, _, err := RunPrecompiledContract(c, input, contract, evm)
+			assert.NoError(t, err)
+			assert.Equal(t, []byte{rc.want}, out)
+		}
 	}
 }
