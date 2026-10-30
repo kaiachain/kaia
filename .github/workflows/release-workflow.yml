@@ -262,7 +262,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            kaiachain/kaia:${{ github.ref == 'refs/heads/dev' && 'dev' || github.ref_name }}
+            kaiachain/kaia:${{ github.ref_name }}
             ${{ startsWith(github.ref, 'refs/tags/v') && 'kaiachain/kaia:latest' || '' }} 
 
   # Major-only: Update repository metadata
