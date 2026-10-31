@@ -50,7 +50,7 @@ type Node struct {
 	IP    net.IP   // len 4 for IPv4 or 16 for IPv6
 	UDP   uint16   // discovery port numbers
 	TCP   uint16   // TCP listening port number
-	TCPs  []uint16 // TCP listening port number including both main port and subports
+	TCPs  []uint16 // unique TCP listening ports, main port first
 	ID    NodeID   // the node's public key
 	NType NodeType // the node's type (cn, pn, en, bn)
 
@@ -77,12 +77,15 @@ func NewNode(id NodeID, ip net.IP, udpPort, tcpPort uint16, tcpSubports []uint16
 		IP:    ip,
 		UDP:   udpPort,
 		TCP:   tcpPort,
-		TCPs:  tcpSubports,
+		TCPs:  []uint16{tcpPort},
 		ID:    id,
 		NType: nType,
 		sha:   crypto.Keccak256Hash(id[:]),
 	}
-	node.AddSubport(tcpPort)
+	// The dialer uses this order as channel indices, with the main port at 0.
+	for _, port := range tcpSubports {
+		node.AddSubport(port)
+	}
 	return node
 }
 
