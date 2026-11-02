@@ -32,6 +32,7 @@ import (
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	vrank_mock "github.com/kaiachain/kaia/kaiax/vrank/mock"
 	"github.com/kaiachain/kaia/storage/database"
@@ -207,7 +208,7 @@ func TestGetRewardEligiblePreForkError(t *testing.T) {
 // TestRewardFollowsEpochTransition runs the real node-state transition of an epoch block E into
 // the deferred reward. ABv2 holds four ValActive nodes but three active slots, so the epoch
 // transition at E moves the lowest address to ValInactive although it meets MinimumStake.
-// StakingInfo holds every profile at both blocks; the staking rewards of E-1 and E must follow the
+// The staking info, the staking rewards and the reward address lookup of E-1 and E must follow the
 // node states of each block, the same as the committee.
 func TestRewardFollowsEpochTransition(t *testing.T) {
 	const epochBlock = 4
@@ -254,7 +255,15 @@ func TestRewardFollowsEpochTransition(t *testing.T) {
 	v.GovModule = mGov
 	v.VRankModule = mVRank
 
-	// The staking info since Permissionless: every profile, whatever its state.
+	mStakingReal := staking_impl.NewStakingModule()
+	require.NoError(t, mStakingReal.Init(&staking_impl.InitOpts{
+		ChainKv:      database.NewMemDB(),
+		ChainConfig:  h.Backend.BlockChain().Config(),
+		Chain:        h.Backend.BlockChain(),
+		ValsetModule: v,
+	}))
+
+	// The test ABv2 staking contracts hold no stake, so take these amounts over the kept nodes.
 	si := &staking.StakingInfo{}
 	for i, n := range nodes {
 		si.NodeIds = append(si.NodeIds, n.NodeID)
@@ -263,7 +272,13 @@ func TestRewardFollowsEpochTransition(t *testing.T) {
 		si.StakingAmounts = append(si.StakingAmounts, uint64(5_000_000+i))
 	}
 	mStaking := staking_mock.NewMockStakingModule(ctrl)
-	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).DoAndReturn(func(num uint64) (*staking.StakingInfo, error) {
+		kept, err := mStakingReal.GetStakingInfo(num)
+		if err != nil {
+			return nil, err
+		}
+		return si.FilterNodes(kept.NodeIds), nil
+	}).AnyTimes()
 
 	r := reward_impl.NewRewardModule()
 	require.NoError(t, r.Init(&reward_impl.InitOpts{
@@ -271,7 +286,6 @@ func TestRewardFollowsEpochTransition(t *testing.T) {
 		Chain:         chain_mock.NewMockBlockChain(ctrl),
 		GovModule:     mGov,
 		StakingModule: mStaking,
-		ValsetModule:  v,
 	}))
 
 	for _, tc := range []struct {
@@ -285,6 +299,24 @@ func TestRewardFollowsEpochTransition(t *testing.T) {
 		eligible, err := v.GetRewardEligible(tc.num)
 		require.NoError(t, err)
 		assert.ElementsMatch(t, tc.eligible, eligible, "block %d", tc.num)
+		kept, err := mStakingReal.GetStakingInfo(tc.num)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, tc.eligible, kept.NodeIds, "block %d", tc.num)
+
+		// Every qualified validator finds its reward address.
+		qualified, err := v.GetQualifiedValidators(tc.num)
+		require.NoError(t, err)
+		for _, n := range nodes {
+			r.NodeAddress = n.NodeID
+			header := &types.Header{Number: new(big.Int).SetUint64(tc.num)}
+			err := r.PrepareHeader(header)
+			if slices.Contains(qualified, n.NodeID) {
+				require.NoError(t, err, "block %d, %s", tc.num, n.NodeID.Hex())
+				assert.Equal(t, n.RewardAddress, header.Rewardbase, "block %d, %s", tc.num, n.NodeID.Hex())
+			} else if !slices.Contains(tc.eligible, n.NodeID) {
+				assert.Error(t, err, "block %d, %s", tc.num, n.NodeID.Hex())
+			}
+		}
 
 		header := &types.Header{Number: new(big.Int).SetUint64(tc.num), BaseFee: big.NewInt(25e9), Rewardbase: nodes[1].RewardAddress}
 		spec, err := r.GetDeferredReward(header, nil, nil)

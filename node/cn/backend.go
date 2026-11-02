@@ -507,9 +507,10 @@ func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.
 	// Initialize modules
 	return errors.Join(
 		mStaking.Init(&staking_impl.InitOpts{
-			ChainKv:     s.chainDB.GetMiscDB(),
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
+			ChainKv:      s.chainDB.GetMiscDB(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			ValsetModule: mValset,
 		}),
 		mGov.Init(&gov_impl.InitOpts{
 			ChainConfig: s.chainConfig,
@@ -544,7 +545,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:         s.blockchain,
 			GovModule:     s.govModule,
 			StakingModule: s.stakingModule,
-			ValsetModule:  mValset,
 			NodeAddress:   s.nodeAddress,
 			Rewardbase:    s.rewardbase,
 		}),

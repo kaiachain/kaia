@@ -127,7 +127,6 @@ func TestHardForkBlock(t *testing.T) {
 			Chain:         chain,
 			GovModule:     govModule,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
-			ValsetModule:  mValset,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			ChainKv:       chainDb.GetMiscDB(),

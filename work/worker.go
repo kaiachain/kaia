@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -362,6 +363,19 @@ func (self *worker) commitNewWork() {
 
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
+
+	// Only qualified validators produce a block.
+	if mValset := self.chain.Validator().ValsetModule(); mValset != nil {
+		qualified, err := mValset.GetQualifiedValidators(nextBlockNum.Uint64())
+		if err != nil {
+			logger.Error("Failed to get qualified validators for mining", "number", nextBlockNum, "err", err)
+			return
+		}
+		if !slices.Contains(qualified, self.nodeAddr) {
+			logger.Trace("Not a qualified validator, skip mining", "number", nextBlockNum)
+			return
+		}
+	}
 
 	// Wait for ideal block time to ensure consistent block intervals
 	self.waitForIdealBlockTime(parent)

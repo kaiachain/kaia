@@ -30,6 +30,8 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/mocks"
@@ -53,6 +55,7 @@ func (b *testBackend) ReBroadcastTxs(types.Transactions)       {}
 func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engine, finalizeCh <-chan *consensus.ExecutionResult, mux *event.TypeMux) (w *worker, taken <-chan struct{}) {
 	chain := mocks.NewMockBlockChain(ctrl)
 	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Time: big.NewInt(0)})).AnyTimes()
+	chain.EXPECT().Validator().Return(&fakeValidator{}).AnyTimes()
 	// commitNewWork stops at Pending.
 	takenCh := make(chan struct{}, 1)
 	txPool := mocks.NewMockTxPool(ctrl)
@@ -215,6 +218,54 @@ func TestWorkerPostOwnChainHeadWithFullChannel(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("mined block's chain events weren't posted")
 			}
+		})
+	}
+}
+
+type fakeValidator struct {
+	blockchain.Validator
+	valset valset.ValsetModule
+}
+
+func (v *fakeValidator) ValsetModule() valset.ValsetModule { return v.valset }
+
+// Tests that commitNewWork stops before PrepareHeader unless the node is a qualified validator of the next block.
+func TestCommitNewWorkQualifiedOnly(t *testing.T) {
+	var (
+		nodeAddr = common.HexToAddress("0xa01")
+		other    = common.HexToAddress("0xa02")
+	)
+	for _, tc := range []struct {
+		name          string
+		qualified     []common.Address
+		qualifiedErr  error
+		prepareHeader bool
+	}{
+		{"qualified", []common.Address{other, nodeAddr}, nil, true},
+		{"not qualified", []common.Address{other}, nil, false},
+		{"qualified validators unavailable", nil, errors.New("no state"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mValset := valset_mock.NewMockValsetModule(ctrl)
+			mValset.EXPECT().GetQualifiedValidators(uint64(1)).Return(tc.qualified, tc.qualifiedErr)
+
+			chain := mocks.NewMockBlockChain(ctrl)
+			chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Time: big.NewInt(0)})).AnyTimes()
+			chain.EXPECT().Validator().Return(&fakeValidator{valset: mValset}).AnyTimes()
+			txPool := mocks.NewMockTxPool(ctrl)
+			if tc.prepareHeader {
+				txPool.EXPECT().Pending().Return(nil, nil)
+				chain.EXPECT().PrepareHeader(gomock.Any()).Return(errors.New("stop"))
+			}
+
+			w := &worker{
+				config:   &params.ChainConfig{},
+				backend:  &testBackend{chain: chain, txPool: txPool},
+				chain:    chain,
+				nodeAddr: nodeAddr,
+			}
+			w.commitNewWork()
 		})
 	}
 }

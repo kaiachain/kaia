@@ -31,7 +31,6 @@ import (
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
-	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 )
@@ -71,11 +70,6 @@ type rewardModuleTestConfig struct {
 
 	// PermissionlessBlock, when set, schedules Osaka and Permissionless at this block instead.
 	PermissionlessBlock *big.Int
-	// RewardEligible is returned by ValsetModule.GetRewardEligible: the reward-eligible nodes at
-	// the block, after the transitions applied for it. Nil makes every staking entry eligible.
-	RewardEligible []common.Address
-	// RewardEligibleErr, when set, makes ValsetModule.GetRewardEligible fail with it.
-	RewardEligibleErr error
 }
 
 // Make a RewardModule that works with the given block.
@@ -122,7 +116,6 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		chain    = chain_mock.NewMockBlockChain(mockCtrl)
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
-		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 
 		chainConfig = &params.ChainConfig{
 			ChainID:                       big.NewInt(31337),
@@ -163,7 +156,6 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		Chain:         chain,
 		GovModule:     mGov,
 		StakingModule: mStaking,
-		ValsetModule:  mValset,
 		NodeAddress:   cfg.NodeAddress,
 		Rewardbase:    cfg.Rewardbase,
 	})
@@ -173,18 +165,6 @@ func makeTestRewardModuleWithConfig(t *testing.T, cfg rewardModuleTestConfig) *R
 		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(nil, cfg.StakingErr).AnyTimes()
 	} else {
 		mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
-	}
-	// Every staking entry is a qualified validator. The reward module no longer asks, but the
-	// expectation keeps the fixture meaningful for code that does (e.g. the pre-fix FinalizeState,
-	// whose header rewrite TestFinalizeStateLeavesHeaderUntouched must observe rather than a
-	// missing-mock failure).
-	mValset.EXPECT().GetQualifiedValidators(gomock.Any()).Return(stakingInfo.NodeIds, nil).AnyTimes()
-	if cfg.RewardEligibleErr != nil {
-		mValset.EXPECT().GetRewardEligible(gomock.Any()).Return(nil, cfg.RewardEligibleErr).AnyTimes()
-	} else if cfg.RewardEligible != nil {
-		mValset.EXPECT().GetRewardEligible(gomock.Any()).Return(cfg.RewardEligible, nil).AnyTimes()
-	} else {
-		mValset.EXPECT().GetRewardEligible(gomock.Any()).Return(stakingInfo.NodeIds, nil).AnyTimes()
 	}
 
 	if cfg.Header != nil {

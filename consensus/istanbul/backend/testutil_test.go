@@ -215,9 +215,10 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 			NodeAddress: engine.Address(),
 		}),
 		mStaking.Init(&staking_impl.InitOpts{
-			ChainKv:     dbm.GetMiscDB(),
-			ChainConfig: config,
-			Chain:       chain,
+			ChainKv:      dbm.GetMiscDB(),
+			ChainConfig:  config,
+			Chain:        chain,
+			ValsetModule: mValset,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			ChainKv:       dbm.GetMiscDB(),
