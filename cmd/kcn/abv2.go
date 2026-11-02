@@ -23,7 +23,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"path/filepath"
+	"slices"
 	"strings"
+	"time"
 
 	kaia "github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi"
@@ -31,20 +34,26 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/client"
+	"github.com/kaiachain/kaia/cmd/utils"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	addressbookv2 "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/params"
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	defaultNodeKeyPath = "/var/kcnd/data/klay/nodekey"
-	defaultEndpoint    = "/var/kcnd/data/klay.ipc"
-)
+const defaultTimeout = 2 * time.Minute
+
+// minEpochTimeLeft is the time before the next epoch block below which a ready
+// transition prints a warning. The onboarding portal uses the same value.
+const minEpochTimeLeft = 5 * time.Minute
+
+// defaultDatadir is the data directory of an rpm install (DATA_DIR in /etc/kcnd/conf/kcnd.conf).
+const defaultDatadir = "/var/kcnd/data"
 
 // AddressBookV2 method names, shared by the command wiring and the pre-flight
 // dry-run (which packs calldata by name).
@@ -66,17 +75,26 @@ type abv2TxFn func(*addressbookv2.AddressBookV2Transactor, *bind.TransactOpts, c
 var (
 	abv2EndpointFlag = &cli.StringFlag{
 		Name:  "endpoint",
-		Usage: "RPC or IPC endpoint",
-		Value: defaultEndpoint,
+		Usage: "RPC or IPC endpoint (default: <datadir>/klay.ipc)",
 	}
 	abv2PrivateKeyFlag = &cli.StringFlag{
 		Name:  "private-key",
-		Usage: "Hex-encoded private key (default: load from " + defaultNodeKeyPath + ")",
+		Usage: "Hex-encoded private key, used instead of the node key file. Unsafe: a key on the command line stays in shell history and process listings",
+	}
+	abv2DatadirFlag = &cli.StringFlag{
+		Name:  "datadir",
+		Usage: "Node data directory (rpm installs use the default; for a tar install, DATA_DIR in conf/kcnd.conf). The key is loaded from <datadir>/nodekey if it exists, else <datadir>/klay/nodekey, as the node does",
+		Value: defaultDatadir,
 	}
 	abv2NodeIdFlag = &cli.StringFlag{
 		Name:     "node-id",
 		Usage:    "Address of the target validator node",
 		Required: true,
+	}
+	abv2TimeoutFlag = &cli.DurationFlag{
+		Name:  "timeout",
+		Usage: "How long to wait for the transaction receipt",
+		Value: defaultTimeout,
 	}
 )
 
@@ -151,60 +169,262 @@ var ValOpsCommand = &cli.Command{
 }
 
 func abv2Flags() []cli.Flag {
-	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag}
+	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2DatadirFlag, abv2TimeoutFlag}
 }
 
 func abv2SuspenderFlags() []cli.Flag {
-	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2NodeIdFlag}
+	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2DatadirFlag, abv2TimeoutFlag, abv2NodeIdFlag}
 }
 
+// nodeFilePath returns the path the node uses for a key file under datadir.
+// It resolves the path as the node does (node.Config.ResolvePath):
+// <datadir>/<name> if that file exists, else <datadir>/klay/<name>.
+func nodeFilePath(datadir, name string) string {
+	cfg := node.Config{DataDir: datadir, Name: utils.ClientIdentifier}
+	return cfg.ResolvePath(name)
+}
+
+// endpointOf returns --endpoint if set, else the IPC socket of the node under --datadir.
+func endpointOf(ctx *cli.Context) string {
+	if endpoint := ctx.String("endpoint"); endpoint != "" {
+		return endpoint
+	}
+	return filepath.Join(ctx.String("datadir"), "klay.ipc")
+}
+
+// datadirUsed reports whether the command reads the key or the endpoint from --datadir.
+func datadirUsed(ctx *cli.Context) bool {
+	return ctx.String("private-key") == "" || ctx.String("endpoint") == ""
+}
+
+// datadirSource describes where the --datadir value came from.
+func datadirSource(ctx *cli.Context) string {
+	if ctx.IsSet("datadir") {
+		return "--datadir"
+	}
+	return "default"
+}
+
+// parseAddress parses a non-zero 20-byte hex address given to --flag.
+func parseAddress(flag, value string) (common.Address, error) {
+	if !common.IsHexAddress(value) {
+		return common.Address{}, fmt.Errorf("invalid --%s %q: expected a 20-byte hex address (40 hex digits, with or without 0x)", flag, value)
+	}
+	addr := common.HexToAddress(value)
+	if addr == (common.Address{}) {
+		return common.Address{}, fmt.Errorf("invalid --%s: zero address", flag)
+	}
+	return addr, nil
+}
+
+// formatKAIA formats an amount in kei as KAIA.
+func formatKAIA(kei *big.Int) string {
+	return new(big.Float).Quo(new(big.Float).SetInt(kei), big.NewFloat(params.KAIA)).Text('f', 6) + " KAIA"
+}
+
+// loadKey returns the --private-key key if set, else the raw nodekey under --datadir.
 func loadKey(ctx *cli.Context) (*ecdsa.PrivateKey, error) {
 	if keyHex := ctx.String("private-key"); keyHex != "" {
 		return crypto.HexToECDSA(strings.TrimPrefix(keyHex, "0x"))
 	}
-	return crypto.LoadECDSA(defaultNodeKeyPath)
+	key, err := crypto.LoadECDSA(nodeFilePath(ctx.String("datadir"), node.DatadirPrivateKey))
+	if err != nil {
+		return nil, fmt.Errorf("load key: %w (check --datadir; the default is "+defaultDatadir+")", err)
+	}
+	return key, nil
 }
 
 func abv2Run(ctx *cli.Context, method string, nodeIdFn func(*bind.TransactOpts) common.Address, fn abv2TxFn) error {
 	key, err := loadKey(ctx)
 	if err != nil {
-		return fmt.Errorf("load key: %w (use --private-key to specify explicitly)", err)
+		return err
 	}
-	ec, transactor, err := dialABv2(ctx.String("endpoint"))
+	endpoint := endpointOf(ctx)
+	ec, transactor, err := dialABv2(endpoint)
 	if err != nil {
-		return fmt.Errorf("%w (use --endpoint to specify explicitly)", err)
+		return fmt.Errorf("%w (check --endpoint or --datadir)", err)
 	}
 	defer ec.Close()
+	chainID, err := ec.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf("get chain ID from %s: %w", endpoint, err)
+	}
 
 	opts := bind.NewKeyedTransactor(key)
-	opts.GasLimit = params.UpperGasLimit
 	nodeId := nodeIdFn(opts)
 
+	fmt.Printf("method:   %s\n", method)
+	if datadirUsed(ctx) {
+		fmt.Printf("datadir:  %s (%s)\n", ctx.String("datadir"), datadirSource(ctx))
+	}
+	fmt.Printf("endpoint: %s\n", endpoint)
+	fmt.Printf("chain ID: %s\n", chainID)
+	fmt.Printf("sender:   %s\n", opts.From.Hex())
+	fmt.Printf("node ID:  %s\n", nodeId.Hex())
+
+	caller, err := addressbookv2.NewAddressBookV2Caller(system.AddressBookAddr, ec)
+	if err != nil {
+		return err
+	}
+	if method == methodReadyCandidate || method == methodReadyValidator {
+		if err := abv2PrintEpochWarnings(ec, caller, method, nodeId); err != nil {
+			return err
+		}
+	}
+
 	// Pre-flight: fail fast on an inevitable revert (e.g. SlotsFull) without gas.
-	if reason := abv2DryRun(ec, method, opts.From, nodeId, opts.GasLimit); reason != "" {
+	if reason := abv2DryRun(ec, method, opts.From, nodeId); reason != "" {
 		return fmt.Errorf("pre-flight check reverted: %s (no transaction sent)", reason)
+	}
+	if opts.GasLimit, opts.GasPrice, err = abv2GasParams(ec, method, opts.From, nodeId); err != nil {
+		return fmt.Errorf("%w (no transaction sent)", err)
 	}
 
 	tx, err := fn(transactor, opts, nodeId)
 	if err != nil {
 		return err
 	}
-	return printAndWait(ec, tx, opts.From)
+	if err := printAndWait(ec, tx, opts.From, ctx.Duration("timeout")); err != nil {
+		return err
+	}
+	return abv2PrintNodeState(caller, nodeId)
+}
+
+// abv2PrintEpochWarnings prints the time left before the next epoch block and a
+// warning for each way the ready transition may not take effect at that block.
+// It never refuses: the contract has no epoch-time condition.
+func abv2PrintEpochWarnings(ec *client.KaiaClient, caller *addressbookv2.AddressBookV2Caller, method string, nodeId common.Address) error {
+	head, err := ec.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("get head block: %w", err)
+	}
+	interval, err := caller.EpochBlockInterval(nil)
+	if err != nil {
+		return fmt.Errorf("get epoch block interval: %w (AddressBookV2 is active only after the Permissionless fork)", err)
+	}
+	if interval.Sign() <= 0 {
+		return fmt.Errorf("invalid epoch block interval %s", interval)
+	}
+	nextEpoch, timeLeft := epochTimeLeft(head.Number, interval)
+	fmt.Printf("epoch:    next epoch block %s, about %s left\n", nextEpoch, timeLeft)
+
+	// A zero timeoutAt never expires.
+	var timeoutIn *time.Duration
+	if method == methodReadyValidator {
+		info, err := caller.GetNodeInfo(nil, nodeId)
+		if err != nil {
+			return fmt.Errorf("get node info: %w", err)
+		}
+		if info.TimeoutAt != nil && info.TimeoutAt.Sign() > 0 {
+			d := time.Duration(info.TimeoutAt.Int64()-int64(head.Time.Uint64())) * time.Second
+			timeoutIn = &d
+			fmt.Printf("timeout:  %s (about %s from now)\n", time.Unix(info.TimeoutAt.Int64(), 0).UTC().Format(time.RFC3339), d)
+		}
+	}
+	epochLength := time.Duration(interval.Int64()) * time.Second
+	for _, w := range readyWarnings(method, nextEpoch, timeLeft, epochLength, timeoutIn) {
+		fmt.Println("WARNING: " + w)
+	}
+	return nil
+}
+
+// readyWarnings returns the warnings for a ready transition sent timeLeft before
+// the epoch block nextEpoch. timeoutIn is the time until the node's idle timeout,
+// or nil if it has none. A ValReady or ValInactive node becomes Registered at the
+// first block whose time reaches its idle timeout. At an epoch block the epoch
+// transition runs first, so a timeout on the epoch block itself does not stop a
+// promotion to ValActive; it still applies if the node is not promoted.
+func readyWarnings(method string, nextEpoch *big.Int, timeLeft, epochLength time.Duration, timeoutIn *time.Duration) []string {
+	var ws []string
+	late := timeLeft < minEpochTimeLeft
+	if late {
+		ws = append(ws, fmt.Sprintf("less than %s is left before epoch block %s. If the transaction is included after that block, the transition takes effect one epoch later (about %s)",
+			minEpochTimeLeft, nextEpoch, epochLength))
+	}
+	if method != methodReadyValidator || timeoutIn == nil {
+		return ws
+	}
+	switch {
+	case *timeoutIn < timeLeft:
+		ws = append(ws, fmt.Sprintf("the node's idle timeout comes before epoch block %s. The node will become Registered, not ValActive, and must go through ready-candidate again", nextEpoch))
+	case late && *timeoutIn < timeLeft+epochLength:
+		ws = append(ws, fmt.Sprintf("if the transaction is included after epoch block %s, the node's idle timeout comes before the next epoch block. The node will then become Registered, not ValActive", nextEpoch))
+	}
+	return ws
+}
+
+// epochTimeLeft returns the next epoch block after head and the time until it,
+// counting one second per block.
+func epochTimeLeft(head, interval *big.Int) (*big.Int, time.Duration) {
+	blocksLeft := new(big.Int).Sub(interval, new(big.Int).Mod(head, interval))
+	return new(big.Int).Add(head, blocksLeft), time.Duration(blocksLeft.Int64()) * time.Second
+}
+
+// abv2PrintNodeState prints the node's state and suspension after a transaction.
+func abv2PrintNodeState(caller *addressbookv2.AddressBookV2Caller, nodeId common.Address) error {
+	state, err := caller.GetNodeState(nil, nodeId)
+	if err != nil {
+		return fmt.Errorf("get node state: %w", err)
+	}
+	suspended, err := caller.GetSuspendedValidators(nil)
+	if err != nil {
+		return fmt.Errorf("get suspended validators: %w", err)
+	}
+	fmt.Printf("state:    %s\n", valset.NodeState(state))
+	fmt.Printf("suspended: %t\n", slices.Contains(suspended, nodeId))
+	return nil
+}
+
+// abv2CallMsg builds the call of method(nodeId) on AddressBookV2 sent by from.
+func abv2CallMsg(method string, from, nodeId common.Address) (kaia.CallMsg, error) {
+	abv2ABI, err := addressbookv2.AddressBookV2MetaData.GetAbi()
+	if err != nil {
+		return kaia.CallMsg{}, err
+	}
+	data, err := abv2ABI.Pack(method, nodeId)
+	if err != nil {
+		return kaia.CallMsg{}, err
+	}
+	to := system.AddressBookAddr
+	return kaia.CallMsg{From: from, To: &to, Data: data}, nil
+}
+
+// abv2GasParams returns the gas limit (estimate plus 50%) and gas price for the
+// transition, and fails if the sender cannot pay gasLimit * gasPrice up front.
+func abv2GasParams(ec *client.KaiaClient, method string, from, nodeId common.Address) (uint64, *big.Int, error) {
+	msg, err := abv2CallMsg(method, from, nodeId)
+	if err != nil {
+		return 0, nil, err
+	}
+	estimate, err := ec.EstimateGas(context.Background(), msg)
+	if err != nil {
+		return 0, nil, fmt.Errorf("estimate gas: %w", err)
+	}
+	gasLimit := estimate + estimate/2
+	gasPrice, err := ec.SuggestGasPrice(context.Background())
+	if err != nil {
+		return 0, nil, fmt.Errorf("get gas price: %w", err)
+	}
+	balance, err := ec.BalanceAt(context.Background(), from, nil)
+	if err != nil {
+		return 0, nil, fmt.Errorf("get balance of %s: %w", from.Hex(), err)
+	}
+	required := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
+	if balance.Cmp(required) < 0 {
+		return 0, nil, fmt.Errorf("sender %s needs %s for gas but holds %s; send KAIA to this address",
+			from.Hex(), formatKAIA(required), formatKAIA(balance))
+	}
+	return gasLimit, gasPrice, nil
 }
 
 // abv2DryRun returns the simulated transition's revert reason, or "" if it would
 // succeed or can't be decoded (fail-open).
-func abv2DryRun(ec *client.KaiaClient, method string, from, nodeId common.Address, gas uint64) string {
-	abv2ABI, err := addressbookv2.AddressBookV2MetaData.GetAbi()
+func abv2DryRun(ec *client.KaiaClient, method string, from, nodeId common.Address) string {
+	msg, err := abv2CallMsg(method, from, nodeId)
 	if err != nil {
 		return ""
 	}
-	data, err := abv2ABI.Pack(method, nodeId)
-	if err != nil {
-		return ""
-	}
-	to := system.AddressBookAddr
-	msg := kaia.CallMsg{From: from, To: &to, Gas: gas, Data: data}
+	msg.Gas = params.UpperGasLimit
 	if _, err := ec.CallContract(context.Background(), msg, nil); err != nil {
 		reason := revertReasonFromErr(err)
 		if reason == "SlotsFull" {
@@ -280,7 +500,10 @@ func abv2SlotInfo(ec *client.KaiaClient, method string, nodeId common.Address) s
 // abv2SuspenderAction wraps a suspender-role command; reads node-id from --node-id flag.
 func abv2SuspenderAction(method string, fn abv2TxFn) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
-		nodeId := common.HexToAddress(ctx.String("node-id"))
+		nodeId, err := parseAddress("node-id", ctx.String("node-id"))
+		if err != nil {
+			return err
+		}
 		return abv2Run(ctx, method, func(*bind.TransactOpts) common.Address { return nodeId }, fn)
 	}
 }
@@ -305,9 +528,15 @@ func dialABv2(endpoint string) (*client.KaiaClient, *addressbookv2.AddressBookV2
 	return ec, t, nil
 }
 
-func printAndWait(ec *client.KaiaClient, tx *types.Transaction, from common.Address) error {
+func printAndWait(ec *client.KaiaClient, tx *types.Transaction, from common.Address, timeout time.Duration) error {
 	fmt.Printf("tx: %s\n", tx.Hash().Hex())
-	receipt, err := bind.WaitMined(context.Background(), ec, tx)
+	fmt.Println("waiting for receipt...")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	receipt, err := bind.WaitMined(ctx, ec, tx)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("no receipt for %s after %s; the outcome is unknown. Check the transaction hash before sending again", tx.Hash().Hex(), timeout)
+	}
 	if err != nil {
 		return fmt.Errorf("wait for receipt: %w", err)
 	}
