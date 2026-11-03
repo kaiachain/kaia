@@ -19,9 +19,9 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/kaiachain/kaia/blockchain/system"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/urfave/cli/v2"
@@ -55,29 +55,44 @@ var (
 var SignCreateNodeCommand = &cli.Command{
 	Name:   "sign-create-node",
 	Usage:  "Sign the nodeId-ownership proof required by AddressBookV2.createNode (offline)",
-	Flags:  []cli.Flag{abv2PrivateKeyFlag, signChainIDFlag, signStakingFlag, signManagerFlag, signNodeIdFlag},
+	Flags:  []cli.Flag{abv2PrivateKeyFlag, abv2DatadirFlag, signChainIDFlag, signStakingFlag, signManagerFlag, signNodeIdFlag},
 	Action: signCreateNodeAction,
 }
 
 func signCreateNodeAction(ctx *cli.Context) error {
 	key, err := loadKey(ctx)
 	if err != nil {
-		return fmt.Errorf("load key: %w (use --private-key to specify explicitly)", err)
+		return err
 	}
 	nodeId := crypto.PubkeyToAddress(key.PublicKey)
-	if v := ctx.String("node-id"); v != "" && common.HexToAddress(v) != nodeId {
-		return fmt.Errorf("--node-id %s does not match the signing key's address %s", v, nodeId.Hex())
+	if v := ctx.String("node-id"); v != "" {
+		expected, err := parseAddress("node-id", v)
+		if err != nil {
+			return err
+		}
+		if expected != nodeId {
+			return fmt.Errorf("--node-id %s does not match the signing key's address %s", v, nodeId.Hex())
+		}
 	}
-	sig, err := system.SignCreateNodeProof(
-		key,
-		big.NewInt(ctx.Int64("chain-id")),
-		common.HexToAddress(ctx.String("manager")),
-		nodeId,
-		common.HexToAddress(ctx.String("staking-contract")),
-	)
+	chainID := ctx.Int64("chain-id")
+	if chainID <= 0 {
+		return fmt.Errorf("invalid --chain-id %d: must be positive (8217 mainnet, 1001 kairos)", chainID)
+	}
+	manager, err := parseAddress("manager", ctx.String("manager"))
 	if err != nil {
 		return err
 	}
+	staking, err := parseAddress("staking-contract", ctx.String("staking-contract"))
+	if err != nil {
+		return err
+	}
+	sig, err := system.SignCreateNodeProof(key, big.NewInt(chainID), manager, nodeId, staking)
+	if err != nil {
+		return err
+	}
+	// The inputs go to stderr so that stdout holds only the signature.
+	fmt.Fprintf(os.Stderr, "chain ID:         %d\nnode ID:          %s\nmanager:          %s\nstaking contract: %s\n",
+		chainID, nodeId.Hex(), manager.Hex(), staking.Hex())
 	fmt.Println(hexutil.Encode(sig))
 	return nil
 }
