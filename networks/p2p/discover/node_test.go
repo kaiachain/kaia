@@ -259,7 +259,7 @@ var parseNodeTests = []struct {
 			net.IP{0x7f, 0x0, 0x0, 0x1},
 			52150,
 			52150,
-			[]uint16{1, 52150},
+			[]uint16{1},
 			NodeTypeUnknown,
 		),
 	},
@@ -270,7 +270,7 @@ var parseNodeTests = []struct {
 			net.IP{0x7f, 0x0, 0x0, 0x1},
 			123,
 			52150,
-			[]uint16{1, 2, 52150},
+			[]uint16{1, 2},
 			NodeTypeUnknown,
 		),
 	},
@@ -322,6 +322,43 @@ func TestParseNode(t *testing.T) {
 				t.Errorf("test %q:\n  result mismatch:\ngot:  %#v, want: %#v", test.rawurl, n, test.wantResult)
 			}
 		}
+	}
+}
+
+func TestParseNodePortOrder(t *testing.T) {
+	const baseURL = "kni://1dd9d65c4552b5eb43d5ad55a2ee3f56c6cbc1c64a5c8d659f51fcd51bace24351232b8d7821617d2b29b54b81cdefb9b3e9c37d7fd5f63270bcc9e1a6f6a439@127.0.0.1:32323"
+	tests := []struct {
+		name  string
+		query string
+		ports []uint16
+	}{
+		{"no subport", "", []uint16{32323}},
+		{"one subport", "?subport=32324", []uint16{32323, 32324}},
+		{"lower subport", "?subport=32322", []uint16{32323, 32322}},
+		{"multiple subports", "?subport=32325&subport=32324", []uint16{32323, 32325, 32324}},
+		{"duplicate main port", "?subport=32323", []uint16{32323}},
+		{"duplicate subport", "?subport=32324&subport=32324", []uint16{32323, 32324}},
+		{"mixed duplicates", "?subport=32324&subport=32323&subport=32325&subport=32324", []uint16{32323, 32324, 32325}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			n, err := ParseNode(baseURL + test.query)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Check literal port lists: constructing the expectation with NewNode
+			// would hide a regression shared by the parser and the constructor.
+			if !reflect.DeepEqual(n.TCPs, test.ports) {
+				t.Fatalf("ports = %v, want %v", n.TCPs, test.ports)
+			}
+			roundTrip, err := ParseNode(n.String())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(roundTrip.TCPs, test.ports) {
+				t.Fatalf("round-trip ports = %v, want %v", roundTrip.TCPs, test.ports)
+			}
+		})
 	}
 }
 
