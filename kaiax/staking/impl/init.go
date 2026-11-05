@@ -22,6 +22,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -34,9 +35,10 @@ var (
 )
 
 type InitOpts struct {
-	ChainKv     database.Database
-	ChainConfig *params.ChainConfig
-	Chain       backends.BlockChainForCaller
+	ChainKv      database.Database
+	ChainConfig  *params.ChainConfig
+	Chain        backends.BlockChainForCaller
+	ValsetModule valset.ValsetModule
 }
 
 type StakingModule struct {
@@ -70,6 +72,9 @@ func (s *StakingModule) Init(opts *InitOpts) error {
 	}
 	if s.ChainConfig.Governance.Reward.StakingUpdateInterval == 0 {
 		return staking.ErrZeroStakingInterval
+	}
+	if s.ChainConfig.PermissionlessCompatibleBlock != nil && s.ValsetModule == nil {
+		return staking.ErrValsetModuleNotSet
 	}
 	s.stakingInterval = s.ChainConfig.Governance.Reward.StakingUpdateInterval
 	s.useGiniCoeff = s.ChainConfig.Governance.Reward.UseGiniCoeff

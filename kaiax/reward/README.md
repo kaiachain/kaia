@@ -97,7 +97,7 @@ The rules have changed over hardforks.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
 - **Permissionless hardfork**: For the chains using the NDF method, the half burn of the Magma rule takes effect from this hardfork (see the note under the Magma rule). Nothing changes for the DF method.
-  - The staking info of block N holds every AddressBookV2 profile read from the state of N-1. The staking rewards of block N go to the reward-eligible nodes of N (`ValActive`, including the suspended ones), decided on the state of N-1 plus the transitions applied for N, the same node states as the committee of N. So a node promoted (or removed) by the transition for N is rewarded (or not) from N on, not from N+1.
+  - The staking info of block N holds the reward-eligible nodes of N (`ValActive`, including the suspended ones), read from the state of N-1 and decided on the state of N-1 plus the transitions applied for N, the same node states as the committee of N (see [kaiax/staking](../staking/README.md)). So a node promoted (or removed) by the transition for N is rewarded (or not) from N on, not from N+1.
 
 ## Persistent schema
 
@@ -150,7 +150,7 @@ This module does not have any background threads.
 This module sets `header.Rewardbase`, the address that receives this node's block reward, before any transaction of the block is executed:
 
 - `istanbul.policy != 2`: the node's configured reward base (`--rewardbase`).
-- `istanbul.policy = 2` (WeightedRandom), since the Permissionless hardfork: the reward address of this node's AddressBookV2 profile (`NodeIds` / `RewardAddrs`, which hold every profile regardless of its state, so a committee member promoted to `ValActive` in this very block is included). A node without a profile cannot be in the committee, so it returns an error instead of falling back to `--rewardbase`.
+- `istanbul.policy = 2` (WeightedRandom), since the Permissionless hardfork: the reward address of this node's AddressBookV2 profile (`NodeIds` / `RewardAddrs`, which hold the reward-eligible nodes of this block, so a committee member promoted to `ValActive` in this very block is included). A node without a profile cannot be in the committee, so it returns an error instead of falling back to `--rewardbase`.
 - `istanbul.policy = 2`, before the Permissionless hardfork: the reward address registered for this node in the legacy AddressBook (`NodeIds` / `RewardAddrs`) if non-zero, otherwise `--rewardbase`.
 
 The value must be final here because, when `reward.deferredtxfee = false`, the transaction fee is credited to `header.Rewardbase` while each transaction runs (`TransitionDb`, since Magma). A failure to read the staking info is returned (the block is not built) rather than treated as "no entry". Blocks that an unfixed node already sealed with a header naming a different address than the one it executed with stay unreplayable (every node executes with the sealed header); such a chain has to be regenerated.

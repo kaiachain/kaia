@@ -389,7 +389,6 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			Chain:         bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // RoundRobin tests leave this nil; WeightedRandom tests inject a mock (PrepareHeader reads it).
-			ValsetModule:  mValset,
 			NodeAddress:   b.address,
 			Rewardbase:    nodeRewardbase,
 		}),
@@ -422,9 +421,10 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		func() error {
 			if stakingImpl, ok := mStaking.(*staking_impl.StakingModule); ok {
 				return stakingImpl.Init(&staking_impl.InitOpts{
-					ChainKv:     bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
-					ChainConfig: genesis.Config,
-					Chain:       bc,
+					ChainKv:      bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
+					ChainConfig:  genesis.Config,
+					Chain:        bc,
+					ValsetModule: mValset,
 				})
 			}
 			return nil

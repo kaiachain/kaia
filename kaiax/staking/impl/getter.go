@@ -19,6 +19,7 @@ package impl
 import (
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -44,20 +45,84 @@ type clRegistryResult struct {
 	StakingAmounts []*big.Int
 }
 
+// stakingInfoEntry is a value of the staking info cache, with the reward-eligible nodes of the block
+// right after its source block since Permissionless.
+// Its StakingInfos are shared by every caller, so their computed fields are filled before they are shared.
+type stakingInfoEntry struct {
+	si *staking.StakingInfo
+
+	mu       sync.Mutex           // guards filtered
+	filtered *staking.StakingInfo // si filtered for block si.SourceBlockNum+1
+}
+
+func (s *StakingModule) newStakingInfoEntry(si *staking.StakingInfo) *stakingInfoEntry {
+	s.fillComputedFields(si)
+	return &stakingInfoEntry{si: si}
+}
+
+// fillComputedFields fills the lazily computed fields of si, so that reading them later does not write si.
+// Gini is filled for the minimum stake that kaia_getStakingInfo and the P2P staking info use.
+func (s *StakingModule) fillComputedFields(si *staking.StakingInfo) {
+	si.ConsolidatedNodes()
+	if s.minimumStake != nil {
+		si.Gini(s.minimumStake.Uint64())
+	}
+}
+
 func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error) {
+	entry, err := s.getStakingInfoEntry(num)
+	if err != nil {
+		return nil, err
+	}
+	if !s.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return entry.si, nil
+	}
+
+	// Only the block right after the source block owns the cached filtered copy.
+	// Block 0 shares the entry of block 1, so it is filtered on each call.
+	if num != entry.si.SourceBlockNum+1 {
+		return s.filterRewardEligible(entry.si, num)
+	}
+
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.filtered == nil {
+		filtered, err := s.filterRewardEligible(entry.si, num)
+		if err != nil {
+			return nil, err
+		}
+		entry.filtered = filtered
+	}
+	return entry.filtered, nil
+}
+
+// filterRewardEligible returns a copy of si with only the nodes reward-eligible at block num.
+func (s *StakingModule) filterRewardEligible(si *staking.StakingInfo, num uint64) (*staking.StakingInfo, error) {
+	eligible, err := s.ValsetModule.GetRewardEligible(num)
+	if err != nil {
+		return nil, err
+	}
+	filtered := si.FilterNodes(eligible)
+	s.fillComputedFields(filtered)
+	return filtered, nil
+}
+
+// getStakingInfoEntry returns the cache entry of the staking info used for block num.
+func (s *StakingModule) getStakingInfoEntry(num uint64) (*stakingInfoEntry, error) {
 	isKaia := s.ChainConfig.IsKaiaForkEnabled(new(big.Int).SetUint64(num))
 	sourceNum := sourceBlockNum(num, isKaia, s.stakingInterval)
 
 	// Try cache first
-	if si, ok := s.stakingInfoCache.Get(sourceNum); ok {
-		return si.(*staking.StakingInfo), nil
+	if entry, ok := s.stakingInfoCache.Get(sourceNum); ok {
+		return entry.(*stakingInfoEntry), nil
 	}
 
 	// Only before Kaia, try the database
 	if !isKaia {
 		if si := ReadStakingInfo(s.ChainKv, sourceNum); si != nil {
-			s.stakingInfoCache.Add(sourceNum, si)
-			return si, nil
+			entry := s.newStakingInfoEntry(si)
+			s.stakingInfoCache.Add(sourceNum, entry)
+			return entry, nil
 		}
 	}
 
@@ -73,8 +138,9 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 	}
 
 	// Cache it
-	s.stakingInfoCache.Add(sourceNum, si)
-	return si, nil
+	entry := s.newStakingInfoEntry(si)
+	s.stakingInfoCache.Add(sourceNum, entry)
+	return entry, nil
 }
 
 // Read the staking status from the blockchain state.

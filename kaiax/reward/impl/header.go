@@ -111,7 +111,6 @@ func (r *RewardModule) effectiveRewardbase(num uint64) (common.Address, error) {
 
 // lookupRewardAddress returns the reward address registered for nodeId in the staking info used
 // for block num (the zero address when there is none), or the staking lookup error.
-// Since Permissionless, the staking info holds every AddressBookV2 profile regardless of its state.
 func (r *RewardModule) lookupRewardAddress(num uint64, nodeId common.Address) (common.Address, error) {
 	sInfo, err := r.StakingModule.GetStakingInfo(num)
 	if err != nil {

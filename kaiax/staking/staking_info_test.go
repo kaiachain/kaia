@@ -335,7 +335,9 @@ func TestResponse(t *testing.T) {
 func TestFilterNodes(t *testing.T) {
 	var (
 		n1, n2, n3 = common.HexToAddress("0xa01"), common.HexToAddress("0xa02"), common.HexToAddress("0xa03")
-		cl         = CLStakingInfos{{CLNodeId: n1, CLPoolAddr: common.HexToAddress("0xe01"), CLStakingAmount: 1}}
+		cl1        = &CLStakingInfo{CLNodeId: n1, CLPoolAddr: common.HexToAddress("0xe01"), CLStakingAmount: 1}
+		cl2        = &CLStakingInfo{CLNodeId: n2, CLPoolAddr: common.HexToAddress("0xe02"), CLStakingAmount: 2}
+		cl         = CLStakingInfos{cl1, cl2}
 	)
 	si := &StakingInfo{
 		SourceBlockNum:   9,
@@ -360,9 +362,23 @@ func TestFilterNodes(t *testing.T) {
 		KIFAddr:          common.HexToAddress("0xd02"),
 		KPFAddr:          common.HexToAddress("0xd03"),
 		StakingAmounts:   []uint64{1, 3},
-		CLStakingInfos:   cl,
+		CLStakingInfos:   CLStakingInfos{cl1}, // the CL entry of the dropped n2 is dropped too
 	}, filtered)
 	assert.Len(t, si.NodeIds, 3, "si must be left unchanged")
+	assert.Len(t, si.CLStakingInfos, 2, "si must be left unchanged")
 
 	assert.Empty(t, si.FilterNodes(nil).NodeIds)
+	assert.Empty(t, si.FilterNodes(nil).CLStakingInfos)
+	assert.NotNil(t, si.FilterNodes(nil).CLStakingInfos, "an empty list, not null")
+	assert.Nil(t, (&StakingInfo{}).FilterNodes(nil).CLStakingInfos, "no CL info stays nil")
+}
+
+func TestToResponse_EmptyLists(t *testing.T) {
+	si := &StakingInfo{}
+	res := si.ToResponse(false, 0)
+	assert.NotNil(t, res.NodeIds)
+	assert.NotNil(t, res.StakingContracts)
+	assert.NotNil(t, res.RewardAddrs)
+	assert.NotNil(t, res.StakingAmounts)
+	assert.Nil(t, si.NodeIds, "si must be left unchanged")
 }

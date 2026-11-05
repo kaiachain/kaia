@@ -45,7 +45,6 @@ import (
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/supply"
 	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
-	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -153,7 +152,6 @@ func (s *SupplyTestSuite) SetupTest() {
 		sealer   = faker.NewFakerWithFixedSealer(addrProposer)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
-		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 		mReward  = reward_impl.NewRewardModule()
 		mSystem  = system_impl.NewSystemModule()
 		mSupply  = NewSupplyModule()
@@ -179,7 +177,6 @@ func (s *SupplyTestSuite) SetupTest() {
 		Chain:         chain,
 		GovModule:     mGov,
 		StakingModule: mStaking,
-		ValsetModule:  mValset,
 		Rewardbase:    addrProposer,
 	})
 	mSystem.Init(&system_impl.InitOpts{
@@ -201,7 +198,7 @@ func (s *SupplyTestSuite) SetupTest() {
 	)
 
 	// With every modules ready, generate the blocks
-	blocks := setupBlocks(t, config, genesisBlock, dbm, mGov, mStaking, mValset)
+	blocks := setupBlocks(t, config, genesisBlock, dbm, mGov, mStaking)
 
 	s.mockCtrl = mockCtrl
 	s.dbm = dbm
@@ -359,7 +356,7 @@ func setupMockStaking(mStaking *staking_mock.MockStakingModule) {
 	}, nil).AnyTimes()
 }
 
-func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.Block, dbm database.DBManager, mGov *gov_mock.MockGovModule, mStaking *staking_mock.MockStakingModule, mValset *valset_mock.MockValsetModule) []*types.Block {
+func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.Block, dbm database.DBManager, mGov *gov_mock.MockGovModule, mStaking *staking_mock.MockStakingModule) []*types.Block {
 	cacheConfig := &blockchain.CacheConfig{
 		ArchiveMode:         false,
 		CacheSize:           512,
@@ -377,7 +374,6 @@ func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.B
 		Chain:         chain,
 		GovModule:     mGov,
 		StakingModule: mStaking,
-		ValsetModule:  mValset,
 		Rewardbase:    addrProposer,
 	}))
 

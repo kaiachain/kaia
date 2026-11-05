@@ -151,7 +151,6 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 			Chain:         bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
-			ValsetModule:  mValset,
 			Rewardbase:    genesisAddr,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
@@ -391,7 +390,6 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	mValset := valset_impl.NewValsetModule()
 	mGov := gov_impl.NewGovModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -404,7 +402,6 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 			Chain:         bcdata.bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
-			ValsetModule:  mValset,
 			Rewardbase:    *bcdata.rewardBase,
 		}),
 	)
@@ -511,7 +508,6 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
-	mValset := valset_impl.NewValsetModule()
 	mGov := gov_impl.NewGovModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -524,7 +520,6 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 			Chain:         bcdata.bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
-			ValsetModule:  mValset,
 			Rewardbase:    *bcdata.rewardBase,
 		}),
 	)

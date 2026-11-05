@@ -41,7 +41,7 @@ Since the Permissionless hardfork ([KIP-286](https://kips.kaia.io/KIPs/kip-286))
   - The state of N already contains the transitions for N, but also the user transactions of N, so `Nodes(N+1)` is not read from it directly.
 - The sets of the block N are drawn from `Nodes(N)`:
   - `Council(N)` = {`ValActive`, `ValPaused`}
-  - `RewardEligible(N)` = {`ValActive`}, including the suspended ones. These nodes receive the staking rewards of the block N (see [kaiax/reward](../reward/README.md)).
+  - `RewardEligible(N)` = {`ValActive`}, including the suspended ones. These nodes receive the staking rewards of the block N, and are the nodes of `StakingInfo(N)` (see [kaiax/staking](../staking/README.md) and [kaiax/reward](../reward/README.md)).
   - `QualifiedValidators(N)` = {`ValActive`} − {suspended}. If every `ValActive` node is suspended, all `ValActive` nodes instead.
   - `Committee(N,R)` = `QualifiedValidators(N)` for every round R. There is no round-based sampling.
   - `DemotedValidators(N)` = `Council(N)` − `QualifiedValidators(N)`, i.e. {`ValPaused`} and the suspended `ValActive` nodes.

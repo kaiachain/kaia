@@ -22,7 +22,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
@@ -46,7 +45,6 @@ type InitOpts struct {
 	Chain         blockChain
 	GovModule     reward.GovModule // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
 	StakingModule staking.StakingModule
-	ValsetModule  valset.ValsetModule // since Permissionless, decides the reward eligibility
 	NodeAddress   common.Address
 	Rewardbase    common.Address
 }
@@ -60,7 +58,7 @@ func NewRewardModule() *RewardModule {
 }
 
 func (r *RewardModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.GovModule == nil || opts.StakingModule == nil || opts.ValsetModule == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.Chain == nil || opts.GovModule == nil || opts.StakingModule == nil {
 		return reward.ErrInitUnexpectedNil
 	}
 	r.InitOpts = *opts
