@@ -113,6 +113,7 @@ type Sealer interface {
 	// Write information to header.Extra.
 	WriteAuthorSeal(header *types.Header, seal []byte) error
 	WriteCommittedSeals(header *types.Header, committedSeals [][]byte) error
+	ClearCommittedSeals(header *types.Header) error
 	WriteRound(header *types.Header, round int64)
 	WriteValidators(header *types.Header, validators []common.Address) error
 

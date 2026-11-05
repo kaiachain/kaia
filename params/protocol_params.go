@@ -219,7 +219,7 @@ const (
 
 	// The p2p message size is max 12 MiB, so a block is capped to it minus a safety margin for any metadata that may accompany the block message.
 	// MaxBlockSize (10 MiB) = ProtocolMaxMsgSize (12 MiB) - margin (2 MiB)
-	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block
+	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block, not counting committed seals
 )
 
 const (

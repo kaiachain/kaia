@@ -324,6 +324,13 @@ func (m *IstanbulSealer) WriteCommittedSeals(header *types.Header, committedSeal
 	})
 }
 
+func (m *IstanbulSealer) ClearCommittedSeals(header *types.Header) error {
+	return m.writeExtra(header, func(extra *IstanbulExtra) error {
+		extra.CommittedSeal = nil
+		return nil
+	})
+}
+
 func (m *IstanbulSealer) HeaderHash(header *types.Header) common.Hash {
 	if filtered := istanbulFilteredHeader(header, true); filtered != nil {
 		return RLPHash(filtered)
