@@ -18,6 +18,7 @@ package impl
 
 import (
 	"errors"
+	"fmt"
 	"maps"
 	"math/big"
 	"sync"
@@ -327,13 +328,13 @@ func TestGetStakingInfo_Permissionless_RewardEligible(t *testing.T) {
 		ctrl       = gomock.NewController(t)
 		mValset    = valset_mock.NewMockValsetModule(ctrl)
 	)
-	mValset.EXPECT().GetRewardEligible(uint64(0)).Return([]common.Address{n5, n2, n0}, nil).Times(1)
+	mValset.EXPECT().GetRewardEligible(uint64(1)).Return([]common.Address{n5, n2, n0}, nil).Times(1)
 	mStaking := newPermissionlessTestStakingModule(t, mValset)
 
-	si, err := mStaking.GetStakingInfo(0)
+	si, err := mStaking.GetStakingInfo(1)
 	assert.NoError(t, err)
 
-	again, err := mStaking.GetStakingInfo(0)
+	again, err := mStaking.GetStakingInfo(1)
 	assert.NoError(t, err)
 	assert.Same(t, si, again)
 	assert.Equal(t, []common.Address{n0, n2, n5}, si.NodeIds) // in the AddressBookV2 order
@@ -355,7 +356,7 @@ func TestGetStakingInfo_Permissionless_Concurrent(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	mValset := valset_mock.NewMockValsetModule(gomock.NewController(t))
-	mValset.EXPECT().GetRewardEligible(uint64(0)).Return([]common.Address{common.HexToAddress("0xF00")}, nil).AnyTimes()
+	mValset.EXPECT().GetRewardEligible(uint64(1)).Return([]common.Address{common.HexToAddress("0xF00")}, nil).AnyTimes()
 	mStaking := newPermissionlessTestStakingModule(t, mValset)
 	mStaking.minimumStake = big.NewInt(5_000_000)
 	_, err := mStaking.getStakingInfoEntry(0)
@@ -369,7 +370,7 @@ func TestGetStakingInfo_Permissionless_Concurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results[i], _ = mStaking.GetStakingInfo(0)
+			results[i], _ = mStaking.GetStakingInfo(1)
 			results[i].ConsolidatedNodes()
 			results[i].ToResponse(false, mStaking.minimumStake.Uint64()) // as kaia_getStakingInfo does
 		}()
@@ -377,6 +378,33 @@ func TestGetStakingInfo_Permissionless_Concurrent(t *testing.T) {
 	wg.Wait()
 	for _, r := range results {
 		assert.Same(t, results[0], r)
+	}
+}
+
+// Blocks 0 and 1 share the staking info of block 0, but each keeps its own reward-eligible nodes
+// regardless of which one is queried first.
+func TestGetStakingInfo_Permissionless_Genesis(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	var (
+		n0, n2, n5 = common.HexToAddress("0xF00"), common.HexToAddress("0x1000"), common.HexToAddress("0x4000")
+		eligible0  = []common.Address{n0, n2, n5}
+		eligible1  = []common.Address{n2, n5}
+	)
+	for _, order := range [][]uint64{{0, 1}, {1, 0}} {
+		t.Run(fmt.Sprintf("%v", order), func(t *testing.T) {
+			mValset := valset_mock.NewMockValsetModule(gomock.NewController(t))
+			mValset.EXPECT().GetRewardEligible(uint64(0)).Return(eligible0, nil).AnyTimes()
+			mValset.EXPECT().GetRewardEligible(uint64(1)).Return(eligible1, nil).Times(1)
+			mStaking := newPermissionlessTestStakingModule(t, mValset)
+
+			expected := map[uint64][]common.Address{0: eligible0, 1: eligible1}
+			for _, num := range append(order, order...) {
+				si, err := mStaking.GetStakingInfo(num)
+				assert.NoError(t, err)
+				assert.Equal(t, expected[num], si.NodeIds, "block %d", num)
+			}
+		})
 	}
 }
 
@@ -399,11 +427,11 @@ func TestGetStakingInfo_Permissionless_RewardEligibleError(t *testing.T) {
 	t.Run("reward-eligible nodes unavailable", func(t *testing.T) {
 		errNoState := errors.New("no state")
 		mValset := valset_mock.NewMockValsetModule(gomock.NewController(t))
-		mValset.EXPECT().GetRewardEligible(uint64(0)).Return(nil, errNoState).Times(2)
+		mValset.EXPECT().GetRewardEligible(uint64(1)).Return(nil, errNoState).Times(2)
 		mStaking := newPermissionlessTestStakingModule(t, mValset)
-		_, err := mStaking.GetStakingInfo(0)
+		_, err := mStaking.GetStakingInfo(1)
 		assert.ErrorIs(t, err, errNoState)
-		_, err = mStaking.GetStakingInfo(0) // an error is not kept
+		_, err = mStaking.GetStakingInfo(1) // an error is not kept
 		assert.ErrorIs(t, err, errNoState)
 
 		_, err = mStaking.getStakingInfoEntry(0)

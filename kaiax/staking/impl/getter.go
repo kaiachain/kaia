@@ -45,13 +45,14 @@ type clRegistryResult struct {
 	StakingAmounts []*big.Int
 }
 
-// stakingInfoEntry is a value of the staking info cache, with its reward-eligible nodes since Permissionless.
+// stakingInfoEntry is a value of the staking info cache, with the reward-eligible nodes of the block
+// right after its source block since Permissionless.
 // Its StakingInfos are shared by every caller, so their computed fields are filled before they are shared.
 type stakingInfoEntry struct {
 	si *staking.StakingInfo
 
-	mu       sync.Mutex // guards filtered
-	filtered *staking.StakingInfo
+	mu       sync.Mutex           // guards filtered
+	filtered *staking.StakingInfo // si filtered for block si.SourceBlockNum+1
 }
 
 func (s *StakingModule) newStakingInfoEntry(si *staking.StakingInfo) *stakingInfoEntry {
@@ -77,18 +78,33 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 		return entry.si, nil
 	}
 
+	// Only the block right after the source block owns the cached filtered copy.
+	// Block 0 shares the entry of block 1, so it is filtered on each call.
+	if num != entry.si.SourceBlockNum+1 {
+		return s.filterRewardEligible(entry.si, num)
+	}
+
 	entry.mu.Lock()
 	defer entry.mu.Unlock()
 	if entry.filtered == nil {
-		eligible, err := s.ValsetModule.GetRewardEligible(num)
+		filtered, err := s.filterRewardEligible(entry.si, num)
 		if err != nil {
 			return nil, err
 		}
-		filtered := entry.si.FilterNodes(eligible)
-		s.fillComputedFields(filtered)
 		entry.filtered = filtered
 	}
 	return entry.filtered, nil
+}
+
+// filterRewardEligible returns a copy of si with only the nodes reward-eligible at block num.
+func (s *StakingModule) filterRewardEligible(si *staking.StakingInfo, num uint64) (*staking.StakingInfo, error) {
+	eligible, err := s.ValsetModule.GetRewardEligible(num)
+	if err != nil {
+		return nil, err
+	}
+	filtered := si.FilterNodes(eligible)
+	s.fillComputedFields(filtered)
+	return filtered, nil
 }
 
 // getStakingInfoEntry returns the cache entry of the staking info used for block num.
