@@ -152,6 +152,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 			maxPeers:            srv.MaxPeers(),
 			dialer:              srv.Dialer,
 		}, srv.ntab, srv)
+		srv.applyCNPeersToDialSched()
 		srv.dialSched.Start()
 	}
 
