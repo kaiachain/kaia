@@ -235,6 +235,39 @@ func TestPeerSet_PeersWithoutBlock(t *testing.T) {
 	assert.Equal(t, []Peer{enPeer}, enWithoutBlock)
 }
 
+func assertSamePeers(t *testing.T, want []Peer, got []Peer) {
+	t.Helper()
+	assert.Len(t, got, len(want))
+	for _, p := range want {
+		assert.True(t, slices.Contains(got, p))
+	}
+}
+
+func TestPeerSet_SamplePeersToSendBlock(t *testing.T) {
+	peerSet := newPeerSet()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	block := newBlock(blockNum1)
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	for _, p := range []*MockPeer{cnPeer, pnPeer, enPeer} {
+		p.EXPECT().KnowsBlock(block.Hash()).Return(false).AnyTimes()
+		assert.NoError(t, peerSet.Register(p, nil))
+	}
+
+	// A CN pushes the block to CN peers only; PN peers are served like ENs.
+	assertSamePeers(t, []Peer{cnPeer}, peerSet.SamplePeersToSendBlock(block, common.CONSENSUSNODE))
+	assertSamePeers(t, []Peer{pnPeer, enPeer}, peerSet.SamplePeersToSendBlock(block, common.PROXYNODE))
+	assertSamePeers(t, []Peer{enPeer}, peerSet.SamplePeersToSendBlock(block, common.ENDPOINTNODE))
+}
+
 func TestPeerSet_PeersWithoutTx(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)
