@@ -160,6 +160,11 @@ func (f *Faker) WriteCommittedSeals(header *types.Header, _ [][]byte) error {
 	return f.verifyFailure(header)
 }
 
+// ClearCommittedSeals is a no-op for faker.
+func (f *Faker) ClearCommittedSeals(_ *types.Header) error {
+	return nil
+}
+
 func (f *Faker) verifyFailure(header *types.Header) error {
 	if f.fullFake {
 		return nil

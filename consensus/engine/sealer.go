@@ -155,6 +155,13 @@ func (s *dynamicSealer) WriteCommittedSeals(header *types.Header, committedSeals
 	return s.implAt(header.Number.Uint64()).WriteCommittedSeals(header, committedSeals)
 }
 
+func (s *dynamicSealer) ClearCommittedSeals(header *types.Header) error {
+	if header == nil || header.Number == nil {
+		return consensus.ErrUnknownBlock
+	}
+	return s.implAt(header.Number.Uint64()).ClearCommittedSeals(header)
+}
+
 func (s *dynamicSealer) F(blockNum uint64, qualifiedlen, committeesize int) int {
 	return s.implAt(blockNum).F(blockNum, qualifiedlen, committeesize)
 }

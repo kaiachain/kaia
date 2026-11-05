@@ -489,9 +489,15 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if v.bc == nil {
 		return errors.New("block validator with header chain is not supported")
 	}
-	// check EIP 7934 RLP-encoded block size cap
-	if v.config.IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
-		return ErrBlockOversized
+	// check EIP 7934 RLP-encoded block size cap, without the committed seals added after the vote
+	if v.config.IsOsakaForkEnabled(block.Number()) {
+		header := block.Header()
+		if err := v.sealer.ClearCommittedSeals(header); err != nil {
+			return err
+		}
+		if block.WithSeal(header).Size() > params.MaxBlockSize {
+			return ErrBlockOversized
+		}
 	}
 	// Check whether the block's known, and if not, that it's linkable
 	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
