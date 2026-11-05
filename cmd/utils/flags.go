@@ -109,8 +109,8 @@ var (
 	}
 	SrvTypeFlag = &cli.StringFlag{
 		Name:     "srvtype",
-		Usage:    `json rpc server type ("http", "fasthttp")`,
-		Value:    "fasthttp",
+		Usage:    "Deprecated JSON-RPC server type option; only http is supported",
+		Value:    "http",
 		Aliases:  []string{"common.srvtype"},
 		EnvVars:  []string{"KLAYTN_SRVTYPE", "KAIA_SRVTYPE"},
 		Category: "KAIA",

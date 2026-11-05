@@ -216,7 +216,7 @@ var (
 	}
 	fasthttpFlag = &cli.BoolFlag{
 		Name:    "fasthttp",
-		Usage:   "(docker only) Use High performance http module",
+		Usage:   "(docker only) Deprecated; nodes always use the standard HTTP server",
 		Aliases: []string{"deploy.docker.fasthttp"},
 	}
 	networkIdFlag = &cli.IntFlag{
