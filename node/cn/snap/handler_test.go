@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types/account"
@@ -299,4 +300,48 @@ func TestHandleMessage_Success(t *testing.T) {
 		err := HandleMessage(reader, &testDownloader{}, mockPeer(msg))
 		assert.NoError(t, err)
 	}
+}
+
+// TestServiceGetTrieNodesQuery_LookupCapCountsCachedLookups checks that the
+// per-request lookup cap (maxTrieNodeLookups) also counts lookups that are
+// answered from the already-expanded in-memory trie and cost no database read.
+// Before ethereum/go-ethereum#35856 such lookups were free, so a single request
+// could carry an unbounded number of them.
+func TestServiceGetTrieNodesQuery_LookupCapCountsCachedLookups(t *testing.T) {
+	items := []*testKV{}
+	for i := uint64(1); i <= 100; i++ {
+		acc, _ := genExternallyOwnedAccount(1, big.NewInt(1))
+		serializer := account.NewAccountSerializerWithAccount(acc)
+		blob, _ := rlp.EncodeToBytes(serializer)
+		items = append(items, &testKV{key32(i), blob})
+	}
+	reader, root := NewTestSnapshotReader(items)
+
+	// Sanity check: the root node (empty path) is served.
+	nodes, err := ServiceGetTrieNodesQuery(reader, &GetTrieNodesPacket{
+		Root:  root,
+		Paths: []TrieNodePathSet{{[]byte{}}},
+		Bytes: softResponseLimit,
+	}, time.Now())
+	assert.NoError(t, err)
+	assert.Len(t, nodes, 1)
+	assert.NotEmpty(t, nodes[0])
+
+	// The keys start with bytes 0x01..0x64, so the root is a full node whose
+	// child at nibble 0xf is empty. The compact path 0x1f (the single nibble
+	// 0xf) is absent from the trie, and its lookup is answered from the
+	// in-memory root node without touching the database. Request it more
+	// often than the lookup cap allows.
+	missing := TrieNodePathSet{[]byte{0x1f}}
+	paths := make([]TrieNodePathSet, 2*maxTrieNodeLookups)
+	for i := range paths {
+		paths[i] = missing
+	}
+	nodes, err = ServiceGetTrieNodesQuery(reader, &GetTrieNodesPacket{
+		Root:  root,
+		Paths: paths,
+		Bytes: softResponseLimit,
+	}, time.Now())
+	assert.NoError(t, err)
+	assert.LessOrEqual(t, len(nodes), maxTrieNodeLookups+1)
 }

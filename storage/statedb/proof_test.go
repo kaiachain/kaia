@@ -867,3 +867,135 @@ func nonRandomTrie(n int) (*Trie, map[string]*kv) {
 	}
 	return trie, vals
 }
+
+// TestEmptyValueRangeProof tests normal range proof with both edge proofs
+// as the existent proof, but with an extra empty value included, which is a
+// noop technically, but practically should be rejected.
+// Ported from ethereum/go-ethereum#23960.
+func TestEmptyValueRangeProof(t *testing.T) {
+	trie, values := randomTrie(512)
+	entries := make(entrySlice, 0, len(values))
+	for _, kv := range values {
+		entries = append(entries, kv)
+	}
+	sort.Sort(entries)
+
+	// Create a new entry with a slightly modified key
+	mid := len(entries) / 2
+	key := common.CopyBytes(entries[mid-1].k)
+	for n := len(key) - 1; n >= 0; n-- {
+		if key[n] < 0xff {
+			key[n]++
+			break
+		}
+	}
+	noop := &kv{key, []byte{}, false}
+	entries = append(append(append([]*kv{}, entries[:mid]...), noop), entries[mid:]...)
+
+	start, end := 1, len(entries)-1
+
+	proof := database.NewMemoryDBManager()
+	if err := trie.Prove(entries[start].k, 0, proof); err != nil {
+		t.Fatalf("Failed to prove the first node %v", err)
+	}
+	if err := trie.Prove(entries[end-1].k, 0, proof); err != nil {
+		t.Fatalf("Failed to prove the last node %v", err)
+	}
+	var keys [][]byte
+	var vals [][]byte
+	for i := start; i < end; i++ {
+		keys = append(keys, entries[i].k)
+		vals = append(vals, entries[i].v)
+	}
+	_, err := VerifyRangeProof(trie.Hash(), keys[0], keys[len(keys)-1], keys, vals, proof)
+	if err == nil {
+		t.Fatalf("Expected failure on noop entry")
+	}
+	if have, want := err.Error(), "range contains deletion"; have != want {
+		t.Fatalf("wrong error, have %q, want %q", have, want)
+	}
+}
+
+// TestAllElementsEmptyValueRangeProof tests the range proof with all elements,
+// but with an extra empty value included, which is a noop technically, but
+// practically should be rejected.
+// Ported from ethereum/go-ethereum#23960.
+func TestAllElementsEmptyValueRangeProof(t *testing.T) {
+	trie, values := randomTrie(512)
+	entries := make(entrySlice, 0, len(values))
+	for _, kv := range values {
+		entries = append(entries, kv)
+	}
+	sort.Sort(entries)
+
+	// Create a new entry with a slightly modified key
+	mid := len(entries) / 2
+	key := common.CopyBytes(entries[mid-1].k)
+	for n := len(key) - 1; n >= 0; n-- {
+		if key[n] < 0xff {
+			key[n]++
+			break
+		}
+	}
+	noop := &kv{key, []byte{}, false}
+	entries = append(append(append([]*kv{}, entries[:mid]...), noop), entries[mid:]...)
+
+	var keys [][]byte
+	var vals [][]byte
+	for i := 0; i < len(entries); i++ {
+		keys = append(keys, entries[i].k)
+		vals = append(vals, entries[i].v)
+	}
+	_, err := VerifyRangeProof(trie.Hash(), nil, nil, keys, vals, nil)
+	if err == nil {
+		t.Fatalf("Expected failure on noop entry")
+	}
+	if have, want := err.Error(), "range contains deletion"; have != want {
+		t.Fatalf("wrong error, have %q, want %q", have, want)
+	}
+}
+
+// TestRangeProofWithPrecedingKeys tests that a range proof is rejected when
+// the key-value list contains entries that precede the requested range, i.e.
+// keys smaller than firstKey. Such an entry falls into a subtree that the edge
+// proofs leave as an unresolved hash node, so applying it to the proof trie
+// fails; that failure used to be ignored, and the proof passed with the extra
+// entry included. Ported from ethereum/go-ethereum#33898.
+func TestRangeProofWithPrecedingKeys(t *testing.T) {
+	trie, vals := randomTrie(4096)
+	entries := make(entrySlice, 0, len(vals))
+	for _, kv := range vals {
+		entries = append(entries, kv)
+	}
+	sort.Sort(entries)
+
+	start, end := 100, 200
+	proof := database.NewMemoryDBManager()
+	if err := trie.Prove(entries[start].k, 0, proof); err != nil {
+		t.Fatalf("Failed to prove the first node %v", err)
+	}
+	if err := trie.Prove(entries[end-1].k, 0, proof); err != nil {
+		t.Fatalf("Failed to prove the last node %v", err)
+	}
+	var keys [][]byte
+	var values [][]byte
+	for i := start; i < end; i++ {
+		keys = append(keys, entries[i].k)
+		values = append(values, entries[i].v)
+	}
+	// The requested range alone must verify.
+	if _, err := VerifyRangeProof(trie.Hash(), entries[start].k, entries[end-1].k, keys, values, proof); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	// Prepend the entry just before the requested range; the edge keys and
+	// the proof stay the same.
+	keys = append([][]byte{entries[start-1].k}, keys...)
+	values = append([][]byte{entries[start-1].v}, values...)
+	_, err := VerifyRangeProof(trie.Hash(), entries[start].k, entries[end-1].k, keys, values, proof)
+	if err == nil {
+		t.Fatalf("Expected failure on key-value pairs preceding the range")
+	}
+	if have, want := err.Error(), "unexpected key-value pairs preceding the requested range"; have != want {
+		t.Fatalf("wrong error, have %q, want %q", have, want)
+	}
+}
