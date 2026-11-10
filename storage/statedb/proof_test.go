@@ -954,3 +954,48 @@ func TestAllElementsEmptyValueRangeProof(t *testing.T) {
 		t.Fatalf("wrong error, have %q, want %q", have, want)
 	}
 }
+
+// TestRangeProofWithPrecedingKeys tests that a range proof is rejected when
+// the key-value list contains entries that precede the requested range, i.e.
+// keys smaller than firstKey. Such an entry falls into a subtree that the edge
+// proofs leave as an unresolved hash node, so applying it to the proof trie
+// fails; that failure used to be ignored, and the proof passed with the extra
+// entry included. Ported from ethereum/go-ethereum#33898.
+func TestRangeProofWithPrecedingKeys(t *testing.T) {
+	trie, vals := randomTrie(4096)
+	entries := make(entrySlice, 0, len(vals))
+	for _, kv := range vals {
+		entries = append(entries, kv)
+	}
+	sort.Sort(entries)
+
+	start, end := 100, 200
+	proof := database.NewMemoryDBManager()
+	if err := trie.Prove(entries[start].k, 0, proof); err != nil {
+		t.Fatalf("Failed to prove the first node %v", err)
+	}
+	if err := trie.Prove(entries[end-1].k, 0, proof); err != nil {
+		t.Fatalf("Failed to prove the last node %v", err)
+	}
+	var keys [][]byte
+	var values [][]byte
+	for i := start; i < end; i++ {
+		keys = append(keys, entries[i].k)
+		values = append(values, entries[i].v)
+	}
+	// The requested range alone must verify.
+	if _, err := VerifyRangeProof(trie.Hash(), entries[start].k, entries[end-1].k, keys, values, proof); err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	// Prepend the entry just before the requested range; the edge keys and
+	// the proof stay the same.
+	keys = append([][]byte{entries[start-1].k}, keys...)
+	values = append([][]byte{entries[start-1].v}, values...)
+	_, err := VerifyRangeProof(trie.Hash(), entries[start].k, entries[end-1].k, keys, values, proof)
+	if err == nil {
+		t.Fatalf("Expected failure on key-value pairs preceding the range")
+	}
+	if have, want := err.Error(), "unexpected key-value pairs preceding the requested range"; have != want {
+		t.Fatalf("wrong error, have %q, want %q", have, want)
+	}
+}
