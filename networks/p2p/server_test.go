@@ -753,6 +753,116 @@ func TestServerSetCNPeersUpdatesDialSched(t *testing.T) {
 	}
 }
 
+// An allowlist set before Start reaches the dial scheduler created by Start.
+func TestServerAppliesCNPeersSetBeforeDialSched(t *testing.T) {
+	allowed, allowedAddr := testNodeWithAddress("10.0.0.1", discover.NodeTypeCN)
+	blocked, _ := testNodeWithAddress("10.0.0.2", discover.NodeTypeCN)
+	newSched := func() *DialSched {
+		return NewDialSched(DialConfig{selfType: discover.NodeTypeCN}, &mockTable{
+			nodesByType: map[discover.NodeType][]*discover.Node{
+				discover.NodeTypeCN: {allowed, blocked},
+			},
+		}, nil)
+	}
+
+	unset := &BaseServer{peers: make(map[discover.NodeID]*Peer)}
+	unset.dialSched = newSched()
+	unset.applyCNPeersToDialSched()
+	candidates, _ := unset.dialSched.getCandidates()
+	if len(candidates) != 0 {
+		t.Fatalf("CN must hold dynamic CN dials until the first allowlist push, got %d", len(candidates))
+	}
+
+	set := &BaseServer{peers: make(map[discover.NodeID]*Peer)}
+	set.SetCNPeers([]common.Address{allowedAddr})
+	set.dialSched = newSched()
+	set.applyCNPeersToDialSched()
+	candidates, _ = set.dialSched.getCandidates()
+	if !hasNodeID(candidates, allowed.ID) || hasNodeID(candidates, blocked.ID) {
+		t.Fatal("allowlist set before Start should filter the new dial scheduler")
+	}
+
+	empty := &BaseServer{peers: make(map[discover.NodeID]*Peer)}
+	empty.SetCNPeers([]common.Address{})
+	empty.dialSched = newSched()
+	empty.applyCNPeersToDialSched()
+	candidates, _ = empty.dialSched.getCandidates()
+	if len(candidates) != 0 {
+		t.Fatal("empty allowlist set before Start should reject dynamic CN candidates")
+	}
+
+	open := &BaseServer{peers: make(map[discover.NodeID]*Peer)}
+	open.SetCNPeers(nil)
+	open.dialSched = newSched()
+	open.applyCNPeersToDialSched()
+	candidates, _ = open.dialSched.getCandidates()
+	if !hasNodeID(candidates, allowed.ID) || !hasNodeID(candidates, blocked.ID) {
+		t.Fatal("nil allowlist set before Start should disable dynamic dial filtering")
+	}
+}
+
+// cnSeedDiscovery serves fixed CN entries, like a table reseeded from the node DB.
+type cnSeedDiscovery struct {
+	fakeDiscovery
+	cns []*discover.Node
+}
+
+func (d *cnSeedDiscovery) RandomNodes(buf []*discover.Node, nType discover.NodeType) int {
+	if nType != discover.NodeTypeCN {
+		return 0
+	}
+	return copy(buf, d.cns)
+}
+
+type recordingDialer struct {
+	dialed chan discover.NodeID
+}
+
+func (d *recordingDialer) Dial(n *discover.Node) (net.Conn, error) {
+	select {
+	case d.dialed <- n.ID:
+	default:
+	}
+	return nil, errors.New("test dial")
+}
+
+func (d *recordingDialer) DialMulti(*discover.Node) ([]net.Conn, error) {
+	return nil, errors.New("unexpected multichannel dial")
+}
+
+func TestServerStartAppliesCNPeersSetBeforeStart(t *testing.T) {
+	allowed, allowedAddr := testNodeWithAddress("10.0.0.1", discover.NodeTypeCN)
+	blocked, _ := testNodeWithAddress("10.0.0.2", discover.NodeTypeCN)
+	dialer := &recordingDialer{dialed: make(chan discover.NodeID, 16)}
+	srv := &SingleChannelServer{&BaseServer{
+		Config: Config{
+			Name:                   "test",
+			ConnectionType:         common.CONSENSUSNODE,
+			MaxPhysicalConnections: 10,
+			PrivateKey:             newkey(),
+			NoDiscovery:            true,
+			NoListen:               true,
+			Dialer:                 dialer,
+		},
+		ntab: &cnSeedDiscovery{cns: []*discover.Node{blocked, allowed}},
+	}}
+
+	srv.SetCNPeers([]common.Address{allowedAddr})
+	if err := srv.Start(); err != nil {
+		t.Fatalf("Could not start server: %v", err)
+	}
+	defer srv.Stop()
+
+	select {
+	case id := <-dialer.dialed:
+		if id != allowed.ID {
+			t.Fatalf("dialed a CN outside the allowlist set before Start: %v", id)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("allowlist set before Start should release the CN dial hold")
+	}
+}
+
 func TestServerSetupConn(t *testing.T) {
 	var (
 		id     = discover.PubkeyID(&newkey().PublicKey)

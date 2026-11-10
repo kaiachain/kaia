@@ -78,6 +78,7 @@ type BaseServer struct {
 	trusted       map[discover.NodeID]bool
 	dialSched     *DialSched
 	cnPeerAddrs   map[common.Address]struct{} // KIP-311 peerNodes allowlist for CN-CN connections.
+	cnPeersSet    bool                        // SetCNPeers has been called at least once.
 
 	// Inbound connection throttling. inboundHistory tracks the last seen time
 	// per remote IP; its mutex guards concurrent access from multiple
@@ -172,6 +173,7 @@ func (srv *BaseServer) Start() (err error) {
 			maxPeers:            srv.MaxPeers(),
 			dialer:              srv.Dialer,
 		}, srv.ntab, srv)
+		srv.applyCNPeersToDialSched()
 		srv.dialSched.Start()
 	}
 
@@ -751,6 +753,7 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 		}
 	}
 	srv.lock.Lock()
+	srv.cnPeersSet = true
 	if addrs == nil {
 		srv.cnPeerAddrs = nil
 		if srv.dialSched != nil {
@@ -775,6 +778,21 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 		srv.logger.Info("Disconnecting CN peer outside allowlist", "id", p.ID())
 		p.Disconnect(DiscRequested)
 	}
+}
+
+// applyCNPeersToDialSched hands an allowlist set before Start to the new dial scheduler.
+func (srv *BaseServer) applyCNPeersToDialSched() {
+	if !srv.cnPeersSet {
+		return
+	}
+	var addrs []common.Address
+	if srv.cnPeerAddrs != nil {
+		addrs = make([]common.Address, 0, len(srv.cnPeerAddrs))
+		for addr := range srv.cnPeerAddrs {
+			addrs = append(addrs, addr)
+		}
+	}
+	srv.dialSched.SetCNPeers(addrs)
 }
 
 func (srv *BaseServer) peersOutsideCNPeerAddrs() []*Peer {
