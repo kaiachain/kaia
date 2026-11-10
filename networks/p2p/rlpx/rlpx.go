@@ -406,6 +406,10 @@ const (
 	shaLen = 32                     // hash length (for nonce etc)
 
 	eciesOverhead = 65 /* pubkey */ + 16 /* IV */ + 32 /* MAC */
+
+	// maxHandshakeMsgSize is the largest encrypted handshake message (auth or ack)
+	// that is read, the same 2KB as the limit on the protocol handshake message.
+	maxHandshakeMsgSize = 2 * 1024
 )
 
 var (
@@ -417,6 +421,7 @@ var (
 	// the allowed 24 bits (i.e. length >= 16MB).
 	errPlainMessageTooLarge = errors.New("message length >= 16MB")
 	errFrameTooLarge        = errors.New("frame too large")
+	errHandshakeMsgTooLarge = errors.New("handshake message too large")
 )
 
 // Secrets represents the connection secrets which are negotiated during the handshake.
@@ -655,6 +660,9 @@ func (h *handshakeState) readMsg(msg interface{}, prv *ecdsa.PrivateKey, r io.Re
 		return nil, err
 	}
 	size := binary.BigEndian.Uint16(prefix)
+	if size > maxHandshakeMsgSize {
+		return nil, errHandshakeMsgTooLarge
+	}
 
 	// Read the handshake packet.
 	packet, err := h.rbuf.read(r, int(size))

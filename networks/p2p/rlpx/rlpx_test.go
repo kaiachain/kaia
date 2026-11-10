@@ -25,6 +25,8 @@ package rlpx
 import (
 	"bytes"
 	"crypto/ecdsa"
+	crand "crypto/rand"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -33,6 +35,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/kaiachain/kaia/crypto"
@@ -40,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/simulations/pipes"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type message struct {
@@ -390,6 +394,59 @@ func TestHandshakeForwardCompatibility(t *testing.T) {
 	if !bytes.Equal(fooIngressHash, wantFooIngressHash) {
 		t.Errorf("ingress-mac('foo') mismatch:\ngot %x\nwant %x", fooIngressHash, wantFooIngressHash)
 	}
+}
+
+// TestHandshakeMsgSizeLimit checks that an encrypted handshake message (auth or ack)
+// larger than maxHandshakeMsgSize is rejected on its size prefix, before the body is
+// read or decrypted. The remote side is not authenticated yet when it sends this message.
+// The limit is ported from https://github.com/ethereum/go-ethereum/pull/30029.
+func TestHandshakeMsgSizeLimit(t *testing.T) {
+	// sealAuth returns a well-formed EIP-8 auth packet for keyB,
+	// zero-padded so that its size prefix equals size.
+	sealAuth := func(size int) []byte {
+		plain, err := rlp.EncodeToBytes(&authMsgV4{Version: 4})
+		require.NoError(t, err)
+		plain = append(plain, make([]byte, size-eciesOverhead-len(plain))...)
+		prefix := binary.BigEndian.AppendUint16(nil, uint16(size))
+		enc, err := ecies.Encrypt(crand.Reader, ecies.ImportECDSAPublic(&keyB.PublicKey), plain, nil, prefix)
+		require.NoError(t, err)
+		return append(prefix, enc...)
+	}
+
+	t.Run("at limit", func(t *testing.T) {
+		var (
+			h   handshakeState
+			msg = new(authMsgV4)
+		)
+		_, err := h.readMsg(msg, keyB, bytes.NewReader(sealAuth(maxHandshakeMsgSize)))
+		require.NoError(t, err)
+		assert.Equal(t, uint(4), msg.Version)
+	})
+
+	// The packet is well-formed, so without the limit it is read, decrypted and decoded.
+	t.Run("over limit", func(t *testing.T) {
+		var (
+			h      handshakeState
+			msg    = new(authMsgV4)
+			packet = sealAuth(maxHandshakeMsgSize + 1)
+		)
+		_, err := h.readMsg(msg, keyB, bytes.NewReader(packet))
+		assert.ErrorIs(t, err, errHandshakeMsgTooLarge)
+		assert.Zero(t, msg.Version, "message was decrypted")
+		assert.Less(t, cap(h.rbuf.data), len(packet), "read buffer grew to the message size")
+	})
+
+	// The listening side fails on the size prefix alone. It does not wait for the body.
+	t.Run("recipient handshake", func(t *testing.T) {
+		local, remote := net.Pipe()
+		defer local.Close()
+		defer remote.Close()
+		local.SetDeadline(time.Now().Add(time.Second))
+		go remote.Write([]byte{0xff, 0xff})
+
+		_, err := NewConn(local, nil).Handshake(keyB)
+		assert.ErrorIs(t, err, errHandshakeMsgTooLarge)
+	})
 }
 
 func BenchmarkHandshakeRead(b *testing.B) {
