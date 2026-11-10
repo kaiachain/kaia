@@ -517,20 +517,14 @@ func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType common
 
 	switch nodeType {
 	case common.CONSENSUSNODE:
-		// If currNode is CN, sends block to sampled peers from (CN + PN), not to EN.
+		// If currNode is CN, sends block to CN peers; PN and EN peers get the hash announcement (KIP-311).
 		cnsWithoutBlock := peers.CNWithoutBlock(hash)
 		sampledCNsWithoutBlock := samplingPeers(cnsWithoutBlock, sampleSize(cnsWithoutBlock))
 
-		// CN always broadcasts a block to its PN peers, unless the number of PN peers exceeds the limit.
-		pnsWithoutBlock := peers.PNWithoutBlock(hash)
-		if len(pnsWithoutBlock) > blockReceivingPNLimit {
-			pnsWithoutBlock = samplingPeers(pnsWithoutBlock, blockReceivingPNLimit)
-		}
-
 		logger.Trace("Propagated block", "hash", hash,
-			"CN recipients", len(sampledCNsWithoutBlock), "PN recipients", len(pnsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
+			"CN recipients", len(sampledCNsWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 
-		return append(cnsWithoutBlock, pnsWithoutBlock...)
+		return cnsWithoutBlock
 	case common.PROXYNODE:
 		// If currNode is PN, sends block to sampled peers from (PN + EN), not to CN.
 		peersWithoutBlock = peers.PeersWithoutBlockExceptCN(hash)
