@@ -475,7 +475,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 		case 1:
 			// If we're only retrieving an account trie node, fetch it directly
 			blob, resolved, err := accTrie.TryGetNode(pathset[0])
-			loads += resolved // always account database reads, even for failures
+			loads += max(resolved, 1) // charge per request regardless of the cache
 			if err != nil {
 				break
 			}
@@ -500,7 +500,7 @@ func ServiceGetTrieNodesQuery(chain SnapshotReader, req *GetTrieNodesPacket, sta
 			}
 			for _, path := range pathset[1:] {
 				blob, resolved, err := stTrie.TryGetNode(path)
-				loads += resolved // always account database reads, even for failures
+				loads += max(resolved, 1) // charge per request regardless of the cache
 				if err != nil {
 					break
 				}
