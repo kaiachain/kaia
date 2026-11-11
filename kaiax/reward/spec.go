@@ -115,6 +115,15 @@ func (spec *RewardSpec) IncRecipient(addr common.Address, amount *big.Int) {
 	spec.Rewards[addr].Add(spec.Rewards[addr], amount)
 }
 
+func (spec *RewardSpec) Validate() error {
+	for addr, amount := range spec.Rewards {
+		if amount.Sign() < 0 {
+			return errNegativeRewardAmount(addr, amount)
+		}
+	}
+	return nil
+}
+
 // RewardResponse is the response type for the kaia_getReward API.
 // TODO-kaiax: RewardResponse to use hexutil.Big for big.Int fields.
 type RewardResponse = RewardSpec

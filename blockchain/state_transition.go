@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -294,9 +295,16 @@ func (st *StateTransition) buyGas() error {
 	var (
 		validatedFeePayer = st.msg.ValidatedFeePayer()
 		validatedSender   = st.msg.ValidatedSender()
-		feeRatio, _       = st.msg.FeeRatio()
+		feeRatio, isRatio = st.msg.FeeRatio()
 		isOsaka           = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
 	)
+
+	// Transaction.Validate rejects this on the block path. Check it here too so that
+	// callers applying a message without Validate (e.g. tracers) never split the fee
+	// with a ratio above 100, which would credit the sender.
+	if isRatio && !feeRatio.IsValid() {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
 
 	// mgval is the maximum gas fee that can actually be paid in the worst case (e.g., revert)
 	// st.gasPrice = tx.gasPrice (before Magma) or effectiveGasPrice (since Magma)
@@ -471,6 +479,32 @@ func (st *StateTransition) preCheck() error {
 	return st.buyGas()
 }
 
+func (st *StateTransition) captureTxStartPreCheck() {
+	if !st.evm.Config.Debug {
+		return
+	}
+	tracer, ok := st.evm.Config.Tracer.(vm.TxPrestateTracer)
+	if !ok {
+		return
+	}
+
+	tx := st.msg
+	from := tx.ValidatedSender()
+	feePayer := tx.ValidatedFeePayer()
+	to := from
+	create := (tx.Type().IsEthereumTransaction() && tx.To() == nil) || tx.Type().IsContractDeploy()
+	if create {
+		if tx.To() != nil {
+			to = *tx.To()
+		} else {
+			to = crypto.CreateAddress(from, st.state.GetNonce(from))
+		}
+	} else if tx.To() != nil {
+		to = *tx.To()
+	}
+	tracer.CaptureTxStartPreCheck(st.evm, from, feePayer, to, create, tx.Data(), tx.Value(), tx.AuthList())
+}
+
 // TransitionDb will transition the state by applying the current message and
 // returning the evm execution result with following fields.
 //
@@ -495,6 +529,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// 4. the purchased gas is enough to cover intrinsic usage
 	// 5. there is no overflow when calculating intrinsic gas
 	// 6. caller has enough balance to cover asset transfer for **topmost** call
+
+	st.captureTxStartPreCheck()
 
 	// Check clauses 1-3, buy gas if everything is correct
 	if err := st.preCheck(); err != nil {
@@ -617,10 +653,21 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// Defer transferring Tx fee when DeferredTxFee is true
 	// DeferredTxFee has never been voted, so it's ok to use the genesis value instead of the latest value from governance.
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
+		fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
 		if rules.IsMagma {
-			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+			// Since Magma, the fee goes to the proposer (Rewardbase) instead of Coinbase, and the Magma
+			// rule burns half of it. Kaia v0.9.0 to v2.2.2 did not burn it and credited the whole fee;
+			// #816 (v3.0.0-rc.1) re-introduced the burn. To keep the blocks of v0.9.0 to v2.2.2
+			// replayable, the burn is activated at the Permissionless hardfork (#1097); Permissionless is
+			// ordered after Magma, so IsPermissionless alone identifies the burning regime. Deferred fees
+			// (reward.deferredtxfee=true) are untouched here; their burn is applied at block finalization.
+			credited := fee
+			if rules.IsPermissionless {
+				credited = new(big.Int).Sub(fee, new(big.Int).Div(fee, big.NewInt(2))) // the burnt half is rounded down
+			}
+			st.state.AddBalance(st.evm.Context.Rewardbase, credited)
 		} else {
-			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+			st.state.AddBalance(st.evm.Context.Coinbase, fee)
 		}
 	}
 
@@ -661,6 +708,7 @@ var errTxFailed2receiptstatus = map[error]uint{
 	kerrors.ErrDeprecated:                           types.ReceiptStatusErrDeprecated,
 	kerrors.ErrNotSupported:                         types.ReceiptStatusErrNotSupported,
 	kerrors.ErrInvalidCodeFormat:                    types.ReceiptStatusErrInvalidCodeFormat,
+	kerrors.ErrZeroThreshold:                        types.ReceiptStatusErrZeroThreshold,
 }
 
 var receiptstatus2errTxFailed = map[uint]error{
@@ -694,6 +742,7 @@ var receiptstatus2errTxFailed = map[uint]error{
 	types.ReceiptStatusErrDeprecated:                           kerrors.ErrDeprecated,
 	types.ReceiptStatusErrNotSupported:                         kerrors.ErrNotSupported,
 	types.ReceiptStatusErrInvalidCodeFormat:                    kerrors.ErrInvalidCodeFormat,
+	types.ReceiptStatusErrZeroThreshold:                        kerrors.ErrZeroThreshold,
 }
 
 func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorization) (authority common.Address, err error) {

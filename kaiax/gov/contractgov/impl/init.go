@@ -15,7 +15,7 @@ var (
 )
 
 type chain interface {
-	consensus.ChainReader
+	consensus.ChainReaderWithSealer
 }
 
 type InitOpts struct {

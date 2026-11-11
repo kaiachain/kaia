@@ -45,7 +45,7 @@ func NewChannelManager(channelSize int) *ChannelManager {
 		msgCodes:    make(map[uint64]uint),
 	}
 
-	for i := 0; i < channelSize; i++ {
+	for range channelSize {
 		channelMgr.msgChannels = append(channelMgr.msgChannels, make([]chan p2p.Msg, MaxChannel, MaxChannel))
 	}
 
@@ -75,6 +75,9 @@ func NewChannelManager(channelSize int) *ChannelManager {
 
 	channelMgr.RegisterMsgCode(MiscChannel, BlobSidecarsRequestMsg)
 	channelMgr.RegisterMsgCode(MiscChannel, BlobSidecarsMsg)
+
+	channelMgr.RegisterMsgCode(MiscChannel, VRankPreprepareMsg)
+	channelMgr.RegisterMsgCode(MiscChannel, VRankCandidateMsg)
 
 	return channelMgr
 }

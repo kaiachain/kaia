@@ -233,8 +233,9 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) setHashForMarsh
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetFeePayerSignatures(s TxSignatures) {

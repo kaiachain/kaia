@@ -48,7 +48,7 @@ type TestRoleBasedAccountType struct {
 func genTestKeys(len int) []*ecdsa.PrivateKey {
 	keys := make([]*ecdsa.PrivateKey, len)
 
-	for i := 0; i < len; i++ {
+	for i := range len {
 		keys[i], _ = crypto.GenerateKey()
 	}
 

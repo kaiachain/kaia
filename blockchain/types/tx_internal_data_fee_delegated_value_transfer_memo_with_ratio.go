@@ -215,8 +215,9 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) setHashForMarshal
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetFeePayerSignatures(s TxSignatures) {

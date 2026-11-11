@@ -652,8 +652,10 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 		logger.Error("Pricing query for empty pool") // This cannot happen, print to catch programming errors
 		return false
 	}
+	// Equal price is not underpriced: the only caller admits a missing-nonce tx
+	// by evicting the same account's max queued tx, so no third party is displaced.
 	cheapest := []*types.Transaction(*l.items)[0]
-	return cheapest.GasPrice().Cmp(tx.GasPrice()) >= 0
+	return cheapest.GasPrice().Cmp(tx.GasPrice()) > 0
 }
 
 // Discard finds a number of most underpriced transactions, removes them from the

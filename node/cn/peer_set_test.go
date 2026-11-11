@@ -20,6 +20,7 @@ package cn
 
 import (
 	"math/big"
+	"slices"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -34,6 +35,8 @@ func setMockPeers(mockPeers []*MockPeer) {
 		mp.EXPECT().GetAddr().Return(addrs[i]).AnyTimes()
 		mp.EXPECT().GetID().Return(nodeids[i].String()).AnyTimes()
 		mp.EXPECT().Broadcast().AnyTimes()
+		// Register calls GetP2PPeer() for the exemption check; nil keeps validation.
+		mp.EXPECT().GetP2PPeer().Return(nil).AnyTimes()
 	}
 }
 
@@ -1005,12 +1008,7 @@ func TestPeerSet_TypePeersWithoutBlock(t *testing.T) {
 }
 
 func containsPeer(target Peer, peers []Peer) bool {
-	for _, peer := range peers {
-		if target == peer {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(peers, target)
 }
 
 func countPeerType(t common.ConnType, peers []Peer) int {

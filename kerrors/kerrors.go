@@ -47,6 +47,7 @@ var (
 	ErrAccountKeyNilUninitializable         = errors.New("AccountKeyNil cannot be initialized to an account")
 	ErrNotOnCurve                           = errors.New("public key is not on curve")
 	ErrZeroKeyWeight                        = errors.New("key weight is zero")
+	ErrZeroThreshold                        = errors.New("threshold is zero")
 	ErrUnserializableKey                    = errors.New("key is not serializable")
 	ErrDuplicatedKey                        = errors.New("duplicated key")
 	ErrWeightedSumOverflow                  = errors.New("weighted sum overflow")

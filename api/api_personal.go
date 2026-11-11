@@ -268,7 +268,7 @@ func (s *PersonalAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTx
 		return common.Hash{}, errTxArgNilGasPrice
 	}
 
-	if args.TxSignatures == nil {
+	if len(args.TxSignatures) == 0 {
 		return common.Hash{}, errTxArgNilSenderSig
 	}
 
@@ -386,9 +386,14 @@ func (s *PersonalAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTx
 	if err != nil {
 		return nil, err
 	}
+	if err := validateSenderSignatures(tx.Type(), args.TxSignatures); err != nil {
+		return nil, err
+	}
 	// Don't return errors for nil signature allowing the fee payer to sign a tx earlier than the sender.
 	if args.TxSignatures != nil {
-		tx.SetSignature(args.TxSignatures.ToTxSignatures())
+		if err := tx.SetSignature(args.TxSignatures.ToTxSignatures()); err != nil {
+			return nil, err
+		}
 	}
 	feePayer, err := tx.FeePayer()
 	if err != nil {

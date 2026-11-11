@@ -140,10 +140,6 @@ start_node() {
         OPTIONS="$OPTIONS --datadir $DATA_DIR"
     fi
 
-    if [[ ! -z $AUTHORIZED_NODES ]] && [[ $AUTHORIZED_NODES != "" ]]; then
-        OPTIONS="$OPTIONS --authorized-nodes $AUTHORIZED_NODES"
-    fi
-
     if [[ ! -z $ADDITIONAL ]] && [[ $ADDITIONAL != "" ]]; then
         OPTIONS="$OPTIONS $ADDITIONAL"
     fi

@@ -145,7 +145,7 @@ func (s *KafkaSuite) TestKafka_setupTopic() {
 func (s *KafkaSuite) TestKafka_setupTopicConcurrency() {
 	topicName := "test-setup-concurrency-topic"
 	wg := sync.WaitGroup{}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		wg.Go(func() {
 			kaf, err := NewKafka(s.conf)
 			s.NoError(err)
@@ -175,7 +175,7 @@ func (s *KafkaSuite) TestKafka_CreateAndDeleteTopic() {
 	// deleted a topic successfully
 	s.Nil(s.kfk.DeleteTopic(s.topic))
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		topics, err := s.kfk.ListTopics()
 		s.NoError(err)
 		if _, exist := topics[s.topic]; !exist {
@@ -197,7 +197,7 @@ func (d *kafkaData) Key() string {
 
 func publishRandomData(t *testing.T, producer *Kafka, topic string, numTests, testBytesSize int) []*kafkaData {
 	var expected []*kafkaData
-	for i := 0; i < numTests; i++ {
+	for i := range numTests {
 		testData := &kafkaData{i, common.MakeRandomBytes(testBytesSize)}
 		assert.NoError(t, producer.Publish(topic, testData))
 		expected = append(expected, testData)
@@ -230,7 +230,7 @@ func (s *KafkaSuite) subscribeData(topic, groupId string, numTests int, handler 
 
 	// wait for all data to be consumed
 	timeout := time.NewTimer(10 * time.Second)
-	for i := 0; i < numTests; i++ {
+	for i := range numTests {
 		select {
 		case <-numCheckCh:
 			s.T().Logf("test count: %v, total tests: %v", i+1, numTests)
@@ -369,7 +369,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithV1Segments() {
 
 	// make multi producers
 	var producers []*Kafka
-	for i := 0; i < numProducers; i++ {
+	for range numProducers {
 		config := GetDefaultKafkaConfig()
 		config.Brokers = s.kfk.config.Brokers
 		config.SegmentSizeBytes = segmentSize
@@ -448,7 +448,7 @@ func (s *KafkaSuite) TestKafka_PubSubWithSegements_BufferOverflow() {
 	s.NoError(err)
 
 	// insert incomplete message segments
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		msg := s.kfk.makeProducerMessage(topic, "test-key-"+strconv.Itoa(i), common.MakeRandomBytes(10), 0, 2)
 		_, _, err = s.kfk.producer.SendMessage(msg)
 		s.NoError(err)

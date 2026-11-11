@@ -52,14 +52,14 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 	fetch := make(chan *request, 16)
 	defer close(fetch)
 
-	var delivered uint32
-	for i := 0; i < fetchers; i++ {
+	var delivered atomic.Uint32
+	for range fetchers {
 		go func() {
 			defer fetchPend.Done()
 
 			for req := range fetch {
 				time.Sleep(time.Duration(rand.Intn(int(100 * time.Microsecond))))
-				atomic.AddUint32(&delivered, 1)
+				delivered.Add(1)
 
 				f.deliver([]uint64{
 					req.section + uint64(requests), // Non-requested data (ensure it doesn't go out of bounds)
@@ -79,7 +79,7 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 	var pend sync.WaitGroup
 	pend.Add(clients)
 
-	for i := 0; i < clients; i++ {
+	for range clients {
 		go func() {
 			defer pend.Done()
 
@@ -89,13 +89,13 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 			f.run(in, fetch, out, quit, &pend)
 
 			go func() {
-				for j := 0; j < requests; j++ {
+				for j := range requests {
 					in <- uint64(j)
 				}
 				close(in)
 			}()
 
-			for j := 0; j < requests; j++ {
+			for j := range requests {
 				bits := <-out
 				if want := new(big.Int).SetUint64(uint64(j)).Bytes(); !bytes.Equal(bits, want) {
 					t.Errorf("vector %d: delivered content mismatch: have %x, want %x", j, bits, want)
@@ -105,7 +105,7 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 	}
 	pend.Wait()
 
-	if have := atomic.LoadUint32(&delivered); int(have) != requests {
+	if have := delivered.Load(); int(have) != requests {
 		t.Errorf("request count mismatch: have %v, want %v", have, requests)
 	}
 }

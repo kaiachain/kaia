@@ -64,7 +64,7 @@ type SupplyModule struct {
 	lastAccReward *supply.AccReward // Last AccReward
 
 	// Stops long-running tasks.
-	quit   uint32         // stops the synchronous loop in accumulateCheckpoint
+	quit   atomic.Uint32  // stops the synchronous loop in accumulateCheckpoint
 	quitCh chan struct{}  // stops the goroutine in select loop
 	wg     sync.WaitGroup // wait for the goroutine to finish
 
@@ -91,6 +91,9 @@ func (s *SupplyModule) Init(opts *InitOpts) error {
 }
 
 func (s *SupplyModule) Start() error {
+	// One-time DB repair: fix BurntFee undercount caused by missing blob fees in Osaka window.
+	s.applyBlobFeeFixupIfNeeded()
+
 	// Reload the last checkpoint from database.
 	if err := s.loadLastAccReward(); err != nil {
 		return err
@@ -101,7 +104,7 @@ func (s *SupplyModule) Start() error {
 	s.memoCache.Purge()
 
 	// Reset the quit state.
-	atomic.StoreUint32(&s.quit, 0)
+	s.quit.Store(0)
 	s.quitCh = make(chan struct{}, 1)
 	s.wg.Add(1)
 	go s.catchup()
@@ -109,7 +112,7 @@ func (s *SupplyModule) Start() error {
 }
 
 func (s *SupplyModule) Stop() {
-	atomic.StoreUint32(&s.quit, 1)
+	s.quit.Store(1)
 	s.quitCh <- struct{}{}
 	s.wg.Wait()
 }
@@ -146,6 +149,60 @@ func (s *SupplyModule) loadLastAccReward() error {
 	s.lastAccNum = lastAccNum
 	s.lastAccReward = lastAccReward
 	return nil
+}
+
+// applyBlobFeeFixupIfNeeded repairs AccReward supply checkpoints that were written with incorrect
+// BurntFee values during the Osaka hard fork window. Blob fees were burned at the EVM level but
+// were not included in BurntFee until the corresponding bugfix. This fixup is a no-op once the
+// done-flag is set in the database, or if this node has not yet accumulated past the affected range.
+//
+// Hard-coded first-bad-checkpoint values (first 128-aligned block >= Osaka activation):
+//   - Kairos  (chainID=1001): firstBadCheckpoint=209134080
+//   - Mainnet (chainID=8217): firstBadCheckpoint=213333120
+func (s *SupplyModule) applyBlobFeeFixupIfNeeded() {
+	if ReadSupplyBlobFeeFixupDone(s.ChainKv) {
+		return
+	}
+
+	// Resolve the first checkpoint block that may contain incorrect BurntFee for this network.
+	var firstBadCheckpoint uint64
+	if s.ChainConfig.ChainID != nil {
+		switch s.ChainConfig.ChainID.Uint64() {
+		case params.KairosNetworkId: // 1001
+			firstBadCheckpoint = 209134080
+		case params.MainnetNetworkId: // 8217
+			firstBadCheckpoint = 213333120
+		default:
+			// Not a known production network (devnet, private chain, etc.); mark done and skip.
+			WriteSupplyBlobFeeFixupDone(s.ChainKv)
+			return
+		}
+	} else {
+		// No chain ID configured; mark done and skip.
+		WriteSupplyBlobFeeFixupDone(s.ChainKv)
+		return
+	}
+
+	lastAccNum := ReadLastAccRewardNumber(s.ChainKv)
+	if lastAccNum < firstBadCheckpoint {
+		// The node hasn't accumulated past the affected range yet.
+		// Don't mark done: Mainnet Osaka hasn't activated, so we must check again on next startup.
+		return
+	}
+
+	// Reset to the last safe checkpoint (one interval before the first bad one).
+	safeResetNum := firstBadCheckpoint - checkpointInterval
+	for num := firstBadCheckpoint; num <= lastAccNum; num += checkpointInterval {
+		DeleteAccReward(s.ChainKv, num)
+	}
+	WriteLastAccRewardNumber(s.ChainKv, safeResetNum)
+	WriteSupplyBlobFeeFixupDone(s.ChainKv)
+
+	logger.Warn("Applied supply blob fee BurntFee fixup",
+		"firstBadCheckpoint", firstBadCheckpoint,
+		"safeReset", safeResetNum,
+		"deletedThrough", lastAccNum,
+	)
 }
 
 // catchup is a long-running goroutine that accumulates the supply checkpoint until the current head block.

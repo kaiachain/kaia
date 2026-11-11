@@ -58,6 +58,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 		}
 		// Block precaching permitted to continue, execute the transaction
 		stateDB.SetTxContext(tx.Hash(), block.Hash(), i)
+		tx = copyTxForPrefetch(tx)
 		if err := precacheTransaction(p.chain, nil, stateDB, header, tx, cfg); err != nil {
 			return // Ugh, something went horribly wrong, bail out
 		}
@@ -81,9 +82,16 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 
 	// Block precaching permitted to continue, execute the transaction
 	stateDB.SetTxContext(tx.Hash(), block.Hash(), ti)
+	tx = copyTxForPrefetch(tx)
 	if err := precacheTransaction(p.chain, nil, stateDB, header, tx, cfg); err != nil {
 		return // Ugh, something went horribly wrong, bail out
 	}
+}
+
+// Prefetch runs against speculative state, so it must not overwrite the
+// state-dependent execution caches on the transaction imported by the block.
+func copyTxForPrefetch(tx *types.Transaction) *types.Transaction {
+	return types.NewTx(tx.GetTxInternalData())
 }
 
 // precacheTransaction attempts to apply a transaction to the given state database

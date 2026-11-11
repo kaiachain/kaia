@@ -18,36 +18,35 @@ package core
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"io"
 	"math/big"
-	"math/rand"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_istanbul "github.com/kaiachain/kaia/consensus/istanbul/mocks"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/log/term"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
-	"github.com/mattn/go-colorable"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// newMockBackend create a mock-backend initialized with default values
-func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller) {
+// newMockBackend create a mock-backend and mock valset/gov modules initialized with default values.
+// Caller must call istCore.RegisterKaiaxModules(mockValset, mockGov) after New().
+func newMockBackend(t *testing.T, validatorAddrs []common.Address, permissionless bool) (*mock_istanbul.MockBackend, *gomock.Controller, *valset_mock.MockValsetModule, *mock_gov.MockGovModule) {
 	committeeSize := uint64(len(validatorAddrs) / 3)
 
-	istExtra := &types.IstanbulExtra{
+	istExtra := &istanbul.IstanbulExtra{
 		Validators:    validatorAddrs,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
@@ -61,7 +60,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 		ParentHash: common.Hash{},
 		Number:     common.Big0,
 		GasUsed:    0,
-		Extra:      append(make([]byte, types.IstanbulExtraVanity), extra...),
+		Extra:      append(make([]byte, istanbul.IstanbulExtraVanity), extra...),
 		Time:       new(big.Int).SetUint64(1234),
 		BlockScore: common.Big0,
 	})
@@ -69,26 +68,35 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	eventMux := new(event.TypeMux)
 
 	mockCtrl := gomock.NewController(t)
-	mockValset := istanbul.NewBlockValSet(validatorAddrs, []common.Address{})
+	mockValsetModule := valset_mock.NewMockValsetModule(mockCtrl)
+	mockGovModule := mock_gov.NewMockGovModule(mockCtrl)
 	mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
 
-	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
-
-	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().GetCommitteeStateByRound(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
+	// Valset module: used by core startRound (no BlockValSet)
+	mockValsetModule.EXPECT().GetCouncil(gomock.Any()).Return(validatorAddrs, nil).AnyTimes()
+	mockValsetModule.EXPECT().GetDemotedValidators(gomock.Any()).Return([]common.Address{}, nil).AnyTimes()
+	mockValsetModule.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(num uint64, round uint64) ([]common.Address, error) {
 			if round == 2 {
-				return istanbul.NewRoundCommitteeState(
-					mockValset, committeeSize, validatorAddrs[2:committeeSize+2], validatorAddrs[0],
-				), nil
+				return validatorAddrs[2 : committeeSize+2], nil
 			}
-			return istanbul.NewRoundCommitteeState(
-				mockValset, committeeSize, validatorAddrs[0:committeeSize], validatorAddrs[0],
-			), nil
-		}).AnyTimes()
-	mockBackend.EXPECT().GetProposerByRound(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
+			return validatorAddrs[0:committeeSize], nil
+		},
+	).AnyTimes()
+	mockValsetModule.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
+
+	// Gov module: required by core registration checks.
+	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{CommitteeSize: committeeSize}).AnyTimes()
+
+	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
+	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
+	sealerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	mockBackend.EXPECT().Sealer().Return(istanbul.NewSealerImpl(sealerKey)).AnyTimes()
+	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
+	mockBackend.EXPECT().IsPermissionlessAt(gomock.Any()).Return(permissionless).AnyTimes()
+	mockBackend.EXPECT().VerifyProposalBody(gomock.Any()).Return(nil).AnyTimes()
 
 	// Set an eventMux in which istanbul core will subscribe istanbul events
 	mockBackend.EXPECT().EventMux().Return(eventMux).AnyTimes()
@@ -104,7 +112,108 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
-	return mockBackend, mockCtrl
+	return mockBackend, mockCtrl, mockValsetModule, mockGovModule
+}
+
+func TestGetRoundCommitteeStateUsesReturnedCommitteeSize(t *testing.T) {
+	validatorAddrs := []common.Address{
+		common.HexToAddress("0x0001"),
+		common.HexToAddress("0x0002"),
+		common.HexToAddress("0x0003"),
+		common.HexToAddress("0x0004"),
+		common.HexToAddress("0x0005"),
+	}
+	const (
+		round           = uint64(0)
+		govCommitteeLen = uint64(2)
+	)
+	proposer := validatorAddrs[0]
+
+	for _, tc := range []struct {
+		name              string
+		committee         []common.Address
+		expectedCommittee uint64
+	}{
+		{name: "subset committee keeps old effective size", committee: validatorAddrs[:int(govCommitteeLen)], expectedCommittee: govCommitteeLen},
+		{name: "full committee uses qualified length", committee: validatorAddrs, expectedCommittee: uint64(len(validatorAddrs))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			const seq = uint64(7)
+			mockCtrl := gomock.NewController(t)
+			t.Cleanup(mockCtrl.Finish)
+
+			mockValsetModule := valset_mock.NewMockValsetModule(mockCtrl)
+			mockGovModule := mock_gov.NewMockGovModule(mockCtrl)
+			mockValsetModule.EXPECT().GetCouncil(seq).Return(validatorAddrs, nil)
+			mockValsetModule.EXPECT().GetDemotedValidators(seq).Return([]common.Address{}, nil)
+			mockValsetModule.EXPECT().GetCommittee(seq, round).Return(tc.committee, nil)
+			mockValsetModule.EXPECT().GetProposer(seq, round).Return(proposer, nil)
+
+			c := &core{valsetModule: mockValsetModule, govModule: mockGovModule}
+			qualified, committee, gotProposer, committeeSize, requiredMsgCnt, fNum, err := getRoundCommitteeState(c, seq, round)
+			require.NoError(t, err)
+
+			assert.Equal(t, validatorAddrs, qualified.List())
+			assert.Equal(t, tc.committee, committee.List())
+			assert.Equal(t, proposer, gotProposer)
+			assert.Equal(t, tc.expectedCommittee, committeeSize)
+			assert.Equal(t, calcQuorumSize(len(validatorAddrs), tc.expectedCommittee), requiredMsgCnt)
+			assert.Equal(t, calcFaultTolerance(len(validatorAddrs), tc.expectedCommittee), fNum)
+		})
+	}
+}
+
+func TestStartNewRoundUsesViewRound(t *testing.T) {
+	validators := []common.Address{
+		common.HexToAddress("0x1"),
+		common.HexToAddress("0x2"),
+		common.HexToAddress("0x3"),
+		common.HexToAddress("0x4"),
+	}
+	ctrl := gomock.NewController(t)
+	backend := mock_istanbul.NewMockBackend(ctrl)
+	backend.EXPECT().Address().Return(validators[0]).AnyTimes()
+	backend.EXPECT().LastProposal().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)}), common.Address{})
+	backend.EXPECT().SetCurrentView(gomock.Any())
+	backend.EXPECT().EventMux().Return(new(event.TypeMux))
+
+	mValset := valset_mock.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetCouncil(uint64(11)).Return(validators, nil)
+	mValset.EXPECT().GetDemotedValidators(uint64(11)).Return(nil, nil)
+	mValset.EXPECT().GetCommittee(uint64(11), uint64(0)).Return(validators, nil)
+	mValset.EXPECT().GetProposer(uint64(11), uint64(0)).Return(validators[1], nil)
+
+	c := New(backend, istanbul.DefaultConfig).(*core)
+	c.RegisterKaiaxModules(mValset, mock_gov.NewMockGovModule(ctrl))
+	c.current = newRoundState(
+		&bft.View{Sequence: big.NewInt(10), Round: big.NewInt(0)},
+		valset.NewAddressSet(validators), common.Hash{}, nil, nil, nil, backend.HasBadProposal,
+	)
+	c.startNewRound(big.NewInt(3))
+	t.Cleanup(c.stopTimer)
+
+	assert.Equal(t, uint64(0), c.current.Round().Uint64())
+	assert.Equal(t, validators[1], c.current.proposer)
+}
+
+// getTestCommitteeState returns qualified, committee, proposer, nonCommittee for tests using the same logic as newMockBackend
+func getTestCommitteeState(validatorAddrs []common.Address, committeeSize uint64, seq, round uint64) (qualified, committee *valset.AddressSet, proposer common.Address, nonCommittee *valset.AddressSet) {
+	qualified = valset.NewAddressSet(validatorAddrs).Subtract(valset.NewAddressSet([]common.Address{}))
+	var committeeAddrs []common.Address
+	if round == 2 {
+		committeeAddrs = validatorAddrs[2 : committeeSize+2]
+	} else {
+		committeeAddrs = validatorAddrs[0:committeeSize]
+	}
+	committee = valset.NewAddressSet(committeeAddrs)
+	proposer = validatorAddrs[0]
+	nonCommittee = qualified.Subtract(committee)
+	return qualified, committee, proposer, nonCommittee
+}
+
+func TestGetRoundCommitteeStateMissingModules(t *testing.T) {
+	_, _, _, _, _, _, err := getRoundCommitteeState(&core{}, 1, 0)
+	assert.ErrorIs(t, err, istanbul.ErrNoEssentialModule)
 }
 
 // genValidators returns a set of addresses and corresponding keys used for generating a validator set
@@ -112,7 +221,7 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 	addrs := make([]common.Address, n)
 	keyMap := make(map[common.Address]*ecdsa.PrivateKey, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		key, _ := crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(key.PublicKey)
 		keyMap[addrs[i]] = key
@@ -122,31 +231,16 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 
 // signBlock signs the given block with the given private key
 func signBlock(block *types.Block, privateKey *ecdsa.PrivateKey) (*types.Block, error) {
-	var hash common.Hash
 	header := block.Header()
-	hasher := sha3.NewKeccak256()
 
-	// Clean seal is required for calculating proposer seal
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-
-	seal, err := crypto.Sign(crypto.Keccak256([]byte(hash.Bytes())), privateKey)
+	testSealer := istanbul.NewSealerImpl(privateKey)
+	authorSeal, err := testSealer.MakeAuthorSeal(header)
 	if err != nil {
 		return nil, err
 	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
+	if err := testSealer.WriteAuthorSeal(header, authorSeal); err != nil {
 		return nil, err
 	}
-	istanbulExtra.Seal = seal
-
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return nil, err
-	}
-
-	header.Extra = append(header.Extra[:types.IstanbulExtraVanity], payload...)
 	return block.WithSeal(header), nil
 }
 
@@ -163,258 +257,164 @@ func genBlock(prevBlock *types.Block, signerKey *ecdsa.PrivateKey) (*types.Block
 	return signBlock(block, signerKey)
 }
 
-// genBlockParams generates a signed block indicating prevBlock with ParentHash with additional parameters.
-func genBlockParams(prevBlock *types.Block, signerKey *ecdsa.PrivateKey, gasUsed uint64, time int64, blockScore int64) (*types.Block, error) {
-	block := types.NewBlockWithHeader(&types.Header{
-		ParentHash: prevBlock.Hash(),
-		Number:     new(big.Int).Add(prevBlock.Number(), common.Big1),
-		GasUsed:    gasUsed,
-		Extra:      prevBlock.Extra(),
-		Time:       new(big.Int).Add(prevBlock.Time(), big.NewInt(time)),
-		BlockScore: new(big.Int).Add(prevBlock.BlockScore(), big.NewInt(blockScore)),
-	})
-	return signBlock(block, signerKey)
+// genIstanbulMsg generates an istanbul message with given values, in the wire
+// format selected by permissionless.
+func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey, permissionless bool) (istanbul.MessageEvent, error) {
+	return genIstanbulMsgWithSealKey(msgType, prevHash, proposal, signerAddr, signerKey, signerKey, permissionless)
 }
 
-// genIstanbulMsg generates an istanbul message with given values
-func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey) (istanbul.MessageEvent, error) {
-	var subject interface{}
-
-	if msgType == msgPreprepare {
-		subject = &istanbul.Preprepare{
-			View: &istanbul.View{
-				Round:    big.NewInt(0),
-				Sequence: proposal.Number(),
-			},
-			Proposal: proposal,
+// genIstanbulMsgWithSealKey builds an istanbul message signed (outer signature) by
+// signerKey, but whose COMMIT CommittedSeal is signed by sealKey over the legacy
+// (non-round-bound) preimage. A sealKey different from signerKey forges the
+// committed seal.
+func genIstanbulMsgWithSealKey(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey, sealKey *ecdsa.PrivateKey, permissionless bool) (istanbul.MessageEvent, error) {
+	view := &bft.View{Round: big.NewInt(0), Sequence: proposal.Number()}
+	var payload any
+	switch msgType {
+	case bft.MsgPreprepare:
+		payload = &bft.Preprepare{View: view, Proposal: proposal}
+	case bft.MsgPrepare:
+		payload = &bft.Prepare{View: view, Digest: proposal.Hash()}
+	case bft.MsgCommit:
+		// A COMMIT carries a CommittedSeal: the sender's signature over the proposal's
+		// committed-seal preimage, which handleCommit verifies.
+		seal, err := crypto.Sign(crypto.Keccak256(istanbul.PrepareCommittedSeal(proposal.Hash())), sealKey)
+		if err != nil {
+			return istanbul.MessageEvent{}, err
 		}
-	} else {
-		subject = &istanbul.Subject{
-			View: &istanbul.View{
-				Round:    big.NewInt(0),
-				Sequence: proposal.Number(),
-			},
-			Digest:   proposal.Hash(),
-			PrevHash: prevHash,
-		}
+		payload = &bft.Commit{View: view, Digest: proposal.Hash(), CommittedSeal: seal}
+	case bft.MsgRoundChange:
+		payload = &bft.RoundChange{View: view}
+	default:
+		return istanbul.MessageEvent{}, bft.ErrInvalidMessage
 	}
-
-	encodedSubject, err := Encode(subject)
-	if err != nil {
-		return istanbul.MessageEvent{}, err
-	}
-
-	msg := &message{
-		Hash:    prevHash,
-		Code:    msgType,
-		Msg:     encodedSubject,
-		Address: signerAddr,
-	}
-
-	data, err := msg.PayloadNoSig()
-	if err != nil {
-		return istanbul.MessageEvent{}, err
-	}
-
-	msg.Signature, err = crypto.Sign(crypto.Keccak256([]byte(data)), signerKey)
-	if err != nil {
-		return istanbul.MessageEvent{}, err
-	}
-
-	encodedPayload, err := msg.Payload()
-	if err != nil {
-		return istanbul.MessageEvent{}, err
-	}
-
-	istMsg := istanbul.MessageEvent{
-		Hash:    msg.Hash,
-		Payload: encodedPayload,
-	}
-
-	return istMsg, nil
+	return signIstanbulMsg(prevHash, msgType, payload, signerAddr, signerKey, permissionless)
 }
 
-// TestCore_handleEvents_scenario_invalidSender tests `handleEvents` function of `istanbul.core` with a scenario.
-// It posts an invalid message and a valid message of each istanbul message type.
-func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
+// genIstanbulCommitWithRoundBoundSeal builds a COMMIT with a round-bound committed seal (post-permissionless).
+func genIstanbulCommitWithRoundBoundSeal(prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey, round byte) (istanbul.MessageEvent, error) {
+	seal, err := crypto.Sign(crypto.Keccak256(istanbul.PrepareCommittedSealWithRound(proposal.Hash(), round)), signerKey)
+	if err != nil {
+		return istanbul.MessageEvent{}, err
+	}
+	commit := &bft.Commit{
+		View:          &bft.View{Round: big.NewInt(int64(round)), Sequence: proposal.Number()},
+		Digest:        proposal.Hash(),
+		CommittedSeal: seal,
+	}
+	return signIstanbulMsg(prevHash, bft.MsgCommit, commit, signerAddr, signerKey, true)
+}
+
+// signIstanbulMsg assembles a bft.Message carrying payload and signs it with
+// signerKey in the wire format selected by permissionless.
+func signIstanbulMsg(prevHash common.Hash, code uint64, payload any, signerAddr common.Address, signerKey *ecdsa.PrivateKey, permissionless bool) (istanbul.MessageEvent, error) {
+	encodedPayload, err := bft.Encode(payload)
+	if err != nil {
+		return istanbul.MessageEvent{}, err
+	}
+	msg := &bft.Message{
+		PrevHash: prevHash,
+		Code:     code,
+		Msg:      encodedPayload,
+		Address:  signerAddr,
+	}
+	isPermissionlessAt := func(uint64) bool { return permissionless }
+	data, err := msg.PayloadNoSigForFork(isPermissionlessAt)
+	if err != nil {
+		return istanbul.MessageEvent{}, err
+	}
+	if msg.Signature, err = crypto.Sign(crypto.Keccak256(data), signerKey); err != nil {
+		return istanbul.MessageEvent{}, err
+	}
+	wire, err := msg.PayloadForFork(isPermissionlessAt)
+	if err != nil {
+		return istanbul.MessageEvent{}, err
+	}
+	return istanbul.MessageEvent{Hash: msg.PrevHash, Payload: wire}, nil
+}
+
+func neverPermissionless(uint64) bool  { return false }
+func alwaysPermissionless(uint64) bool { return true }
+
+// startCoreAtPreprepare starts a core, drives a preprepare, and returns the core plus a committee
+// sender (≠ proposer) with its key, ready to send COMMITs. permissionless sets the backend fork status.
+func startCoreAtPreprepare(t *testing.T, permissionless bool) (c *core, prevHash common.Hash, proposal *types.Block, sender common.Address, senderKey *ecdsa.PrivateKey) {
+	t.Helper()
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
-	defer fork.ClearHardForkBlockNumberConfig()
+	t.Cleanup(fork.ClearHardForkBlockNumberConfig)
 
-	validatorAddrs, validatorKeyMap := genValidators(30)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
-	defer mockCtrl.Finish()
+	addrs, keys := genValidators(30)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, addrs, permissionless)
+	t.Cleanup(mockCtrl.Finish)
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
+	c = New(mockBackend, istConfig).(*core)
+	c.RegisterKaiaxModules(mockValset, mockGov)
+	require.NoError(t, c.Start())
+	t.Cleanup(func() { c.Stop() })
 
-	// When the istanbul core started, a message handling loop in `handleEvents()` waits istanbul messages
-	istCore := New(mockBackend, istConfig).(*core)
-	if err := istCore.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer istCore.Stop()
-
-	// Get variables initialized on `newMockBackend()`
-	eventMux := mockBackend.EventMux()
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	cState, err := mockBackend.GetCommitteeStateByRound(istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
-	assert.NoError(t, err)
+	_, committee, proposer, _ := getTestCommitteeState(addrs, uint64(len(addrs)/3), c.currentView().Sequence.Uint64(), c.currentView().Round.Uint64())
+	cand, err := genBlock(lastBlock, keys[proposer])
+	require.NoError(t, err)
+	pp, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), cand, proposer, keys[proposer], permissionless)
+	require.NoError(t, err)
+	require.NoError(t, mockBackend.EventMux().Post(pp))
+	time.Sleep(time.Second)
+	require.NotNil(t, c.current.Preprepare)
 
-	// Preprepare message originated from invalid sender
-	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
-		msgSenderKey := validatorKeyMap[msgSender]
-
-		newProposal, err := genBlock(lastBlock, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
+	for i := 0; i < committee.Len(); i++ {
+		if committee.At(i) != proposer {
+			sender = committee.At(i)
+			break
 		}
-
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastProposal.Hash(), newProposal, msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Nil(t, istCore.current.Preprepare)
 	}
+	return c, lastBlock.Hash(), c.current.Preprepare.Proposal.(*types.Block), sender, keys[sender]
+}
 
-	// Preprepare message originated from valid sender and set a new proposal in the istanbul core
-	{
-		msgSender := cState.Proposer()
-		msgSenderKey := validatorKeyMap[msgSender]
+// TestCore_handleCommit_RejectsForgedCommittedSeal checks that a COMMIT from a committee member
+// whose CommittedSeal is signed by a different key (a forged seal) is rejected, while a
+// correctly-signed COMMIT is accepted.
+func TestCore_handleCommit_RejectsForgedCommittedSeal(t *testing.T) {
+	c, prevHash, proposal, sender, senderKey := startCoreAtPreprepare(t, false)
 
-		newProposal, err := genBlock(lastBlock, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
+	// Seal signed by a key other than the sender's: recovered signer != sender, so it is rejected.
+	forgeKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	forged, err := genIstanbulMsgWithSealKey(bft.MsgCommit, prevHash, proposal, sender, senderKey, forgeKey, false)
+	require.NoError(t, err)
+	require.NoError(t, c.backend.EventMux().Post(forged))
+	time.Sleep(time.Second)
+	assert.Equal(t, 0, len(c.current.Commits.messages), "forged committed seal must be rejected")
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
+	// A correctly-signed seal from the same sender is accepted (so it was the seal, not the sender).
+	valid, err := genIstanbulMsg(bft.MsgCommit, prevHash, proposal, sender, senderKey, false)
+	require.NoError(t, err)
+	require.NoError(t, c.backend.EventMux().Post(valid))
+	time.Sleep(time.Second)
+	assert.Equal(t, 1, len(c.current.Commits.messages), "valid committed seal must be accepted")
+}
 
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
+// TestCore_handleCommit_PermissionlessRoundBoundSeal checks that post-permissionless handleCommit
+// rejects a legacy committed seal and accepts a round-bound one from the same committee member.
+func TestCore_handleCommit_PermissionlessRoundBoundSeal(t *testing.T) {
+	c, prevHash, proposal, sender, senderKey := startCoreAtPreprepare(t, true)
 
-		time.Sleep(time.Second)
-		currentHeader, proposalHeader := istCore.current.Preprepare.Proposal.Header().String(), newProposal.Header().String()
-		assert.Equal(t, currentHeader, proposalHeader)
-	}
+	// A legacy (non-round-bound) committed seal must be rejected post-permissionless.
+	legacy, err := genIstanbulMsg(bft.MsgCommit, prevHash, proposal, sender, senderKey, true)
+	require.NoError(t, err)
+	require.NoError(t, c.backend.EventMux().Post(legacy))
+	time.Sleep(time.Second)
+	assert.Equal(t, 0, len(c.current.Commits.messages), "legacy committed seal must be rejected post-permissionless")
 
-	// Prepare message originated from invalid sender
-	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
-		msgSenderKey := validatorKeyMap[msgSender]
-
-		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Equal(t, 0, len(istCore.current.Prepares.messages))
-	}
-
-	// Prepare message originated from valid sender
-	{
-		msgSender := cState.Committee().At(rand.Int() % (cState.Committee().Len() - 1))
-		msgSenderKey := validatorKeyMap[msgSender]
-
-		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Equal(t, 1, len(istCore.current.Prepares.messages))
-	}
-
-	// Commit message originated from invalid sender
-	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
-		msgSenderKey := validatorKeyMap[msgSender]
-
-		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Equal(t, 0, len(istCore.current.Commits.messages))
-	}
-
-	// Commit message originated from valid sender
-	{
-		msgSender := cState.Committee().At(rand.Int() % (cState.Committee().Len() - 1))
-		msgSenderKey := validatorKeyMap[msgSender]
-
-		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Equal(t, 1, len(istCore.current.Commits.messages))
-	}
-
-	//// RoundChange message originated from invalid sender
-	//{
-	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
-	//
-	//	istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := eventMux.Post(istanbulMsg); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	time.Sleep(time.Second)
-	//	assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
-	//}
-
-	// RoundChange message originated from valid sender
-	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
-		msgSenderKey := validatorKeyMap[msgSender]
-
-		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := eventMux.Post(istanbulMsg); err != nil {
-			t.Fatal(err)
-		}
-
-		time.Sleep(time.Second)
-		assert.Equal(t, 1, len(istCore.roundChangeSet.roundChanges[0].messages)) // round is set to 0 in this test
-	}
+	// A round-bound committed seal from the same sender is accepted.
+	roundBound, err := genIstanbulCommitWithRoundBoundSeal(prevHash, proposal, sender, senderKey, 0)
+	require.NoError(t, err)
+	require.NoError(t, c.backend.EventMux().Post(roundBound))
+	time.Sleep(time.Second)
+	assert.Equal(t, 1, len(c.current.Commits.messages), "round-bound committed seal must be accepted post-permissionless")
 }
 
 func TestCore_handlerMsg(t *testing.T) {
@@ -422,13 +422,14 @@ func TestCore_handlerMsg(t *testing.T) {
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	validatorAddrs, validatorKeyMap := genValidators(10)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs, false)
 	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig.Copy()
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +437,8 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	cState, _ := mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+	committeeSize := uint64(len(validatorAddrs) / 3)
+	_, _, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, lastBlock.NumberU64()+1, 0)
 
 	// invalid format
 	{
@@ -456,7 +458,7 @@ func TestCore_handlerMsg(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, nonValidatorAddr, nonValidatorKey)
+		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, nonValidatorAddr, nonValidatorKey, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -467,7 +469,7 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	// valid message
 	{
-		msgSender := cState.Proposer()
+		msgSender := proposer
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
@@ -475,7 +477,7 @@ func TestCore_handlerMsg(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey)
+		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, msgSender, msgSenderKey, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -485,246 +487,72 @@ func TestCore_handlerMsg(t *testing.T) {
 	}
 }
 
-// TODO-Kaia: To enable logging in the test code, we can use the following function.
-// This function will be moved to somewhere utility functions are located.
-func enableLog() {
-	usecolor := term.IsTty(os.Stderr.Fd()) && os.Getenv("TERM") != "dumb"
-	output := io.Writer(os.Stderr)
-	if usecolor {
-		output = colorable.NewColorableStderr()
-	}
-	glogger := log.NewGlogHandler(log.StreamHandler(output, log.TerminalFormat(usecolor)))
-	log.PrintOrigins(true)
-	log.ChangeGlobalLogLevel(glogger, log.Lvl(3))
-	glogger.Vmodule("")
-	glogger.BacktraceAt("")
-	log.Root().SetHandler(glogger)
-}
-
-// splitSubList splits a committee into two groups w/o proposer
-// one for n nodes, the other for len(committee) - n - 1 nodes
-func splitSubList(committee []common.Address, n int, proposerAddr common.Address) ([]common.Address, []common.Address) {
-	var subCN, remainingCN []common.Address
-
-	for _, val := range committee {
-		if val == proposerAddr {
-			// proposer is not included in any group
-			continue
-		}
-		if len(subCN) < n {
-			subCN = append(subCN, val)
-		} else {
-			remainingCN = append(remainingCN, val)
-		}
-	}
-	return subCN, remainingCN
-}
-
-// Simulate a proposer that receives messages from disagreeing groups of CNs.
-func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) State {
-	if testing.Verbose() {
-		enableLog()
-	}
-
+// TestCore_postPrepreparedEvent checks that the event loop keeps processing after
+// an invalid sender and emits PrepreparedEvent for the subsequent valid proposal.
+func TestCore_postPrepreparedEvent(t *testing.T) {
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
-	// Note that genValidators(n) will generate n/3 validators.
-	// We want n validators, thus calling genValidators(3n).
-	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
-
-	// Add more EXPECT()s to remove unexpected call error
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
-	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
+	validatorAddrs, validatorKeyMap := genValidators(10)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs, false)
 	defer mockCtrl.Finish()
 
-	var (
-		// it creates two pre-defined blocks: one for benign CNs, the other for the malicious
-		// newProposal is a block which the proposer has created
-		// malProposal is an incorrect block that malicious CNs use to try stop consensus
-		lastProposal, _ = mockBackend.LastProposal()
-		lastBlock       = lastProposal.(*types.Block)
-		cState, _       = mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
-		proposer        = cState.Proposer()
-		proposerKey     = validatorKeyMap[proposer]
-		// the proposer generates a block as newProposal
-		// malicious CNs does not accept the proposer's block and use malProposal's hash value for consensus
-		newProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
-		malProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 0, 0)
-	)
-
-	// Start istanbul core
-	istConfig := istanbul.DefaultConfig
+	istConfig := istanbul.DefaultConfig.Copy()
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	istCore := New(mockBackend, istConfig).(*core)
-	require.Nil(t, istCore.Start())
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
+	require.NoError(t, istCore.Start())
 	defer istCore.Stop()
 
-	// Step 1 - Pre-prepare with correct message
+	lastProposal, _ := mockBackend.LastProposal()
+	lastBlock := lastProposal.(*types.Block)
+	wantSeq := lastBlock.NumberU64() + 1
+	committeeSize := uint64(len(validatorAddrs) / 3)
+	_, _, proposer, nonCommittee := getTestCommitteeState(validatorAddrs, committeeSize, wantSeq, 0)
 
-	// Create pre-prepare message
-	istanbulMsg, err := genIstanbulMsg(msgPreprepare, lastBlock.Hash(), newProposal, proposer, proposerKey)
-	require.Nil(t, err)
+	invalidSender := nonCommittee.At(0)
+	invalidProposal, err := genBlock(lastBlock, validatorKeyMap[invalidSender])
+	require.NoError(t, err)
+	invalidMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), invalidProposal,
+		invalidSender, validatorKeyMap[invalidSender], false)
+	require.NoError(t, err)
 
-	// Handle pre-prepare message
-	err = istCore.handleMsg(istanbulMsg.Payload)
-	require.Nil(t, err)
+	proposal, err := genBlock(lastBlock, validatorKeyMap[proposer])
+	require.NoError(t, err)
+	validMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), proposal,
+		proposer, validatorKeyMap[proposer], false)
+	require.NoError(t, err)
+	require.NotEqual(t, invalidProposal.Hash(), proposal.Hash())
 
-	// splitSubList split current committee into benign CNs and malicious CNs
-	subList := cState.Committee().List()
-	maliciousCNs, benignCNs := splitSubList(subList, numMalicious, proposer)
-	benignCNs = append(benignCNs, proposer)
+	mux := mockBackend.EventMux()
+	sub := mux.Subscribe(istanbul.PrepreparedEvent{})
+	defer sub.Unsubscribe()
 
-	// Shortcut for sending consensus message to everyone in `CNList`
-	sendMessages := func(state uint64, proposal *types.Block, CNList []common.Address) {
-		for _, val := range CNList {
-			istanbulMsg, err = genIstanbulMsg(state, lastBlock.Hash(), proposal, val, validatorKeyMap[val])
-			assert.Nil(t, err)
-			err = istCore.handleMsg(istanbulMsg.Payload)
-			// assert.Nil(t, err)
-		}
-	}
-
-	// Step 2 - Receive disagreeing prepare messages
-
-	sendMessages(msgPrepare, newProposal, benignCNs)
-	sendMessages(msgPrepare, malProposal, maliciousCNs)
-
-	if istCore.state.Cmp(StatePreprepared) == 0 {
-		t.Logf("State stuck at preprepared")
-		return istCore.state
-	}
-
-	// Step 3 - Receive disagreeing commit messages
-
-	sendMessages(msgCommit, newProposal, benignCNs)
-	sendMessages(msgCommit, malProposal, maliciousCNs)
-	return istCore.state
-}
-
-// TestCore_malCN tests whether the proposer can commit when malicious CNs exist.
-func TestCore_malCN(t *testing.T) {
-	// If there are less than 'f' malicious CNs, proposer can commit.
-	state := simulateMaliciousCN(t, 4, 1)
-	assert.Equal(t, StateCommitted, state)
-
-	// If there are more than 'f' malicious CNs, the proposer cannot commit, stuck at preprepared state.
-	state = simulateMaliciousCN(t, 4, 3)
-	assert.Equal(t, StatePreprepared, state)
-}
-
-// Simulate chain split depending on the number of numValidators
-func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
-	if testing.Verbose() {
-		enableLog()
-	}
-
-	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
-	defer fork.ClearHardForkBlockNumberConfig()
-
-	// Note that genValidators(n) will generate n/3 validators.
-	// We want n validators, thus calling genValidators(3n).
-	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
-
-	// Add more EXPECT()s to remove unexpected call error
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
-	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
-	defer mockCtrl.Finish()
-
-	var (
-		lastProposal, _ = mockBackend.LastProposal()
-		lastBlock       = lastProposal.(*types.Block)
-		cState, _       = mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
-		proposer        = cState.Proposer()
-		proposerKey     = validatorKeyMap[proposer]
-	)
-
-	// Start istanbul core
-	istConfig := istanbul.DefaultConfig
-	istConfig.ProposerPolicy = istanbul.WeightedRandom
-	coreProposer := New(mockBackend, istConfig).(*core)
-	coreA := New(mockBackend, istConfig).(*core)
-	coreB := New(mockBackend, istConfig).(*core)
-	require.Nil(t,
-		coreProposer.Start(),
-		coreA.Start(),
-		coreB.Start())
-	defer coreProposer.Stop()
-	defer coreA.Stop()
-	defer coreB.Stop()
-
-	// make two groups
-	// the number of group size is (numValidators-1/2) + 1
-	// groupA consists of proposer, coreA, unnamed node(s)
-	// groupB consists of proposer, coreB, unnamed node(s)
-	subList := cState.Committee().List()
-	groupA, groupB := splitSubList(subList, (numValidators-1)/2, proposer)
-	groupA = append(groupA, proposer)
-	groupB = append(groupB, proposer)
-
-	// Step 1 - the malicious proposer generates two blocks
-	proposalA, err := genBlockParams(lastBlock, proposerKey, 0, 0, 1)
-	assert.Nil(t, err)
-
-	proposalB, err := genBlockParams(lastBlock, proposerKey, 1000, 10, 1)
-	assert.Nil(t, err)
-
-	// Shortcut for sending message `proposal` to core `c`
-	sendMessages := func(state uint64, proposal *types.Block, CNList []common.Address, c *core) {
-		for _, val := range CNList {
-			valKey := validatorKeyMap[val]
-			if state == msgPreprepare {
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, proposer, valKey)
-				err = c.handleMsg(istanbulMsg.Payload)
-			} else {
-				istanbulMsg, _ := genIstanbulMsg(state, lastBlock.Hash(), proposal, val, valKey)
-				err = c.handleMsg(istanbulMsg.Payload)
-			}
-			if err != nil {
-				t.Logf("handleMsg error: %s", err)
+	// Post and receive concurrently: TypeMux delivery is unbuffered.
+	postErrors := make(chan error, 1)
+	go func() {
+		for _, msg := range []istanbul.MessageEvent{invalidMsg, validMsg} {
+			if err := mux.Post(msg); err != nil {
+				postErrors <- err
+				return
 			}
 		}
+	}()
+
+	select {
+	case ev := <-sub.Chan():
+		require.NotNil(t, ev)
+		pe, ok := ev.Data.(istanbul.PrepreparedEvent)
+		require.True(t, ok)
+		require.NotNil(t, pe.Block)
+		require.Equal(t, proposal.Hash(), pe.Block.Hash(), "only the valid proposal may produce the event")
+		require.Equal(t, wantSeq, pe.View.Sequence.Uint64())
+		require.Equal(t, uint64(0), pe.View.Round.Uint64())
+	case err := <-postErrors:
+		t.Fatalf("failed to post consensus message: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("expected PrepreparedEvent after rejecting the invalid sender")
 	}
-	// Step 2 - exchange consensus messages inside each group
-
-	// the proposer sends two different blocks to each group
-	// each group receives a block and handles the message
-	// when chain split occurs, their states become StateCommitted
-	// otherwise, their states stay StatePreprepared
-	sendMessages(msgPreprepare, proposalA, groupA, coreA)
-	sendMessages(msgPrepare, proposalA, groupA, coreA)
-	if coreA.state.Cmp(StatePrepared) == 0 {
-		sendMessages(msgCommit, proposalA, groupA, coreA)
-	}
-
-	sendMessages(msgPreprepare, proposalB, groupB, coreB)
-	sendMessages(msgPrepare, proposalB, groupB, coreB)
-	if coreB.state.Cmp(StatePrepared) == 0 {
-		sendMessages(msgCommit, proposalB, groupB, coreB)
-	}
-
-	return coreA.state, coreB.state
-}
-
-// TestCore_chainSplit tests whether a chain split occurs in a certain conditions:
-//  1. the number of validators does not consist of 3f+1;
-//     e.g. if the number of validator is 5, it consists of 3f+2 (f=1)
-//  2. the proposer is malicious; it sends two different blocks to each group
-//
-// After Ceil(2N/3) quorum calculation, the chain should not be split
-func TestCore_chainSplit(t *testing.T) {
-	// Even though the number of validators is not 3f+1, the chain is not split.
-	stateA, stateB := simulateChainSplit(t, 5)
-	assert.Equal(t, StatePreprepared, stateA)
-	assert.Equal(t, StatePreprepared, stateB)
-
-	// If the number of validators is 3f+1, the chain cannot be split.
-	stateA, stateB = simulateChainSplit(t, 7)
-	fmt.Println(stateA, stateB)
-	assert.Equal(t, StatePreprepared, stateA)
-	assert.Equal(t, StatePreprepared, stateB)
 }
 
 // TestCore_handleTimeoutMsg_race tests a race condition between round change triggers.
@@ -763,13 +591,14 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	}
 
 	validatorAddrs, validatorKeys := genValidators(10)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs, false)
 	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -822,31 +651,135 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 
 // makeRCMsgPayload makes a payload of round change message.
 func makeRCMsgPayload(t *testing.T, round int64, sequence int64, prevHash common.Hash, senderAddr common.Address, signerKey *ecdsa.PrivateKey) []byte {
-	subject, err := Encode(&istanbul.Subject{
-		View: &istanbul.View{
+	encoded, err := bft.Encode(&bft.RoundChange{
+		View: &bft.View{
 			Round:    big.NewInt(round),
 			Sequence: big.NewInt(sequence),
 		},
-		Digest:   common.Hash{},
-		PrevHash: prevHash,
 	})
 	require.Nil(t, err)
 
-	msg := &message{
-		Hash:    prevHash,
-		Code:    msgRoundChange,
-		Msg:     subject,
-		Address: senderAddr,
+	msg := &bft.Message{
+		PrevHash: prevHash,
+		Code:     bft.MsgRoundChange,
+		Msg:      encoded,
+		Address:  senderAddr,
 	}
 
-	data, err := msg.PayloadNoSig()
+	// The mock backend in this test is pre-Permissionless.
+	data, err := msg.PayloadNoSigForFork(neverPermissionless)
 	require.Nil(t, err)
 
 	msg.Signature, err = crypto.Sign(crypto.Keccak256([]byte(data)), signerKey)
 	require.Nil(t, err)
 
-	payload, err := msg.Payload()
+	payload, err := msg.PayloadForFork(neverPermissionless)
 	require.Nil(t, err)
 
 	return payload
+}
+
+// An oversized PREPARE, COMMIT or ROUND CHANGE must be rejected before any of
+// the retention paths (backlog, roundChangeSet, messageSet) can keep it. The
+// signed payload can be inflated through a view field, since rlp does not cap
+// big.Int on decode, or through any variable-length payload field.
+func TestHandleCheckedMsgRejectsOversizedSubjectMessage(t *testing.T) {
+	src := common.HexToAddress("0x1")
+	oversizedView := &bft.View{
+		Sequence: big.NewInt(1),
+		Round:    new(big.Int).Lsh(big.NewInt(1), 8*maxSubjectMessageBytes),
+	}
+	encode := func(val any) []byte {
+		encoded, err := bft.Encode(val)
+		require.NoError(t, err)
+		return encoded
+	}
+	view := &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}
+	payloads := map[uint64]map[string][]byte{
+		bft.MsgPrepare: {"view field": encode(&bft.Prepare{View: oversizedView})},
+		bft.MsgCommit: {
+			"view field":     encode(&bft.Commit{View: oversizedView}),
+			"committed seal": encode(&bft.Commit{View: view, CommittedSeal: make([]byte, maxSubjectMessageBytes+1)}),
+		},
+		bft.MsgRoundChange: {"view field": encode(&bft.RoundChange{View: oversizedView})},
+	}
+
+	for code, byName := range payloads {
+		for name, payload := range byName {
+			msg := &bft.Message{Code: code, Msg: payload}
+			t.Run(fmt.Sprintf("code %d/%s", code, name), func(t *testing.T) {
+				c := newTestBacklogCore()
+				c.roundChangeSet = newRoundChangeSet(valset.NewAddressSet([]common.Address{src}), 1)
+
+				err := c.handleCheckedMsg(msg, src)
+
+				require.ErrorIs(t, err, errMessageTooLarge)
+				assert.Empty(t, c.backlogs)
+				assert.Zero(t, c.current.Prepares.Size())
+				assert.Zero(t, c.current.Commits.Size())
+				assert.Empty(t, c.roundChangeSet.roundChanges)
+			})
+		}
+	}
+}
+
+// A well-formed message of every code must stay inside the size limit, even at
+// the largest view. PREPREPARE carries a block and is exempt from the subject
+// limit; only the P2P size cap applies to it.
+func TestCheckMessageSizeFitsWellFormedMessages(t *testing.T) {
+	view := &bft.View{
+		Sequence: new(big.Int).SetUint64(^uint64(0)),
+		Round:    new(big.Int).SetUint64(^uint64(0)),
+	}
+	maxRound := new(big.Int).SetUint64(^uint64(0))
+	for code, payload := range map[uint64]any{
+		bft.MsgPrepare: &bft.Prepare{View: view, Digest: common.HexToHash("0x01")},
+		bft.MsgCommit:  &bft.Commit{View: view, Digest: common.HexToHash("0x01"), CommittedSeal: make([]byte, crypto.SignatureLength)},
+		bft.MsgRoundChange: &bft.RoundChange{View: view, Prepared: &bft.PreparedClaim{
+			Round: maxRound, Digest: common.HexToHash("0x01"),
+		}},
+	} {
+		encoded, err := bft.Encode(payload)
+		require.NoError(t, err)
+		require.NoError(t, checkMessageSize(&bft.Message{
+			PrevHash:  common.HexToHash("0x02"),
+			Code:      code,
+			Msg:       encoded,
+			Signature: make([]byte, crypto.SignatureLength),
+		}, alwaysPermissionless))
+	}
+	require.NoError(t, checkMessageSize(&bft.Message{
+		Code: bft.MsgPreprepare,
+		Msg:  make([]byte, maxSubjectMessageBytes+1),
+	}, alwaysPermissionless))
+}
+
+func TestCheckMessageSizeIncludesConsensusP2PWrapper(t *testing.T) {
+	encoded, err := bft.Encode(&bft.RoundChange{View: &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}})
+	require.NoError(t, err)
+	msg := &bft.Message{
+		Code:      bft.MsgRoundChange,
+		Msg:       encoded,
+		Signature: make([]byte, crypto.SignatureLength),
+	}
+	payloadSize := func() int {
+		payload, err := msg.Payload()
+		require.NoError(t, err)
+		return len(payload)
+	}
+	// Size the attachment so the signed message itself fits the protocol cap
+	// and only its ConsensusMsg wrapper pushes the wire message over it.
+	msg.Evidence = make([]byte, maxConsensusP2PMessageBytes-256)
+	msg.Evidence = make([]byte, len(msg.Evidence)+maxConsensusP2PMessageBytes-10-payloadSize())
+	payload, err := msg.Payload()
+	require.NoError(t, err)
+	require.LessOrEqual(t, len(payload), maxConsensusP2PMessageBytes)
+	wire, err := bft.Encode(&bft.ConsensusMsg{Payload: payload})
+	require.NoError(t, err)
+	require.Equal(t, uint64(len(wire)), consensusP2PMessageSize(payload))
+	require.Greater(t, consensusP2PMessageSize(payload), uint64(maxConsensusP2PMessageBytes))
+	require.ErrorIs(t, checkMessageSize(msg, alwaysPermissionless), errMessageTooLarge)
+
+	msg.Evidence = msg.Evidence[:len(msg.Evidence)-64]
+	require.NoError(t, checkMessageSize(msg, alwaysPermissionless))
 }

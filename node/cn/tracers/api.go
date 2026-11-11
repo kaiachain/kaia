@@ -24,6 +24,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -54,8 +55,12 @@ const (
 	// by default before being forcefully aborted.
 	defaultTraceTimeout = 5 * time.Second
 
-	// defaultLoggerTimeout is the amount of time a logger can aggregate trace logs
-	defaultLoggerTimeout = 1 * time.Second
+	// A structured trace is encoded incrementally, but the RPC layer still makes
+	// full-result copies. These defaults target about 1 GiB of transient memory
+	// per near-cap trace on the recommended 64 GiB EN profile.
+	maxConcurrentStructTraces = 2
+	maxStructTraceLogs        = 1_000_000
+	maxStructTraceBytes       = 128 * 1024 * 1024
 
 	// defaultTraceReexec is the number of blocks the tracer is willing to go back
 	// and reexecute to produce missing historical state necessary to run a specific
@@ -78,6 +83,7 @@ const (
 var (
 	HeavyAPIRequestLimit int32 = 500 // WARN: changing this value will have no effect. This value is for test. See HeavyDebugRequestLimitFlag
 	heavyAPIRequestCount int32 = 0
+	structTraceSlots           = make(chan struct{}, maxConcurrentStructTraces)
 )
 
 // StateReleaseFunc is used to deallocate resources held by constructing a
@@ -94,7 +100,7 @@ type Backend interface {
 	RPCGasCap() *big.Int
 	ChainConfig() *params.ChainConfig
 	ChainDB() database.DBManager
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 	// StateAtBlock returns the state corresponding to the stateroot of the block.
 	// N.B: For executing transactions on block N, the required stateRoot is block N-1,
 	// so this method should be called with the parent.
@@ -160,8 +166,12 @@ func (context *chainContext) CurrentBlock() *types.Block {
 	return block
 }
 
-func (context *chainContext) Engine() consensus.Engine {
-	return context.backend.Engine()
+func (context *chainContext) Sealer() consensus.Sealer {
+	return context.backend.Sealer()
+}
+
+func (context *chainContext) ValidateHeader(header *types.Header) error {
+	return nil
 }
 
 func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
@@ -220,7 +230,7 @@ func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
-func newChainContext(ctx context.Context, backend Backend) consensus.ChainReader {
+func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
 	return &chainContext{backend: backend, ctx: ctx}
 }
 
@@ -252,10 +262,19 @@ func (api *CommonAPI) blockByNumberAndHash(ctx context.Context, number rpc.Block
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
-	Tracer        *string
-	Timeout       *string
-	LoggerTimeout *string
-	Reexec        *uint64
+	Tracer       *string         `json:"tracer,omitempty"`
+	TracerConfig json.RawMessage `json:"tracerConfig,omitempty"`
+	Timeout      *string         `json:"timeout,omitempty"`
+	// Deprecated: loggerTimeout is ignored because logs are encoded during execution. Use Timeout.
+	LoggerTimeout  *string                   `json:"loggerTimeout,omitempty"`
+	Reexec         *uint64                   `json:"reexec,omitempty"`
+	StateOverrides *kaiaapi.EthStateOverride `json:"stateOverrides,omitempty"`
+}
+
+type traceSyntheticBalance struct {
+	addr     common.Address
+	amount   *big.Int
+	gasPrice *big.Int
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -387,9 +406,8 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		localctx = context.Background()
 		reler    = new(releaser)
 	)
-	for th := 0; th < threads; th++ {
+	for range threads {
 		pend.Go(func() {
-
 			// Fetch and execute the block trace tasks
 			for task := range tasks {
 				signer := types.MakeSigner(api.backend.ChainConfig(), task.block.Number())
@@ -698,9 +716,8 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	)
 
 	threads := min(runtime.NumCPU(), len(txs))
-	for th := 0; th < threads; th++ {
+	for range threads {
 		pend.Go(func() {
-
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
 				msg, err := txs[task.index].AsMessageWithAccountKeyPicker(signer, task.statedb, block.NumberU64())
@@ -943,6 +960,12 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 	defer release()
 
+	if config != nil && config.StateOverrides != nil {
+		if err := config.StateOverrides.Apply(statedb); err != nil {
+			return nil, err
+		}
+	}
+
 	// Execute the trace
 	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
@@ -962,39 +985,52 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), basefee))
+	traceCallGasPrice := msg.EffectiveGasPrice(block.Header(), api.backend.ChainConfig())
+	traceCallTopUp := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), traceCallGasPrice)
+	statedb.AddBalance(msg.ValidatedSender(), traceCallTopUp)
 
 	txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
-	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config)
+	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config, traceSyntheticBalance{addr: msg.ValidatedSender(), amount: traceCallTopUp, gasPrice: traceCallGasPrice})
 }
 
 // traceTx configures a new tracer according to the provided configuration, and
 // executes the given message in the provided environment. The return value will
 // be tracer dependent.
-func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig) (interface{}, error) {
+func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, blockCtx vm.BlockContext, txCtx vm.TxContext, statedb *state.StateDB, config *TraceConfig, syntheticBalance ...traceSyntheticBalance) (interface{}, error) {
 	// Assemble the structured logger or the JavaScript tracer
 	var (
-		tracer vm.Tracer
-		err    error
+		tracer   vm.Tracer
+		err      error
+		traceCtx context.Context
 	)
 	switch {
 	case config != nil && config.Tracer != nil:
 		// Define a meaningful timeout of a single transaction trace
-		timeout := defaultTraceTimeout
-		if config.Timeout != nil {
-			if timeout, err = time.ParseDuration(*config.Timeout); err != nil {
-				return nil, err
-			}
+		timeout, timeoutErr := resolveTraceTimeout(config)
+		if timeoutErr != nil {
+			return nil, timeoutErr
 		}
 
 		if *config.Tracer == "fastCallTracer" || *config.Tracer == "callTracer" {
-			tracer = vm.NewCallTracer()
+			if tracer, err = vm.NewCallTracerWithConfig(config.TracerConfig); err != nil {
+				return nil, err
+			}
+		} else if *config.Tracer == "prestateTracer" {
+			if tracer, err = vm.NewPrestateTracer(config.TracerConfig); err != nil {
+				return nil, err
+			}
 		} else {
 			// Construct the JavaScript tracer to execute with
 			if tracer, err = New(*config.Tracer, new(Context), api.unsafeTrace); err != nil {
 				return nil, err
+			}
+		}
+		if len(syntheticBalance) > 0 {
+			if prestateTracer, ok := tracer.(*vm.PrestateTracer); ok {
+				synthetic := syntheticBalance[0]
+				prestateTracer.SetSyntheticBalance(synthetic.addr, synthetic.amount, synthetic.gasPrice)
 			}
 		}
 		// Handle timeouts and RPC cancellations
@@ -1009,6 +1045,8 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 					t.Stop(errors.New("execution timeout"))
 				case *vm.CallTracer:
 					t.Stop(errors.New("execution timeout"))
+				case *vm.PrestateTracer:
+					t.Stop(errors.New("execution timeout"))
 				default:
 					logger.Warn("unknown tracer type", "type", reflect.TypeOf(t).String())
 				}
@@ -1016,38 +1054,65 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		}()
 		defer cancel()
 
-	case config == nil:
-		tracer = vm.NewStructLogger(nil)
-
 	default:
-		tracer = vm.NewStructLogger(config.LogConfig)
+		timeout, timeoutErr := resolveTraceTimeout(config)
+		if timeoutErr != nil {
+			return nil, timeoutErr
+		}
+		if err := acquireStructTraceSlot(ctx); err != nil {
+			return nil, fmt.Errorf("tracing aborted: %w", err)
+		}
+		defer releaseStructTraceSlot()
+
+		// Queueing does not consume the execution timeout.
+		var cancel context.CancelFunc
+		traceCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		var logConfig *vm.LogConfig
+		if config != nil {
+			logConfig = config.LogConfig
+		}
+		tracer = vm.NewStructLoggerWithLimits(logConfig, maxStructTraceLogs, maxStructTraceBytes)
 	}
 	// Run the transaction with tracing enabled.
 	vmenv := vm.NewEVM(blockCtx, txCtx, statedb, api.backend.ChainConfig(), &vm.Config{Debug: true, Tracer: tracer})
+	if structured, ok := tracer.(*vm.StructLogger); ok {
+		traceDone := make(chan struct{})
+		defer close(traceDone)
+		go func() {
+			select {
+			case <-traceCtx.Done():
+				vmenv.Cancel(vm.CancelByCtxDone)
+				structured.Stop()
+			case <-traceDone:
+			}
+		}()
+	}
 
 	ret, err := blockchain.ApplyMessage(vmenv, message)
+	if structured, ok := tracer.(*vm.StructLogger); ok {
+		if structured.LimitReached() {
+			return nil, vm.ErrTraceResultLimitReached
+		}
+		if encodeErr := structured.EncodingError(); encodeErr != nil {
+			return nil, fmt.Errorf("structured trace encoding failed: %w", encodeErr)
+		}
+		if traceCtx.Err() != nil {
+			return nil, fmt.Errorf("tracing aborted: %w", traceCtx.Err())
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
 	// Depending on the tracer type, format and return the output
 	switch tracer := tracer.(type) {
 	case *vm.StructLogger:
-		loggerTimeout := defaultLoggerTimeout
-		if config != nil && config.LoggerTimeout != nil {
-			if loggerTimeout, err = time.ParseDuration(*config.LoggerTimeout); err != nil {
-				return nil, err
-			}
+		result, err := tracer.GetResult(ret.UsedGas, ret.Failed(), ret.Return())
+		if traceCtx.Err() != nil {
+			return nil, fmt.Errorf("tracing aborted: %w", traceCtx.Err())
 		}
-		if logs, err := kaiaapi.FormatLogs(loggerTimeout, tracer.StructLogs()); err == nil {
-			return &kaiaapi.ExecutionResult{
-				Gas:         ret.UsedGas,
-				Failed:      ret.Failed(),
-				ReturnValue: fmt.Sprintf("%x", ret.Return()),
-				StructLogs:  logs,
-			}, nil
-		} else {
-			return nil, err
-		}
+		return result, err
 
 	case *Tracer:
 		return tracer.GetResult()
@@ -1055,8 +1120,28 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		return tracer.GetResult()
 	case *vm.CallTracer:
 		return tracer.GetResult()
+	case *vm.PrestateTracer:
+		return tracer.GetResult()
 
 	default:
 		panic(fmt.Sprintf("bad tracer type %T", tracer))
 	}
+}
+
+func acquireStructTraceSlot(ctx context.Context) error {
+	select {
+	case structTraceSlots <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func releaseStructTraceSlot() { <-structTraceSlots }
+
+func resolveTraceTimeout(config *TraceConfig) (time.Duration, error) {
+	if config == nil || config.Timeout == nil {
+		return defaultTraceTimeout, nil
+	}
+	return time.ParseDuration(*config.Timeout)
 }

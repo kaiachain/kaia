@@ -19,6 +19,7 @@ package reward
 import (
 	"errors"
 	"fmt"
+	"math/big"
 )
 
 var (
@@ -28,6 +29,8 @@ var (
 	ErrNoReceipts            = errors.New("receipts not found")
 	ErrInvalidBlockRange     = errors.New("invalid block number range")
 	ErrBlockRangeLimit       = errors.New("exceeds block number range limit")
+	ErrInvalidRewardbase     = errors.New("rewardbase mismatches with expected address")
+	ErrNegativeRewardAmount  = errors.New("negative reward amount")
 )
 
 func errMalformedRewardRatio(ratio string) error {
@@ -36,4 +39,8 @@ func errMalformedRewardRatio(ratio string) error {
 
 func errMalformedRewardKip82Ratio(ratio string) error {
 	return fmt.Errorf("malformed reward.kip82ratio: %s", ratio)
+}
+
+func errNegativeRewardAmount(addr fmt.Stringer, amount *big.Int) error {
+	return fmt.Errorf("%w: addr %s amount %s", ErrNegativeRewardAmount, addr.String(), amount.String())
 }

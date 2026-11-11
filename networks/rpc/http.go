@@ -23,7 +23,6 @@
 package rpc
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -34,14 +33,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/rs/cors"
-	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
 const (
@@ -251,28 +249,12 @@ func newHTTPServerConn(r *http.Request, w http.ResponseWriter) ServerCodec {
 	return NewCodec(conn)
 }
 
-// httpReadWriteNopCloser wraps a io.Reader and io.Writer with a NOP Close method.
-type httpReadWriteNopCloser struct {
-	io.Reader
-	io.Writer
-}
-
-func (t *httpReadWriteNopCloser) SetWriteDeadline(t2 time.Time) error { return nil }
-
-// Close does nothing and returns always nil
-func (t *httpReadWriteNopCloser) Close() error {
-	return nil
-}
-
 // NewHTTPServer creates a new HTTP RPC server around an API provider.
 //
 // Deprecated: Server implements http.Handler
 func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv http.Handler) *http.Server {
 	timeouts = sanitizeTimeouts(timeouts)
-	// Wrap the CORS-handler within a host-handler
-	handler := newCorsHandler(srv, cors)
-	handler = newVHostHandler(vhosts, handler)
-	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
+	handler := srv
 
 	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
 	nrApp := newNewRelicApp()
@@ -285,63 +267,17 @@ func NewHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv ht
 	if ddTracer != nil {
 		handler = newDatadogHTTPHandler(ddTracer, handler)
 	}
+
+	// Wrap the CORS-handler within a host-handler.
+	handler = newCorsHandler(handler, cors)
+	handler = newVHostHandler(vhosts, handler)
+	handler = http.TimeoutHandler(handler, timeouts.ExecutionTimeout, "timeout")
 
 	return &http.Server{
 		Handler:      handler,
 		ReadTimeout:  timeouts.ReadTimeout,
 		WriteTimeout: timeouts.WriteTimeout,
 		IdleTimeout:  timeouts.IdleTimeout,
-	}
-}
-
-// NewFastHTTPServer creates a new HTTP RPC server around an API provider based on fasthttp library.
-//
-// Deprecated: fasthttp server type endpoint is no longer supported
-func NewFastHTTPServer(cors []string, vhosts []string, timeouts HTTPTimeouts, srv *Server) *fasthttp.Server {
-	timeouts = sanitizeTimeouts(timeouts)
-	if len(cors) == 0 {
-		for _, vhost := range vhosts {
-			if vhost == "*" {
-				return &fasthttp.Server{
-					Concurrency:        ConcurrencyLimit,
-					Handler:            fasthttp.TimeoutHandler(srv.HandleFastHTTP, timeouts.ExecutionTimeout, "timeout"),
-					ReadTimeout:        timeouts.ReadTimeout,
-					WriteTimeout:       timeouts.WriteTimeout,
-					IdleTimeout:        timeouts.IdleTimeout,
-					MaxRequestBodySize: common.MaxRequestContentLength,
-					ReduceMemoryUsage:  true,
-				}
-			}
-		}
-	}
-	// Wrap the CORS-handler within a host-handler
-	handler := newCorsHandler(srv, cors)
-	handler = newVHostHandler(vhosts, handler)
-
-	// If os environment variables for NewRelic exist, register the NewRelicHTTPHandler
-	nrApp := newNewRelicApp()
-	if nrApp != nil {
-		handler = newNewRelicHTTPHandler(nrApp, handler)
-	}
-
-	// If os environment variables for Datadog exist, register the NewDatadogHTTPHandler
-	ddTracer := newDatadogTracer()
-	if ddTracer != nil {
-		handler = newDatadogHTTPHandler(ddTracer, handler)
-	}
-
-	fhandler := fasthttpadaptor.NewFastHTTPHandler(handler)
-	fhandler = fasthttp.TimeoutHandler(fhandler, timeouts.ExecutionTimeout, "timeout")
-
-	// TODO-Kaia concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{
-		Concurrency:        ConcurrencyLimit,
-		Handler:            fhandler,
-		ReadTimeout:        timeouts.ReadTimeout,
-		WriteTimeout:       timeouts.WriteTimeout,
-		IdleTimeout:        timeouts.IdleTimeout,
-		MaxRequestBodySize: common.MaxRequestContentLength,
-		ReduceMemoryUsage:  true,
 	}
 }
 
@@ -375,38 +311,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.ServeSingleRequest(ctx, codec)
 }
 
-func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
-	r := &requestCtx.Request
-	w := &requestCtx.Response
-
-	// Permit dumb empty requests for remote health-checks (AWS)
-	if requestCtx.IsGet() && requestCtx.Request.Header.ContentLength() == 0 && string(requestCtx.URI().QueryString()) == "" {
-		return
-	}
-	if code, err := validateFastRequest(requestCtx); err != nil {
-		w.Header.Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header.Set("X-Content-Type-Options", "nosniff")
-		w.Header.SetStatusCode(code)
-		fmt.Fprintf(requestCtx, "%s", err.Error())
-		return
-	}
-	// All checks passed, create a codec that reads direct from the request body
-	// untilEOF and writes the response to w and order the server to process a
-	// single request.
-	var ctx context.Context
-	ctx = requestCtx
-	ctx = context.WithValue(ctx, "remote", requestCtx.RemoteAddr().String())
-	ctx = context.WithValue(ctx, "scheme", string(requestCtx.URI().Scheme()))
-	ctx = context.WithValue(ctx, "local", requestCtx.LocalAddr().String())
-
-	reader := bufio.NewReaderSize(bytes.NewReader(r.Body()), common.MaxRequestContentLength)
-	codec := NewCodec(&httpReadWriteNopCloser{reader, w.BodyWriter()})
-	defer codec.close()
-
-	w.Header.SetContentType(contentType)
-	srv.ServeSingleRequest(ctx, codec)
-}
-
 // validateRequest returns a non-zero response code and error message if the
 // request is invalid.
 func validateRequest(r *http.Request) (int, error) {
@@ -423,33 +327,13 @@ func validateRequest(r *http.Request) (int, error) {
 	}
 	// Check content-type
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("content-type")); err == nil {
-		for _, accepted := range acceptedContentTypes {
-			if accepted == mt {
-				return 0, nil
-			}
+		if slices.Contains(acceptedContentTypes, mt) {
+			return 0, nil
 		}
 	}
 	// Invalid content-type
 	err := fmt.Errorf("invalid content type, only %s is supported", contentType)
 	return http.StatusUnsupportedMediaType, err
-}
-
-// validateRequest returns a non-zero response code and error message if the
-// request is invalid.
-func validateFastRequest(requestCtx *fasthttp.RequestCtx) (int, error) {
-	if requestCtx.IsPut() || requestCtx.IsDelete() {
-		return http.StatusMethodNotAllowed, errors.New("method not allowed")
-	}
-	if requestCtx.Request.Header.ContentLength() > common.MaxRequestContentLength {
-		err := fmt.Errorf("content length too large (%d>%d)", requestCtx.Request.Header.ContentLength(), common.MaxRequestContentLength)
-		return http.StatusRequestEntityTooLarge, err
-	}
-	mt, _, err := mime.ParseMediaType(string(requestCtx.Request.Header.ContentType()))
-	if string(requestCtx.Method()) != http.MethodOptions && (err != nil || mt != contentType) {
-		err := fmt.Errorf("invalid content type, only %s is supported", contentType)
-		return http.StatusUnsupportedMediaType, err
-	}
-	return 0, nil
 }
 
 func newCorsHandler(srv http.Handler, allowedOrigins []string) http.Handler {

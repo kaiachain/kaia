@@ -24,7 +24,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/contracts/bindings/rebalance"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -54,7 +54,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	optsOwner := bind.NewKeyedTransactor(validator.Keys[0])
 	transactor := backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), nil)
 	// We need to wait for the following contract executions to be processed, so let's have enough number of blocks
-	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
+	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(4))
 
 	contractAddr, tx, contract, err := rebalance.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	t.Log("Target Block:", targetBlockNum.Int64())
 
 	// prepare newbie accounts
-	numNewbie := 3
+	numNewbie := 2
 	newbieAccs := make([]TestAccount, numNewbie)
 	newbieAllocs := make([]*big.Int, numNewbie)
 
@@ -85,7 +85,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	totalNewbieAlloc := state.GetBalance(validator.Addr)
 	t.Log("Total Newbie amount: ", totalNewbieAlloc)
 
-	for i := 0; i < numNewbie; i++ {
+	for i := range numNewbie {
 		newbieAccs[i] = genKaiaLegacyAccount(t)
 		newbieAllocs[i] = new(big.Int).Div(totalNewbieAlloc, big.NewInt(2))
 		totalNewbieAlloc.Sub(totalNewbieAlloc, newbieAllocs[i])

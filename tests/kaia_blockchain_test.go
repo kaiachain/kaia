@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -38,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/work"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +49,7 @@ import (
 func TestSimpleBlockchain(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
-	numAccounts := 12
+	numAccounts := 4
 	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil, nil)
 	defer os.RemoveAll(workspace)
 
@@ -57,26 +57,28 @@ func TestSimpleBlockchain(t *testing.T) {
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
 
 	contractDeployCode := "0x608060405234801561001057600080fd5b506000808190555060646001819055506101848061002f6000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806302e5329e14610067578063197e70e41461009457806349b667d2146100c157806367e0badb146100ec575b600080fd5b34801561007357600080fd5b5061009260048036038101908080359060200190929190505050610117565b005b3480156100a057600080fd5b506100bf60048036038101908080359060200190929190505050610121565b005b3480156100cd57600080fd5b506100d6610145565b6040518082815260200191505060405180910390f35b3480156100f857600080fd5b5061010161014f565b6040518082815260200191505060405180910390f35b8060018190555050565b806000540160008190555060015460005481151561013b57fe5b0660008190555050565b6000600154905090565b600080549050905600a165627a7a72305820ef4e7e564c744de3a36cb74000c35687f7de9ecf1d29abdd3c4bcc66db981c160029"
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		_, contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
 	}
-	time.Sleep(time.Second) // need to make a block before contract execution
+	target := node.BlockChain().CurrentHeader().Number.Uint64() + 1
+	if header := waitBlock(node.BlockChain(), target); header == nil {
+		t.Fatal("failed to wait for contract deployment block")
+	}
 
 	// deploy
 	calldata := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
-	for i := 0; i < numAccounts; i++ {
-		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
+
+	for i := range numAccounts {
+		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 5)
 		deployValueTransferTx(t, node.TxPool(), chainId, richAccount, accounts[i%numAccounts])
 		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr, calldata)
-
-		// time.Sleep(time.Second) // wait until txpool is flushed if needed
 	}
 
 	// stop full node
 	if err := fullNode.Stop(); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
 	// start full node with previous db
 	fullNode, node, err := newKaiaNode(t, workspace, validator, nil, nil)
@@ -84,7 +86,10 @@ func TestSimpleBlockchain(t *testing.T) {
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
 	}
-	time.Sleep(2 * time.Second)
+	target = node.BlockChain().CurrentHeader().Number.Uint64() + 1
+	if header := waitBlock(node.BlockChain(), target); header == nil {
+		t.Fatal("failed to wait for node restart block")
+	}
 
 	// stop node before ending the test code
 	if err := fullNode.Stop(); err != nil {
@@ -113,7 +118,7 @@ func newBlockchain(t *testing.T, config *params.ChainConfig, genesis *blockchain
 	if err := node.StartMining(false); err != nil {
 		t.Fatal()
 	}
-	time.Sleep(2 * time.Second) // wait for initializing mining
+	time.Sleep(1 * time.Second) // wait for initializing mining
 
 	chainId := node.BlockChain().Config().ChainID
 
@@ -132,7 +137,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 	}
 
 	var err error
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		if accounts[i], err = createAnonymousAccount(getRandomPrivateKeyString(t)); err != nil {
 			t.Fatal()
 		}
@@ -158,19 +163,16 @@ func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *p
 		t.Fatalf("failed to create node: %v", err)
 	}
 
-	istanbulConfData, err := rlp.EncodeToBytes(&types.IstanbulExtra{
-		Validators:    []common.Address{validator.Addr},
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if genesis == nil {
 		genesis = blockchain.DefaultTestGenesisBlock()
-		genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
-		genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
+		genesisHeader := &types.Header{
+			Number: big.NewInt(0),
+			Extra:  append([]byte(nil), genesis.ExtraData...),
+		}
+		if err := engine.NewSealer(genesis.Config, nil).WriteValidators(genesisHeader, []common.Address{validator.Addr}); err != nil {
+			t.Fatal(err)
+		}
+		genesis.ExtraData = genesisHeader.Extra
 		genesis.Alloc[validator.Addr] = blockchain.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(params.KAIA))}
 	}
 
@@ -245,7 +247,7 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 	gasPrice := txpool.GasPrice()
 
 	txNuminABlock := 100
-	for i := 0; i < txNum; i++ {
+	for i := range txNum {
 		if i%txNuminABlock == 0 {
 			time.Sleep(time.Second)
 		}

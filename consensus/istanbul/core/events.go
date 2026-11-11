@@ -24,15 +24,15 @@ package core
 
 import (
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 type backlogEvent struct {
 	src  common.Address
-	msg  *message
+	msg  *bft.Message
 	Hash common.Hash
 }
 
 type timeoutEvent struct {
-	nextView *istanbul.View
+	nextView *bft.View
 }

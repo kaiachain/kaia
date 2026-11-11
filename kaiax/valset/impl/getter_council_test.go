@@ -17,18 +17,22 @@
 package impl
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetCouncilGenesis(t *testing.T) {
@@ -37,11 +41,12 @@ func TestGetCouncilGenesis(t *testing.T) {
 		mockChain = chain_mock.NewMockBlockChain(ctrl)
 		v         = &ValsetModule{InitOpts: InitOpts{Chain: mockChain}}
 	)
-	defer ctrl.Finish()
 	// Kairos block 0
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{
-		Extra: hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af8549499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb294571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c8b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
+		Number: common.Big0,
+		Extra:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af8549499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb294571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c8b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
 	}).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 
 	council, err := v.getCouncilGenesis()
 	assert.NoError(t, err)
@@ -107,7 +112,7 @@ func TestGetCouncilDB(t *testing.T) {
 		v := &ValsetModule{InitOpts: InitOpts{ChainKv: db}}
 		writeLowestScannedVoteNum(db, tc.lowestScannedVoteNum)
 
-		for i := uint64(0); i < 7; i++ {
+		for i := range uint64(7) {
 			council, ok, err := v.getCouncilDB(i)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected[i].ok, ok)
@@ -118,6 +123,37 @@ func TestGetCouncilDB(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestGetCouncilFromIstanbulSnapshotCopiesCachedCouncil(t *testing.T) {
+	var (
+		ctrl       = gomock.NewController(t)
+		mockChain  = chain_mock.NewMockBlockChain(ctrl)
+		mockGov    = gov_mock.NewMockGovModule(ctrl)
+		v          = NewValsetModule()
+		block9     = uint64(9)
+		councilAt9 = numsToAddrs(1, 2)
+	)
+	v.Chain = mockChain
+	v.GovModule = mockGov
+
+	v.councilCache.Add(block9, valset.NewAddressSet(councilAt9))
+
+	vote, err := headergov.NewVoteData(numToAddr(1), string(gov.AddValidator), numToAddr(3)).ToVoteBytes()
+	require.NoError(t, err)
+	mockChain.EXPECT().GetHeaderByNumber(block9).Return(&types.Header{
+		Number: big.NewInt(int64(block9)),
+		Vote:   vote,
+	})
+	mockGov.EXPECT().GetParamSet(block9).Return(gov.ParamSet{})
+
+	councilAt10, _, err := v.getCouncilFromIstanbulSnapshot(block9+1, false)
+	require.NoError(t, err)
+	require.Equal(t, numsToAddrs(1, 2, 3), councilAt10.List())
+
+	cached, ok := v.councilCache.Get(block9)
+	require.True(t, ok)
+	require.Equal(t, councilAt9, cached.(*valset.AddressSet).List())
 }
 
 func TestParseValidatorVote(t *testing.T) {

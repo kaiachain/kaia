@@ -57,7 +57,7 @@ func makeTestState(t *testing.T) (Database, common.Hash, []*testAccount) {
 
 	// Fill it with some arbitrary data
 	var accounts []*testAccount
-	for i := byte(0); i < 96; i++ {
+	for i := range byte(96) {
 		var obj *stateObject
 		acc := &testAccount{
 			address:    common.BytesToAddress([]byte{i}),

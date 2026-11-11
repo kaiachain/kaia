@@ -20,6 +20,27 @@ import "fmt"
 
 const defaultErrorCode = -32000
 
+const (
+	// TODO: migrate other error codes
+	errcodeResponseTooLarge = -32003
+)
+
+const (
+	errMsgResponseTooLarge = "response too large"
+	errMsgBatchTooLarge    = "batch too large"
+)
+
+// internalServerError carries an error code and message returned to the client
+// for server-internal failures (e.g. response-size limit exceeded).
+type internalServerError struct {
+	code    int
+	message string
+}
+
+func (e *internalServerError) ErrorCode() int { return e.code }
+
+func (e *internalServerError) Error() string { return e.message }
+
 type methodNotFoundError struct{ method string }
 
 func (e *methodNotFoundError) ErrorCode() int { return -32601 }

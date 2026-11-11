@@ -11,9 +11,9 @@ var (
 
 	ErrVotePermissionDenied = errors.New("you don't have the right to vote")
 	ErrInvalidKeyValue      = errors.New("your vote couldn't be placed. Please check your vote's key and value")
+	ErrDeprecatedVote       = errors.New("vote parameter is deprecated at the current rules")
 
 	ErrGovInNonEpochBlock = errors.New("governance is not allowed in non-epoch block")
-	ErrNilVote            = errors.New("vote is nil")
 	ErrGovVerification    = errors.New("header.Governance does not match the vote in previous epoch")
 
 	ErrGovParamNotAccount       = errors.New("govparamcontract is not an account")

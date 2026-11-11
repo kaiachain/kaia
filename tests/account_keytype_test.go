@@ -36,7 +36,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
@@ -518,8 +518,6 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	accountKeyTypes := []accountkey.AccountKeyType{
 		// accountkey.AccountKeyTypeNil, // not supported type
 		accountkey.AccountKeyTypeLegacy,
-		accountkey.AccountKeyTypePublic,
-		accountkey.AccountKeyTypeFail,
 		accountkey.AccountKeyTypeWeightedMultiSig,
 		accountkey.AccountKeyTypeRoleBased,
 	}

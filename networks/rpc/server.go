@@ -75,6 +75,14 @@ var (
 
 	// UpstreamArchiveEN is the upstream archive mode EN endpoint
 	UpstreamArchiveEN string
+
+	// BatchRequestLimit is the maximum number of items in a JSON-RPC batch.
+	// 0 disables the check. Overwritten by --rpc.batch-request-limit flag.
+	BatchRequestLimit = 1000
+
+	// BatchResponseMaxSize is the maximum total response bytes per JSON-RPC batch.
+	// 0 disables the check. Overwritten by --rpc.batch-response-max-size flag.
+	BatchResponseMaxSize = 25 * 1024 * 1024
 )
 
 // Server is an RPC server.
@@ -147,7 +155,7 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 	s.codecs.Add(codec)
 	defer s.codecs.Remove(codec)
 
-	c := initClient(codec, s.idgen, &s.services)
+	c := initClient(codec, s.idgen, &s.services, BatchRequestLimit, BatchResponseMaxSize)
 	<-codec.closed()
 	c.Close()
 }
@@ -160,7 +168,7 @@ func (s *Server) ServeSingleRequest(ctx context.Context, codec ServerCodec) {
 	if atomic.LoadInt32(&s.run) == 0 {
 		return
 	}
-	h := newHandler(ctx, codec, s.idgen, &s.services)
+	h := newHandler(ctx, codec, s.idgen, &s.services, BatchRequestLimit, BatchResponseMaxSize)
 	h.allowSubscribe = false
 	defer h.close(io.EOF, nil)
 

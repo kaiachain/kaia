@@ -122,7 +122,7 @@ func New(conf *Config) (*Node, error) {
 	}
 
 	// Ensure that the AccountManager method works before the node has started.
-	// We rely on this in cmd/{kcn,ken,kpn}.
+	// We rely on this in cmd/{kcn,ken}.
 	am, ephemeralKeystore, err := makeAccountManager(conf)
 	if err != nil {
 		return nil, err
@@ -742,12 +742,6 @@ func (n *Node) apis() []rpc.API {
 			Version:   "1.0",
 			Service:   NewDebugNodeAPI(n),
 		}, {
-			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "kaia" namespace.
-			Namespace: "web3",
-			Version:   "1.0",
-			Service:   NewKaiaNodeAPI(n),
-			Public:    true,
-		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   NewKaiaNodeAPI(n),
@@ -795,7 +789,7 @@ func NtpCheckWithLocal(n *Node) error {
 
 	ntpRetryTime := time.Duration(1)
 	var remote *time.Time
-	for i := 0; i < ntpMaxRetry; i++ {
+	for range ntpMaxRetry {
 		time.Sleep(ntpRetryTime)
 		remote, err = ntpclient.GetNetworkTime(url, portNum)
 		if remote != nil {

@@ -209,7 +209,7 @@ func TestArrayify(t *testing.T) {
 	keyLen := 10
 	txLen := 30
 	keys := make([]*ecdsa.PrivateKey, keyLen)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 
@@ -219,7 +219,7 @@ func TestArrayify(t *testing.T) {
 	hashes := map[common.Hash]bool{}
 	for start, key := range keys {
 		addr := crypto.PubkeyToAddress(key.PublicKey)
-		for i := 0; i < txLen; i++ {
+		for i := range txLen {
 			tx, _ := types.SignTx(types.NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
 			groups[addr] = append(groups[addr], tx)
 			hashes[tx.Hash()] = true
@@ -579,5 +579,49 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 			require.Nil(t, err)
 			assert.Equal(t, tc.expectedTxs, incorporatedTxs)
 		})
+	}
+}
+
+// Regression test: an auction bundle targeting a gasless bundle's last tx must
+// stay adjacent to its target after coordinateTargetTxHash, regardless of the
+// (previously map-randomized) group order.
+func TestCoordinateTargetTxHashDeterministicWithGaslessTarget(t *testing.T) {
+	approveTx := types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+	swapTx := types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+	targetTx := types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+	fillerTx := types.NewTransaction(3, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+	txs := []*types.Transaction{approveTx, swapTx, targetTx, fillerTx}
+
+	gen := func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+	}
+	lendGen := NewTxOrGenFromGen(gen, common.Hash{0xaa})
+	bidGen := NewTxOrGenFromGen(gen, common.Hash{0xbb})
+
+	// Gasless bundle owns swap as its last tx; auction bundle targets swap.
+	// Module registration order places gasless before auction in the input.
+	newInput := func() []*Bundle {
+		gasless := NewBundle([]*TxOrGen{lendGen, NewTxOrGenFromTx(approveTx), NewTxOrGenFromTx(swapTx)}, targetTx.Hash(), false)
+		auction := NewBundle([]*TxOrGen{bidGen}, swapTx.Hash(), true)
+		return []*Bundle{gasless, auction}
+	}
+
+	in := newInput()
+	require.False(t, in[0].IsConflict(in[1]), "auction targeting the gasless bundle's last tx must be allowed")
+
+	for i := 0; i < 100; i++ {
+		incorporated, err := IncorporateBundleTx(txs, coordinateTargetTxHash(newInput()))
+		require.NoError(t, err)
+
+		bidIdx := -1
+		for j, txOrGen := range incorporated {
+			if txOrGen.Id == bidGen.Id {
+				bidIdx = j
+				break
+			}
+		}
+		require.NotEqual(t, -1, bidIdx, "auction bid must be present")
+		require.Greater(t, bidIdx, 0, "auction bid must not be first; its target must precede it")
+		require.Equal(t, swapTx.Hash(), incorporated[bidIdx-1].Id, "auction bid must immediately follow its target swap tx")
 	}
 }

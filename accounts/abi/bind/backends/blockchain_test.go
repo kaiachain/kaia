@@ -440,7 +440,7 @@ func TestBlockChainSubscribeFilterLogs(t *testing.T) {
 	}()
 
 	// Wait for 2 logs
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		select {
 		case log := <-logs:
 			assert.Equal(t, code1Addr, log.Address)

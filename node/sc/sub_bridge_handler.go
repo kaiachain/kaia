@@ -316,7 +316,6 @@ func (sbh *SubBridgeHandler) handleParentChainReceiptResponseMsg(p BridgePeer, m
 	if err := msg.Decode(&receipts); err != nil && err != rlp.EOL {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	// Stores receipt and remove tx from sentServiceChainTxs only if the tx is successfully executed.
 	sbh.writeServiceChainTxReceipts(sbh.subbridge.blockchain, receipts)
 	return nil
 }
@@ -396,7 +395,8 @@ func (sbh *SubBridgeHandler) handleParentChainInvalidTxResponseMsg(msg p2p.Msg) 
 				sbh.SyncNonceAndGasPrice()
 
 				logger.Error("Bridge tx is removed which has lower gasPrice than UpperBoundBaseFee")
-				// Remove the tx and delegate re-execution of the tx by Value Transfer Recovery feature
+				// Remove the tx from the pool. For value transfer txs, Value Transfer Recovery
+				// will retry if enabled. For anchoring txs, there is no automatic retry mechanism;
 				if err := sbh.subbridge.GetBridgeTxPool().RemoveTx(tx); err != nil {
 					logger.Error("Failed to remove bridge tx",
 						"txType", tx.Type(), "txNonce", tx.Nonce(), "txHash", tx.Hash().String())

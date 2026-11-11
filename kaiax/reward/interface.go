@@ -25,7 +25,8 @@ import (
 type RewardModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
-	kaiax.ConsensusModule
+	kaiax.HeaderModule
+	kaiax.BlockStateModule
 	kaiax.TxProcessModule
 
 	// GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created.

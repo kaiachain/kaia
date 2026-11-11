@@ -76,7 +76,7 @@ func TestMarshal(t *testing.T) {
 		input[i] = byte(i)
 	}
 	for _, size := range []int{Size, Size256, Size384, 12, 25, 63} {
-		for i := 0; i < 256; i++ {
+		for i := range 256 {
 			h, err := New(size, nil)
 			if err != nil {
 				t.Fatalf("size=%d, len(input)=%d: error from New(%v, nil): %v", size, i, size, err)
@@ -140,7 +140,7 @@ func testHashes(t *testing.T) {
 		}
 
 		h.Reset()
-		for j := 0; j < i; j++ {
+		for j := range i {
 			h.Write(input[j : j+1])
 		}
 
@@ -182,10 +182,10 @@ func testHashes2X(t *testing.T) {
 		}
 
 		h.Reset()
-		for j := 0; j < len(input); j++ {
+		for j := range input {
 			h.Write(input[j : j+1])
 		}
-		for j := 0; j < len(sum); j++ {
+		for j := range sum {
 			h = h.Clone()
 			if _, err := h.Read(sum[j : j+1]); err != nil {
 				t.Fatalf("#%d (byte-by-byte) - Read %d: error from Read: %v", i, j, err)

@@ -18,6 +18,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
@@ -109,6 +110,9 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 		GoverningNode:          numToAddr(0),
 	}).AnyTimes()
 
+	// Mock chainConfig (set up before PostInsertBlock since applyVote reads Config())
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+
 	// Mock chain headers
 	for _, vote := range voteData {
 		voteBytes, err := headergov.NewVoteData(numToAddr(0), string(vote.key), vote.addresses).ToVoteBytes()
@@ -120,13 +124,10 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	}
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(&types.Header{}).AnyTimes() // For unused blocks
 
-	// Mock chainConfig
-	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
-
 	// Mock qualified validators
 	for blkNum, data := range mockQualifiedValidators {
 		stakingAmounts := make([]uint64, len(data))
-		for i := 0; i < len(data); i++ {
+		for i := range data {
 			stakingAmounts[i] = uint64(5000000)
 		}
 		mockStaking.EXPECT().GetStakingInfo(blkNum).Return(&staking.StakingInfo{
@@ -142,7 +143,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	}
 
 	for currentNum, mockQualified := range mockQualifiedValidators {
-		qualified, err := v.getQualifiedValidators(currentNum)
+		qualified, err := v.getQualifiedPermissioned(currentNum)
 		assert.NoError(t, err)
 		assert.Equal(t, mockQualified, qualified.List())
 	}
@@ -245,6 +246,78 @@ func TestWeightedRandomProposer_ListWeighted(t *testing.T) {
 			t.Logf("actual: %v", addrsToNums(proposerList))
 		}
 	}
+}
+
+// TestCalcBaseProposers_PinnedToUpdateNumPlus1 verifies that the cached base proposer list is a
+// pure function of updateNum — derived from the qualified set at updateNum+1 (the interval's first
+// block, matching legacy istanbul). calcBaseProposers takes no block context, so the per-interval
+// schedule cannot depend on which block first populates proposerListCache (no divergence across
+// restarts/sync). See AUDIT_PROPOSER_LIST_NONDETERMINISM.md.
+func TestCalcBaseProposers_PinnedToUpdateNumPlus1(t *testing.T) {
+	const (
+		interval  = uint64(100)
+		updateNum = uint64(100)
+		minStake  = uint64(5000000)
+	)
+	var (
+		ctrl          = gomock.NewController(t)
+		mockChain     = chain_mock.NewMockBlockChain(ctrl)
+		mockGov       = gov_mock.NewMockGovModule(ctrl)
+		mockStaking   = staking_mock.NewMockStakingModule(ctrl)
+		pListCache, _ = lru.New(128)
+		rVoteCache, _ = lru.New(128)
+		v             = &ValsetModule{
+			InitOpts: InitOpts{
+				ChainKv:       database.NewMemoryDBManager().GetMiscDB(),
+				Chain:         mockChain,
+				GovModule:     mockGov,
+				StakingModule: mockStaking,
+			},
+			proposerListCache: pListCache,
+			removeVotesCache:  rVoteCache,
+		}
+		council      = numsToAddrs(1, 2, 3, 4)
+		updateHeader = &types.Header{Number: big.NewInt(int64(updateNum))}
+	)
+
+	// Migrated council DB: council [1,2,3,4] from genesis.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
+	writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
+	writeCouncil(v.ChainKv, 0, council)
+
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerUpdateInterval: interval,
+		ProposerPolicy:         uint64(params.WeightedRandom),
+		MinimumStake:           big.NewInt(int64(minStake)),
+		GovernanceMode:         "none",
+	}).AnyTimes()
+	// Istanbul on (staking-based demotion active), Kore off (weighted path).
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(updateNum).Return(updateHeader).AnyTimes()
+
+	// Every validator is qualified at updateNum (weights) and updateNum+1 (demotion check).
+	fullStaking := &staking.StakingInfo{
+		NodeIds:          council,
+		StakingContracts: council,
+		RewardAddrs:      council,
+		StakingAmounts:   []uint64{minStake, minStake, minStake, minStake},
+	}
+	mockStaking.EXPECT().GetStakingInfo(updateNum).Return(fullStaking, nil).AnyTimes()
+	mockStaking.EXPECT().GetStakingInfo(updateNum+1).Return(fullStaking, nil).AnyTimes()
+
+	// Reference: list built from qualified@(updateNum+1) = [1,2,3,4], weights from staking@updateNum.
+	reference := generateProposerListWeighted(valset.NewAddressSet(council), fullStaking, false, updateHeader.Hash())
+
+	// 1) Populate the cache. The list must derive from qualified@(updateNum+1).
+	list1, err := v.calcBaseProposers(updateNum, false)
+	require.NoError(t, err)
+	assert.Equal(t, reference, list1, "base list must derive from qualified@(updateNum+1)")
+
+	// 2) Cache-population order must not matter: a fresh cache yields the same list.
+	v.proposerListCache.Purge()
+	list2, err := v.calcBaseProposers(updateNum, false)
+	require.NoError(t, err)
+	assert.Equal(t, list1, list2, "base list must be independent of cache-population order")
 }
 
 func TestWeightedRandomProposer_ListUniform(t *testing.T) {

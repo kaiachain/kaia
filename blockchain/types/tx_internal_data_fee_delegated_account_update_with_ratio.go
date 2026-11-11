@@ -308,8 +308,9 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) setHashForMarshaling(
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetFeePayerSignatures(s TxSignatures) {

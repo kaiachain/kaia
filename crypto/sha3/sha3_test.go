@@ -234,7 +234,7 @@ func benchmarkHash(b *testing.B, h hash.Hash, size, num int) {
 
 	var state []byte
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < num; j++ {
+		for range num {
 			h.Write(data)
 		}
 		state = h.Sum(state[:0])
@@ -256,7 +256,7 @@ func benchmarkShake(b *testing.B, h ShakeHash, size, num int) {
 
 	for i := 0; i < b.N; i++ {
 		h.Reset()
-		for j := 0; j < num; j++ {
+		for range num {
 			h.Write(data)
 		}
 		h.Read(d)

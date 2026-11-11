@@ -21,12 +21,11 @@ import (
 	"errors"
 	"math/big"
 	"strings"
-	"sync/atomic"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/contracts/bindings/rebalance"
 	"github.com/kaiachain/kaia/kaiax/supply"
 )
 
@@ -208,7 +207,7 @@ func (s *SupplyModule) accumulateRewards(fromNum, toNum uint64, fromAccReward *s
 	accReward := fromAccReward.Copy() // make a copy because we're updating it in-place.
 
 	for num := fromNum + 1; num <= toNum; num++ {
-		if atomic.LoadUint32(&s.quit) == 1 { // Received quit signal
+		if s.quit.Load() == 1 { // Received quit signal
 			return nil, supply.ErrSupplyModuleQuit
 		}
 

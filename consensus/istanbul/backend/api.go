@@ -23,11 +23,11 @@
 package backend
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
+	"maps"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -43,12 +43,10 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	if err != nil {
 		return nil, err
 	}
-
-	valSet, err := api.istanbul.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
+	if api.istanbul.valsetModule == nil {
+		return nil, istanbul.ErrNoEssentialModule
 	}
-	return valSet.Qualified().List(), nil
+	return api.istanbul.valsetModule.GetQualifiedValidators(num)
 }
 
 // GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.
@@ -57,19 +55,17 @@ func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address,
 	if err != nil {
 		return nil, err
 	}
-
-	valSet, err := api.istanbul.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
+	if api.istanbul.valsetModule == nil {
+		return nil, istanbul.ErrNoEssentialModule
 	}
-	return valSet.Demoted().List(), nil
+	return api.istanbul.valsetModule.GetDemotedValidators(num)
 }
 
 // GetValidatorsAtHash retrieves the list of authorized validators with the given block hash.
 func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
 	return api.GetValidators(&rpcBlockNumber)
@@ -79,7 +75,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
 	return api.GetDemotedValidators(&rpcBlockNumber)
@@ -91,9 +87,7 @@ func (api *API) Candidates() map[common.Address]bool {
 	defer api.istanbul.candidatesLock.RUnlock()
 
 	proposals := make(map[common.Address]bool)
-	for address, auth := range api.istanbul.candidates {
-		proposals[address] = auth
-	}
+	maps.Copy(proposals, api.istanbul.candidates)
 	return proposals
 }
 
@@ -115,18 +109,6 @@ func (api *API) Discard(address common.Address) {
 	delete(api.istanbul.candidates, address)
 }
 
-func RecoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) ([]common.Address, error) {
-	committers := make([]common.Address, len(extra.CommittedSeal))
-	for idx, cs := range extra.CommittedSeal {
-		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(headerHash), cs)
-		if err != nil {
-			return nil, err
-		}
-		committers[idx] = committer
-	}
-	return committers, nil
-}
-
 func (api *API) GetTimeout() uint64 {
 	return istanbul.DefaultConfig.Timeout
 }
@@ -143,9 +125,9 @@ func resolveRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber, allo
 	}
 
 	if num > headNum+1 { // May allow up to head + 1 to query the pending block.
-		return 0, errUnknownBlock
+		return 0, consensus.ErrUnknownBlock
 	} else if num == headNum+1 && !allowPending {
-		return 0, errPendingNotAllowed
+		return 0, istanbul.ErrPendingNotAllowed
 	} else {
 		return num, nil
 	}

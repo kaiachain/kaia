@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -1041,7 +1040,7 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
 	if tx.Type() == types.TxTypeEthereumBlob {
 		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
-		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(header.BaseFee).Uint64())
+		fields["blobGasPrice"] = hexutil.Uint64(params.CalcBlobFee(header.BaseFee).Uint64())
 	}
 
 	// Always use the "status" field and Ignore the "root" field.
@@ -1217,12 +1216,12 @@ func (api *EthAPI) Accounts() []common.Address {
 	return api.kaiaAccountAPI.Accounts()
 }
 
-func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner bool) (map[string]interface{}, error) {
+func RpcMarshalEthHeader(head *types.Header, sealer consensus.Sealer, chainConfig *params.ChainConfig, inclMiner bool) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
 
 	if head.Number.Sign() != 0 && inclMiner {
-		proposer, err = engine.Author(head)
+		proposer, err = sealer.Author(head)
 		if err != nil {
 			// miner is the field Kaia should provide the correct value. It's not the field dummy value is allowed.
 			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
@@ -1270,8 +1269,8 @@ func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfi
 	return result, nil
 }
 
-func RpcMarshalEthBlock(block *types.Block, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
-	fields, err := RpcMarshalEthHeader(block.Header(), engine, chainConfig, inclMiner)
+func RpcMarshalEthBlock(block *types.Block, sealer consensus.Sealer, chainConfig *params.ChainConfig, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
+	fields, err := RpcMarshalEthHeader(block.Header(), sealer, chainConfig, inclMiner)
 	if err != nil {
 		return nil, err
 	}
@@ -1302,12 +1301,12 @@ func RpcMarshalEthBlock(block *types.Block, engine consensus.Engine, chainConfig
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
 func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
-	return RpcMarshalEthHeader(head, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner)
+	return RpcMarshalEthHeader(head, api.kaiaAPI.b.Sealer(), api.kaiaAPI.b.ChainConfig(), inclMiner)
 }
 
 // rpcMarshalBlock marshal block as Ethereum compatible format
 func (api *EthAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
-	return RpcMarshalEthBlock(block, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner, inclTx, fullTx)
+	return RpcMarshalEthBlock(block, api.kaiaAPI.b.Sealer(), api.kaiaAPI.b.ChainConfig(), inclMiner, inclTx, fullTx)
 }
 
 func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*blockchain.ExecutionResult, error) {
@@ -1662,7 +1661,7 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 		return nil, err
 	}
 
-	results := make([]*map[string]interface{}, 0, eip4844.MaxBlobsPerBlock(api.kaiaBlockChainAPI.b.ChainConfig(), block.Number()))
+	results := make([]*map[string]interface{}, 0, api.kaiaBlockChainAPI.b.ChainConfig().LatestBlobConfigMax(block.Number()))
 	for txIndex, tx := range block.Transactions() {
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
@@ -1728,5 +1727,5 @@ func (api *EthAPI) BlobBaseFee(ctx context.Context) (*hexutil.Big, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(eip4844.CalcBlobFee(header.BaseFee)), nil
+	return (*hexutil.Big)(params.CalcBlobFee(header.BaseFee)), nil
 }

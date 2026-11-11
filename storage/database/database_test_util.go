@@ -34,7 +34,7 @@ func NewLevelDBManagerForTest(dbc *DBConfig, levelDBOption *opt.Options) (DBMana
 
 	var ldb *levelDB
 	var err error
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
+	for i := range int(databaseEntryTypeSize) {
 		if dbm.config.SingleDB {
 			if i == 0 {
 				ldb, err = NewLevelDBWithOption(dbc.Dir, levelDBOption)

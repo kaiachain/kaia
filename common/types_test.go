@@ -278,3 +278,12 @@ func TestMixedcaseAccount_Address(t *testing.T) {
 
 }
 */
+
+func TestConnTypeValid(t *testing.T) {
+	for _, ct := range []ConnType{CONSENSUSNODE, ENDPOINTNODE, PROXYNODE, BOOTNODE} {
+		assert.True(t, ct.Valid(), "defined role %d should be valid", int(ct))
+	}
+	for _, ct := range []ConnType{UNKNOWNNODE, ConnTypeUndefined, ConnType(5), ConnType(42), ConnType(255)} {
+		assert.False(t, ct.Valid(), "undefined value %d should be invalid", int(ct))
+	}
+}

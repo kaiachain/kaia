@@ -181,7 +181,7 @@ func bloomBitAND(bloom1, bloom2 types.Bloom) types.Bloom {
 	bloom2Bytes := bloom2.Bytes()
 	var resultBytes types.Bloom
 
-	for i := 0; i < types.BloomByteLength; i++ {
+	for i := range types.BloomByteLength {
 		resultBytes[i] = bloom1Bytes[i] & bloom2Bytes[i]
 	}
 
@@ -192,7 +192,7 @@ func ldbBloomBitAND(bloom1, bloom2 []byte) []byte {
 	lenFilter := len(bloom1)
 	resultBytes := make([]byte, lenFilter)
 
-	for i := 0; i < lenFilter; i++ {
+	for i := range lenFilter {
 		resultBytes[i] = bloom1[i] & bloom2[i]
 	}
 
@@ -398,7 +398,7 @@ func Benchmark_LDBBloom_Lookup(b *testing.B) {
 func benchmark_LDBBloom_Compare(b *testing.B, bloomFilter filter.Filter, filterInstance1 []byte, opt *testOption) {
 	numAddrs := len(opt.testAddrs)
 	generator2 := bloomFilter.NewGenerator()
-	for i := 0; i < len(addrs); i++ {
+	for i := range addrs {
 		generator2.Add([]byte(opt.testAddrs[i%numAddrs]))
 	}
 	buf2 := &util.Buffer{}
@@ -433,7 +433,7 @@ func Benchmark_LDBBloom_Compare(b *testing.B) {
 
 func benchmark_LDBBloom_BitAND(b *testing.B, bloomFilter filter.Filter, filterInstance1 []byte, opt *testOption) {
 	generator2 := bloomFilter.NewGenerator()
-	for i := 0; i < len(addrs); i++ {
+	for range addrs {
 		generator2.Add([]byte(opt.testAddrs[0]))
 	}
 	buf2 := &util.Buffer{}

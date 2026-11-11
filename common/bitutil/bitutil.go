@@ -38,7 +38,7 @@ func fastXORBytes(dst, a, b []byte) int {
 		dw := *(*[]uintptr)(unsafe.Pointer(&dst))
 		aw := *(*[]uintptr)(unsafe.Pointer(&a))
 		bw := *(*[]uintptr)(unsafe.Pointer(&b))
-		for i := 0; i < w; i++ {
+		for i := range w {
 			dw[i] = aw[i] ^ bw[i]
 		}
 	}
@@ -52,7 +52,7 @@ func fastXORBytes(dst, a, b []byte) int {
 // it supports unaligned read/writes or not.
 func safeXORBytes(dst, a, b []byte) int {
 	n := min(len(b), len(a))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		dst[i] = a[i] ^ b[i]
 	}
 	return n
@@ -76,7 +76,7 @@ func fastANDBytes(dst, a, b []byte) int {
 		dw := *(*[]uintptr)(unsafe.Pointer(&dst))
 		aw := *(*[]uintptr)(unsafe.Pointer(&a))
 		bw := *(*[]uintptr)(unsafe.Pointer(&b))
-		for i := 0; i < w; i++ {
+		for i := range w {
 			dw[i] = aw[i] & bw[i]
 		}
 	}
@@ -90,7 +90,7 @@ func fastANDBytes(dst, a, b []byte) int {
 // it supports unaligned read/writes or not.
 func safeANDBytes(dst, a, b []byte) int {
 	n := min(len(b), len(a))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		dst[i] = a[i] & b[i]
 	}
 	return n
@@ -114,7 +114,7 @@ func fastORBytes(dst, a, b []byte) int {
 		dw := *(*[]uintptr)(unsafe.Pointer(&dst))
 		aw := *(*[]uintptr)(unsafe.Pointer(&a))
 		bw := *(*[]uintptr)(unsafe.Pointer(&b))
-		for i := 0; i < w; i++ {
+		for i := range w {
 			dw[i] = aw[i] | bw[i]
 		}
 	}
@@ -128,7 +128,7 @@ func fastORBytes(dst, a, b []byte) int {
 // it supports unaligned read/writes or not.
 func safeORBytes(dst, a, b []byte) int {
 	n := min(len(b), len(a))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		dst[i] = a[i] | b[i]
 	}
 	return n
@@ -149,7 +149,7 @@ func fastTestBytes(p []byte) bool {
 	w := n / wordSize
 	if w > 0 {
 		pw := *(*[]uintptr)(unsafe.Pointer(&p))
-		for i := 0; i < w; i++ {
+		for i := range w {
 			if pw[i] != 0 {
 				return true
 			}
@@ -166,7 +166,7 @@ func fastTestBytes(p []byte) bool {
 // safeTestBytes tests for set bits one byte at a time. It works on all
 // architectures, independent if it supports unaligned read/writes or not.
 func safeTestBytes(p []byte) bool {
-	for i := 0; i < len(p); i++ {
+	for i := range p {
 		if p[i] != 0 {
 			return true
 		}

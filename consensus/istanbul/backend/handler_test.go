@@ -24,6 +24,8 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/rlp"
@@ -31,12 +33,13 @@ import (
 )
 
 func TestBackend_HandleMsg(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend := newBlockChain(t, 1)
 	defer backend.Stop()
 	eventSub := backend.istanbulEventMux.Subscribe(istanbul.MessageEvent{})
+	defer eventSub.Unsubscribe()
 
 	addr := common.StringToAddress("test addr")
-	data := &istanbul.ConsensusMsg{
+	data := &bft.ConsensusMsg{
 		PrevHash: common.HexToHash("0x1234"),
 		Payload:  []byte("test data"),
 	}
@@ -46,16 +49,34 @@ func TestBackend_HandleMsg(t *testing.T) {
 	// Success case
 	{
 		msg := p2p.Msg{
-			Code:    IstanbulMsg,
+			Code:    consensus.ConsensusMsgCode,
 			Size:    uint32(size),
 			Payload: payload,
 		}
-		isHandled, err := backend.HandleMsg(addr, msg)
-		assert.Nil(t, err)
-		assert.True(t, isHandled)
+		type result struct {
+			handled bool
+			err     error
+		}
+		resultCh := make(chan result, 1)
+		go func() {
+			handled, err := backend.HandleMsg(addr, msg)
+			resultCh <- result{handled, err}
+		}()
 
-		if err != nil {
-			t.Fatalf("handle message failed: %v", err)
+		evTimer := time.NewTimer(3 * time.Second)
+		defer evTimer.Stop()
+
+		select {
+		case event := <-eventSub.Chan():
+			switch ev := event.Data.(type) {
+			case istanbul.MessageEvent:
+				assert.Equal(t, data.Payload, ev.Payload)
+				assert.Equal(t, data.PrevHash, ev.Hash)
+			default:
+				t.Fatal("unexpected message type")
+			}
+		case <-evTimer.C:
+			t.Fatal("failed to subscribe istanbul message event")
 		}
 
 		recentMsg, ok := backend.recentMessages.Get(addr)
@@ -72,20 +93,12 @@ func TestBackend_HandleMsg(t *testing.T) {
 		assert.True(t, ok)
 		assert.True(t, value.(bool))
 
-		evTimer := time.NewTimer(3 * time.Second)
-		defer evTimer.Stop()
-
 		select {
-		case event := <-eventSub.Chan():
-			switch ev := event.Data.(type) {
-			case istanbul.MessageEvent:
-				assert.Equal(t, data.Payload, ev.Payload)
-				assert.Equal(t, data.PrevHash, ev.Hash)
-			default:
-				t.Fatal("unexpected message type")
-			}
-		case <-evTimer.C:
-			t.Fatal("failed to subscribe istanbul message event")
+		case result := <-resultCh:
+			assert.NoError(t, result.err)
+			assert.True(t, result.handled)
+		case <-time.After(3 * time.Second):
+			t.Fatal("HandleMsg did not return after event delivery")
 		}
 	}
 
@@ -105,7 +118,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	{
 		size, payload, _ := rlp.EncodeToReader([]byte{0x1, 0x2})
 		msg := p2p.Msg{
-			Code:    IstanbulMsg,
+			Code:    consensus.ConsensusMsgCode,
 			Size:    uint32(size),
 			Payload: payload,
 		}
@@ -117,7 +130,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	// Failure case - stopped istanbul engine
 	{
 		msg := p2p.Msg{
-			Code:    IstanbulMsg,
+			Code:    consensus.ConsensusMsgCode,
 			Size:    uint32(size),
 			Payload: payload,
 		}
@@ -128,15 +141,71 @@ func TestBackend_HandleMsg(t *testing.T) {
 	}
 }
 
-func TestBackend_Protocol(t *testing.T) {
+func TestBackend_HandleMsgAppliesBackpressureOutsideCoreMu(t *testing.T) {
 	backend := newTestBackend()
-	defer backend.Stop()
+	backend.coreStarted.Store(true)
+	eventSub := backend.istanbulEventMux.Subscribe(istanbul.MessageEvent{})
+	defer eventSub.Unsubscribe()
 
-	assert.Equal(t, IstanbulProtocol, backend.Protocol())
+	data := &bft.ConsensusMsg{Payload: []byte("backpressure test")}
+	size, payload, err := rlp.EncodeToReader(data)
+	assert.NoError(t, err)
+	hash := istanbul.RLPHash(data.Payload)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := backend.HandleMsg(common.StringToAddress("peer"), p2p.Msg{
+			Code:    consensus.ConsensusMsgCode,
+			Size:    uint32(size),
+			Payload: payload,
+		})
+		done <- err
+	}()
+
+	deadline := time.After(time.Second)
+	for {
+		backend.coreMu.Lock()
+		_, known := backend.knownMessages.Get(hash)
+		backend.coreMu.Unlock()
+		if known {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("HandleMsg did not prepare the consensus event")
+		case <-time.After(time.Millisecond):
+		}
+	}
+
+	select {
+	case err := <-done:
+		t.Fatalf("HandleMsg returned before the event was received: %v", err)
+	default:
+	}
+
+	locked := make(chan struct{})
+	go func() {
+		backend.coreMu.Lock()
+		backend.coreMu.Unlock()
+		close(locked)
+	}()
+	select {
+	case <-locked:
+	case <-time.After(time.Second):
+		t.Fatal("HandleMsg held coreMu while waiting for event delivery")
+	}
+
+	eventSub.Unsubscribe()
+	select {
+	case err := <-done:
+		assert.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("HandleMsg did not unblock after event subscription closed")
+	}
 }
 
 func TestBackend_ValidatePeerType(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend := newBlockChain(t, 1)
 	defer backend.Stop()
 
 	// Return nil if the input address is a validator
@@ -150,11 +219,51 @@ func TestBackend_ValidatePeerType(t *testing.T) {
 		err := backend.ValidatePeerType(common.Address{})
 		assert.Equal(t, errInvalidPeerAddress, err)
 	}
+}
 
-	// Return an error if backend.chain is not set
-	{
-		backend.chain = nil
-		err := backend.ValidatePeerType(backend.address)
-		assert.Equal(t, errNoChainReader, err)
+// startBlockedValidatePeer creates a test backend and starts a goroutine that
+// blocks on ValidatePeerType. Returns the backend and a channel that closes
+// when ValidatePeerType returns. Asserts that ValidatePeerType is still
+// blocking after 200ms.
+func startBlockedValidatePeer(t *testing.T) (*backend, chan struct{}) {
+	t.Helper()
+	b := newTestBackend()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer func() { recover() }() // valsetModule is nil in test backend
+		b.ValidatePeerType(common.Address{})
+	}()
+
+	select {
+	case <-done:
+		t.Fatal("ValidatePeerType should block before engine is ready")
+	case <-time.After(200 * time.Millisecond):
+	}
+	return b, done
+}
+
+func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
+	b, done := startBlockedValidatePeer(t)
+	defer b.Stop()
+
+	b.SignalPeerRegistrable()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ValidatePeerType should unblock after SignalPeerRegistrable")
+	}
+}
+
+func TestValidatePeerType_UnblocksOnStop(t *testing.T) {
+	b, done := startBlockedValidatePeer(t)
+	defer b.Stop()
+
+	b.Stop()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ValidatePeerType should unblock after Stop")
 	}
 }

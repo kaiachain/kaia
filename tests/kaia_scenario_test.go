@@ -39,7 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/compiler"
 	"github.com/kaiachain/kaia/common/profile"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
@@ -2059,7 +2059,7 @@ func testTxBundleRevertScenario(t *testing.T, bcdata *BCData, rewardBase, valida
 	var txs types.Transactions
 
 	// 1. Transfer (rewardBase -> anon) using a legacy transaction four times.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
 		var tx *types.Transaction
 		if i == 3 {
@@ -2081,7 +2081,7 @@ func testTxBundleRevertScenario(t *testing.T, bcdata *BCData, rewardBase, valida
 	}
 
 	// 2. Transfer (validator -> anon) using a legacy transaction two times.
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(validator.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
@@ -2230,7 +2230,7 @@ func testTxBundleTimeOutScenario(t *testing.T, bcdata *BCData, rewardBase, valid
 	var txs types.Transactions
 
 	// 1. Transfer (rewardBase -> anon) using a legacy transaction twenty times.
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.KAIA))
 		tx := types.NewTransaction(rewardBase.Nonce,
 			anon.Addr, amount, gasLimit, gasPrice, []byte{})
@@ -2280,7 +2280,7 @@ func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.
 		// 2. Transfer (anon -> validator) using a legacy transaction two times.
 		{
 			txs := []*types.Transaction{}
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kei))
 				nonce := anon.Nonce
 				if i == 1 {

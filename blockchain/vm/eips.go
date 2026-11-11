@@ -341,7 +341,7 @@ func opBlobBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 	return nil, nil
 }
 
-// opCLZ implements the CLZ opcode (count leading zero bytes)
+// opCLZ implements the CLZ opcode (count leading zero bits)
 func opCLZ(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	x := scope.Stack.peek()
 	x.SetUint64(256 - uint64(x.BitLen()))
@@ -408,7 +408,13 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[LOG4].computationCost = params.Log4ComputationCostCancun
 }
 
+func enablePermissionlessComputationCostModification(jt *JumpTable) {
+	jt[CLZ].computationCost = params.ClzComputationCost
+}
+
 func ChangeGasCostForTest(jt *JumpTable) {
+	// Callers pass a table whose entries are shared with a package-level one.
+	*jt = *copyJumpTable(jt)
 	// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
 	jt[EXTCODEHASH].constantGas = params.WarmStorageReadCostEIP2929
 	jt[EXTCODEHASH].dynamicGas = gasEip2929AccountCheck

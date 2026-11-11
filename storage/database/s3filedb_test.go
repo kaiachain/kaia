@@ -108,7 +108,7 @@ func (s *SuiteS3FileDB) TestS3FileDB() {
 func (s *SuiteS3FileDB) TestS3FileDB_Overwrite() {
 	testKey := common.MakeRandomBytes(32)
 	var testVals [][]byte
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		testVals = append(testVals, common.MakeRandomBytes(1024*1024))
 	}
 

@@ -19,6 +19,7 @@ package impl
 import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -36,9 +37,10 @@ type ProtocolManagerDownloader interface {
 }
 
 type InitOpts struct {
-	ChainConfig *params.ChainConfig
-	Chain       backends.BlockChainForCaller
-	Downloader  ProtocolManagerDownloader
+	ChainConfig  *params.ChainConfig
+	Chain        backends.BlockChainForCaller
+	Downloader   ProtocolManagerDownloader
+	BlsSecretKey bls.SecretKey
 }
 
 type RandaoModule struct {

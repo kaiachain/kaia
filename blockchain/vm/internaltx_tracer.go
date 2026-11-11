@@ -60,8 +60,8 @@ type InternalTxTracer struct {
 	initialized      bool
 	revertString     string
 
-	interrupt uint32 // Atomic flag to signal execution interruption
-	reason    error  // Textual reason for the interruption
+	interrupt atomic.Uint32 // Atomic flag to signal execution interruption
+	reason    error         // Textual reason for the interruption
 
 	gasLimit uint64 // Amount of gas bought for the whole tx
 }
@@ -198,7 +198,7 @@ func wrapError(context string, err error) error {
 // Stop terminates execution of the tracer at the first opportune moment.
 func (t *InternalTxTracer) Stop(err error) {
 	t.reason = err
-	atomic.StoreUint32(&t.interrupt, 1)
+	t.interrupt.Store(1)
 }
 
 // CaptureState implements the Tracer interface to trace a single step of VM execution.
@@ -210,7 +210,7 @@ func (t *InternalTxTracer) CaptureState(env *EVM, pc uint64, op OpCode, gas, cos
 			t.initialized = true
 		}
 		// If tracing was interrupted, set the error and stop
-		if atomic.LoadUint32(&t.interrupt) > 0 {
+		if t.interrupt.Load() > 0 {
 			t.err = t.reason
 			return
 		}

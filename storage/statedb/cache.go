@@ -82,7 +82,7 @@ var (
 func (cacheType TrieNodeCacheType) ToValid() TrieNodeCacheType {
 	validTrieNodeCacheTypes := []TrieNodeCacheType{CacheTypeLocal, CacheTypeRedis, CacheTypeHybrid}
 	for _, validType := range validTrieNodeCacheTypes {
-		if strings.ToLower(string(cacheType)) == strings.ToLower(string(validType)) {
+		if strings.EqualFold(string(cacheType), string(validType)) {
 			return validType
 		}
 	}

@@ -154,9 +154,8 @@ func bigEndianByteAt(bigint *big.Int, n int) byte {
 	return byte(word >> shift)
 }
 
-// Byte returns the byte at position n,
-// with the supplied padlength in Little-Endian encoding.
-// n==0 returns the MSB
+// Byte returns the byte at position n in the padlength-byte big-endian
+// representation of bigint. Position 0 is the most significant byte.
 // Example: bigint '5', padlength 32, n=31 => 5
 func Byte(bigint *big.Int, padlength, n int) byte {
 	if n >= padlength {
@@ -204,15 +203,16 @@ func S256(x *big.Int) *big.Int {
 }
 
 // Exp implements exponentiation by squaring.
-// Exp returns a newly-allocated big integer and does not change
-// base or exponent. The result is truncated to 256 bits.
+// Exp returns a newly-allocated big integer truncated to 256 bits.
+// It modifies base during the calculation; callers that need to preserve base
+// must pass a copy.
 //
 // Courtesy @karalabe and @chfast
 func Exp(base, exponent *big.Int) *big.Int {
 	result := big.NewInt(1)
 
 	for _, word := range exponent.Bits() {
-		for i := 0; i < wordBits; i++ {
+		for range wordBits {
 			if word&1 == 1 {
 				U256(result.Mul(result, base))
 			}

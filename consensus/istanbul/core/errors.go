@@ -22,23 +22,35 @@ var (
 	// errInconsistentSubject is returned when received subject is different from
 	// current subject.
 	errInconsistentSubject = errors.New("inconsistent subjects")
+	// errInconsistentPrevHash is returned when a message of the current
+	// sequence does not extend the parent recorded for the current height.
+	errInconsistentPrevHash = errors.New("inconsistent parent hash")
 	// errNotFromProposer is returned when received message is supposed to be from
 	// proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")
 	// errNotFromCommittee is returned when received message is supposed to be from a committee.
 	errNotFromCommittee = errors.New("message does not come from a committee")
+	// errInvalidCommittedSeal is returned when a COMMIT's CommittedSeal is not the
+	// sender's signature over the proposal's committed-seal preimage.
+	errInvalidCommittedSeal = errors.New("invalid committed seal")
 	// errIgnored is returned when a message was ignored.
 	errIgnored = errors.New("message is ignored")
 	// errFutureMessage is returned when current view is earlier than the
 	// view of the received message.
 	errFutureMessage = errors.New("future message")
+	// errRoundChangeTooFar is returned when a ROUND CHANGE is outside the
+	// retained future-round window.
+	errRoundChangeTooFar = errors.New("round change is too far in the future")
+	// errRoundChangeMessageLimit is returned when a ROUND CHANGE bucket already
+	// retains one message per committee member.
+	errRoundChangeMessageLimit = errors.New("round change message limit reached")
+	// errMessageTooLarge is returned when the signed part of a PREPARE, COMMIT
+	// or ROUND CHANGE exceeds maxSubjectMessageBytes, or when any message
+	// exceeds the P2P message size.
+	errMessageTooLarge = errors.New("message is too large")
 	// errOldMessage is returned when the received message's view is earlier
 	// than current view.
 	errOldMessage = errors.New("old message")
-	// errInvalidMessage is returned when the message is malformed.
-	errInvalidMessage = errors.New("invalid message")
 	// errFailedDecodeMessageSet is returned when the message set is malformed.
 	errFailedDecodeMessageSet = errors.New("failed to decode message set")
-	// errInvalidSigner is returned when the message is signed by a validator different than message sender
-	errInvalidSigner = errors.New("message not signed by the sender")
 )

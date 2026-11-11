@@ -26,5 +26,5 @@ jobs:
           path-to-signatures: "${{ github.event.repository.name }}/signatures/version1/cla.json"
           path-to-document: "https://gist.github.com/kaiachain-dev/bbf65cc330275c057463c4c94ce787a6" # Kaia Gist
           branch: "main"
-          allowlist: dependabot[bot], KaiaDev, circleci-kaia
+          allowlist: dependabot[bot], KaiaDev
           remote-repository-name: ${{ secrets.CLA_REPOSITORY }}

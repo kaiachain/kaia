@@ -61,7 +61,7 @@ func GenerateRandomDir() (string, error) {
 }
 
 func GenerateKeys(num int) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
-	for i := 0; i < num; i++ {
+	for range num {
 		nodekey := RandomHex()[2:]
 		nodekeys = append(nodekeys, nodekey)
 
@@ -107,7 +107,7 @@ func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.Pri
 		}
 	}
 
-	for i := 0; i < num; i++ {
+	for i := range num {
 		derived, _ := key.NewChildKey(uint32(i))
 		nodekey := hexutil.Encode(derived.Key)[2:]
 		nodekeys = append(nodekeys, nodekey)

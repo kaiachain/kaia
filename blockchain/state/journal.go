@@ -26,6 +26,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 )
 
 // journalEntry is a modification entry in the state change journal that can be
@@ -122,6 +123,10 @@ type (
 		account            *common.Address
 		prevcode, prevhash []byte
 	}
+	codeInfoChange struct {
+		account      *common.Address
+		prevCodeInfo params.CodeInfo
+	}
 
 	// Changes to other state values.
 	refundChange struct {
@@ -215,6 +220,14 @@ func (ch codeChange) revert(s *StateDB) {
 }
 
 func (ch codeChange) dirtied() *common.Address {
+	return ch.account
+}
+
+func (ch codeInfoChange) revert(s *StateDB) {
+	s.getStateObject(*ch.account).setCodeInfo(ch.prevCodeInfo)
+}
+
+func (ch codeInfoChange) dirtied() *common.Address {
 	return ch.account
 }
 

@@ -81,7 +81,7 @@ func (s *SupplyTestSuite) TestWithCatchup() {
 }
 
 func (s *SupplyTestSuite) waitCatchup() {
-	for i := 0; i < 1000; i++ { // wait 10 seconds until catchup complete
+	for range 1000 { // wait 10 seconds until catchup complete
 		if s.s.lastAccNum == 400 {
 			return
 		}

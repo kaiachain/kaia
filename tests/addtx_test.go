@@ -134,11 +134,11 @@ func benchAddTx(b *testing.B, maxAccounts, numValidators int, parallel string, n
 
 	if parallel == "queueing" {
 		txChs = make([]chan *types.Transaction, numQueue)
-		for i := 0; i < numQueue; i++ {
+		for i := range numQueue {
 			txChs[i] = make(chan *types.Transaction, 100)
 		}
 
-		for i := 0; i < numQueue; i++ {
+		for i := range numQueue {
 			go txDispatcher(txChs[i], txpool, &wait)
 		}
 	}

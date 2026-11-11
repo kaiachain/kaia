@@ -23,29 +23,86 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 // msgPriority is defined for calculating processing priority to speedup consensus
-// msgPreprepare > msgCommit > msgPrepare
+// bft.MsgPreprepare > bft.MsgCommit > bft.MsgPrepare
 var msgPriority = map[uint64]int{
-	msgPreprepare: 1,
-	msgCommit:     2,
-	msgPrepare:    3,
+	bft.MsgPreprepare: 1,
+	bft.MsgCommit:     2,
+	bft.MsgPrepare:    3,
 }
 
-// checkMessage checks the message state
-// return errInvalidMessage if the message is invalid
+const (
+	// Keep only a small future-sequence window so far-future messages cannot
+	// occupy a sender's budget until the node catches up. A node further behind
+	// than this window catches up through block synchronization rather than
+	// through retained consensus messages.
+	maxBacklogSequencesAhead = 8
+
+	// Limit small-message churn independently from retained bytes. A PREPREPARE
+	// carries an entire block and takes the sender's single protected slot
+	// instead.
+	maxBacklogMessagesPerSender = 128
+
+	// A single sender may retain at most one transport-sized allocation across
+	// its ROUND CHANGE Evidence. Small signed messages do not consume this
+	// budget, so large Evidence cannot crowd out the sender's future PREPARE
+	// or COMMIT messages. Each Evidence must match the EvidenceHash its sender
+	// signed, so only the sender itself can spend this allowance.
+	maxBacklogEvidenceBytesPerSender uint64 = maxConsensusP2PMessageBytes
+
+	// Bound aggregate Evidence memory even when many qualified validators send
+	// maximum-sized future ROUND CHANGEs. Only Evidence bytes consume this
+	// budget: ordinary votes and ROUND CHANGEs without prepared evidence remain
+	// admissible when it is full. PREPREPAREs likewise remain in their separate
+	// one-per-sender slots.
+	maxBacklogEvidenceBytes uint64 = 64 * 1024 * 1024
+)
+
+// checkMessage checks that msg, whose decoded view is view, belongs to the
+// current height and round state, and that it extends the current chain.
+// return bft.ErrInvalidMessage if the message is invalid
 // return errFutureMessage if the message view is larger than current view
 // return errOldMessage if the message view is smaller than current view
-func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
+// return errInconsistentPrevHash if a current vote or ROUND CHANGE has another parent
+func (c *core) checkMessage(msg *bft.Message, view *bft.View) error {
+	if err := c.checkMessageView(msg.Code, view); err != nil {
+		return err
+	}
+	return c.checkPrevHash(msg)
+}
+
+// checkPrevHash binds a vote or ROUND CHANGE of the current sequence to the
+// chain it extends: each carries the parent of its height as PrevHash. The
+// parent is recorded when the round starts, so a late vote for this height is
+// still accepted after the block is inserted but before the next height starts.
+// Future messages are checked when they become current. A PRE-PREPARE is
+// exempt: its parent is the proposal's, which Verify checks and whose failure
+// starts a round change instead of silently dropping the proposal.
+func (c *core) checkPrevHash(msg *bft.Message) error {
+	if msg.Code != bft.MsgPreprepare && msg.PrevHash != c.current.parentHash {
+		return errInconsistentPrevHash
+	}
+	return nil
+}
+
+func (c *core) checkMessageView(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
-	if msgCode == msgRoundChange {
+	// The round is consumed as a uint64 (View.Round.Uint64()); reject out-of-range values.
+	if !view.Round.IsUint64() {
+		return bft.ErrInvalidMessage
+	}
+
+	if msgCode == bft.MsgRoundChange {
 		if view.Sequence.Cmp(c.currentView().Sequence) > 0 {
 			return errFutureMessage
 		} else if view.Cmp(c.currentView()) < 0 {
@@ -66,10 +123,10 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 		return errFutureMessage
 	}
 
-	// StateAcceptRequest only accepts msgPreprepare
+	// StateAcceptRequest only accepts bft.MsgPreprepare
 	// other messages are future messages
 	if c.state == StateAcceptRequest {
-		if msgCode > msgPreprepare {
+		if msgCode > bft.MsgPreprepare {
 			return errFutureMessage
 		}
 		return nil
@@ -80,7 +137,23 @@ func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
 	return nil
 }
 
-func (c *core) storeBacklog(msg *message, src common.Address) {
+// backlogPreprepare is the one PREPREPARE retained per sender. The view and
+// parent hash are decoded once at retention, so that neither a replacement nor
+// processBacklog decodes the block again.
+type backlogPreprepare struct {
+	msg      *bft.Message
+	view     *bft.View
+	prevHash common.Hash
+}
+
+// storeBacklog retains a future message for processBacklog. PREPARE, COMMIT
+// and ROUND CHANGE queue per sender up to maxBacklogMessagesPerSender. A
+// PREPREPARE takes the sender's single slot, replacing a retained one only when
+// its view is higher: a sender proposes at most once per round, and only its
+// proposal for the highest view can still be handled, while a delayed older one
+// must not evict it. The slot is never shared, so no sender can take the slot
+// of the proposer the node is waiting for.
+func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	if src == c.Address() {
@@ -93,95 +166,191 @@ func (c *core) storeBacklog(msg *message, src common.Address) {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
+	view, prevHash := backlogMessageView(msg)
+	if view == nil {
+		logger.Trace("Discarding future message: cannot decode view")
+		return
+	}
+	if c.isBacklogSequenceTooFar(view.Sequence) {
+		logger.Trace("Discarding future message: sequence is too far ahead", "sequence", view.Sequence)
+		return
+	}
+
+	if msg.Code == bft.MsgPreprepare {
+		if held, ok := c.backlogPreprepares[src]; ok && view.Cmp(held.view) <= 0 {
+			logger.Trace("Discarding future PREPREPARE: not newer than the retained one", "view", view, "retained", held.view)
+			return
+		}
+		c.backlogPreprepares[src] = backlogPreprepare{msg: msg, view: view, prevHash: prevHash}
+		return
+	}
+
+	if c.backlogCounts[src] >= maxBacklogMessagesPerSender {
+		// A full backlog is expected under load; avoid a warning for every
+		// dropped message.
+		logger.Trace("Discarding future message: sender backlog limit reached")
+		return
+	}
+	evidenceBytes := uint64(len(msg.Evidence))
+	if evidenceBytes != 0 {
+		if evidenceBytes > maxBacklogEvidenceBytesPerSender ||
+			c.backlogEvidenceBytes[src] > maxBacklogEvidenceBytesPerSender-evidenceBytes {
+			logger.Trace("Discarding future message: sender backlog evidence limit reached", "bytes", evidenceBytes)
+			return
+		}
+		if evidenceBytes > maxBacklogEvidenceBytes ||
+			c.backlogTotalEvidenceBytes > maxBacklogEvidenceBytes-evidenceBytes {
+			logger.Trace("Discarding future message: total backlog evidence limit reached", "bytes", evidenceBytes)
+			return
+		}
+	}
 	backlog := c.backlogs[src]
 	if backlog == nil {
 		backlog = prque.New()
+		c.backlogs[src] = backlog
 	}
-	switch msg.Code {
-	case msgPreprepare:
-		var p *istanbul.Preprepare
-		err := msg.Decode(&p)
-		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
-		}
-		// for msgRoundChange, msgPrepare and msgCommit cases
-	default:
-		var p *istanbul.Subject
-		err := msg.Decode(&p)
-		if err == nil {
-			backlog.Push(msg, toPriority(msg.Code, p.View))
-		}
+	// toPriority truncates the sequence, so it runs only after
+	// isBacklogSequenceTooFar has rejected sequences that do not fit in uint64.
+	backlog.Push(msg, toPriority(msg.Code, view))
+	c.backlogCounts[src]++
+	if evidenceBytes != 0 {
+		c.backlogEvidenceBytes[src] += evidenceBytes
+		c.backlogTotalEvidenceBytes += evidenceBytes
 	}
-	c.backlogs[src] = backlog
+}
+
+func (c *core) isBacklogSequenceTooFar(sequence *big.Int) bool {
+	if !sequence.IsUint64() {
+		return true
+	}
+	maxSequence := new(big.Int).Add(c.currentView().Sequence, big.NewInt(maxBacklogSequencesAhead))
+	return sequence.Cmp(maxSequence) > 0
+}
+
+// retainedMessageBytes reports the memory a retained message occupies, so that
+// every size limit measures a message the same way.
+func retainedMessageBytes(msg *bft.Message) uint64 {
+	return uint64(len(msg.Msg)) + uint64(len(msg.Signature)) + uint64(len(msg.Evidence))
+}
+
+// removeBacklogMessage releases one queued message of a sender while backlogsMu
+// is held. It drops the sender's accounting at zero, so no explicit cleanup is
+// needed when the sender's queue becomes empty.
+func (c *core) removeBacklogMessage(src common.Address, msg *bft.Message) {
+	if c.backlogCounts[src] <= 1 {
+		delete(c.backlogCounts, src)
+	} else {
+		c.backlogCounts[src]--
+	}
+
+	evidenceBytes := uint64(len(msg.Evidence))
+	if evidenceBytes == 0 {
+		return
+	}
+	senderBytes := c.backlogEvidenceBytes[src]
+	if senderBytes < evidenceBytes || c.backlogTotalEvidenceBytes < evidenceBytes {
+		// This is an internal invariant violation, not peer input. Preserve the
+		// conservative accounting instead of silently clamping it and hiding the
+		// mismatch or wrapping an unsigned subtraction.
+		c.logger.Error("Inconsistent backlog evidence accounting", "from", src,
+			"messageBytes", evidenceBytes, "senderBytes", senderBytes,
+			"totalBytes", c.backlogTotalEvidenceBytes)
+		return
+	}
+	senderBytes -= evidenceBytes
+	if senderBytes == 0 {
+		delete(c.backlogEvidenceBytes, src)
+	} else {
+		c.backlogEvidenceBytes[src] = senderBytes
+	}
+	c.backlogTotalEvidenceBytes -= evidenceBytes
+}
+
+// backlogMessageView decodes the view a message belongs to and the parent hash
+// to post it under. The view is nil when the message cannot be retained.
+func backlogMessageView(msg *bft.Message) (view *bft.View, prevHash common.Hash) {
+	if msg.Code == bft.MsgPreprepare {
+		var p *bft.Preprepare
+		if err := msg.Decode(&p); err != nil || p == nil || p.Proposal == nil {
+			return nil, common.Hash{}
+		}
+		view, prevHash = p.View, p.Proposal.ParentHash()
+	} else {
+		var err error
+		if view, err = msg.GetView(); err != nil {
+			return nil, common.Hash{}
+		}
+		prevHash = msg.PrevHash
+	}
+	if view == nil || view.Sequence == nil || view.Round == nil {
+		return nil, common.Hash{}
+	}
+	return view, prevHash
+}
+
+// postBacklogMessage posts a retained message once its view is current, or
+// discards it once its view has passed. It reports whether the message is
+// still in the future and must stay retained.
+func (c *core) postBacklogMessage(src common.Address, msg *bft.Message, view *bft.View, prevHash common.Hash) (future bool) {
+	logger := c.logger.NewWith("from", src, "state", c.state)
+
+	if view == nil {
+		logger.Debug("Nil view", "msg", msg)
+		return false
+	}
+	err := c.checkMessage(msg, view)
+	if err == errFutureMessage {
+		return true
+	}
+	if err != nil {
+		logger.Trace("Skip the backlog event", "msg", msg, "err", err)
+		return false
+	}
+	logger.Trace("Post backlog event", "msg", msg)
+
+	go c.sendEvent(backlogEvent{
+		src:  src,
+		msg:  msg,
+		Hash: prevHash,
+	})
+	return false
 }
 
 func (c *core) processBacklog() {
 	c.backlogsMu.Lock()
 	defer c.backlogsMu.Unlock()
 
+	for src, held := range c.backlogPreprepares {
+		if !c.postBacklogMessage(src, held.msg, held.view, held.prevHash) {
+			delete(c.backlogPreprepares, src)
+		}
+	}
+
 	for src, backlog := range c.backlogs {
-		if backlog == nil {
-			continue
+		// Stop at the first future message: the queue is ordered by view, so
+		// everything behind it is in the future as well.
+		for !backlog.Empty() {
+			m, prio := backlog.Pop()
+			msg := m.(*bft.Message)
+			view, prevHash := backlogMessageView(msg)
+			if c.postBacklogMessage(src, msg, view, prevHash) {
+				backlog.Push(msg, prio)
+				break
+			}
+			c.removeBacklogMessage(src, msg)
 		}
 
-		logger := c.logger.NewWith("from", src, "state", c.state)
-		isFuture := false
-
-		// We stop processing if
-		//   1. backlog is empty
-		//   2. The first message in queue is a future message
-		for !(backlog.Empty() || isFuture) {
-			m, prio := backlog.Pop()
-			msg := m.(*message)
-			var view *istanbul.View
-			var prevHash common.Hash
-			switch msg.Code {
-			case msgPreprepare:
-				var m *istanbul.Preprepare
-				err := msg.Decode(&m)
-				if err == nil {
-					view = m.View
-				}
-				prevHash = m.Proposal.ParentHash()
-				// for msgRoundChange, msgPrepare and msgCommit cases
-			default:
-				var sub *istanbul.Subject
-				err := msg.Decode(&sub)
-				if err == nil {
-					view = sub.View
-				}
-				prevHash = sub.PrevHash
-			}
-			if view == nil {
-				logger.Debug("Nil view", "msg", msg)
-				continue
-			}
-			// Push back if it's a future message
-			err := c.checkMessage(msg.Code, view)
-			if err != nil {
-				if err == errFutureMessage {
-					logger.Trace("Stop processing backlog", "msg", msg)
-					backlog.Push(msg, prio)
-					isFuture = true
-					break
-				}
-				logger.Trace("Skip the backlog event", "msg", msg, "err", err)
-				continue
-			}
-			logger.Trace("Post backlog event", "msg", msg)
-
-			go c.sendEvent(backlogEvent{
-				src:  src,
-				msg:  msg,
-				Hash: prevHash,
-			})
+		// Do not retain prque's backing storage after all messages from this
+		// sender have been processed or discarded.
+		if backlog.Empty() {
+			delete(c.backlogs, src)
 		}
 	}
 }
 
-func toPriority(msgCode uint64, view *istanbul.View) int64 {
-	if msgCode == msgRoundChange {
-		// For msgRoundChange, set the message priority based on its sequence
+func toPriority(msgCode uint64, view *bft.View) int64 {
+	if msgCode == bft.MsgRoundChange {
+		// For bft.MsgRoundChange, set the message priority based on its sequence
 		return -int64(view.Sequence.Uint64() * 1000)
 	}
 	// FIXME: round will be reset as 0 while new sequence

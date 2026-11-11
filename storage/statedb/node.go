@@ -169,7 +169,7 @@ func decodeShort(hash, elems []byte) (node, error) {
 
 func decodeFull(hash, elems []byte) (*fullNode, error) {
 	n := &fullNode{flags: nodeFlag{hash: hash}}
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		cld, rest, err := decodeRef(elems)
 		if err != nil {
 			return n, wrapError(err, fmt.Sprintf("[%d]", i))

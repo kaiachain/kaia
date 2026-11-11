@@ -38,7 +38,7 @@ func TestFilterTxs(t *testing.T) {
 	mAuction := prep(t)
 	txs := make(map[common.Address]types.Transactions)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		// tx.Time is set to current time
 		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
@@ -75,7 +75,7 @@ func TestFilterTxs_TargetTx(t *testing.T) {
 	mAuction := prep(t)
 	txs := make(map[common.Address]types.Transactions)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		// tx.Time is set to current time
 		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
@@ -109,7 +109,7 @@ func TestFilterTxs_GaslessTx(t *testing.T) {
 	mAuction := prep(t)
 	txs := make(map[common.Address]types.Transactions)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		// tx.Time is set to current time
 		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)

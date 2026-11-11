@@ -23,9 +23,8 @@
 package core
 
 import (
-	"time"
-
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
@@ -37,7 +36,7 @@ func (c *core) sendCommit() {
 	}
 
 	// Do not send message if the owner of the core is not a member of the committee for the current view
-	if !c.currentCommittee.Committee().Contains(c.Address()) {
+	if !c.current.committee.Contains(c.Address()) {
 		return
 	}
 
@@ -46,8 +45,8 @@ func (c *core) sendCommit() {
 	c.broadcastCommit(sub)
 }
 
-func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, prevHash common.Hash) {
-	sub := &istanbul.Subject{
+func (c *core) sendCommitForOldBlock(view *bft.View, digest common.Hash, prevHash common.Hash) {
+	sub := &proposalSubject{
 		View:     view,
 		Digest:   digest,
 		PrevHash: prevHash,
@@ -55,34 +54,33 @@ func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, pr
 	c.broadcastCommit(sub)
 }
 
-func (c *core) broadcastCommit(sub *istanbul.Subject) {
+func (c *core) broadcastCommit(sub *proposalSubject) {
 	logger := c.logger.NewWith("state", c.state)
 
-	encodedSubject, err := Encode(sub)
+	encodedCommit, err := bft.Encode(&bft.Commit{View: sub.View, Digest: sub.Digest})
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
-	c.broadcast(&message{
-		Hash: sub.PrevHash,
-		Code: msgCommit,
-		Msg:  encodedSubject,
+	c.broadcast(&bft.Message{
+		PrevHash: sub.PrevHash,
+		Code:     bft.MsgCommit,
+		Msg:      encodedCommit,
 	})
 }
 
-func (c *core) handleCommit(msg *message, src common.Address) error {
-	timestamp := time.Now()
+func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	// Decode COMMIT message
-	var commit *istanbul.Subject
+	var commit *bft.Commit
 	err := msg.Decode(&commit)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
-	if err := c.checkMessage(msgCommit, commit.View); err != nil {
+	if err := c.checkMessage(msg, commit.View); err != nil {
 		// logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
 	}
@@ -91,26 +89,39 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 		return err
 	}
 
-	if !c.currentCommittee.Committee().Contains(src) {
+	if !c.current.committee.Contains(src) {
 		logger.Warn("received an istanbul commit message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.String(), "msgView", commit.View.String())
 		return errNotFromCommittee
 	}
 
-	c.acceptCommit(msg, src)
-	Vrank.AddCommit(src, commit.View.Round.Uint64(), timestamp)
+	// Verify commit.CommittedSeal is the sender's signature over the proposal's
+	// committed-seal preimage. Without this, an arbitrary seal would be copied verbatim into the sealed block.
+	// commit.Digest is the proposal hash, already validated by verifyCommit above.
+	committedSealPreimage := istanbul.PrepareCommittedSeal(commit.Digest)
+	if c.isPermissionlessAt(commit.View.Sequence.Uint64()) {
+		committedSealPreimage = istanbul.PrepareCommittedSealWithRound(commit.Digest, byte(commit.View.Round.Uint64()))
+	}
+	committer, err := istanbul.GetSignatureAddress(committedSealPreimage, commit.CommittedSeal)
+	if err != nil || committer != src {
+		logger.Warn("invalid committed seal in commit message", "sender", src.String(), "recovered", committer.String(), "err", err)
+		return errInvalidCommittedSeal
+	}
 
-	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
-	// and we are in earlier state before Prepared state.
-	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in
-	// the previous round skip sending PREPARE messages.
+	c.acceptCommit(msg, src)
+
+	// Change to Prepared state once this view has quorum evidence. Where the
+	// hash-lock shortcut applies (IsPermissionlessAt is false), a node locked
+	// on this digest commits directly; otherwise it must also contribute a
+	// PREPARE and establish a certificate for this round before committing.
 	if c.state.Cmp(StatePrepared) < 0 {
-		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
-			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
+		if !c.isPermissionlessAt(commit.View.Sequence.Uint64()) &&
+			c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
+			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", bft.MsgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() >= c.currentCommittee.RequiredMessageCount() {
-			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.currentCommittee.Qualified().Len())
+		} else if c.current.GetPrepareOrCommitSize() >= c.current.requiredMessageCount {
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", bft.MsgCommit, "valSet", c.current.qualified.Len())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -122,7 +133,7 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= c.currentCommittee.RequiredMessageCount() {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= c.current.requiredMessageCount {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()
@@ -132,11 +143,11 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *istanbul.Subject, src common.Address) error {
+func (c *core) verifyCommit(commit *bft.Commit, src common.Address) error {
 	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	sub := c.current.Subject()
-	if !commit.Equal(sub) {
+	if !sub.matches(commit.View, commit.Digest) {
 		logger.Warn("Inconsistent subjects between commit and proposal", "expected", sub, "got", commit)
 		return errInconsistentSubject
 	}
@@ -144,7 +155,7 @@ func (c *core) verifyCommit(commit *istanbul.Subject, src common.Address) error 
 	return nil
 }
 
-func (c *core) acceptCommit(msg *message, src common.Address) error {
+func (c *core) acceptCommit(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	// Add the COMMIT message to current round state

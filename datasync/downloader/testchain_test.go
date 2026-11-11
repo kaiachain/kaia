@@ -25,7 +25,6 @@ package downloader
 import (
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
@@ -54,12 +53,12 @@ var testChainForkLightA, testChainForkLightB, testChainForkHeavy *testChain
 
 func init() {
 	forkLen := int(MaxForkAncestry + 50)
-	var wg sync.WaitGroup
-	wg.Add(3)
-	go func() { testChainForkLightA = testChainBase.makeFork(forkLen, false, 1); wg.Done() }()
-	go func() { testChainForkLightB = testChainBase.makeFork(forkLen, false, 2); wg.Done() }()
-	go func() { testChainForkHeavy = testChainBase.makeFork(forkLen, true, 3); wg.Done() }()
-	wg.Wait()
+	// Generate on the shared test DB sequentially.
+	// GenerateChain now initializes full blockchain/trie machinery internally,
+	// so concurrent writes against the same memory DB can corrupt trie fixtures.
+	testChainForkLightA = testChainBase.makeFork(forkLen, false, 1)
+	testChainForkLightB = testChainBase.makeFork(forkLen, false, 2)
+	testChainForkHeavy = testChainBase.makeFork(forkLen, true, 3)
 }
 
 type testChain struct {

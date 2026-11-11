@@ -65,7 +65,7 @@ func (s *NotificationTestService) SomeSubscription(ctx context.Context, n, val i
 		// test expects n events, if we begin sending event immediately some events
 		// will probably be dropped since the subscription ID might not be send to
 		// the client.
-		for i := 0; i < n; i++ {
+		for i := range n {
 			if err := notifier.Notify(subscription.ID, val+i); err != nil {
 				return
 			}
@@ -103,7 +103,7 @@ func (s *NotificationTestService) HangSubscription(ctx context.Context, val int)
 
 func TestNewID(t *testing.T) {
 	hexchars := "0123456789ABCDEFabcdef"
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		id := string(NewID())
 		if !strings.HasPrefix(id, "0x") {
 			t.Fatalf("invalid ID prefix, want '0x...', got %s", id)
@@ -162,7 +162,7 @@ func TestNotifications(t *testing.T) {
 		t.Fatalf("expected subscription id, got %T", response.Result)
 	}
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		var notification jsonNotification
 		if err := in.Decode(&notification); err != nil {
 			t.Fatalf("%v", err)

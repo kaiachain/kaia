@@ -1,7 +1,12 @@
 package impl
 
 import (
+	"maps"
+	"math/big"
+
+	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
@@ -48,10 +53,10 @@ func NewHeaderGovAPI(s *headerGovModule) *headerGovAPI {
 
 func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 	var (
-		voter       = api.h.nodeAddress
-		blockNumber = api.h.Chain.CurrentBlock().NumberU64()
-		gp          = api.h.GetParamSet(blockNumber + 1)
-		gMode       = gp.GovernanceMode
+		voter     = api.h.nodeAddress
+		nextBlock = api.h.Chain.CurrentBlock().NumberU64() + 1
+		gp        = api.h.GetParamSet(nextBlock)
+		gMode     = gp.GovernanceMode
 	)
 
 	if gMode == "single" && voter != gp.GoverningNode {
@@ -63,15 +68,44 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", ErrInvalidKeyValue
 	}
 
-	err := api.h.checkConsistency(blockNumber+1, vote)
+	if gov.DeprecatedAt(vote.Name(), api.h.ChainConfig.Rules(new(big.Int).SetUint64(nextBlock))) {
+		return "", ErrDeprecatedVote
+	}
+
+	err := api.h.checkConsistency(nextBlock, vote)
 	if err != nil {
 		return "", err
+	}
+
+	if vote.Name() == gov.GovernanceGovParamContract {
+		if err := api.checkGovParamContract(vote.Value().(common.Address)); err != nil {
+			return "", err
+		}
 	}
 
 	// TODO-kaiax: add removevalidator vote check
 
 	api.h.PushMyVotes(vote)
 	return "(kaiax) Your vote is prepared. It will be put into the block header or applied when your node generates a block as a proposer. Note that your vote may be duplicate.", nil
+}
+
+// checkGovParamContract rejects a govparamcontract vote whose value is not a contract account in the current state.
+// VerifyVote deliberately skips this check because local state is not deterministic across nodes (#946).
+// It is enforced here at vote creation to catch operator mistakes and to stay compatible with
+// v2.2.2 validators, which still reject such votes during header verification.
+func (api *headerGovAPI) checkGovParamContract(addr common.Address) error {
+	state, err := api.h.Chain.State()
+	if err != nil {
+		return err
+	}
+
+	acc := state.GetAccount(addr)
+	if acc == nil {
+		return ErrGovParamNotAccount
+	} else if acc.Type() != account.SmartContractAccountType || acc.Empty() {
+		return ErrGovParamNotContract
+	}
+	return nil
 }
 
 func (api *headerGovAPI) IdxCache() []uint64 {
@@ -136,21 +170,15 @@ func (api *headerGovAPI) Status() StatusResponse {
 	groupedVotes := make(map[uint64]headergov.VotesInEpoch, len(api.h.groupedVotes))
 	for epochIdx, votes := range api.h.groupedVotes {
 		copiedVotes := make(headergov.VotesInEpoch, len(votes))
-		for blockNum, vote := range votes {
-			copiedVotes[blockNum] = vote
-		}
+		maps.Copy(copiedVotes, votes)
 		groupedVotes[epochIdx] = copiedVotes
 	}
 
 	governances := make(map[uint64]headergov.GovData, len(api.h.governances))
-	for blockNum, gov := range api.h.governances {
-		governances[blockNum] = gov
-	}
+	maps.Copy(governances, api.h.governances)
 
 	govHistory := make(headergov.History, len(api.h.history))
-	for blockNum, pset := range api.h.history {
-		govHistory[blockNum] = pset
-	}
+	maps.Copy(govHistory, api.h.history)
 
 	myVotes := make([]headergov.VoteData, len(api.h.myVotes))
 	copy(myVotes, api.h.myVotes)

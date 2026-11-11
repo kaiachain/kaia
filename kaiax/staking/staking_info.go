@@ -65,6 +65,40 @@ type CLStakingInfo struct {
 
 type CLStakingInfos []*CLStakingInfo
 
+// FilterNodes returns a copy of si whose NodeIds, StakingContracts, RewardAddrs, StakingAmounts and
+// CLStakingInfos keep only the entries of the nodes in nodeIds, in the original order. The
+// CLStakingInfo entries are shared with si.
+func (si *StakingInfo) FilterNodes(nodeIds []common.Address) *StakingInfo {
+	keep := make(map[common.Address]bool, len(nodeIds))
+	for _, id := range nodeIds {
+		keep[id] = true
+	}
+	n := &StakingInfo{
+		SourceBlockNum: si.SourceBlockNum,
+		KEFAddr:        si.KEFAddr,
+		KIFAddr:        si.KIFAddr,
+		KPFAddr:        si.KPFAddr,
+	}
+	for i, id := range si.NodeIds {
+		if !keep[id] {
+			continue
+		}
+		n.NodeIds = append(n.NodeIds, id)
+		n.StakingContracts = append(n.StakingContracts, si.StakingContracts[i])
+		n.RewardAddrs = append(n.RewardAddrs, si.RewardAddrs[i])
+		n.StakingAmounts = append(n.StakingAmounts, si.StakingAmounts[i])
+	}
+	if si.CLStakingInfos != nil {
+		n.CLStakingInfos = CLStakingInfos{} // an empty list stays a list, not null, in JSON
+	}
+	for _, clsi := range si.CLStakingInfos {
+		if keep[clsi.CLNodeId] {
+			n.CLStakingInfos = append(n.CLStakingInfos, clsi)
+		}
+	}
+	return n
+}
+
 // consolidatedNode is the refined staking information suitable for proposer selection.
 // Sometimes a node would register multiple NodeIds in AddressBook,
 // in which each entry has different StakingAddr and same RewardAddr.
@@ -272,16 +306,16 @@ func (si *StakingInfo) ToResponse(useGini bool, minStake uint64) *StakingInfoRes
 		Gini:    si.Gini(minStake),
 	}
 	if res.NodeIds == nil {
-		si.NodeIds = make([]common.Address, 0)
+		res.NodeIds = make([]common.Address, 0)
 	}
 	if res.RewardAddrs == nil {
-		si.RewardAddrs = make([]common.Address, 0)
+		res.RewardAddrs = make([]common.Address, 0)
 	}
 	if res.StakingContracts == nil {
-		si.StakingContracts = make([]common.Address, 0)
+		res.StakingContracts = make([]common.Address, 0)
 	}
 	if res.StakingAmounts == nil {
-		si.StakingAmounts = make([]uint64, 0)
+		res.StakingAmounts = make([]uint64, 0)
 	}
 	return res
 }

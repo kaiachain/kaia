@@ -107,8 +107,6 @@ var validatorTemplate = `{{ .Name }}:
         mkdir -p /klaytn
 {{- if eq .NodeType "scn" }}
         echo '{{ .SCGenesis }}' > /klaytn/genesis.json
-{{- else if eq .NodeType "spn" }}
-        echo '{{ .SCGenesis }}' > /klaytn/genesis.json
 {{- else if eq .NodeType "sen" }}
         echo '{{ .SCGenesis }}' > /klaytn/genesis.json
 {{- else }}
@@ -129,7 +127,7 @@ var validatorTemplate = `{{ .Name }}:
         echo 'DATA_DIR="/klaytn"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'LOG_DIR="$$DATA_DIR/log"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'RPC_ENABLE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-        echo 'RPC_API="db,eth,klay,net,governance,web3,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
+        echo 'RPC_API="db,eth,klay,net,governance,miner,personal,txpool,debug,admin,istanbul,mainbridge,subbridge"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'NETWORK_ID="{{ .NetworkId }}"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'NO_DISCOVER=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'ADDITIONAL="$$ADDITIONAL --identity \"{{ .Name }}\""' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
@@ -151,8 +149,6 @@ var validatorTemplate = `{{ .Name }}:
 {{- end}}
 {{- if eq .NodeType "cn" }}
         echo 'REWARDBASE={{ .Address }}' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
-{{- else if eq .NodeType "pn" }}
-        echo 'ADDITIONAL="$$ADDITIONAL --txpool.nolocals"' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
 {{- else if eq .Name "EN-0" }}
         echo 'SC_MAIN_BRIDGE=1' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf
         echo 'SC_MAIN_BRIDGE_PORT=50505' >> /klaytn-docker-pkg/conf/k{{ .NodeType }}d.conf

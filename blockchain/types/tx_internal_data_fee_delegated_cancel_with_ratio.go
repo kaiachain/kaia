@@ -185,8 +185,9 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetFeePayerSignatures(s TxSi
 	t.FeePayerSignatures = s
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

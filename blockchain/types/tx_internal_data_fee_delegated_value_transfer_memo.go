@@ -198,8 +198,9 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) setHashForMarshaling(h *co
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetFeePayerSignatures(s TxSignatures) {

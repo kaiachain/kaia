@@ -394,8 +394,8 @@ type Tracer struct {
 	ctx map[string]interface{} // Transaction context gathered throughout execution
 	err error                  // Error, if one has occurred
 
-	interrupt uint32 // Atomic flag to signal execution interruption
-	reason    error  // Textual reason for the interruption
+	interrupt atomic.Uint32 // Atomic flag to signal execution interruption
+	reason    error         // Textual reason for the interruption
 
 	gasLimit        uint64 // Amount of gas bought for the whole tx
 	traceSteps      bool   // When true, will invoke step() on each opcode
@@ -632,7 +632,7 @@ func New(code string, ctx *Context, unsafeTrace bool) (*Tracer, error) {
 // Stop terminates execution of the tracer at the first opportune moment.
 func (jst *Tracer) Stop(err error) {
 	jst.reason = err
-	atomic.StoreUint32(&jst.interrupt, 1)
+	jst.interrupt.Store(1)
 }
 
 // call executes a method on a JS object, catching any errors, formatting and
@@ -706,7 +706,7 @@ func (jst *Tracer) CaptureState(env *vm.EVM, pc uint64, op vm.OpCode, gas, cost,
 		jst.inited = true
 	}
 	// If tracing was interrupted, set the error and stop
-	if atomic.LoadUint32(&jst.interrupt) > 0 {
+	if jst.interrupt.Load() > 0 {
 		jst.err = jst.reason
 		// env.Cancel()
 		return
@@ -767,7 +767,7 @@ func (jst *Tracer) CaptureEnter(typ vm.OpCode, from common.Address, to common.Ad
 		return
 	}
 	// If tracing was interrupted, set the error and stop
-	if atomic.LoadUint32(&jst.interrupt) > 0 {
+	if jst.interrupt.Load() > 0 {
 		jst.err = jst.reason
 		return
 	}
@@ -797,7 +797,7 @@ func (jst *Tracer) CaptureExit(output []byte, gasUsed uint64, err error) {
 		return
 	}
 	// If tracing was interrupted, set the error and stop
-	if atomic.LoadUint32(&jst.interrupt) > 0 {
+	if jst.interrupt.Load() > 0 {
 		jst.err = jst.reason
 		return
 	}

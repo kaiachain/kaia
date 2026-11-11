@@ -25,6 +25,7 @@ package sc
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"sync"
 	"time"
@@ -287,7 +288,7 @@ func (p *baseBridgePeer) Handshake(network uint64, chainID, td *big.Int, head co
 	}()
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		select {
 		case err := <-errc:
 			if err != nil {
@@ -450,9 +451,7 @@ func (ps *bridgePeerSet) Peers() map[string]BridgePeer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[string]BridgePeer)
-	for id, p := range ps.peers {
-		set[id] = p
-	}
+	maps.Copy(set, ps.peers)
 	return set
 }
 

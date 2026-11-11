@@ -80,20 +80,6 @@ func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
 }
 
-// Engine mocks base method.
-func (m *MockBlockChain) Engine() consensus.Engine {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Engine")
-	ret0, _ := ret[0].(consensus.Engine)
-	return ret0
-}
-
-// Engine indicates an expected call of Engine.
-func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
-}
-
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()
@@ -150,6 +136,48 @@ func (mr *MockBlockChainMockRecorder) GetHeaderByNumber(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderByNumber", reflect.TypeOf((*MockBlockChain)(nil).GetHeaderByNumber), arg0)
 }
 
+// HasBadBlock mocks base method.
+func (m *MockBlockChain) HasBadBlock(arg0 common.Hash) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasBadBlock", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasBadBlock indicates an expected call of HasBadBlock.
+func (mr *MockBlockChainMockRecorder) HasBadBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBadBlock", reflect.TypeOf((*MockBlockChain)(nil).HasBadBlock), arg0)
+}
+
+// ValidateProposalExecution mocks base method.
+func (m *MockBlockChain) ValidateProposalExecution(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateProposalExecution", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateProposalExecution indicates an expected call of ValidateProposalExecution.
+func (mr *MockBlockChainMockRecorder) ValidateProposalExecution(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProposalExecution", reflect.TypeOf((*MockBlockChain)(nil).ValidateProposalExecution), arg0)
+}
+
+// Sealer mocks base method.
+func (m *MockBlockChain) Sealer() consensus.Sealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(consensus.Sealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBlockChainMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBlockChain)(nil).Sealer))
+}
+
 // State mocks base method.
 func (m *MockBlockChain) State() (*state.StateDB, error) {
 	m.ctrl.T.Helper()
@@ -178,4 +206,32 @@ func (m *MockBlockChain) StateAt(arg0 common.Hash) (*state.StateDB, error) {
 func (mr *MockBlockChainMockRecorder) StateAt(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAt", reflect.TypeOf((*MockBlockChain)(nil).StateAt), arg0)
+}
+
+// ValidateHeader mocks base method.
+func (m *MockBlockChain) ValidateHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateHeader indicates an expected call of ValidateHeader.
+func (mr *MockBlockChainMockRecorder) ValidateHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateHeader), arg0)
+}
+
+// ValidateProposalHeader mocks base method.
+func (m *MockBlockChain) ValidateProposalHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateProposalHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateProposalHeader indicates an expected call of ValidateProposalHeader.
+func (mr *MockBlockChainMockRecorder) ValidateProposalHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProposalHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateProposalHeader), arg0)
 }

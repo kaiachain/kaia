@@ -37,7 +37,7 @@ type blockChain interface {
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlockByNumber(number uint64) *types.Block
 	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 }
 
 type InitOpts struct {
@@ -45,6 +45,8 @@ type InitOpts struct {
 	Chain         blockChain
 	GovModule     reward.GovModule // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
 	StakingModule staking.StakingModule
+	NodeAddress   common.Address
+	Rewardbase    common.Address
 }
 
 type RewardModule struct {

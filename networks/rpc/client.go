@@ -92,6 +92,10 @@ type Client struct {
 	// This function, if non-nil, is called when the connection is lost.
 	reconnectFunc reconnectFunc
 
+	// config fields
+	batchRequestLimit    int
+	batchResponseMaxSize int
+
 	// writeConn is used for writing to the connection on the caller's goroutine. It should
 	// only be accessed outside of dispatch, with the write lock held. The write lock is
 	// taken by sending on requestOp and released by sending on sendDone.
@@ -120,7 +124,7 @@ type clientConn struct {
 
 func (c *Client) newClientConn(conn ServerCodec) *clientConn {
 	ctx := context.WithValue(context.Background(), clientContextKey{}, c)
-	handler := newHandler(ctx, conn, c.idgen, c.services)
+	handler := newHandler(ctx, conn, c.idgen, c.services, c.batchRequestLimit, c.batchResponseMaxSize)
 	return &clientConn{conn, handler}
 }
 
@@ -206,27 +210,29 @@ func NewClient(initctx context.Context, connect reconnectFunc) (*Client, error) 
 	if err != nil {
 		return nil, err
 	}
-	c := initClient(conn, randomIDGenerator(), new(serviceRegistry))
+	c := initClient(conn, randomIDGenerator(), new(serviceRegistry), BatchRequestLimit, BatchResponseMaxSize)
 	c.reconnectFunc = connect
 	return c, nil
 }
 
-func initClient(conn ServerCodec, idgen func() ID, services *serviceRegistry) *Client {
+func initClient(conn ServerCodec, idgen func() ID, services *serviceRegistry, batchRequestLimit, batchResponseMaxSize int) *Client {
 	_, isHTTP := conn.(*httpConn)
 	c := &Client{
-		idgen:       idgen,
-		isHTTP:      isHTTP,
-		services:    services,
-		writeConn:   conn,
-		close:       make(chan struct{}),
-		closing:     make(chan struct{}),
-		didClose:    make(chan struct{}),
-		reconnected: make(chan ServerCodec),
-		readOp:      make(chan readOp),
-		readErr:     make(chan error),
-		reqInit:     make(chan *requestOp),
-		reqSent:     make(chan error, 1),
-		reqTimeout:  make(chan *requestOp),
+		idgen:                idgen,
+		isHTTP:               isHTTP,
+		services:             services,
+		writeConn:            conn,
+		batchRequestLimit:    batchRequestLimit,
+		batchResponseMaxSize: batchResponseMaxSize,
+		close:                make(chan struct{}),
+		closing:              make(chan struct{}),
+		didClose:             make(chan struct{}),
+		reconnected:          make(chan ServerCodec),
+		readOp:               make(chan readOp),
+		readErr:              make(chan error),
+		reqInit:              make(chan *requestOp),
+		reqSent:              make(chan error, 1),
+		reqTimeout:           make(chan *requestOp),
 	}
 	if !isHTTP {
 		go c.dispatch(conn)

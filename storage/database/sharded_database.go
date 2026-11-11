@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
@@ -531,34 +532,34 @@ func (sdbBatch *shardedDBBatch) Replay(w KeyValueWriter) error {
 }
 
 func (db *shardedDB) Stat(property string) (string, error) {
-	stats := ""
-	errs := ""
+	var stats strings.Builder
+	var errs strings.Builder
 	for idx, shard := range db.shards {
 		stat, err := shard.Stat(property)
 		if err == nil {
 			headInfo := fmt.Sprintf(" [shard%d:%s]\n", idx, shard.Type())
-			stats += headInfo + stat
+			stats.WriteString(headInfo + stat)
 		} else {
-			errs += fmt.Sprintf("shard[%d]: %s", idx, err.Error())
+			errs.WriteString(fmt.Sprintf("shard[%d]: %s", idx, err.Error()))
 		}
 	}
-	if errs == "" {
-		return stats, nil
+	if errs.String() == "" {
+		return stats.String(), nil
 	} else {
-		return stats, errors.New(errs)
+		return stats.String(), errors.New(errs.String())
 	}
 }
 
 func (db *shardedDB) Compact(start []byte, limit []byte) error {
-	errs := ""
+	var errs strings.Builder
 	for idx, shard := range db.shards {
 		if err := shard.Compact(start, limit); err != nil {
-			errs += fmt.Sprintf("shard[%d]: %s", idx, err.Error())
+			errs.WriteString(fmt.Sprintf("shard[%d]: %s", idx, err.Error()))
 		}
 	}
-	if errs == "" {
+	if errs.String() == "" {
 		return nil
 	} else {
-		return errors.New(errs)
+		return errors.New(errs.String())
 	}
 }

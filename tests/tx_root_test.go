@@ -123,7 +123,7 @@ func genTxs(num uint64) (types.Transactions, error) {
 		return tx, err
 	}
 	var txs types.Transactions
-	for i := uint64(0); i < num; i++ {
+	for i := range num {
 		tx, err := newTx(i)
 		if err != nil {
 			return nil, err

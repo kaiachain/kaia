@@ -244,14 +244,15 @@ func (t *TxInternalDataEthereumDynamicFee) setHashForMarshaling(hash *common.Has
 	t.Hash = hash
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SetSignature(signatures TxSignatures) {
+func (t *TxInternalDataEthereumDynamicFee) SetSignature(signatures TxSignatures) error {
 	if len(signatures) != 1 {
-		logger.Crit("TxTypeEthereumDynamicFee can receive only single signature!")
+		return errSingleSignatureOnly(t.Type(), len(signatures))
 	}
 
 	t.V = signatures[0].V
 	t.R = signatures[0].R
 	t.S = signatures[0].S
+	return nil
 }
 
 func (t *TxInternalDataEthereumDynamicFee) RawSignatureValues() TxSignatures {
@@ -396,6 +397,9 @@ func (t *TxInternalDataEthereumDynamicFee) UnmarshalJSON(bytes []byte) error {
 	t.Amount = (*big.Int)(js.Amount)
 	t.Payload = js.Payload
 	t.AccessList = js.AccessList
+	if len(js.TxSignatures) == 0 || js.TxSignatures[0] == nil {
+		return errEmptyTxSignatures
+	}
 	t.V = (*big.Int)(js.TxSignatures[0].V)
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)

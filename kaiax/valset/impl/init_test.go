@@ -25,11 +25,12 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -52,10 +53,11 @@ func TestStartStop(t *testing.T) {
 		mockStaking = staking_mock.NewMockStakingModule(ctrl) // not used in GetCouncil() stage.
 		v           = NewValsetModule()
 	)
-	defer ctrl.Finish()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(current).AnyTimes()
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= current.NumberU64(); i++ {
 		header := &types.Header{Number: big.NewInt(int64(i))}
@@ -147,10 +149,10 @@ func TestMigration(t *testing.T) {
 		mockStaking = staking_mock.NewMockStakingModule(ctrl) // not used in GetCouncil() stage.
 		v           = NewValsetModule()
 	)
-	defer ctrl.Finish()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= 2050; i++ {
 		header := &types.Header{Number: big.NewInt(int64(i)), Vote: votes[i]}
@@ -177,7 +179,7 @@ func TestMigration(t *testing.T) {
 	// 3. Before migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {
 		// council, _, err := v.replayFromIstanbulSnapshot(tc.num, false)
-		council, err := v.getCouncil(tc.num)
+		council, err := v.getCouncilPermissioned(tc.num)
 		require.NoError(t, err)
 		assert.Equal(t, tc.council, council.List(), tc.num)
 	}
@@ -202,13 +204,11 @@ func TestMigration(t *testing.T) {
 }
 
 func makeGenesisBlock(council []common.Address) *types.Block {
-	genesisExtra, _ := rlp.EncodeToBytes(&types.IstanbulExtra{
-		Validators:    council,
-		Seal:          make([]byte, types.IstanbulExtraSeal),
-		CommittedSeal: [][]byte{},
-	})
-	genesisExtraBytes := append(make([]byte, types.IstanbulExtraVanity), genesisExtra...)
-	return types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Extra: genesisExtraBytes})
+	header := &types.Header{Number: big.NewInt(0)}
+	if err := engine.NewSealer(nil, nil).WriteValidators(header, council); err != nil {
+		panic(err)
+	}
+	return types.NewBlockWithHeader(header)
 }
 
 func makeEmptyBlock(num uint64) *types.Block {

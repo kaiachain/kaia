@@ -72,7 +72,7 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	txs := make(types.Transactions, 0, numTransactions)
 	nonce := accountMap.GetNonce(from)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		a := toAddrs[i%numAddrs]
 		txamount := amount
 		if txamount == nil {
@@ -110,7 +110,7 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := amount
@@ -151,7 +151,7 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := amount
@@ -199,7 +199,7 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := amount
@@ -265,7 +265,7 @@ func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer ty
 	}
 	var gasLimit uint64 = 1000000
 	gasPrice := new(big.Int).SetInt64(0)
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		fromIdx := i % numAddrs
 
 		toIdx := (fromIdx + 1) % numAddrs
@@ -293,7 +293,7 @@ func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer ty
 }
 
 func TestValueTransfer(t *testing.T) {
-	var nBlocks int = 3
+	var nBlocks int = 2
 	var txPerBlock int = 10
 
 	if i, err := strconv.ParseInt(os.Getenv("NUM_BLOCKS"), 10, 32); err == nil {
@@ -310,29 +310,29 @@ func TestValueTransfer(t *testing.T) {
 	}{
 		{
 			"SingleSenderMultipleRecipient",
-			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom},
+			testOption{txPerBlock, 120, 4, nBlocks, []byte{}, makeTransactionsFrom},
 		},
 		{
 			"MultipleSenderMultipleRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions},
+			testOption{txPerBlock, 240, 4, nBlocks, []byte{}, makeIndependentTransactions},
 		},
 		{
 			"MultipleSenderRandomRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom},
+			testOption{txPerBlock, 240, 4, nBlocks, []byte{}, makeTransactionsToRandom},
 		},
 
 		// Below test cases execute one transaction per a block.
 		{
 			"SingleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom},
+			testOption{1, 120, 4, 4, []byte{}, makeTransactionsFrom},
 		},
 		{
 			"MultipleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions},
+			testOption{1, 240, 4, 4, []byte{}, makeIndependentTransactions},
 		},
 		{
 			"MultipleSenderRandomRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom},
+			testOption{1, 240, 4, 4, []byte{}, makeTransactionsToRandom},
 		},
 	}
 

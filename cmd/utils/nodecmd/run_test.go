@@ -143,6 +143,7 @@ func TestMain(m *testing.M) {
 func runKaia(t *testing.T, name string, args ...string) *testKaia {
 	tt := &testKaia{}
 	tt.TestCmd = utils.NewTestCmd(t, tt)
+	hasNtpFlag := false
 	for i, arg := range args {
 		switch {
 		case arg == "-datadir" || arg == "--datadir":
@@ -153,6 +154,8 @@ func runKaia(t *testing.T, name string, args ...string) *testKaia {
 			if i < len(args)-1 {
 				tt.Rewardbase = args[i+1]
 			}
+		case arg == "--ntp.disable" || arg == "--ntp.server":
+			hasNtpFlag = true
 		}
 	}
 	if tt.Datadir == "" {
@@ -165,6 +168,9 @@ func runKaia(t *testing.T, name string, args ...string) *testKaia {
 				tt.Cleanup()
 			}
 		}()
+	}
+	if !hasNtpFlag {
+		args = append([]string{"--ntp.disable"}, args...)
 	}
 
 	// Boot "Kaia". This actually runs the test binary but the TestMain

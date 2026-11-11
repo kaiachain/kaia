@@ -78,10 +78,10 @@ func newQueryEngine(ds *DBSyncer, taskQueue int, insertQueue int) *QueryEngine {
 		taskQueue:   taskQueue,
 		insertQueue: insertQueue,
 	}
-	for i := 0; i < taskQueue; i++ {
+	for range taskQueue {
 		go queryEngine.processing()
 	}
-	for i := 0; i < insertQueue; i++ {
+	for range insertQueue {
 		go queryEngine.executing()
 	}
 
@@ -184,7 +184,7 @@ func (qe *QueryEngine) executeBulkInsert(bulkInserts []*BulkInsertQuery, result 
 
 	// Ensure we have meaningful task sizes and schedule the recoveries
 	tasks := min(len(bulkInserts), qe.insertQueue)
-	for i := 0; i < tasks; i++ {
+	for i := range tasks {
 		qe.inserts <- &BulkInsertRequest{
 			bulkInserts: bulkInserts[i:],
 			inc:         tasks,

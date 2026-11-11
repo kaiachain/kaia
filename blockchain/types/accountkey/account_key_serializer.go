@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/pkg/errors"
 )
@@ -82,6 +83,10 @@ func (serializer *AccountKeySerializer) MarshalJSON() ([]byte, error) {
 }
 
 func (serializer *AccountKeySerializer) UnmarshalJSON(b []byte) error {
+	return serializer.unmarshalJSON(b, true)
+}
+
+func (serializer *AccountKeySerializer) unmarshalJSON(b []byte, allowComposite bool) error {
 	var keyJSON AccountKeyJSON
 
 	if err := json.Unmarshal(b, &keyJSON); err != nil {
@@ -97,6 +102,9 @@ func (serializer *AccountKeySerializer) UnmarshalJSON(b []byte) error {
 	serializer.key, err = NewAccountKey(serializer.keyType)
 	if err != nil {
 		return err
+	}
+	if !allowComposite && serializer.key.IsCompositeType() {
+		return kerrors.ErrNestedCompositeType
 	}
 
 	return json.Unmarshal(keyJSON.Key, serializer.key)

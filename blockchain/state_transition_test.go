@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/holiman/uint256"
 	mock_bc "github.com/kaiachain/kaia/blockchain/mocks"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -35,7 +36,9 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +52,7 @@ func TestGetVMerrFromReceiptStatus(t *testing.T) {
 		{types.ReceiptStatusLast, ErrInvalidReceiptStatus},
 		{types.ReceiptStatusSuccessful, nil},
 		{types.ReceiptStatusErrDefault, ErrVMDefault},
+		{types.ReceiptStatusErrZeroThreshold, kerrors.ErrZeroThreshold},
 	}
 
 	for _, tc := range testData {
@@ -75,6 +79,45 @@ func TestGetReceiptStatusFromVMerr(t *testing.T) {
 	expectedStatus = types.ReceiptStatusErrDefault
 	if status != expectedStatus {
 		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
+	}
+
+	// Account key installation error. It must not fall back to ReceiptStatusErrDefault.
+	status = getReceiptStatusFromErrTxFailed(kerrors.ErrZeroThreshold)
+	expectedStatus = types.ReceiptStatusErrZeroThreshold
+	if status != expectedStatus {
+		t.Fatalf("Invalid receipt status, want %d, got %d", expectedStatus, status)
+	}
+}
+
+// TestReceiptStatusTablesAreConsistent checks that every value in
+// [ReceiptStatusSuccessful, ReceiptStatusLast) is a real receipt status and that
+// errTxFailed2receiptstatus and receiptstatus2errTxFailed are inverses of each other,
+// so an error cannot be given a status without being decodable, or vice versa.
+func TestReceiptStatusTablesAreConsistent(t *testing.T) {
+	// Receipt statuses must be consecutive (see the NOTE in blockchain/types/receipt.go).
+	for status := types.ReceiptStatusSuccessful; status < types.ReceiptStatusLast; status++ {
+		if _, ok := receiptstatus2errTxFailed[status]; !ok {
+			t.Errorf("receipt status 0x%02x has no error", status)
+		}
+	}
+	if got, want := len(receiptstatus2errTxFailed), int(types.ReceiptStatusLast-types.ReceiptStatusSuccessful); got != want {
+		t.Errorf("receiptstatus2errTxFailed has %d entries, want %d", got, want)
+	}
+
+	// ReceiptStatusErrDefault is the only one-way entry: unknown errors map to it,
+	// but ErrVMDefault itself is never raised by execution.
+	for err, status := range errTxFailed2receiptstatus {
+		if got := receiptstatus2errTxFailed[status]; got != err {
+			t.Errorf("status 0x%02x decodes to %v, want %v", status, got, err)
+		}
+	}
+	for status, err := range receiptstatus2errTxFailed {
+		if status == types.ReceiptStatusErrDefault {
+			continue
+		}
+		if got := errTxFailed2receiptstatus[err]; got != status {
+			t.Errorf("error %v encodes to 0x%02x, want 0x%02x", err, got, status)
+		}
 	}
 }
 
@@ -505,6 +548,36 @@ func TestStateTransition_preCheck(t *testing.T) {
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
 				// No calls expected in prefetching mode
+			},
+		},
+		// === Fee ratio checks ===
+		{
+			name:          "fee ratio above 100 is rejected",
+			config:        kaiaChainConfig,
+			expectedError: kerrors.ErrFeeRatioOutOfRange,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().ValidatedFeePayer().Return(to).AnyTimes()
+				mockMsg.EXPECT().FeeRatio().Return(types.FeeRatio(150), true).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				// Rejected before any balance is read or changed.
+				m.EXPECT().GetNonce(addr).Return(nonce)
 			},
 		},
 		// === Nonce checks ===
@@ -1088,4 +1161,78 @@ func TestStateTransition_EIP7623(t *testing.T) {
 	res, err = NewStateTransition(evm, tx).TransitionDb()
 	assert.NoError(t, err)
 	assert.Equal(t, gaslimit2, res.UsedGas)
+}
+
+// TestStateTransition_NonDeferredFee verifies where the transaction fee goes in non-deferred mode
+// (reward.deferredtxfee = false) across hardforks:
+//   - before Magma: the whole fee is credited to Coinbase (the block author).
+//   - since Magma, before Permissionless: the whole fee is credited to Rewardbase. The Magma rule
+//     specifies a half burn, but it was only implemented in v3.0.0-rc.1 (#816), so blocks produced by
+//     earlier versions credited the whole fee. They must stay replayable (#1097).
+//   - since Permissionless: half the fee is credited to Rewardbase and the other half is burned.
+func TestStateTransition_NonDeferredFee(t *testing.T) {
+	var (
+		key, _     = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		sender     = crypto.PubkeyToAddress(key.PublicKey)
+		to         = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		coinbase   = common.HexToAddress("0x000000000000000000000000000000000000c0de")
+		rewardbase = common.HexToAddress("0x000000000000000000000000000000000000beef")
+		gasPrice   = big.NewInt(25 * params.Gkei)
+		gasLimit   = uint64(21000) // basic transfer, all gas consumed
+	)
+
+	fee := new(big.Int).Mul(gasPrice, big.NewInt(int64(gasLimit)))
+	halfFee := new(big.Int).Div(fee, big.NewInt(2))
+	initialBalance := new(big.Int).Mul(fee, big.NewInt(10))
+
+	testcases := []struct {
+		desc           string
+		maxHardfork    string // see params.TestKaiaConfig
+		wantCoinbase   *big.Int
+		wantRewardbase *big.Int
+	}{
+		{"pre-magma: whole fee to Coinbase", "ethTxType", fee, big.NewInt(0)},
+		{"magma before permissionless: whole fee to Rewardbase", "osaka", big.NewInt(0), fee},
+		{"permissionless: half fee to Rewardbase, half burned", "permissionless", big.NewInt(0), halfFee},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.desc, func(t *testing.T) {
+			// TestKaiaConfig has DeferredTxFee=false (the default).
+			config := params.TestKaiaConfig(tc.maxHardfork)
+			require.False(t, config.Governance.DeferredTxFee())
+			fork.SetHardForkBlockNumberConfig(config)
+			t.Cleanup(func() { fork.SetHardForkBlockNumberConfig(params.TestChainConfig) })
+			signer := types.LatestSignerForChainID(config.ChainID)
+
+			// Fund the sender with enough balance to cover gas.
+			statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+			statedb.AddBalance(sender, initialBalance)
+
+			tx, err := types.SignTx(
+				types.NewTransaction(0, to, big.NewInt(0), gasLimit, gasPrice, nil),
+				signer, key,
+			)
+			require.NoError(t, err)
+			msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, 0)
+			require.NoError(t, err)
+
+			header := &types.Header{
+				Number:     big.NewInt(0),
+				Time:       big.NewInt(0),
+				BlockScore: big.NewInt(0),
+				Rewardbase: rewardbase,
+			}
+			blockContext := NewEVMBlockContext(header, nil, &coinbase)
+			txContext := NewEVMTxContext(msg, header, config)
+			evm := vm.NewEVM(blockContext, txContext, statedb, config, &vm.Config{})
+
+			_, err = NewStateTransition(evm, msg).TransitionDb()
+			require.NoError(t, err)
+
+			// The sender always pays the whole fee; only the credited amount depends on the hardfork.
+			assert.Zero(t, new(big.Int).Sub(initialBalance, fee).Cmp(statedb.GetBalance(sender)), "sender balance")
+			assert.Zero(t, tc.wantCoinbase.Cmp(statedb.GetBalance(coinbase)), "coinbase balance: want %s got %s", tc.wantCoinbase, statedb.GetBalance(coinbase))
+			assert.Zero(t, tc.wantRewardbase.Cmp(statedb.GetBalance(rewardbase)), "rewardbase balance: want %s got %s", tc.wantRewardbase, statedb.GetBalance(rewardbase))
+		})
+	}
 }

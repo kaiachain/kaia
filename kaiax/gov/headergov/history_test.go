@@ -34,7 +34,7 @@ func TestSearch(t *testing.T) {
 	}
 
 	gh := GovsToHistory(govs)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		t.Run(fmt.Sprintf("Block %d", i), func(t *testing.T) {
 			gp, err := gh.Search(uint64(i))
 			assert.Nil(t, err)

@@ -39,7 +39,6 @@ func (h *headerGovModule) RemoveVotesAfter(blockNum uint64) {
 }
 
 func (h *headerGovModule) RemoveGovAfter(blockNum uint64) {
-
 	dirty := false
 	for blockNumIter := range h.governances {
 		if blockNumIter > blockNum {

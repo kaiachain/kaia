@@ -45,17 +45,22 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Reduce some of the parameters to make the tester faster.
 func init() {
-	MaxForkAncestry = uint64(10000)
-	blockCacheMaxItems = 1024
-	fsHeaderContCheck = 500 * time.Millisecond
+	MaxForkAncestry = uint64(512)
+	MaxHashFetch = 64
+	MaxHeaderFetch = 16
+	MaxBlockFetch = 16
+	blockCacheMaxItems = 80
+	fsHeaderContCheck = 200 * time.Millisecond
 }
 
 var (
@@ -163,7 +168,9 @@ func newTesterWithConfig(t *testing.T, config *params.ChainConfig) *downloadTest
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
 	tester.stateDb = localdb
-	tester.stateDb.WriteTrieNode(genesisBlock.Root().ExtendZero(), []byte{0x00})
+	if err := copyTrieNode(localdb, remotedb, genesisBlock.Root()); err != nil {
+		panic(fmt.Sprintf("failed to initialize genesis state root: %v", err))
+	}
 
 	mockCtrl := gomock.NewController(t)
 	mStaking := mock.NewMockStakingModule(mockCtrl)
@@ -182,6 +189,15 @@ func newTesterWithConfig(t *testing.T, config *params.ChainConfig) *downloadTest
 // newTester creates a new downloader test mocker.
 func newTester(t *testing.T) *downloadTester {
 	return newTesterWithConfig(t, params.TestChainConfig)
+}
+
+func copyTrieNode(dst, src database.DBManager, root common.Hash) error {
+	blob, err := src.ReadTrieNode(root.ExtendZero())
+	if err != nil {
+		return err
+	}
+	dst.WriteTrieNode(root.ExtendZero(), blob)
+	return nil
 }
 
 func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*staking.P2PStakingInfo, []byte) {
@@ -404,10 +420,22 @@ func (dl *downloadTester) CurrentFastBlock() *types.Block {
 
 // FastSyncCommitHead manually sets the head block to a given hash.
 func (dl *downloadTester) FastSyncCommitHead(hash common.Hash) error {
-	// For now only check that the state trie is correct
 	if block := dl.GetBlockByHash(hash); block != nil {
-		_, err := statedb.NewSecureTrie(block.Root(), statedb.NewDatabase(dl.stateDb), nil)
-		return err
+		// The download tester only models state sync at the root-node level.
+		// Full trie reconstruction is covered by statedb/state package tests.
+		blob, err := dl.stateDb.ReadTrieNode(block.Root().ExtendZero())
+		if err != nil {
+			return err
+		}
+		if len(blob) == 0 {
+			return fmt.Errorf("missing state root node: %x", block.Root())
+		}
+		if _, rest, err := rlp.SplitList(blob); err != nil {
+			return err
+		} else if len(rest) != 0 {
+			return fmt.Errorf("unexpected trailing bytes in state root node: %x", block.Root())
+		}
+		return nil
 	}
 	return fmt.Errorf("non existent block: %x", hash[:4])
 }
@@ -471,7 +499,9 @@ func (dl *downloadTester) InsertChain(blocks types.Blocks) (int, error) {
 			dl.ownHeaders[block.Hash()] = block.Header()
 		}
 		dl.ownBlocks[block.Hash()] = block
-		dl.stateDb.WriteTrieNode(block.Root().ExtendZero(), []byte{0x00})
+		if err := copyTrieNode(dl.stateDb, dl.peerDb, block.Root()); err != nil {
+			return i, fmt.Errorf("InsertChain: missing block state root %x: %w", block.Root(), err)
+		}
 		dl.ownChainTd[block.Hash()] = new(big.Int).Add(dl.ownChainTd[block.ParentHash()], block.BlockScore())
 	}
 	return len(blocks), nil
@@ -1164,6 +1194,38 @@ func testCancel(t *testing.T, protocol int, mode SyncMode) {
 	}
 }
 
+// Tests that dropping the peer a sync runs against cancels the sync, and dropping another peer doesn't.
+func TestMasterPeerDropCancelsSync(t *testing.T) {
+	t.Parallel()
+
+	tester := newTester(t)
+	defer tester.terminate()
+
+	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(MaxHeaderFetch, 0, tester.genesis, nil, false)
+	tester.newSlowPeer("master", 65, hashes, headers, blocks, receipts, stakingInfos, 5*time.Second)
+	tester.newPeer("other", 65, hashes, headers, blocks, receipts, stakingInfos)
+
+	errc := make(chan error, 1)
+	go func() { errc <- tester.sync("master", nil, FullSync) }()
+	require.Eventually(t, func() bool { return tester.downloader.isMasterPeer("master") }, time.Second, 10*time.Millisecond)
+
+	// Unregister only: the master's pending request still reads its chain after the test.
+	require.NoError(t, tester.downloader.UnregisterPeer("other"))
+	select {
+	case err := <-errc:
+		t.Fatalf("sync ended after a non-master peer dropped: %v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	require.NoError(t, tester.downloader.UnregisterPeer("master"))
+	select {
+	case err := <-errc:
+		assert.ErrorIs(t, err, errCanceled)
+	case <-time.After(2 * time.Second):
+		t.Fatal("sync still running after its master peer dropped")
+	}
+}
+
 // Tests that synchronisation from multiple peers works as intended (multi thread sanity test).
 func TestMultiSynchronisation62(t *testing.T)      { testMultiSynchronisation(t, 62, FullSync) }
 func TestMultiSynchronisation63Full(t *testing.T)  { testMultiSynchronisation(t, 63, FullSync) }
@@ -1183,7 +1245,7 @@ func testMultiSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	targetBlocks := targetPeers*blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
-	for i := 0; i < targetPeers; i++ {
+	for i := range targetPeers {
 		id := fmt.Sprintf("peer #%d", i)
 		tester.newPeer(id, protocol, hashes[i*blockCacheMaxItems:], headers, blocks, receipts, stakingInfos)
 	}
@@ -1471,6 +1533,162 @@ func testHighTDStarvationAttack(t *testing.T, protocol int, mode SyncMode) {
 	}
 }
 
+func runDeliveryErrorFetcher(d *Downloader, deliveryCh chan dataPack, deliver func(dataPack) (int, error), setIdle func(*peerConnection, int, time.Time)) error {
+	return d.fetchParts(
+		deliveryCh,
+		deliver,
+		make(chan bool),
+		func() map[string]int { return nil },
+		func() int { return 0 },
+		func() bool { return false },
+		func(*peerConnection, int) (*fetchRequest, bool, bool) { return nil, false, false },
+		nil,
+		func(*peerConnection, *fetchRequest) error { return nil },
+		func(*fetchRequest) {},
+		func(*peerConnection) int { return 1 },
+		func() ([]*peerConnection, int) { return nil, d.peers.Len() },
+		setIdle,
+		"bodies",
+	)
+}
+
+func newDeliveryErrorDownloader(t *testing.T, master string, dropPeer peerDropFn) *Downloader {
+	t.Helper()
+
+	d := &Downloader{
+		peers:      newPeerSet(),
+		dropPeer:   dropPeer,
+		cancelCh:   make(chan struct{}),
+		cancelPeer: master,
+	}
+	for _, id := range []string{master, "helper"} {
+		if err := d.peers.Register(newPeerConnection(id, 68, nil, logger.NewWith("peer", id))); err != nil {
+			t.Fatalf("failed to register peer %s: %v", id, err)
+		}
+	}
+	return d
+}
+
+func TestFetchPartsHandlesInvalidBodyPeer(t *testing.T) {
+	testFetchPartsHandlesInvalidDataPeer(t, fmt.Errorf("partial failure: %w", errInvalidBody), errInvalidBody)
+}
+
+func TestFetchPartsHandlesInvalidReceiptPeer(t *testing.T) {
+	testFetchPartsHandlesInvalidDataPeer(t, fmt.Errorf("partial failure: %w", errInvalidReceipt), errInvalidReceipt)
+}
+
+func testFetchPartsHandlesInvalidDataPeer(t *testing.T, deliveryErr, want error) {
+	t.Helper()
+	t.Run("helper", func(t *testing.T) {
+		dropped := make(chan string, 1)
+		var d *Downloader
+		d = newDeliveryErrorDownloader(t, "master", func(id string) {
+			dropped <- id
+			_ = d.peers.Unregister(id)
+		})
+		deliveryCh := make(chan dataPack, 1)
+		deliveryCh <- &bodyPack{peerId: "helper"}
+
+		result := make(chan error, 1)
+		go func() {
+			result <- runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+				return 0, deliveryErr
+			}, func(*peerConnection, int, time.Time) {
+				t.Error("dropped delivery peer must not be returned to idle")
+			})
+		}()
+
+		select {
+		case id := <-dropped:
+			if id != "helper" {
+				t.Fatalf("expected helper to be dropped, got %s", id)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("delivery peer was not dropped")
+		}
+		close(d.cancelCh)
+		if err := <-result; !errors.Is(err, errCanceled) {
+			t.Fatalf("expected fetcher cancellation, got %v", err)
+		}
+	})
+
+	t.Run("master", func(t *testing.T) {
+		d := newDeliveryErrorDownloader(t, "master", func(id string) {
+			t.Errorf("master must be dropped by Synchronise, not fetchParts: %s", id)
+		})
+		deliveryCh := make(chan dataPack, 1)
+		deliveryCh <- &bodyPack{peerId: "master"}
+
+		err := runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+			return 0, deliveryErr
+		}, func(*peerConnection, int, time.Time) {
+			t.Error("master delivery peer must not be returned to idle")
+		})
+		if !errors.Is(err, want) {
+			t.Fatalf("expected %v, got %v", want, err)
+		}
+	})
+}
+
+func TestFetchPartsIdlesPeerAfterPartialStaleDelivery(t *testing.T) {
+	d := newDeliveryErrorDownloader(t, "master", nil)
+	deliveryCh := make(chan dataPack, 1)
+	deliveryCh <- &bodyPack{peerId: "helper"}
+
+	type idleResult struct {
+		id       string
+		accepted int
+	}
+	idled := make(chan idleResult, 1)
+	result := make(chan error, 1)
+	go func() {
+		result <- runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+			return 1, fmt.Errorf("partial failure: %w", errStaleDelivery)
+		}, func(peer *peerConnection, accepted int, _ time.Time) {
+			idled <- idleResult{peer.id, accepted}
+		})
+	}()
+
+	select {
+	case got := <-idled:
+		if got.id != "helper" || got.accepted != 1 {
+			t.Fatalf("unexpected idle result: %+v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("peer was not returned to idle after partial stale delivery")
+	}
+	close(d.cancelCh)
+	if err := <-result; !errors.Is(err, errCanceled) {
+		t.Fatalf("expected fetcher cancellation, got %v", err)
+	}
+}
+
+func TestFetchPartsIgnoresLateDelivery(t *testing.T) {
+	var drops, idles, deliveries int
+	d := newDeliveryErrorDownloader(t, "master", func(string) { drops++ })
+	deliveryCh := make(chan dataPack, 2)
+	deliveryCh <- &bodyPack{peerId: "helper"}
+	deliveryCh <- &bodyPack{peerId: "helper"}
+
+	err := runDeliveryErrorFetcher(d, deliveryCh, func(dataPack) (int, error) {
+		deliveries++
+		if deliveries == 1 {
+			return 0, errLateDelivery
+		}
+		return 0, errInvalidChain
+	}, func(*peerConnection, int, time.Time) { idles++ })
+
+	if !errors.Is(err, errInvalidChain) {
+		t.Fatalf("expected second delivery to stop the fetcher, got %v", err)
+	}
+	if deliveries != 2 {
+		t.Fatalf("late delivery stopped the fetcher after %d deliveries", deliveries)
+	}
+	if drops != 0 || idles != 0 {
+		t.Fatalf("late delivery changed peer state: drops=%d idles=%d", drops, idles)
+	}
+}
+
 // Tests that misbehaving peers are disconnected, whilst behaving ones are not.
 func TestBlockHeaderAttackerDropping62(t *testing.T) { testBlockHeaderAttackerDropping(t, 62) }
 func TestBlockHeaderAttackerDropping63(t *testing.T) { testBlockHeaderAttackerDropping(t, 63) }
@@ -1485,19 +1703,22 @@ func testBlockHeaderAttackerDropping(t *testing.T, protocol int) {
 		result error
 		drop   bool
 	}{
-		{nil, false},                        // Sync succeeded, all is well
-		{errBusy, false},                    // Sync is already in progress, no problem
-		{errUnknownPeer, false},             // Peer is unknown, was already dropped, don't double drop
-		{errBadPeer, true},                  // Peer was deemed bad for some reason, drop it
-		{errStallingPeer, true},             // Peer was detected to be stalling, drop it
-		{errNoPeers, false},                 // No peers to download from, soft race, no issue
-		{errTimeout, true},                  // No hashes received in due time, drop the peer
-		{errEmptyHeaderSet, true},           // No headers were returned as a response, drop as it's a dead end
-		{errPeersUnavailable, true},         // Nobody had the advertised blocks, drop the advertiser
-		{errInvalidAncestor, true},          // Agreed upon ancestor is not acceptable, drop the chain rewriter
-		{errInvalidChain, true},             // Hash chain was detected as invalid, definitely drop
-		{errInvalidBody, false},             // A bad peer was detected, but not the sync origin
-		{errInvalidReceipt, false},          // A bad peer was detected, but not the sync origin
+		{nil, false},                // Sync succeeded, all is well
+		{errBusy, false},            // Sync is already in progress, no problem
+		{errUnknownPeer, false},     // Peer is unknown, was already dropped, don't double drop
+		{errBadPeer, true},          // Peer was deemed bad for some reason, drop it
+		{errStallingPeer, true},     // Peer was detected to be stalling, drop it
+		{errNoPeers, false},         // No peers to download from, soft race, no issue
+		{errTimeout, true},          // No hashes received in due time, drop the peer
+		{errEmptyHeaderSet, true},   // No headers were returned as a response, drop as it's a dead end
+		{errPeersUnavailable, true}, // Nobody had the advertised blocks, drop the advertiser
+		{errInvalidAncestor, true},  // Agreed upon ancestor is not acceptable, drop the chain rewriter
+		{errInvalidChain, true},     // Hash chain was detected as invalid, definitely drop
+		{errInvalidBody, true},      // Invalid body delivered by the sync origin
+		{errInvalidReceipt, true},   // Invalid receipts delivered by the sync origin
+		{fmt.Errorf("wrapped: %w", errInvalidChain), true},
+		{fmt.Errorf("wrapped: %w", errInvalidBody), true},
+		{fmt.Errorf("wrapped: %w", errInvalidReceipt), true},
 		{errCancelContentProcessing, false}, // Synchronisation was canceled, origin may be innocent, don't drop
 	}
 	// Run the tests and check disconnection status
@@ -1895,7 +2116,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts, stakingInfos := master.makeChain(5, 0, master.genesis, nil, false)
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		tester := newTester(t)
 		tester.peerDb = master.peerDb
 
@@ -1963,6 +2184,57 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	}
 }
 
+// newRecoveryTester starts a staking info recovery from "requested" and returns the
+// tester. The peer answers slowly, so the recovery is still pending on return.
+func newRecoveryTester(t *testing.T) *downloadTester {
+	config := params.TestKaiaConfig("cancun")
+	config.Governance.Reward.StakingUpdateInterval = testInterval
+
+	tester := newTesterWithConfig(t, config)
+	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(16, 0, tester.genesis, nil, false)
+	if err := tester.newSlowPeer("requested", 65, hashes, headers, blocks, receipts, stakingInfos, 500*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	for hash, info := range stakingInfos {
+		tester.stateDb.WriteCanonicalHash(hash, info.BlockNum)
+	}
+	// Pending blocks become [4, 8].
+	if err := tester.downloader.SyncStakingInfo("requested", 9, 9); err != nil {
+		t.Fatal(err)
+	}
+	return tester
+}
+
+func TestSyncStakingInfoIgnoresUnselectedPeer(t *testing.T) {
+	tester := newRecoveryTester(t)
+	defer tester.terminate()
+
+	forged := &staking.P2PStakingInfo{BlockNum: 4, KEFAddr: common.HexToAddress("0x2222222222222222222222222222222222222222")}
+	tester.downloader.DeliverStakingInfos("mallory", []*staking.P2PStakingInfo{forged})
+	time.Sleep(200 * time.Millisecond)
+
+	if si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), forged.BlockNum); si != nil {
+		t.Fatalf("staking info from an unselected peer was persisted: %+v", si)
+	}
+}
+
+func TestSyncStakingInfoRejectsOverlongBatch(t *testing.T) {
+	tester := newRecoveryTester(t)
+	defer tester.terminate()
+
+	// Three entries against two pending blocks: the batch must be dropped whole.
+	tester.downloader.DeliverStakingInfos("requested", []*staking.P2PStakingInfo{
+		{BlockNum: 4}, {BlockNum: 8}, {BlockNum: 12},
+	})
+	time.Sleep(200 * time.Millisecond)
+
+	for _, num := range []uint64{4, 8, 12} {
+		if si := staking_impl.ReadStakingInfo(tester.stateDb.GetMiscDB(), num); si != nil {
+			t.Fatalf("an entry of the overlong batch was persisted at %d: %+v", num, si)
+		}
+	}
+}
+
 func TestCalcStakingBlockNumber(t *testing.T) {
 	testCase := []struct {
 		interval uint64
@@ -1992,7 +2264,7 @@ func TestCalcStakingBlockNumber(t *testing.T) {
 		{86400, 259201, 172800},
 	}
 
-	for i := 0; i < len(testCase); i++ {
+	for i := range testCase {
 		result := calcStakingBlockNumber(testCase[i].blockNu, testCase[i].interval)
 
 		if result != testCase[i].result {

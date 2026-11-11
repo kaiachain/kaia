@@ -48,7 +48,7 @@ func TestSortedMap_Put(t *testing.T) {
 	sortedMap := NewItemSortedMap(sizeOfSortedMap)
 
 	// test a sortedMap without a size limit.
-	for i := uint64(0); i < 10000000; i++ {
+	for i := range uint64(10000000) {
 		err := sortedMap.Put(newItem(i))
 		assert.NoError(t, err)
 		assert.Equal(t, int(i+1), sortedMap.Len())

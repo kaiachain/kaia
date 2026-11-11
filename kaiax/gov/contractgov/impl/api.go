@@ -26,7 +26,10 @@ func NewContractGovAPI(c *contractGovModule) *contractGovAPI {
 }
 
 func (api *contractGovAPI) GetContractParams(num rpc.BlockNumber, govParam *common.Address) (gov.PartialParamSet, error) {
-	blockNum := num.Uint64()
+	blockNum, err := api.blockNumber(num)
+	if err != nil {
+		return nil, err
+	}
 	var govParamAddr common.Address
 	if govParam != nil {
 		govParamAddr = *govParam
@@ -41,4 +44,15 @@ func (api *contractGovAPI) GetContractParams(num rpc.BlockNumber, govParam *comm
 	}
 
 	return params, nil
+}
+
+func (api *contractGovAPI) blockNumber(num rpc.BlockNumber) (uint64, error) {
+	head := api.c.Chain.CurrentBlock().NumberU64()
+	if num == rpc.LatestBlockNumber || num == rpc.PendingBlockNumber {
+		return head, nil
+	}
+	if num.Int64() < 0 || num.Uint64() > head {
+		return 0, gov.ErrUnknownBlock
+	}
+	return num.Uint64(), nil
 }

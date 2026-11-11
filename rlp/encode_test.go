@@ -493,9 +493,9 @@ func TestEncodeToReaderPiecewise(t *testing.T) {
 func TestEncodeToReaderReturnToPool(t *testing.T) {
 	buf := make([]byte, 50)
 	wg := new(sync.WaitGroup)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Go(func() {
-			for i := 0; i < 1000; i++ {
+			for range 1000 {
 				_, r, _ := EncodeToReader("foo")
 				io.ReadAll(r)
 				r.Read(buf)

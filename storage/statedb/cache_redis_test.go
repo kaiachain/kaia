@@ -168,7 +168,7 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 
 	itemsLen := redisSetItemChannelSize * 2
 	items := make([]setItem, itemsLen)
-	for i := 0; i < itemsLen; i++ {
+	for i := range itemsLen {
 		items[i].key = randBytes(32)
 		items[i].value = randBytes(500)
 	}
@@ -177,7 +177,7 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 		// wait for a while to avoid redis setItem channel full
 		time.Sleep(sleepDurationForAsyncBehavior)
 
-		for i := 0; i < itemsLen; i++ {
+		for i := range itemsLen {
 			if i == redisSetItemChannelSize {
 				// sleep for a while because Set command can drop an item if setItem channel is full
 				time.Sleep(2 * time.Second)

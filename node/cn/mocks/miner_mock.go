@@ -11,7 +11,6 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	kaiax "github.com/kaiachain/kaia/kaiax"
-	work "github.com/kaiachain/kaia/work"
 )
 
 // MockMiner is a mock of Miner interface.
@@ -35,20 +34,6 @@ func NewMockMiner(ctrl *gomock.Controller) *MockMiner {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMiner) EXPECT() *MockMinerMockRecorder {
 	return m.recorder
-}
-
-// HashRate mocks base method.
-func (m *MockMiner) HashRate() int64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HashRate")
-	ret0, _ := ret[0].(int64)
-	return ret0
-}
-
-// HashRate indicates an expected call of HashRate.
-func (mr *MockMinerMockRecorder) HashRate() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HashRate", reflect.TypeOf((*MockMiner)(nil).HashRate))
 }
 
 // Mining mocks base method.
@@ -93,18 +78,6 @@ func (m *MockMiner) PendingBlock() *types.Block {
 func (mr *MockMinerMockRecorder) PendingBlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingBlock", reflect.TypeOf((*MockMiner)(nil).PendingBlock))
-}
-
-// Register mocks base method.
-func (m *MockMiner) Register(arg0 work.Agent) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Register", arg0)
-}
-
-// Register indicates an expected call of Register.
-func (mr *MockMinerMockRecorder) Register(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockMiner)(nil).Register), arg0)
 }
 
 // RegisterExecutionModule mocks base method.

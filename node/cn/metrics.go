@@ -23,7 +23,7 @@
 package cn
 
 import (
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus"
 	metricutils "github.com/kaiachain/kaia/metrics/utils"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/rcrowley/go-metrics"
@@ -123,7 +123,7 @@ func (rw *meteredMsgReadWriter) ReadMsg() (p2p.Msg, error) {
 		packets, traffic = propBlockInPacketsMeter, propBlockInTrafficMeter
 	case msg.Code == TxMsg:
 		packets, traffic = propTxnInPacketsMeter, propTxnInTrafficMeter
-	case msg.Code == backend.IstanbulMsg:
+	case msg.Code == consensus.ConsensusMsgCode:
 		packets, traffic = propConsensusIstanbulInPacketsMeter, propConsensusIstanbulInTrafficMeter
 	}
 	packets.Mark(1)
@@ -152,7 +152,7 @@ func (rw *meteredMsgReadWriter) WriteMsg(msg p2p.Msg) error {
 		packets, traffic = propBlockOutPacketsMeter, propBlockOutTrafficMeter
 	case msg.Code == TxMsg:
 		packets, traffic = propTxnOutPacketsMeter, propTxnOutTrafficMeter
-	case msg.Code == backend.IstanbulMsg:
+	case msg.Code == consensus.ConsensusMsgCode:
 		packets, traffic = propConsensusIstanbulOutPacketsMeter, propConsensusIstanbulOutTrafficMeter
 	}
 	packets.Mark(1)

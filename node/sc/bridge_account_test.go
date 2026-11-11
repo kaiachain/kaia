@@ -22,12 +22,11 @@ import (
 	"math"
 	"math/big"
 	"os"
-	"path"
+	"runtime"
 	"testing"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/keystore"
-	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,20 +43,9 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	assert.NoError(t, err)
+	bAcc, pPwdStr, cPwdStr := newBridgeAccountsForTest(t, nil, config.DataDir)
 	assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
-
-	pPwdFilePath := path.Join(tempDir, "parent_bridge_account", bAcc.pAccount.address.String())
-	pPwd, err := os.ReadFile(pPwdFilePath)
-	pPwdStr := string(pPwd)
-	assert.NoError(t, err)
-
-	cPwdFilePath := path.Join(tempDir, "child_bridge_account", bAcc.cAccount.address.String())
-	cPwd, err := os.ReadFile(cPwdFilePath)
-	cPwdStr := string(cPwd)
-	assert.NoError(t, err)
 
 	lockAccountsWithCheck := func(t *testing.T, bAcc *BridgeAccounts) {
 		{
@@ -72,84 +60,56 @@ func TestBridgeAccountLockUnlock(t *testing.T) {
 		}
 	}
 
-	unlockParentAccountWithCheck := func(t *testing.T, bAcc *BridgeAccounts, passwd string, duration *uint64, expectedErr error) {
-		expectedIsUnLock := false
-		if expectedErr == nil {
-			expectedIsUnLock = true
-		}
-
-		err := bAcc.pAccount.UnLockAccount(passwd, duration)
-		assert.Equal(t, expectedErr, err)
-
-		time.Sleep(time.Second)
-
-		if duration == nil || *duration == 0 {
-			assert.Equal(t, expectedIsUnLock, bAcc.pAccount.IsUnlockedAccount())
-			return
-		}
-
-		time.Sleep(time.Duration(*duration) * time.Second)
-		assert.Equal(t, false, bAcc.pAccount.IsUnlockedAccount())
+	testCases := []struct {
+		name        string
+		preLockCnt  int
+		duration    int64
+		parentPass  string
+		childPass   string
+		expectedErr error
+	}{
+		{"invalid timeout", 3, int64(uint64(time.Duration(math.MaxInt64)/time.Second) + 1), pPwdStr, cPwdStr, errUnlockDurationTooLarge},
+		{"wrong password duration 0", 1, 0, pPwdStr[:3], cPwdStr[:3], keystore.ErrDecrypt},
+		{"success duration 0", 1, 0, pPwdStr, cPwdStr, nil},
+		{"success duration 1", 1, 1, pPwdStr, cPwdStr, nil},
+		{"wrong password duration 1", 1, 1, pPwdStr[:3], cPwdStr[:3], keystore.ErrDecrypt},
+		{"success nil duration", 1, -1, pPwdStr, cPwdStr, nil},
 	}
 
-	unlockChildAccountWithCheck := func(t *testing.T, bAcc *BridgeAccounts, passwd string, duration *uint64, expectedErr error) {
-		expectedIsUnLock := false
-		if expectedErr == nil {
-			expectedIsUnLock = true
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var durationPtr *uint64
+			if tc.duration >= 0 {
+				duration := uint64(tc.duration)
+				durationPtr = &duration
+			}
+			for i := 0; i < tc.preLockCnt; i++ {
+				lockAccountsWithCheck(t, bAcc)
+			}
 
-		err := bAcc.cAccount.UnLockAccount(passwd, duration)
-		assert.Equal(t, expectedErr, err)
+			expectedIsUnlock := tc.expectedErr == nil
 
-		time.Sleep(time.Second)
+			err := bAcc.pAccount.UnLockAccount(tc.parentPass, durationPtr)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, expectedIsUnlock, bAcc.pAccount.IsUnlockedAccount())
 
-		if duration == nil || *duration == 0 {
-			assert.Equal(t, expectedIsUnLock, bAcc.cAccount.IsUnlockedAccount())
-			return
-		}
+			err = bAcc.cAccount.UnLockAccount(tc.childPass, durationPtr)
+			assert.Equal(t, tc.expectedErr, err)
+			assert.Equal(t, expectedIsUnlock, bAcc.cAccount.IsUnlockedAccount())
 
-		time.Sleep(time.Duration(*duration) * time.Second)
-		assert.Equal(t, false, bAcc.cAccount.IsUnlockedAccount())
+			if tc.expectedErr != nil || durationPtr == nil || *durationPtr == 0 {
+				return
+			}
+
+			deadline := time.Now().Add(time.Duration(*durationPtr)*time.Second + 500*time.Millisecond)
+			for bAcc.pAccount.IsUnlockedAccount() || bAcc.cAccount.IsUnlockedAccount() {
+				if time.Now().After(deadline) {
+					t.Fatal("timeout waiting for unlock expiration")
+				}
+				runtime.Gosched()
+			}
+		})
 	}
-
-	// Double time Lock Account
-	lockAccountsWithCheck(t, bAcc)
-	lockAccountsWithCheck(t, bAcc)
-
-	// Fail to UnLock Account with invalid timeout
-	lockAccountsWithCheck(t, bAcc)
-	duration := uint64(time.Duration(math.MaxInt64)/time.Second) + 1
-	unlockParentAccountWithCheck(t, bAcc, pPwdStr, &duration, errUnlockDurationTooLarge)
-	unlockChildAccountWithCheck(t, bAcc, cPwdStr, &duration, errUnlockDurationTooLarge)
-
-	// Fail to UnLock Account with wrong password
-	lockAccountsWithCheck(t, bAcc)
-	duration = uint64(0)
-	unlockParentAccountWithCheck(t, bAcc, pPwdStr[:3], &duration, keystore.ErrDecrypt)
-	unlockChildAccountWithCheck(t, bAcc, cPwdStr[:3], &duration, keystore.ErrDecrypt)
-
-	// Succeed to UnLock Account
-	lockAccountsWithCheck(t, bAcc)
-	duration = uint64(0)
-	unlockParentAccountWithCheck(t, bAcc, pPwdStr, &duration, nil)
-	unlockChildAccountWithCheck(t, bAcc, cPwdStr, &duration, nil)
-
-	// Succeed to UnLock Account with timeout
-	lockAccountsWithCheck(t, bAcc)
-	duration = uint64(5)
-	unlockParentAccountWithCheck(t, bAcc, pPwdStr, &duration, nil)
-	unlockChildAccountWithCheck(t, bAcc, cPwdStr, &duration, nil)
-
-	// Fail to UnLock Account with wrong password
-	lockAccountsWithCheck(t, bAcc)
-	duration = uint64(5)
-	unlockParentAccountWithCheck(t, bAcc, pPwdStr[:3], &duration, keystore.ErrDecrypt)
-	unlockChildAccountWithCheck(t, bAcc, cPwdStr[:3], &duration, keystore.ErrDecrypt)
-
-	// Succeed to UnLock Account with nil timeout
-	lockAccountsWithCheck(t, bAcc)
-	unlockParentAccountWithCheck(t, bAcc, pPwdStr, nil, nil)
-	unlockChildAccountWithCheck(t, bAcc, cPwdStr, nil, nil)
 }
 
 // TestBridgeAccountInformation checks if the information result is right or not.
@@ -165,8 +125,7 @@ func TestBridgeAccountInformation(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bAcc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	assert.NoError(t, err)
+	bAcc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 	assert.Equal(t, true, bAcc.cAccount.IsUnlockedAccount())
 	assert.Equal(t, true, bAcc.pAccount.IsUnlockedAccount())
 

@@ -78,6 +78,7 @@ type BidInput struct {
 	To            common.Address `json:"to"`
 	Nonce         uint64         `json:"nonce"`
 	Bid           hexutil.Big    `json:"bid"`
+	MaxGasPrice   *hexutil.Big   `json:"maxGasPrice,omitempty"`
 	CallGasLimit  uint64         `json:"callGasLimit"`
 	Data          hexutil.Bytes  `json:"data"`
 	SearcherSig   hexutil.Bytes  `json:"searcherSig"`
@@ -96,6 +97,9 @@ func ToBid(bidInput BidInput) *auction.Bid {
 		Data:          bidInput.Data,
 		SearcherSig:   bidInput.SearcherSig,
 		AuctioneerSig: bidInput.AuctioneerSig,
+	}
+	if bidInput.MaxGasPrice != nil {
+		bidData.MaxGasPrice = bidInput.MaxGasPrice.ToInt()
 	}
 	return &auction.Bid{BidData: bidData}
 }

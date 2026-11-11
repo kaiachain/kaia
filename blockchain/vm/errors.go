@@ -31,6 +31,7 @@ var (
 	ErrCodeStoreOutOfGas                 = errors.New("contract creation code storage out of gas")
 	ErrDepth                             = errors.New("max call depth exceeded")
 	ErrTraceLimitReached                 = errors.New("the number of logs reached the specified limit")
+	ErrTraceResultLimitReached           = errors.New("structured trace exceeds resource limit")
 	ErrInsufficientBalance               = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision          = errors.New("contract address collision")
 	ErrTotalTimeLimitReached             = errors.New("reached the total execution time limit for txs in a block")

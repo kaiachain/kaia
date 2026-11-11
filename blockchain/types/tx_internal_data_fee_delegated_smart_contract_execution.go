@@ -197,8 +197,9 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) setHashForMarshaling(
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetSignature(s TxSignatures) {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetSignature(s TxSignatures) error {
 	t.TxSignatures = s
+	return nil
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetFeePayerSignatures(s TxSignatures) {

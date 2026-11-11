@@ -41,15 +41,16 @@ import (
 )
 
 var (
-	errTxArgInvalidInputData = errors.New(`Both "data" and "input" are set and not equal. Please use "input" to pass transaction call data.`)
-	errTxArgInvalidFeePayer  = errors.New("invalid fee payer is set")
-	errTxArgNilTxType        = errors.New("tx should have a type value")
-	errTxArgNilContractData  = errors.New(`contract creation without any data provided`)
-	errTxArgNilSenderSig     = errors.New("sender signature is not set")
-	errTxArgNilNonce         = errors.New("nonce of the sender is not set")
-	errTxArgNilGas           = errors.New("gas limit is not set")
-	errTxArgNilGasPrice      = errors.New("gas price is not set")
-	errNotForFeeDelegationTx = errors.New("fee-delegation type transactions are not allowed to use this API")
+	errTxArgInvalidInputData  = errors.New(`Both "data" and "input" are set and not equal. Please use "input" to pass transaction call data.`)
+	errTxArgInvalidFeePayer   = errors.New("invalid fee payer is set")
+	errTxArgInvalidSignatures = errors.New("invalid sender signatures")
+	errTxArgNilTxType         = errors.New("tx should have a type value")
+	errTxArgNilContractData   = errors.New(`contract creation without any data provided`)
+	errTxArgNilSenderSig      = errors.New("sender signature is not set")
+	errTxArgNilNonce          = errors.New("nonce of the sender is not set")
+	errTxArgNilGas            = errors.New("gas limit is not set")
+	errTxArgNilGasPrice       = errors.New("gas price is not set")
+	errNotForFeeDelegationTx  = errors.New("fee-delegation type transactions are not allowed to use this API")
 )
 
 // isTxField checks whether the string is a field name of the specific txType.
@@ -143,6 +144,20 @@ type SendTxArgs struct {
 	FeeRatio *types.FeeRatio `json:"feeRatio"`
 
 	TxSignatures types.TxSignaturesJSON `json:"signatures"`
+}
+
+func validateSenderSignatures(txType types.TxType, signatures types.TxSignaturesJSON) error {
+	// Legacy and typed Ethereum transactions both require a single signature.
+	if signatures != nil && txType.IsEthereumTransaction() && len(signatures) != 1 {
+		return errTxArgInvalidSignatures
+	}
+	// Require complete signature fields before conversion.
+	for _, signature := range signatures {
+		if signature == nil || signature.V == nil || signature.R == nil || signature.S == nil {
+			return errTxArgInvalidSignatures
+		}
+	}
+	return nil
 }
 
 // setDefaults is a helper function that fills in default values for unspecified common tx fields.

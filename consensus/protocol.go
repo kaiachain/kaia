@@ -28,33 +28,9 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p"
 )
 
-// Constants to match up protocol versions and messages
-const (
-	Kaia62 = 62
-	Kaia63 = 63
-	Kaia64 = 64
-	Kaia65 = 65
-	Kaia66 = 66
-	Kaia67 = 67
-)
+// ConsensusMsgCode is the p2p message code for BFT consensus messages.
+const ConsensusMsgCode = 0x11
 
-var KaiaProtocol = Protocol{
-	Name:     "kaia",
-	Versions: []uint{Kaia67, Kaia66, Kaia65, Kaia64, Kaia63, Kaia62},
-	Lengths:  []uint64{24, 22, 21, 19, 17, 8},
-}
-
-// Protocol defines the protocol of the consensus
-type Protocol struct {
-	// Official short name of the protocol used during capability negotiation.
-	Name string
-	// Supported versions of the Kaia protocol (first is primary).
-	Versions []uint
-	// Number of implemented message corresponding to different protocol versions.
-	Lengths []uint64
-}
-
-// istanbul BFT
 // Broadcaster defines the interface to enqueue blocks to fetcher and find peer
 type Broadcaster interface {
 	// Enqueue add a block into fetcher queue

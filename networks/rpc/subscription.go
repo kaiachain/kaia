@@ -33,7 +33,9 @@ import (
 )
 
 var (
-	// ErrNotificationsUnsupported is returned when the connection doesn't support notifications
+	// ErrNotificationsUnsupported is returned when the connection doesn't support notifications.
+	// Note: "notifications" here is geth's term for server-pushed subscription events (sent after
+	// a *_subscribe call), and is distinct from JSON-RPC 2.0 notifications (id-less requests).
 	ErrNotificationsUnsupported = errors.New("notifications not supported")
 	// ErrNotificationNotFound is returned when the notification for the given id is not found
 	ErrSubscriptionNotFound = errors.New("subscription not found")

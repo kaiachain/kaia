@@ -112,6 +112,7 @@ func (s *StakingModule) PreloadFromState(refId uint64, header *types.Header, sta
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
+	entry := s.newStakingInfoEntry(info) // filled before info is shared
 	if ss.preloaded[root] == nil {
 		ss.preloaded[root] = &refCountedInfo{
 			info: info,
@@ -119,6 +120,6 @@ func (s *StakingModule) PreloadFromState(refId uint64, header *types.Header, sta
 		}
 	}
 	ss.preloaded[root].refs[refId] = struct{}{}
-	s.stakingInfoCache.Add(header.Number.Uint64(), info)
+	s.stakingInfoCache.Add(header.Number.Uint64(), entry)
 	return nil
 }

@@ -26,6 +26,7 @@ var (
 	ErrZeroStakingInterval = errors.New("staking interval cannot be zero")
 	ErrAddressBookResult   = errors.New("invalid result from AddressBook")
 	ErrCLRegistryResult    = errors.New("invalid result from CLRegistry")
+	ErrValsetModuleNotSet  = errors.New("valset module is not set")
 )
 
 func ErrMultiCallCall(err error) error {

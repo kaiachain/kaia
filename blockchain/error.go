@@ -43,6 +43,9 @@ var (
 	// ErrBlacklistedHash is returned if a block to import is on the blacklist.
 	ErrBlacklistedHash = errors.New("blacklisted hash")
 
+	// ErrInitializeState is returned if the pre-transaction state modifications of a block fail.
+	ErrInitializeState = errors.New("block state initialization failed")
+
 	// tx_pool
 
 	// ErrInvalidSender is returned if the transaction contains an invalid signature.

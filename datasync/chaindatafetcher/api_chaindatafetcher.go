@@ -20,7 +20,6 @@ package chaindatafetcher
 
 import (
 	"errors"
-	"sync/atomic"
 
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
 )
@@ -78,7 +77,7 @@ func (api *ChainDataFetcherAPI) ReadCheckpoint() (int64, error) {
 }
 
 func (api *ChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
-	isRunning := atomic.LoadUint32(&api.f.fetchingStarted)
+	isRunning := api.f.fetchingStarted.Load()
 	if isRunning == running {
 		return errors.New("call stopFetching before writing checkpoint manually")
 	}

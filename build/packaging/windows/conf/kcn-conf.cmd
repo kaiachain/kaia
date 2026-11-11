@@ -7,7 +7,8 @@ set PORT=32323
 set SERVER_TYPE="http"
 set SYNCMODE="full"
 set VERBOSITY=3
-set MAXCONNECTIONS=100
+:: 103 = MaxNodeCount(100) + reserved CN<->EN slots(3), for permissionless CN full mesh
+set MAXCONNECTIONS=103
 :: set LDBCACHESIZE=10240
 :: set PDBCACHESIZE=10240
 set REWARDBASE="0x0"
@@ -21,7 +22,7 @@ set TXPOOL_LIFE_TIME="5m"
 
 REM rpc options setting
 set RPC_ENABLE=0 &:: if this is set, the following options will be used
-set RPC_API="klay" &:: available apis: admin,debug,klay,eth,miner,net,personal,rpc,txpool,web3
+set RPC_API="klay" &:: available apis: admin,debug,klay,eth,miner,net,personal,rpc,txpool
 set RPC_PORT=8551
 set RPC_ADDR="0.0.0.0"
 set RPC_CORSDOMAIN="*"
@@ -29,7 +30,7 @@ set RPC_VHOSTS="*"
 
 REM ws options setting
 set WS_ENABLE=0 &:: if this is set, the following options will be used
-set WS_API="klay" &:: available apis: admin,debug,klay,eth,miner,net,personal,rpc,txpool,web3
+set WS_API="klay" &:: available apis: admin,debug,klay,eth,miner,net,personal,rpc,txpool
 set WS_ADDR="0.0.0.0"
 set WS_PORT=8552
 set WS_ORIGINS="*"

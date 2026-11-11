@@ -19,12 +19,14 @@ package impl
 import (
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/bindings/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 )
@@ -43,20 +45,84 @@ type clRegistryResult struct {
 	StakingAmounts []*big.Int
 }
 
+// stakingInfoEntry is a value of the staking info cache, with the reward-eligible nodes of the block
+// right after its source block since Permissionless.
+// Its StakingInfos are shared by every caller, so their computed fields are filled before they are shared.
+type stakingInfoEntry struct {
+	si *staking.StakingInfo
+
+	mu       sync.Mutex           // guards filtered
+	filtered *staking.StakingInfo // si filtered for block si.SourceBlockNum+1
+}
+
+func (s *StakingModule) newStakingInfoEntry(si *staking.StakingInfo) *stakingInfoEntry {
+	s.fillComputedFields(si)
+	return &stakingInfoEntry{si: si}
+}
+
+// fillComputedFields fills the lazily computed fields of si, so that reading them later does not write si.
+// Gini is filled for the minimum stake that kaia_getStakingInfo and the P2P staking info use.
+func (s *StakingModule) fillComputedFields(si *staking.StakingInfo) {
+	si.ConsolidatedNodes()
+	if s.minimumStake != nil {
+		si.Gini(s.minimumStake.Uint64())
+	}
+}
+
 func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error) {
+	entry, err := s.getStakingInfoEntry(num)
+	if err != nil {
+		return nil, err
+	}
+	if !s.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return entry.si, nil
+	}
+
+	// Only the block right after the source block owns the cached filtered copy.
+	// Block 0 shares the entry of block 1, so it is filtered on each call.
+	if num != entry.si.SourceBlockNum+1 {
+		return s.filterRewardEligible(entry.si, num)
+	}
+
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.filtered == nil {
+		filtered, err := s.filterRewardEligible(entry.si, num)
+		if err != nil {
+			return nil, err
+		}
+		entry.filtered = filtered
+	}
+	return entry.filtered, nil
+}
+
+// filterRewardEligible returns a copy of si with only the nodes reward-eligible at block num.
+func (s *StakingModule) filterRewardEligible(si *staking.StakingInfo, num uint64) (*staking.StakingInfo, error) {
+	eligible, err := s.ValsetModule.GetRewardEligible(num)
+	if err != nil {
+		return nil, err
+	}
+	filtered := si.FilterNodes(eligible)
+	s.fillComputedFields(filtered)
+	return filtered, nil
+}
+
+// getStakingInfoEntry returns the cache entry of the staking info used for block num.
+func (s *StakingModule) getStakingInfoEntry(num uint64) (*stakingInfoEntry, error) {
 	isKaia := s.ChainConfig.IsKaiaForkEnabled(new(big.Int).SetUint64(num))
 	sourceNum := sourceBlockNum(num, isKaia, s.stakingInterval)
 
 	// Try cache first
-	if si, ok := s.stakingInfoCache.Get(sourceNum); ok {
-		return si.(*staking.StakingInfo), nil
+	if entry, ok := s.stakingInfoCache.Get(sourceNum); ok {
+		return entry.(*stakingInfoEntry), nil
 	}
 
 	// Only before Kaia, try the database
 	if !isKaia {
 		if si := ReadStakingInfo(s.ChainKv, sourceNum); si != nil {
-			s.stakingInfoCache.Add(sourceNum, si)
-			return si, nil
+			entry := s.newStakingInfoEntry(si)
+			s.stakingInfoCache.Add(sourceNum, entry)
+			return entry, nil
 		}
 	}
 
@@ -72,8 +138,9 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 	}
 
 	// Cache it
-	s.stakingInfoCache.Add(sourceNum, si)
-	return si, nil
+	entry := s.newStakingInfoEntry(si)
+	s.stakingInfoCache.Add(sourceNum, entry)
+	return entry, nil
 }
 
 // Read the staking status from the blockchain state.
@@ -100,6 +167,7 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 // Works by temporarily injecting the MultiCallContract to a copied state.
 func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateDB) (*staking.StakingInfo, error) {
 	isForPrague := s.ChainConfig.IsPragueForkEnabled(new(big.Int).Add(header.Number, common.Big1))
+	isForPermissionless := s.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).Add(header.Number, common.Big1))
 	num := header.Number.Uint64()
 
 	// Bail out if AddressBook is not installed.
@@ -115,29 +183,54 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		return nil, staking.ErrMultiCallCall(err)
 	}
 
-	// Get staking info from AddressBook
 	callOpts := &bind.CallOpts{BlockNumber: header.Number}
-	abRes, err := contract.MultiCallStakingInfo(callOpts)
-	if err != nil {
-		return nil, staking.ErrAddressBookCall(err)
-	}
 
-	// Get CL registry info if staking info is for Prague block
-	var clRes clRegistryResult
-	if isForPrague {
+	// Helper to read CL registry info, shared by permissioned and permissionless paths.
+	// Permissionless is ordered after Prague (Randao <= Kaia <= Prague <= Permissionless),
+	// so permissionless blocks always need CL registry info too.
+	readCLInfo := func() (clRegistryResult, error) {
+		var clRes clRegistryResult
 		// If Registry is not installed, do not handle CL staking info.
 		// In private network, Randao and Prague hardfork can be activated at the same block.
 		// It leads to staking info inconsistency between block processing and rpc query since the Registry hasn't been installed when finalizing the header.
 		// Note that Randao can't be activated after Prague according to fork ordering (Randao <= Kaia <= Prague).
 		if statedb.GetCode(system.RegistryAddr) == nil || s.ChainConfig.IsRandaoForkBlockParent(header.Number) {
 			logger.Trace("Registry not installed", "sourceNum", num)
-		} else {
-			// Note that if CLRegistry is not registered in Registry,
-			// it will return empty result and no error.
-			clRes, err = contract.MultiCallDPStakingInfo(callOpts)
-			if err != nil {
-				return nil, staking.ErrCLRegistryCall(err)
-			}
+			return clRes, nil
+		}
+		// Note that if CLRegistry is not registered in Registry,
+		// it will return empty result and no error.
+		clRes, err = contract.MultiCallDPStakingInfo(callOpts)
+		if err != nil {
+			return clRes, staking.ErrCLRegistryCall(err)
+		}
+		return clRes, nil
+	}
+
+	// Permissionless: read every profile from AddressBookV2 (effective stake).
+	if isForPermissionless {
+		res, err := contract.MultiCallStakingInfoPermissionless(callOpts)
+		if err != nil {
+			return nil, staking.ErrAddressBookCall(err)
+		}
+		clRes, err := readCLInfo()
+		if err != nil {
+			return nil, err
+		}
+		return parsePermissionlessCallResult(num, res.Profiles, res.StakingAmounts, res.KefAddr, res.KifAddr, res.KpfAddr, clRes)
+	}
+
+	// Permissioned: read from legacy AddressBook.
+	abRes, err := contract.MultiCallStakingInfo(callOpts)
+	if err != nil {
+		return nil, staking.ErrAddressBookCall(err)
+	}
+
+	var clRes clRegistryResult
+	if isForPrague {
+		clRes, err = readCLInfo()
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -149,6 +242,58 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		clRes,
 		abRes.SpareAddress,
 	)
+}
+
+// parsePermissionlessCallResult converts ABv2 multicall results into StakingInfo, keeping every
+// profile regardless of its state; amounts are effective stake (KIP-287). The reward eligibility
+// is decided on the node states of the block being rewarded (KIP-286), not here.
+func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr, kpfAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
+	if len(profiles) == 0 {
+		return emptyStakingInfo(num), nil
+	}
+	if len(profiles) != len(amounts) {
+		logger.Error("length of profiles and amounts differ", "sourceNum", num, "profileLen", len(profiles), "amountLen", len(amounts))
+		return nil, staking.ErrAddressBookResult
+	}
+	if len(clRes.NodeIds) != len(clRes.ClPools) || len(clRes.NodeIds) != len(clRes.StakingAmounts) {
+		logger.Error("length of CL registry result fields differ", "sourceNum", num, "nodeLen", len(clRes.NodeIds), "poolLen", len(clRes.ClPools), "amountLen", len(clRes.StakingAmounts))
+		return nil, staking.ErrCLRegistryResult
+	}
+
+	nodeIds := make([]common.Address, 0, len(profiles))
+	stakingContracts := make([]common.Address, 0, len(profiles))
+	rewardAddrs := make([]common.Address, 0, len(profiles))
+	stakingAmounts := make([]uint64, 0, len(profiles))
+	for i, p := range profiles {
+		nodeIds = append(nodeIds, p.NodeId)
+		stakingContracts = append(stakingContracts, p.StakingContract)
+		rewardAddrs = append(rewardAddrs, p.RewardAddress)
+		stakingAmounts = append(stakingAmounts, new(big.Int).Div(amounts[i], big.NewInt(params.KAIA)).Uint64())
+	}
+
+	var clStakingInfos staking.CLStakingInfos
+	if len(clRes.NodeIds) > 0 {
+		clStakingInfos = make(staking.CLStakingInfos, len(clRes.NodeIds))
+		for i := range clRes.NodeIds {
+			clStakingInfos[i] = &staking.CLStakingInfo{
+				CLNodeId:        clRes.NodeIds[i],
+				CLPoolAddr:      clRes.ClPools[i],
+				CLStakingAmount: big.NewInt(0).Div(clRes.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
+			}
+		}
+	}
+
+	return &staking.StakingInfo{
+		SourceBlockNum:   num,
+		NodeIds:          nodeIds,
+		StakingContracts: stakingContracts,
+		RewardAddrs:      rewardAddrs,
+		KEFAddr:          kefAddr,
+		KIFAddr:          kifAddr,
+		KPFAddr:          kpfAddr,
+		StakingAmounts:   stakingAmounts,
+		CLStakingInfos:   clStakingInfos,
+	}, nil
 }
 
 func parseCallResult(num uint64,

@@ -22,6 +22,7 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -43,7 +44,24 @@ const (
 	// This is shorter than the usual timeout because we don't want
 	// to wait if the connection is known to be bad anyway.
 	discWriteTimeout = 1 * time.Second
+
+	protocolHandshakeFrameLimit = baseProtocolMaxMsgSize + 9 // payload plus an RLP-encoded message code
 )
+
+type transport interface {
+	doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error)
+	// The two handshakes.
+	doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey, error)
+	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
+	// The MsgReadWriter can only be used after the encryption
+	// handshake has completed. The code uses conn.id to track this
+	// by setting it to a non-nil value after the encryption handshake.
+	MsgReadWriter
+	// transports must provide Close because we use MsgPipe in some of
+	// the tests. Closing the actual network connection doesn't do
+	// anything in those tests because NsgPipe doesn't use it.
+	close(err error)
+}
 
 // rlpxTransport is the transport used by actual (non-test) connections.
 // It wraps an RLPx connection with locks and read/write deadlines.
@@ -54,7 +72,9 @@ type rlpxTransport struct {
 }
 
 func newRLPX(conn net.Conn, dialDest *ecdsa.PublicKey) transport {
-	return &rlpxTransport{conn: rlpx.NewConn(conn, dialDest)}
+	rconn := rlpx.NewConn(conn, dialDest)
+	rconn.SetReadFrameLimit(protocolHandshakeFrameLimit)
+	return &rlpxTransport{conn: rconn}
 }
 
 func (t *rlpxTransport) ReadMsg() (Msg, error) {
@@ -140,6 +160,8 @@ func (t *rlpxTransport) doProtoHandshake(our *protoHandshake) (their *protoHands
 	if err := <-werr; err != nil {
 		return nil, fmt.Errorf("write error: %v", err)
 	}
+	// A zero limit allows the full RLPx frame size after the handshake.
+	t.conn.SetReadFrameLimit(0)
 	// If the protocol version supports Snappy encoding, upgrade immediately
 	t.conn.SetSnappy(their.Version >= snappyProtocolVersion)
 
@@ -152,7 +174,7 @@ func readProtocolHandshake(rw MsgReader) (*protoHandshake, error) {
 		return nil, err
 	}
 	if msg.Size > baseProtocolMaxMsgSize {
-		return nil, fmt.Errorf("message too big")
+		return nil, errors.New("message too big")
 	}
 	if msg.Code == discMsg {
 		// Disconnect before protocol handshake is valid according to the

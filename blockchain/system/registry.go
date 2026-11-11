@@ -27,7 +27,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/kip149"
 	"github.com/kaiachain/kaia/params"
 )
 

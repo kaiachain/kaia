@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/consensus/engine"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
@@ -70,6 +71,7 @@ var (
 			utils.RocksDBMaxOpenFilesFlag,
 			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverrideOsaka,
+			utils.OverridePermissionless,
 			utils.LivePruningFlag,
 			utils.FlatTrieFlag,
 		},
@@ -124,6 +126,10 @@ func initGenesis(ctx *cli.Context) error {
 	if ctx.IsSet(utils.OverrideOsaka.Name) {
 		v := ctx.Uint64(utils.OverrideOsaka.Name)
 		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+	if ctx.IsSet(utils.OverridePermissionless.Name) {
+		v := ctx.Uint64(utils.OverridePermissionless.Name)
+		overrides.OverridePermissionless = new(big.Int).SetUint64(v)
 	}
 
 	// Update undefined config with default values
@@ -250,13 +256,13 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
-
-			istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: g.ExtraData})
+			h := &types.Header{Number: big.NewInt(0), Extra: g.ExtraData}
+			validators, err := engine.NewSealer(g.Config, nil).Validators(h)
 			if err != nil {
 				return err
 			}
 
-			if !slices.Contains(istanbulExtra.Validators, g.Config.Governance.GoverningNode) {
+			if !slices.Contains(validators, g.Config.Governance.GoverningNode) {
 				return errors.New("governingNode is not in the validator list")
 			}
 		}

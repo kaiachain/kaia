@@ -21,7 +21,6 @@ type Param struct {
 	// Assumes that the ChainConfig does not contain nil or empty values since the SetDefaults() call.
 	ChainConfigValue func(c *params.ChainConfig) (any, error)
 	DefaultValue     any
-	VoteForbidden    bool
 }
 
 var (
@@ -208,7 +207,6 @@ var Params = map[ParamName]*Param{
 		},
 		ChainConfigValue: func(c *params.ChainConfig) (any, error) { return uint64(c.DeriveShaImpl), nil },
 		DefaultValue:     uint64(0),
-		VoteForbidden:    false,
 	},
 	GovernanceGovernanceMode: {
 		Canonicalizer: stringCanonicalizer,
@@ -228,8 +226,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.GovernanceMode, nil
 		},
-		DefaultValue:  "none",
-		VoteForbidden: true,
+		DefaultValue: "none",
 	},
 	GovernanceGoverningNode: {
 		Canonicalizer: addressCanonicalizer,
@@ -243,8 +240,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.GoverningNode, nil
 		},
-		DefaultValue:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		VoteForbidden: false,
+		DefaultValue: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 	},
 	GovernanceGovParamContract: {
 		Canonicalizer: addressCanonicalizer,
@@ -258,15 +254,13 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.GovParamContract, nil
 		},
-		DefaultValue:  common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		VoteForbidden: false,
+		DefaultValue: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 	},
 	GovernanceUnitPrice: {
 		Canonicalizer:    uint64Canonicalizer,
 		FormatChecker:    noopFormatChecker,
 		ChainConfigValue: func(c *params.ChainConfig) (any, error) { return c.UnitPrice, nil },
 		DefaultValue:     uint64(250e9),
-		VoteForbidden:    false,
 	},
 	IstanbulCommitteeSize: {
 		Canonicalizer: uint64Canonicalizer,
@@ -283,8 +277,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Istanbul.SubGroupSize, nil
 		},
-		DefaultValue:  uint64(21),
-		VoteForbidden: false,
+		DefaultValue: uint64(21),
 	},
 	IstanbulEpoch: {
 		Canonicalizer: uint64Canonicalizer,
@@ -295,8 +288,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Istanbul.Epoch, nil
 		},
-		DefaultValue:  uint64(604800),
-		VoteForbidden: true,
+		DefaultValue: uint64(604800),
 	},
 	IstanbulPolicy: {
 		Canonicalizer: uint64Canonicalizer,
@@ -313,8 +305,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Istanbul.ProposerPolicy, nil
 		},
-		DefaultValue:  uint64(RoundRobin),
-		VoteForbidden: true,
+		DefaultValue: uint64(RoundRobin),
 	},
 	Kip71BaseFeeDenominator: {
 		Canonicalizer: uint64Canonicalizer,
@@ -328,8 +319,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.KIP71.BaseFeeDenominator, nil
 		},
-		DefaultValue:  uint64(20),
-		VoteForbidden: false,
+		DefaultValue: uint64(20),
 	},
 	Kip71GasTarget: {
 		Canonicalizer: uint64Canonicalizer,
@@ -340,8 +330,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.KIP71.GasTarget, nil
 		},
-		DefaultValue:  uint64(30000000),
-		VoteForbidden: false,
+		DefaultValue: uint64(30000000),
 	},
 	Kip71LowerBoundBaseFee: {
 		Canonicalizer: uint64Canonicalizer,
@@ -352,8 +341,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.KIP71.LowerBoundBaseFee, nil
 		},
-		DefaultValue:  uint64(25000000000),
-		VoteForbidden: false,
+		DefaultValue: uint64(25000000000),
 	},
 	Kip71MaxBlockGasUsedForBaseFee: {
 		Canonicalizer: uint64Canonicalizer,
@@ -364,8 +352,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.KIP71.MaxBlockGasUsedForBaseFee, nil
 		},
-		DefaultValue:  uint64(60000000),
-		VoteForbidden: false,
+		DefaultValue: uint64(60000000),
 	},
 	Kip71UpperBoundBaseFee: {
 		Canonicalizer: uint64Canonicalizer,
@@ -376,8 +363,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.KIP71.UpperBoundBaseFee, nil
 		},
-		DefaultValue:  uint64(750000000000),
-		VoteForbidden: false,
+		DefaultValue: uint64(750000000000),
 	},
 	RewardDeferredTxFee: {
 		Canonicalizer: boolCanonicalizer,
@@ -388,8 +374,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.DeferredTxFee, nil
 		},
-		DefaultValue:  false,
-		VoteForbidden: true,
+		DefaultValue: false,
 	},
 	RewardKip82Ratio: {
 		Canonicalizer: stringCanonicalizer,
@@ -424,8 +409,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.Kip82Ratio, nil
 		},
-		DefaultValue:  "20/80",
-		VoteForbidden: false,
+		DefaultValue: "20/80",
 	},
 	RewardMintingAmount: {
 		Canonicalizer: bigIntCanonicalizer,
@@ -436,8 +420,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.MintingAmount, nil
 		},
-		DefaultValue:  big.NewInt(0),
-		VoteForbidden: false,
+		DefaultValue: big.NewInt(0),
 	},
 	RewardMinimumStake: {
 		Canonicalizer: bigIntCanonicalizer,
@@ -454,8 +437,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.MinimumStake, nil
 		},
-		DefaultValue:  big.NewInt(2000000),
-		VoteForbidden: true,
+		DefaultValue: big.NewInt(2000000),
 	},
 	RewardProposerUpdateInterval: {
 		Canonicalizer: uint64Canonicalizer,
@@ -466,8 +448,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.ProposerUpdateInterval, nil
 		},
-		DefaultValue:  uint64(3600),
-		VoteForbidden: true,
+		DefaultValue: uint64(3600),
 	},
 	RewardRatio: {
 		Canonicalizer: stringCanonicalizer,
@@ -500,8 +481,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.Ratio, nil
 		},
-		DefaultValue:  "100/0/0",
-		VoteForbidden: false,
+		DefaultValue: "100/0/0",
 	},
 	RewardStakingUpdateInterval: {
 		Canonicalizer: uint64Canonicalizer,
@@ -512,8 +492,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.StakingUpdateInterval, nil
 		},
-		DefaultValue:  uint64(86400),
-		VoteForbidden: true,
+		DefaultValue: uint64(86400),
 	},
 	RewardStakingRewardThreshold: {
 		Canonicalizer: bigIntCanonicalizer,
@@ -532,8 +511,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.StakingRewardThreshold, nil
 		},
-		DefaultValue:  big.NewInt(5_000_000),
-		VoteForbidden: false,
+		DefaultValue: big.NewInt(5_000_000),
 	},
 	RewardUseGiniCoeff: {
 		Canonicalizer: boolCanonicalizer,
@@ -544,8 +522,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.UseGiniCoeff, nil
 		},
-		DefaultValue:  false,
-		VoteForbidden: true,
+		DefaultValue: false,
 	},
 	RewardUseFlexReward: {
 		Canonicalizer: boolCanonicalizer,
@@ -556,8 +533,7 @@ var Params = map[ParamName]*Param{
 			}
 			return c.Governance.Reward.UseFlexReward, nil
 		},
-		DefaultValue:  false,
-		VoteForbidden: false,
+		DefaultValue: false,
 	},
 }
 
@@ -566,13 +542,11 @@ var ValidatorParams = map[ParamName]*Param{
 		Canonicalizer: validatorAddressListCanonicalizer,
 		FormatChecker: noopFormatChecker,
 		DefaultValue:  []common.Address{},
-		VoteForbidden: false,
 	},
 	RemoveValidator: {
 		Canonicalizer: validatorAddressListCanonicalizer,
 		FormatChecker: noopFormatChecker,
 		DefaultValue:  []common.Address{},
-		VoteForbidden: false,
 	},
 }
 
@@ -583,3 +557,44 @@ const (
 	WeightedRandom
 	ProposerPolicy_End
 )
+
+// AlwaysDeprecated is the definitive list of params that are always deprecated
+// regardless of fork state.
+var AlwaysDeprecated = map[ParamName]struct{}{
+	GovernanceGovernanceMode:     {},
+	IstanbulEpoch:                {},
+	IstanbulPolicy:               {},
+	RewardDeferredTxFee:          {},
+	RewardMinimumStake:           {},
+	RewardProposerUpdateInterval: {},
+	RewardStakingUpdateInterval:  {},
+	RewardUseGiniCoeff:           {},
+}
+
+// PermissionlessDeprecated lists params that become disallowed for voting
+// after the Permissionless hardfork. Validator membership is governed by
+// AddressBookV2 (KIP-290) and the committee is derived from on-chain state,
+// so these governance levers no longer have an effect.
+var PermissionlessDeprecated = map[ParamName]struct{}{
+	AddValidator:          {},
+	RemoveValidator:       {},
+	IstanbulCommitteeSize: {},
+}
+
+// DeprecatedAt reports whether a governance parameter is deprecated (disallowed
+// for voting) given the current chain rules. Deprecation has two sources:
+//   - static: params that have always been deprecated regardless of fork state
+//   - fork-aware: params that become deprecated only after a specific hardfork
+//
+// Callers (Vote, VerifyVote) reject votes on any name for which this returns true.
+func DeprecatedAt(name ParamName, rules params.Rules) bool {
+	if _, ok := AlwaysDeprecated[name]; ok {
+		return true
+	}
+	if rules.IsPermissionless {
+		if _, ok := PermissionlessDeprecated[name]; ok {
+			return true
+		}
+	}
+	return false
+}

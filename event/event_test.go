@@ -130,13 +130,13 @@ func TestMuxConcurrent(t *testing.T) {
 	go poster()
 	go poster()
 	nsubs := 1000
-	for i := 0; i < nsubs; i++ {
+	for i := range nsubs {
 		go sub(i)
 	}
 
 	// wait until everyone has been served
 	counts := make(map[int]int, nsubs)
-	for i := 0; i < nsubs; i++ {
+	for range nsubs {
 		counts[<-recv]++
 	}
 	for i, count := range counts {
@@ -162,7 +162,7 @@ func BenchmarkPost1000(b *testing.B) {
 	)
 	subscribed.Add(nsubs)
 	done.Add(nsubs)
-	for i := 0; i < nsubs; i++ {
+	for range nsubs {
 		go func() {
 			s := mux.Subscribe(testEvent(0))
 			subscribed.Done()
@@ -199,7 +199,7 @@ func BenchmarkPostConcurrent(b *testing.B) {
 		wg.Done()
 	}
 	wg.Add(5)
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		go poster()
 	}
 	wg.Wait()

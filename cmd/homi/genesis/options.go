@@ -26,7 +26,7 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/extra"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
+	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )

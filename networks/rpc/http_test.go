@@ -17,6 +17,8 @@
 package rpc
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,6 +26,20 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 )
+
+type countingBody struct {
+	read int64
+}
+
+func (b *countingBody) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = 'x'
+	}
+	b.read += int64(len(p))
+	return len(p), nil
+}
+
+func (b *countingBody) Close() error { return nil }
 
 func TestHTTPErrorResponseWithDelete(t *testing.T) {
 	testHTTPErrorResponse(t, http.MethodDelete, contentType, "", http.StatusMethodNotAllowed)
@@ -37,6 +53,40 @@ func TestHTTPErrorResponseWithMaxContentLength(t *testing.T) {
 	body := make([]rune, common.MaxRequestContentLength+1)
 	testHTTPErrorResponse(t,
 		http.MethodPost, contentType, string(body), http.StatusRequestEntityTooLarge)
+}
+
+func TestGetRPCRequestsBodyLimit(t *testing.T) {
+	t.Run("chunked", func(t *testing.T) {
+		body := new(countingBody)
+		req := &http.Request{Body: body, ContentLength: -1}
+		_, _, err := getRPCRequests(req)
+		if !errors.Is(err, errAPMRequestTooLarge) {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := int64(common.MaxRequestContentLength + 1)
+		if body.read != want {
+			t.Fatalf("read %d bytes, want %d", body.read, want)
+		}
+		replayed, err := io.ReadAll(req.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if int64(len(replayed)) != want {
+			t.Fatalf("replayed %d bytes, want %d", len(replayed), want)
+		}
+	})
+
+	t.Run("content length", func(t *testing.T) {
+		body := new(countingBody)
+		req := &http.Request{Body: body, ContentLength: int64(common.MaxRequestContentLength + 1)}
+		_, _, err := getRPCRequests(req)
+		if !errors.Is(err, errAPMRequestTooLarge) {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if body.read != 0 {
+			t.Fatalf("read %d bytes", body.read)
+		}
+	})
 }
 
 func TestHTTPErrorResponseWithEmptyContentType(t *testing.T) {

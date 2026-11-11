@@ -28,11 +28,13 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,7 +45,11 @@ func testNewSubBridge(t *testing.T) *SubBridge {
 		t.Fatal(err)
 	}
 
-	sCtx := node.NewServiceContext(&node.DefaultConfig, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
+	nodeCfg := node.DefaultConfig
+	nodeCfg.DataDir = tempDir
+	nodeCfg.DBType = database.MemoryDB
+
+	sCtx := node.NewServiceContext(&nodeCfg, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
 	sBridge, err := NewSubBridge(sCtx, &SCConfig{NetworkId: testNetVersion, DataDir: tempDir})
 	if err != nil {
 		t.Fatal(err)
@@ -51,6 +57,21 @@ func testNewSubBridge(t *testing.T) *SubBridge {
 	assert.NotNil(t, sBridge)
 
 	return sBridge
+}
+
+// testNewSubBridgeLite returns a lightweight SubBridge for tests
+// that only need in-memory peer behavior.
+func testNewSubBridgeLite(t *testing.T) *SubBridge {
+	tempDir, err := os.MkdirTemp(os.TempDir(), "kaia-test-sb-lite-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &SubBridge{
+		config:       &SCConfig{DataDir: tempDir},
+		peers:        newBridgePeerSet(),
+		addPeerCh:    make(chan struct{}, 16),
+		removePeerCh: make(chan struct{}, 16),
+	}
 }
 
 // removeData removes blockchain data generated during the SubBridge test.
@@ -63,8 +84,10 @@ func (sb *SubBridge) removeData(t *testing.T) {
 // TestSubBridge_basic tests some getters and basic operation of SubBridge.
 func TestSubBridge_basic(t *testing.T) {
 	// Create a test SubBridge
-	sBridge := testNewSubBridge(t)
+	sBridge := testNewSubBridgeLite(t)
 	defer sBridge.removeData(t)
+	sBridge.APIBackend = &SubBridgeAPI{sBridge}
+	sBridge.networkId = testNetVersion
 
 	// APIs returns default rpc APIs of MainBridge
 	apis := sBridge.APIs()
@@ -77,48 +100,59 @@ func TestSubBridge_basic(t *testing.T) {
 	assert.Equal(t, testProtocolVersion, sBridge.ProtocolVersion())
 	assert.Equal(t, testNetVersion, sBridge.NetVersion())
 
-	// New components of MainBridge which will update old components
-	bc := testBlockChain(t)
-	txPool := testTxPool(t, sBridge.config.DataDir, bc)
+}
 
-	var comp []interface{}
-	comp = append(comp, bc)
-	comp = append(comp, txPool)
+func TestSubBridge_startStop(t *testing.T) {
+	tempDir, err := os.MkdirTemp(os.TempDir(), "kaia-test-sb-start-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodeCfg := node.DefaultConfig
+	nodeCfg.DataDir = tempDir
+	sCtx := node.NewServiceContext(&nodeCfg, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
 
-	// Check initial status of components
-	assert.Nil(t, sBridge.blockchain)
-	assert.Nil(t, sBridge.txPool)
+	sBridge := &SubBridge{
+		config:       &SCConfig{NetworkId: testNetVersion, DataDir: tempDir, MaxPeer: 10},
+		peers:        newBridgePeerSet(),
+		ctx:          sCtx,
+		networkId:    testNetVersion,
+		maxPeers:     10,
+		newPeerCh:    make(chan BridgePeer),
+		addPeerCh:    make(chan struct{}, 16),
+		removePeerCh: make(chan struct{}, 16),
+		noMorePeers:  make(chan struct{}),
+		quitSync:     make(chan struct{}),
+		rpcSendCh:    make(chan []byte),
+	}
+	defer sBridge.removeData(t)
 
-	// Update and check MainBridge components
-	sBridge.SetComponents(comp)
-	assert.Equal(t, bc, sBridge.blockchain)
-	assert.Equal(t, txPool, sBridge.txPool)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockBridgeTxPool := NewMockBridgeTxPool(mockCtrl)
+	mockBridgeTxPool.EXPECT().Stop().Times(1)
 
-	// Start MainBridge and stop later
+	sBridge.eventMux = &event.TypeMux{}
+	sBridge.chainDB = database.NewMemoryDBManager()
+	defer sBridge.chainDB.Close()
+	sBridge.bridgeTxPool = mockBridgeTxPool
+	sBridge.bridgeManager = &BridgeManager{recoveries: make(map[common.Address]*valueTransferRecovery)}
+	sBridge.chainSub = event.NewSubscription(func(<-chan struct{}) error { return nil })
+	sBridge.logsSub = event.NewSubscription(func(<-chan struct{}) error { return nil })
+	sBridge.reqVTevSub = event.NewSubscription(func(<-chan struct{}) error { return nil })
+	sBridge.reqVTencodedEvSub = event.NewSubscription(func(<-chan struct{}) error { return nil })
+	sBridge.handleVTevSub = event.NewSubscription(func(<-chan struct{}) error { return nil })
+
 	if err := sBridge.Start(p2p.SingleChannelServer{}); err != nil {
 		t.Fatal(err)
 	}
 	defer sBridge.Stop()
-
-	// TODO more test
 }
 
 // TestSubBridge_removePeer tests correct removal of a peer from `SubBridge.peers`.
 func TestSubBridge_removePeer(t *testing.T) {
 	// Create a test SubBridge (it may have 0 peers)
-	sBridge := testNewSubBridge(t)
+	sBridge := testNewSubBridgeLite(t)
 	defer sBridge.removeData(t)
-	defer sBridge.chainDB.Close()
-
-	// Set components of SubBridge
-	bc := testBlockChain(t)
-	txPool := testTxPool(t, sBridge.config.DataDir, bc)
-
-	var comp []interface{}
-	comp = append(comp, bc)
-	comp = append(comp, txPool)
-
-	sBridge.SetComponents(comp)
 
 	// Prepare information of bridgePeer to be added and removed
 	nodeID := "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d"
@@ -141,9 +175,6 @@ func TestSubBridge_removePeer(t *testing.T) {
 	if err := sBridge.peers.Register(mockBridgePeer); err != nil {
 		t.Fatal(err)
 	}
-	if err := sBridge.handler.RegisterNewPeer(mockBridgePeer); err != nil {
-		t.Fatal(err)
-	}
 
 	peerNum := sBridge.peers.Len()
 
@@ -159,9 +190,9 @@ func TestSubBridge_removePeer(t *testing.T) {
 // TestSubBridge_handleMsg fails when a bridgePeer fails to read a message or reads a too long message.
 func TestSubBridge_handleMsg(t *testing.T) {
 	// Create a test SubBridge
-	sBridge := testNewSubBridge(t)
+	sBridge := testNewSubBridgeLite(t)
 	defer sBridge.removeData(t)
-	defer sBridge.chainDB.Close()
+	sBridge.handler = &SubBridgeHandler{subbridge: sBridge}
 
 	// Elements for a bridgePeer
 	key, _ := crypto.GenerateKey()
@@ -216,19 +247,20 @@ func TestSubBridge_handleMsg(t *testing.T) {
 // There are no success cases in this test since `handle` has a infinite loop inside.
 func TestSubBridge_handle(t *testing.T) {
 	// Create a test SubBridge
-	sBridge := testNewSubBridge(t)
+	sBridge := testNewSubBridgeLite(t)
 	defer sBridge.removeData(t)
-	defer sBridge.chainDB.Close()
 
-	// Set components of SubBridge
-	bc := testBlockChain(t)
-	txPool := testTxPool(t, sBridge.config.DataDir, bc)
-
-	var comp []interface{}
-	comp = append(comp, bc)
-	comp = append(comp, txPool)
-
-	sBridge.SetComponents(comp)
+	// Minimal dependencies for handle(): blockchain, handler, and parent operator address.
+	sBridge.blockchain = testBlockChain(t)
+	sBridge.networkId = testNetVersion
+	sBridge.bridgeAccounts = &BridgeAccounts{
+		pAccount: &accountInfo{address: common.Address{}},
+		cAccount: &accountInfo{},
+	}
+	sBridge.handler = &SubBridgeHandler{
+		subbridge:     sBridge,
+		parentChainID: big.NewInt(0),
+	}
 
 	// Variables will be used as return values of mockBridgePeer
 	key, _ := crypto.GenerateKey()
@@ -298,9 +330,8 @@ func TestSubBridge_handle(t *testing.T) {
 // The function sends RPC response data to SubBridge's peers.
 func TestSubBridge_SendRPCData(t *testing.T) {
 	// Create a test SubBridge
-	sBridge := testNewSubBridge(t)
+	sBridge := testNewSubBridgeLite(t)
 	defer sBridge.removeData(t)
-	defer sBridge.chainDB.Close()
 
 	// Test data used as a parameter of SendResponseRPC function
 	data := []byte{0x11, 0x22, 0x33}

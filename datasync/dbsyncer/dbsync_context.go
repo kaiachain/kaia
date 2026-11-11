@@ -78,7 +78,7 @@ func (ds *DBSyncer) HandleChainEventContext(block *types.Block) error {
 }
 
 func (ds *DBSyncer) syncBlockHeaderContext(ctx context.Context, tx *sql.Tx, block *types.Block) error {
-	proposerAddr, committeeAddrs, err := getProposerAndValidatorsFromBlock(block)
+	proposerAddr, committeeAddrs, err := getProposerAndValidatorsFromBlock(ds.blockchain.Sealer(), block)
 
 	totalTx := block.Transactions().Len()
 	committee := strings.ToLower(committeeAddrs)

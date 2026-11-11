@@ -71,7 +71,7 @@ func TestMultipleSignaturesFromBytes(t *testing.T) {
 	// [0:L/2] are cached and [L/2:L] are uncached
 	sigs, err = MultipleSignaturesFromBytes(tc.sigbs)
 	assert.Nil(t, err)
-	for i := 0; i < L; i++ {
+	for i := range L {
 		assert.Equal(t, tc.sigs[i].Marshal(), sigs[i].Marshal())
 	}
 

@@ -92,7 +92,6 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 		}()
 
 		reqMethod := ""
-		reqParam := ""
 
 		// parse RPC requests
 		reqs, isBatch, err := getRPCRequests(r)
@@ -104,8 +103,6 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 			if isBatch {
 				reqMethod += "_batch"
 			}
-			encoded, _ := json.Marshal(reqs[0].Params)
-			reqParam = string(encoded)
 		}
 
 		// datadog transaction name contains the first API method of the request
@@ -119,7 +116,6 @@ func newDatadogHTTPHandler(ddTracer *DatadogTracer, handler http.Handler) http.H
 
 		spanOpts := []ddtrace.StartSpanOption{
 			tracer.Tag("request.method", reqMethod),
-			tracer.Tag("request.params", reqParam),
 		}
 
 		for _, ti := range ddTracer.Tags {

@@ -139,7 +139,7 @@ func (ctx ppctx) printObject(obj *goja.Object, level int, inArray bool) {
 			return
 		}
 		fmt.Fprint(ctx.w, "[")
-		for i := int64(0); i < len; i++ {
+		for i := range len {
 			el := obj.Get(strconv.FormatInt(i, 10))
 			if el != nil {
 				ctx.printValue(el, level+1, true)

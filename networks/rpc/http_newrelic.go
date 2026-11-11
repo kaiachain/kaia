@@ -18,12 +18,16 @@ package rpc
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"os"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
+
+var errAPMRequestTooLarge = errors.New("rpc request body too large")
 
 // dupWriter writes data to the buffer as well as http response
 type dupWriter struct {
@@ -142,13 +146,20 @@ func newNewRelicHTTPHandler(nrApp *newrelic.Application, handler http.Handler) h
 // It returns a slice of RPC request, an indication if these requests are in batch, and an error.
 // Ethereum returns []*jsonrpcMessage, which replaces []rpcRequest
 func getRPCRequests(r *http.Request) ([]*jsonrpcMessage, bool, error) {
-	reqBody, err := io.ReadAll(r.Body)
+	limit := int64(common.MaxRequestContentLength)
+	if r.ContentLength > limit {
+		return nil, false, errAPMRequestTooLarge
+	}
+	reqBody, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
 	if err != nil {
 		logger.Error("cannot read a request body", "err", err)
 		return nil, false, err
 	}
 
 	r.Body = io.NopCloser(bytes.NewReader(reqBody))
+	if int64(len(reqBody)) > limit {
+		return nil, false, errAPMRequestTooLarge
+	}
 	conn := &httpServerConn{Reader: io.NopCloser(bytes.NewReader(reqBody)), Writer: bytes.NewBufferString(""), r: r}
 
 	codec := NewCodec(conn)

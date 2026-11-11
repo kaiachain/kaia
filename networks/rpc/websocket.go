@@ -23,12 +23,8 @@
 package rpc
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -37,11 +33,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	fastws "github.com/clevergo/websocket"
 	mapset "github.com/deckarep/golang-set"
 	"github.com/gorilla/websocket"
 	"github.com/kaiachain/kaia/common"
-	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -92,65 +86,6 @@ func (srv *Server) WebsocketHandler(allowedOrigins []string) http.Handler {
 	})
 }
 
-var upgrader = fastws.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
-func (srv *Server) FastWebsocketHandler(ctx *fasthttp.RequestCtx) {
-	// TODO-Kaia handle websocket protocol
-	protocol := ctx.Request.Header.Peek("Sec-WebSocket-Protocol")
-	if protocol != nil {
-		ctx.Response.Header.Set("Sec-WebSocket-Protocol", string(protocol))
-	}
-
-	err := upgrader.Upgrade(ctx, func(conn *fastws.Conn) {
-		if atomic.LoadInt32(&srv.wsConnCount) >= MaxWebsocketConnections {
-			return
-		}
-		atomic.AddInt32(&srv.wsConnCount, 1)
-		wsConnCounter.Inc(1)
-		defer func() {
-			atomic.AddInt32(&srv.wsConnCount, -1)
-			wsConnCounter.Dec(1)
-		}()
-		if WebsocketReadDeadline != 0 {
-			conn.SetReadDeadline(time.Now().Add(time.Duration(WebsocketReadDeadline) * time.Second))
-		}
-		if WebsocketWriteDeadline != 0 {
-			conn.SetWriteDeadline(time.Now().Add(time.Duration(WebsocketWriteDeadline) * time.Second))
-		}
-		// Create a custom encode/decode pair to enforce payload size and number encoding
-		encoder := func(v interface{}) error {
-			msg, err := json.Marshal(v)
-			if err != nil {
-				return err
-			}
-			err = conn.WriteMessage(websocket.TextMessage, msg)
-			if err != nil {
-				return err
-			}
-			return err
-		}
-		decoder := func(v interface{}) error {
-			_, data, err := conn.ReadMessage()
-			if err != nil {
-				return err
-			}
-			dec := json.NewDecoder(bytes.NewReader(data))
-			dec.UseNumber()
-			return dec.Decode(v)
-		}
-
-		reader := bufio.NewReaderSize(bytes.NewReader(ctx.Request.Body()), common.MaxRequestContentLength)
-		srv.ServeCodec(NewFuncCodec(&httpReadWriteNopCloser{reader, ctx.Response.BodyWriter()}, encoder, decoder), 0)
-	})
-	if err != nil {
-		logger.Error("FastWebsocketHandler fail to upgrade message", "err", err)
-		return
-	}
-}
-
 // NewWSServer creates a new websocket RPC server around an API provider.
 //
 // Deprecated: use Server.WebsocketHandler
@@ -158,57 +93,6 @@ func NewWSServer(allowedOrigins []string, srv *Server) *http.Server {
 	return &http.Server{
 		Handler: srv.WebsocketHandler(allowedOrigins),
 	}
-}
-
-func NewFastWSServer(allowedOrigins []string, srv *Server) *fasthttp.Server {
-	upgrader.CheckOrigin = wsFastHandshakeValidator(allowedOrigins)
-
-	// TODO-Kaia concurreny default (256 * 1024), goroutine limit (8192)
-	return &fasthttp.Server{
-		Concurrency:        ConcurrencyLimit,
-		MaxRequestBodySize: common.MaxRequestContentLength,
-		Handler:            srv.FastWebsocketHandler,
-	}
-}
-
-func wsFastHandshakeValidator(allowedOrigins []string) func(ctx *fasthttp.RequestCtx) bool {
-	origins := mapset.NewSet()
-	allowAllOrigins := false
-
-	for _, origin := range allowedOrigins {
-		if origin == "*" {
-			allowAllOrigins = true
-		}
-		if origin != "" {
-			origins.Add(strings.ToLower(origin))
-		}
-	}
-
-	// allow localhost if no allowedOrigins are specified.
-	if len(origins.ToSlice()) == 0 {
-		origins.Add("http://localhost")
-		if hostname, err := os.Hostname(); err == nil {
-			origins.Add("http://" + strings.ToLower(hostname))
-		}
-	}
-
-	logger.Debug(fmt.Sprintf("Allowed origin(s) for WS RPC interface %v\n", origins.ToSlice()))
-
-	f := func(ctx *fasthttp.RequestCtx) bool {
-		// Skip origin verification if no Origin header is present. The origin check
-		// is supposed to protect against browser based attacks. Browsers always set
-		// Origin. Non-browser software can put anything in origin and checking it doesn't
-		// provide additional security.
-
-		origin := strings.ToLower(string(ctx.Request.Header.Peek("Origin")))
-		if allowAllOrigins || origins.Contains(origin) || origin == "" {
-			return true
-		}
-		logger.Warn(fmt.Sprintf("origin '%s' not allowed on WS-RPC interface\n", origin))
-		return false
-	}
-
-	return f
 }
 
 // wsHandshakeValidator returns a handler that verifies the origin during the

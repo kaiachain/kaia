@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -1273,6 +1274,30 @@ func TestDBManager_WriteCode(t *testing.T) {
 		ret3 := dbm.ReadCode(hash3)
 		assert.Equal(t, data3, ret3)
 	}
+}
+
+// RemoveOldDB runs in the background, so the DB manager can be closed before it finishes.
+// It must not crash the process in that case.
+func TestDatabaseManager_RemoveOldDBAfterClose(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+	dir := t.TempDir()
+	dbm := NewDBManager(&DBConfig{Dir: dir, DBType: LevelDB, NumStateTrieShards: 4})
+
+	oldDBPath := filepath.Join(dir, "statetrie_old")
+	assert.NoError(t, os.MkdirAll(oldDBPath, 0o755))
+
+	dbm.Close()
+
+	endCheck := make(chan struct{})
+	go dbm.RemoveOldDB(oldDBPath, endCheck)
+	select {
+	case <-endCheck:
+	case <-time.After(1 * time.Second):
+		t.Fatal("takes too much time to delete old db")
+	}
+
+	_, err := os.Stat(oldDBPath)
+	assert.True(t, os.IsNotExist(err))
 }
 
 func genRandomData() (common.Hash, []byte) {

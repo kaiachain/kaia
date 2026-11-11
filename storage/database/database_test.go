@@ -301,7 +301,7 @@ func (ts *commonDatabaseTestSuite) TestParallelPutGet() {
 	var pending sync.WaitGroup
 
 	pending.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(key string) {
 			defer pending.Done()
 			err := db.Put([]byte(key), []byte("v"+key))
@@ -313,7 +313,7 @@ func (ts *commonDatabaseTestSuite) TestParallelPutGet() {
 	pending.Wait()
 
 	pending.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(key string) {
 			defer pending.Done()
 			data, err := db.Get([]byte(key))
@@ -328,7 +328,7 @@ func (ts *commonDatabaseTestSuite) TestParallelPutGet() {
 	pending.Wait()
 
 	pending.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(key string) {
 			defer pending.Done()
 			err := db.Delete([]byte(key))
@@ -340,7 +340,7 @@ func (ts *commonDatabaseTestSuite) TestParallelPutGet() {
 	pending.Wait()
 
 	pending.Add(n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(key string) {
 			defer pending.Done()
 			_, err := db.Get([]byte(key))
@@ -356,7 +356,7 @@ func (ts *commonDatabaseTestSuite) TestParallelPutGet() {
 // specified for every DBEntryType.
 func TestDBEntryLengthCheck(t *testing.T) {
 	dbRatioSum := 0
-	for i := 0; i < int(databaseEntryTypeSize); i++ {
+	for i := range int(databaseEntryTypeSize) {
 		if dbBaseDirs[i] == "" {
 			t.Fatalf("Database directory should be specified! index: %v", i)
 		}
@@ -393,7 +393,7 @@ func (d testDataSlice) Less(i, j int) bool {
 
 func insertRandomData(db KeyValueWriter, prefix []byte, num int) (testDataSlice, error) {
 	ret := testDataSlice{}
-	for i := 0; i < num; i++ {
+	for range num {
 		key := common.MakeRandomBytes(32)
 		val := append(key, key...)
 		if len(prefix) > 0 {
@@ -606,7 +606,7 @@ func (ts *commonDatabaseTestSuite) Test_BatchWrite() {
 	batch := db.NewBatch()
 	defer batch.Release()
 	data := testDataSlice{}
-	for i := 0; i < numIter; i++ {
+	for range numIter {
 		inserted, _ := insertRandomData(batch, nil, numData)
 		batch.Write()
 		batch.Reset()

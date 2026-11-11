@@ -102,8 +102,8 @@ func BenchmarkEvmOp(t *testing.B) {
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
-	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/contracts/testing/computationcost/opcodeBench.sol > ../contracts/contracts/testing/computationcost/opcodeBench.sol.json
-	filename := string("../contracts/contracts/testing/computationcost/opcodeBench.sol")
+	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/testing/computationcost/opcodeBench.sol > ../contracts/testing/computationcost/opcodeBench.sol.json
+	filename := string("../contracts/testing/computationcost/opcodeBench.sol")
 	contracts, err := compiler.CompileSolidityOrLoad("", filename)
 	require.NoError(t, err)
 
@@ -229,7 +229,7 @@ func BenchmarkEvmOp(t *testing.B) {
 	{
 		hash := crypto.Keccak256Hash(multisig10.Addr.Bytes())
 		sigs := make([][]byte, 10)
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			s, err := crypto.Sign(hash.Bytes(), multisig10.Keys[i])
 			require.NoError(t, err)
 			sigs[i] = s

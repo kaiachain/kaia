@@ -373,7 +373,7 @@ func TestSnaphots(t *testing.T) {
 		last = common.HexToHash("0x01")
 		head common.Hash
 	)
-	for i := 0; i < 129; i++ {
+	for i := range 129 {
 		head = makeRoot(uint64(i + 2))
 		snaps.Update(head, last, nil, setAccount(fmt.Sprintf("%d", i+2)), nil)
 		last = head

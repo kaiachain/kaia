@@ -219,7 +219,7 @@ const (
 
 	// The p2p message size is max 12 MiB, so a block is capped to it minus a safety margin for any metadata that may accompany the block message.
 	// MaxBlockSize (10 MiB) = ProtocolMaxMsgSize (12 MiB) - margin (2 MiB)
-	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block
+	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block, not counting committed seals
 )
 
 const (
@@ -242,7 +242,8 @@ var (
 	BlockScoreBoundDivisor = big.NewInt(2048)   // The bound divisor of the blockscore, used in the update calculations.
 	GenesisBlockScore      = big.NewInt(131072) // BlockScore of the Genesis block.
 	MinimumBlockScore      = big.NewInt(131072) // The minimum that the blockscore may ever be.
-	DurationLimit          = big.NewInt(13)     // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
+	DefaultBlockScore      = big.NewInt(1)
+	DurationLimit          = big.NewInt(13) // The decision boundary on the blocktime duration used to determine whether blockscore should go up or not.
 
 	// SystemAddress is where the system-transaction is sent from as per EIP-4788
 	SystemAddress = common.HexToAddress("0xfffffffffffffffffffffffffffffffffffffffe")

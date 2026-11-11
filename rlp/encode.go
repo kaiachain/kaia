@@ -314,7 +314,7 @@ func makeSliceWriter(typ reflect.Type, ts rlpstruct.Tags) (writer, error) {
 		// w.list is not called for them.
 		wfn = func(val reflect.Value, w *encBuffer) error {
 			vlen := val.Len()
-			for i := 0; i < vlen; i++ {
+			for i := range vlen {
 				if err := etypeinfo.writer(val.Index(i), w); err != nil {
 					return err
 				}
@@ -330,7 +330,7 @@ func makeSliceWriter(typ reflect.Type, ts rlpstruct.Tags) (writer, error) {
 				return nil
 			}
 			listOffset := w.list()
-			for i := 0; i < vlen; i++ {
+			for i := range vlen {
 				if err := etypeinfo.writer(val.Index(i), w); err != nil {
 					return err
 				}

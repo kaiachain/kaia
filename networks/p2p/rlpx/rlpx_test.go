@@ -153,7 +153,7 @@ func TestFrameReadWrite(t *testing.T) {
 	}
 
 	// Check readFrame on the test vector.
-	content, err := h.readFrame(bytes.NewReader(golden))
+	content, err := h.readFrame(bytes.NewReader(golden), 0)
 	if err != nil {
 		t.Fatalf("ReadMsg error: %v", err)
 	}
@@ -161,6 +161,26 @@ func TestFrameReadWrite(t *testing.T) {
 	if !bytes.Equal(content, wantContent) {
 		t.Errorf("frame content mismatch:\ngot  %x\nwant %x", content, wantContent)
 	}
+}
+
+func TestFrameReadLimit(t *testing.T) {
+	conn := NewConn(nil, nil)
+	hash := fakeHash(bytes.Repeat([]byte{1}, 32))
+	conn.InitWithSecrets(Secrets{
+		AES:        crypto.Keccak256(),
+		MAC:        crypto.Keccak256(),
+		IngressMAC: hash,
+		EgressMAC:  hash,
+	})
+	h := conn.session
+
+	buf := new(bytes.Buffer)
+	if err := h.writeFrame(buf, 0, make([]byte, 2048)); err != nil {
+		t.Fatal(err)
+	}
+	_, err := h.readFrame(bytes.NewReader(buf.Bytes()), 2048)
+	assert.ErrorIs(t, err, errFrameTooLarge)
+	assert.LessOrEqual(t, cap(h.rbuf.data), 32)
 }
 
 type fakeHash []byte

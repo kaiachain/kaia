@@ -31,7 +31,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/contracts/contracts/libs/kip13"
+	"github.com/kaiachain/kaia/contracts/bindings/kip13"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 

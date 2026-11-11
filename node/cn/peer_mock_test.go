@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	auction "github.com/kaiachain/kaia/kaiax/auction"
+	vrank "github.com/kaiachain/kaia/kaiax/vrank"
 	p2p "github.com/kaiachain/kaia/networks/p2p"
 	discover "github.com/kaiachain/kaia/networks/p2p/discover"
 	snap "github.com/kaiachain/kaia/node/cn/snap"
@@ -123,6 +124,30 @@ func (m *MockPeer) AsyncSendTransactions(arg0 types.Transactions) {
 func (mr *MockPeerMockRecorder) AsyncSendTransactions(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncSendTransactions", reflect.TypeOf((*MockPeer)(nil).AsyncSendTransactions), arg0)
+}
+
+// AsyncSendVRankCandidate mocks base method.
+func (m *MockPeer) AsyncSendVRankCandidate(arg0 *vrank.VRankCandidate) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AsyncSendVRankCandidate", arg0)
+}
+
+// AsyncSendVRankCandidate indicates an expected call of AsyncSendVRankCandidate.
+func (mr *MockPeerMockRecorder) AsyncSendVRankCandidate(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncSendVRankCandidate", reflect.TypeOf((*MockPeer)(nil).AsyncSendVRankCandidate), arg0)
+}
+
+// AsyncSendVRankPreprepare mocks base method.
+func (m *MockPeer) AsyncSendVRankPreprepare(arg0 *vrank.VRankPreprepare) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AsyncSendVRankPreprepare", arg0)
+}
+
+// AsyncSendVRankPreprepare indicates an expected call of AsyncSendVRankPreprepare.
+func (mr *MockPeerMockRecorder) AsyncSendVRankPreprepare(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncSendVRankPreprepare", reflect.TypeOf((*MockPeer)(nil).AsyncSendVRankPreprepare), arg0)
 }
 
 // Broadcast mocks base method.
@@ -748,6 +773,34 @@ func (m *MockPeer) SendTransactions(arg0 types.Transactions) error {
 func (mr *MockPeerMockRecorder) SendTransactions(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransactions", reflect.TypeOf((*MockPeer)(nil).SendTransactions), arg0)
+}
+
+// SendVRankCandidate mocks base method.
+func (m *MockPeer) SendVRankCandidate(arg0 *vrank.VRankCandidate) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendVRankCandidate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendVRankCandidate indicates an expected call of SendVRankCandidate.
+func (mr *MockPeerMockRecorder) SendVRankCandidate(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendVRankCandidate", reflect.TypeOf((*MockPeer)(nil).SendVRankCandidate), arg0)
+}
+
+// SendVRankPreprepare mocks base method.
+func (m *MockPeer) SendVRankPreprepare(arg0 *vrank.VRankPreprepare) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendVRankPreprepare", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendVRankPreprepare indicates an expected call of SendVRankPreprepare.
+func (mr *MockPeerMockRecorder) SendVRankPreprepare(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendVRankPreprepare", reflect.TypeOf((*MockPeer)(nil).SendVRankPreprepare), arg0)
 }
 
 // SetAddr mocks base method.

@@ -93,7 +93,6 @@ func bootnode(ctx *cli.Context) error {
 	setHTTP(ctx, &bcfg)
 	setWS(ctx, &bcfg)
 	setgRPC(ctx, &bcfg)
-	setAuthorizedNodes(ctx, &bcfg)
 
 	// Check exit condition
 	switch bcfg.checkCMDState() {
@@ -138,20 +137,37 @@ func bootnode(ctx *cli.Context) error {
 		}
 	}
 
-	cfg := discover.Config{
-		NetworkID:       bcfg.networkID,
-		PrivateKey:      bcfg.nodeKey,
-		AnnounceAddr:    realaddr,
-		NetRestrict:     bcfg.restrictList,
-		Conn:            conn,
-		Addr:            realaddr,
-		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
-		NodeType:        p2p.ConvertNodeType(common.BOOTNODE),
-		AuthorizedNodes: bcfg.AuthorizedNodes,
-		DiscoverTypes:   discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
+	// KIP-311 requires a BN to rate limit discovery pings from unknown NodeIds.
+	// Reject a negative rate outright, and warn when the limiter is disabled or
+	// set so low that legitimate NAT'd nodes would be throttled.
+	pingRateLimit := ctx.Int(utils.BNPingRateLimitFlag.Name)
+	if pingRateLimit < 0 {
+		log.Fatalf("Invalid --%s %d: must not be negative (0 disables the limiter)",
+			utils.BNPingRateLimitFlag.Name, pingRateLimit)
+	}
+	if pingRateLimit == 0 {
+		logger.Warn("Discovery ping rate limiting is disabled; KIP-311 requires a bootstrap node to rate limit pings from unknown NodeIds",
+			"flag", utils.BNPingRateLimitFlag.Name)
+	} else if pingRateLimit < 2 {
+		logger.Warn("Discovery ping rate limit is very low; nodes sharing one public IP via NAT may be throttled",
+			"flag", utils.BNPingRateLimitFlag.Name, "value", pingRateLimit)
 	}
 
-	tab, err := discover.ListenUDP(&cfg)
+	cfg := discover.Config{
+		NetworkID:     bcfg.networkID,
+		PrivateKey:    bcfg.nodeKey,
+		AnnounceAddr:  realaddr,
+		NetRestrict:   bcfg.restrictList,
+		Conn:          conn,
+		Addr:          realaddr,
+		Id:            discover.PubkeyID(&bcfg.nodeKey.PublicKey),
+		NodeType:      p2p.ConvertNodeType(common.BOOTNODE),
+		DiscoverTypes: discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
+		PingRateLimit: float64(pingRateLimit),
+		PingBurst:     ctx.Int(utils.BNPingBurstFlag.Name),
+	}
+
+	disc, err := discover.NewDiscovery2(&cfg)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -160,7 +176,7 @@ func bootnode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	node.appendAPIs(NewBN(tab).APIs())
+	node.appendAPIs(disc.APIs())
 	if err := startNode(node); err != nil {
 		return err
 	}

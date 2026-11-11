@@ -40,7 +40,7 @@ func GetModuleName(mi ModuleID) string {
 
 func GetModuleID(moduleName string) ModuleID {
 	moduleName = strings.ToLower(moduleName)
-	for i := 0; i < len(moduleNames); i++ {
+	for i := range len(moduleNames) {
 		if moduleName == moduleNames[i] {
 			return ModuleID(i)
 		}
@@ -139,6 +139,7 @@ const (
 	KaiaxGasless
 	Builder
 	KaiaxAuction
+	KaiaxVrank
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -227,4 +228,5 @@ var moduleNames = [ModuleNameLen]string{
 	"kaiax/gasless",
 	"builder",
 	"kaiax/auction",
+	"kaiax/vrank",
 }

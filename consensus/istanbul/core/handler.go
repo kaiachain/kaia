@@ -24,17 +24,20 @@ package core
 
 import (
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/rlp"
 )
 
 // Start implements core.Engine.Start
 func (c *core) Start() error {
-	// Start a new round from last sequence + 1
-	c.startNewRound(common.Big0)
-
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	c.subscribeEvents()
+
+	// Start a new round from last sequence + 1
+	c.startNewRound(common.Big0)
+
 	c.handlerWg.Add(1)
 	go c.handleEvents()
 
@@ -65,8 +68,8 @@ func (c *core) subscribeEvents() {
 	c.timeoutSub = c.backend.EventMux().Subscribe(
 		timeoutEvent{},
 	)
-	c.finalCommittedSub = c.backend.EventMux().Subscribe(
-		istanbul.FinalCommittedEvent{},
+	c.chainHeadSub = c.backend.EventMux().Subscribe(
+		istanbul.ChainHeadEvent{},
 	)
 }
 
@@ -74,7 +77,7 @@ func (c *core) subscribeEvents() {
 func (c *core) unsubscribeEvents() {
 	c.events.Unsubscribe()
 	c.timeoutSub.Unsubscribe()
-	c.finalCommittedSub.Unsubscribe()
+	c.chainHeadSub.Unsubscribe()
 }
 
 func (c *core) handleEvents() {
@@ -93,7 +96,7 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case istanbul.RequestEvent:
-				r := &istanbul.Request{
+				r := &bft.Request{
 					Proposal: ev.Proposal,
 				}
 				err := c.handleRequest(r)
@@ -106,13 +109,13 @@ func (c *core) handleEvents() {
 					// c.backend.Gossip(c.valSet, ev.Payload)
 				}
 			case backlogEvent:
-				if !c.currentCommittee.Qualified().Contains(ev.src) {
+				if !c.current.qualified.Contains(ev.src) {
 					c.logger.Error("Invalid address in valSet", "addr", ev.src)
 					continue
 				}
 				// No need to check signature for internal messages
 				if err := c.handleCheckedMsg(ev.msg, ev.src); err == nil {
-					p, err := ev.msg.Payload()
+					p, err := ev.msg.PayloadForFork(c.isPermissionlessAt)
 					if err != nil {
 						c.logger.Warn("Get message payload failed", "err", err)
 						continue
@@ -132,13 +135,13 @@ func (c *core) handleEvents() {
 				return
 			}
 			c.handleTimeoutMsg(data.nextView)
-		case event, ok := <-c.finalCommittedSub.Chan():
+		case event, ok := <-c.chainHeadSub.Chan():
 			if !ok {
 				return
 			}
 			switch event.Data.(type) {
-			case istanbul.FinalCommittedEvent:
-				c.handleFinalCommitted()
+			case istanbul.ChainHeadEvent:
+				c.handleChainHead()
 			}
 		}
 	}
@@ -153,8 +156,8 @@ func (c *core) handleMsg(payload []byte) error {
 	logger := c.logger.NewWith()
 
 	// Decode message and check its signature
-	msg := new(message)
-	if err := msg.FromPayload(payload, c.validateFn); err != nil {
+	msg := new(bft.Message)
+	if err := msg.FromPayloadForFork(payload, c.isPermissionlessAt, c.validateFn); err != nil {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			if err != istanbul.ErrUnauthorizedAddress {
 				logger.Error("Failed to decode message from payload", "err", err)
@@ -176,7 +179,7 @@ func (c *core) handleMsg(payload []byte) error {
 	}
 
 	// Only accept message if the address is valid
-	if !c.currentCommittee.Qualified().Contains(msg.Address) {
+	if !c.current.qualified.Contains(msg.Address) {
 		logger.Error("Invalid address in message", "msg", msg)
 		return istanbul.ErrUnauthorizedAddress
 	}
@@ -184,35 +187,85 @@ func (c *core) handleMsg(payload []byte) error {
 	return c.handleCheckedMsg(msg, msg.Address)
 }
 
-func (c *core) handleCheckedMsg(msg *message, src common.Address) error {
+// maxSubjectMessageBytes bounds the signed part of ROUND CHANGE, PREPARE and
+// COMMIT. These carry fixed-shape payloads, but rlp does not cap the length of
+// a big.Int view field. The limit is far above a well-formed message.
+const maxSubjectMessageBytes = 1024
+
+// maxConsensusP2PMessageBytes matches node/cn.ProtocolMaxMsgSize. The P2P
+// message wraps the signed consensus payload in ConsensusMsg, so the payload
+// itself must be smaller than this cap.
+const maxConsensusP2PMessageBytes = 12 * 1024 * 1024
+
+// consensusP2PMessageSize is the RLP size of ConsensusMsg{PrevHash, Payload}.
+// A 32-byte PrevHash always occupies 33 RLP bytes.
+func consensusP2PMessageSize(payload []byte) uint64 {
+	return rlp.ListSize(33 + rlp.BytesSize(payload))
+}
+
+// checkMessageSize rejects an oversized consensus message before the retention
+// paths diverge (backlog, roundChangeSet, messageSet), so every retained copy
+// is bounded. A ROUND CHANGE may attach a prepared certificate, including the
+// prepared block, as its unsigned Evidence, so only the signed part is held to
+// the subject limit; the Evidence is bounded by the P2P limit below.
+func checkMessageSize(msg *bft.Message, isPermissionlessAt func(uint64) bool) error {
+	retained := retainedMessageBytes(msg)
+	if msg.Code != bft.MsgPreprepare && retained-uint64(len(msg.Evidence)) > maxSubjectMessageBytes {
+		return errMessageTooLarge
+	}
+	// Most messages are far below the P2P limit. Only encode near the boundary,
+	// where RLP headers and the ConsensusMsg wrapper can push a message over it.
+	if retained >= maxConsensusP2PMessageBytes-2048 {
+		payload, err := msg.PayloadForFork(isPermissionlessAt)
+		if err != nil || consensusP2PMessageSize(payload) > maxConsensusP2PMessageBytes {
+			return errMessageTooLarge
+		}
+	}
+	return nil
+}
+
+func (c *core) handleCheckedMsg(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
 
-	// Store the message if it's a future message
+	if err := checkMessageSize(msg, c.isPermissionlessAt); err != nil {
+		logger.Debug("Discarding oversized message", "code", msg.Code, "bytes", retainedMessageBytes(msg))
+		return err
+	}
+
+	// Store the message if it's a future message, or catch up if we're behind
 	testBacklog := func(err error) error {
 		if err == errFutureMessage {
 			c.storeBacklog(msg, src)
+
+			lastProposal, _ := c.backend.LastProposal()
+			if lastProposal != nil && lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+				// We're behind, catch up to the latest sequence
+				// startNewRound will call processBacklog() to handle this message
+				logger.Trace("Catching up to latest sequence on future message", "lastProposal", lastProposal.Number().Uint64())
+				c.startNewRound(common.Big0)
+			}
 		}
 
 		return err
 	}
 
 	switch msg.Code {
-	case msgPreprepare:
+	case bft.MsgPreprepare:
 		return testBacklog(c.handlePreprepare(msg, src))
-	case msgPrepare:
+	case bft.MsgPrepare:
 		return testBacklog(c.handlePrepare(msg, src))
-	case msgCommit:
+	case bft.MsgCommit:
 		return testBacklog(c.handleCommit(msg, src))
-	case msgRoundChange:
+	case bft.MsgRoundChange:
 		return testBacklog(c.handleRoundChange(msg, src))
 	default:
 		logger.Error("Invalid message type", "msg", msg)
 	}
 
-	return errInvalidMessage
+	return bft.ErrInvalidMessage
 }
 
-func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
+func (c *core) handleTimeoutMsg(nextView *bft.View) {
 	// TODO-Kaia-Istanbul: EN/PN should not handle consensus msgs.
 	if c.backend.NodeType() != common.CONSENSUSNODE {
 		logger.Trace("PN/EN doesn't need to handle timeout messages",
@@ -236,7 +289,7 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 	// the max round with F+1 round change message. We only need to catch up
 	// if the max round is larger than current round.
 	if !c.waitingForRoundChange {
-		maxRound := c.roundChangeSet.MaxRound(c.currentCommittee.F() + 1)
+		maxRound := c.roundChangeSet.MaxRound(c.current.f + 1)
 		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
 			logger.Warn("[RC] Send round change because of timeout event")
 			c.sendRoundChange(maxRound)
@@ -249,5 +302,25 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 		c.startNewRound(common.Big0)
 	} else {
 		c.sendRoundChange(nextView.Round)
+	}
+}
+
+func (c *core) handleChainHead() {
+	lastProposal, _ := c.backend.LastProposal()
+	if lastProposal == nil {
+		return
+	}
+
+	// Core not initialized yet (during startup)
+	if c.current == nil {
+		c.logger.Trace("Chain head event skipped, core not initialized", "lastProposal", lastProposal.Number().Uint64())
+		return
+	}
+
+	// Only start new round if the chain has advanced beyond current sequence.
+	// When commit() calls startNewRound() synchronously, sequence is already advanced,
+	// so this check will fail and prevent duplicate calls.
+	if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+		c.startNewRound(common.Big0)
 	}
 }

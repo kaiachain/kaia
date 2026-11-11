@@ -97,7 +97,7 @@ func newRedisCache(config *TrieNodeCacheConfig) (*RedisCache, error) {
 	}
 
 	workerNum := runtime.NumCPU()/2 + 1
-	for i := 0; i < workerNum; i++ {
+	for range workerNum {
 		go func() {
 			for item := range cache.setItemCh {
 				cache.Set(item.key, item.value)
