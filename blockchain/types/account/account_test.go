@@ -532,3 +532,36 @@ func TestUnextendRLP(t *testing.T) {
 		assert.Equal(t, tc.unextended, hexutil.Encode(unextended))
 	}
 }
+
+// Stored accounts always start with a type byte. Input without one, or with the
+// legacy type, used to fall back to a LegacyAccount whose constructor stops the
+// process. The decoders and constructors must return an error instead.
+func TestAccountSerializer_RejectsLegacyInput(t *testing.T) {
+	legacyList := common.FromHex("0xf8448080a00000000000000000000000000000000000000000000000000000000000000000a0c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470")
+	// 0x80 is the RLP encoding of the legacy type byte (0).
+	legacyTyped := append([]byte{0x80}, legacyList...)
+
+	for name, input := range map[string][]byte{
+		"empty":       {},
+		"legacy list": legacyList,
+		"legacy type": legacyTyped,
+	} {
+		t.Run(name, func(t *testing.T) {
+			ser := NewAccountSerializer()
+			assert.Error(t, rlp.DecodeBytes(input, ser))
+			assert.Nil(t, ser.GetAccount())
+		})
+	}
+
+	ser := NewAccountSerializer()
+	assert.ErrorIs(t, rlp.DecodeBytes(legacyTyped, ser), ErrDeprecatedLegacyAccount)
+
+	_, err := NewAccountWithType(LegacyAccountType)
+	assert.ErrorIs(t, err, ErrDeprecatedLegacyAccount)
+	_, err = NewAccountWithMap(LegacyAccountType, nil)
+	assert.ErrorIs(t, err, ErrDeprecatedLegacyAccount)
+
+	// The legacy JSON layout has no account body.
+	ser = NewAccountSerializer()
+	assert.ErrorIs(t, json.Unmarshal([]byte(`{"nonce":"0x0","balance":"0x0"}`), ser), ErrDeprecatedLegacyAccount)
+}

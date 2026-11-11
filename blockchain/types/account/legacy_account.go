@@ -42,39 +42,6 @@ func newEmptyLegacyAccount() *LegacyAccount {
 	return &LegacyAccount{}
 }
 
-// newLegacyAccount returns a LegacyAccount object whose all
-// attributes are initialized.
-// This object is used when an account is created.
-// Refer to StateDB.createObject().
-func newLegacyAccount() *LegacyAccount {
-	logger.CritWithStack("Legacy account is deprecated.")
-	return &LegacyAccount{
-		0, new(big.Int), common.Hash{}, emptyCodeHash,
-	}
-}
-
-func newLegacyAccountWithMap(values map[AccountValueKeyType]interface{}) *LegacyAccount {
-	acc := newLegacyAccount()
-
-	if v, ok := values[AccountValueKeyNonce].(uint64); ok {
-		acc.Nonce = v
-	}
-
-	if v, ok := values[AccountValueKeyBalance].(*big.Int); ok {
-		acc.Balance.Set(v)
-	}
-
-	if v, ok := values[AccountValueKeyStorageRoot].(common.Hash); ok {
-		acc.Root = v
-	}
-
-	if v, ok := values[AccountValueKeyCodeHash].([]byte); ok {
-		acc.CodeHash = v
-	}
-
-	return acc
-}
-
 func (a *LegacyAccount) Type() AccountType {
 	return LegacyAccountType
 }

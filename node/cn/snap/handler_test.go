@@ -300,3 +300,44 @@ func TestHandleMessage_Success(t *testing.T) {
 		assert.NoError(t, err)
 	}
 }
+
+// A storage range request for an account that is absent from the requested
+// state must get an empty response. With a non-zero origin the server takes the
+// Merkle proof branch, which reads the account from the trie; the trie returns
+// an empty value for a missing key, and that value must not reach the account
+// decoder.
+func TestServiceGetStorageRangesQuery_MissingAccount(t *testing.T) {
+	items := []*testKV{}
+	for i := uint64(1); i <= 10; i++ {
+		acc, _ := genExternallyOwnedAccount(1, big.NewInt(1))
+		serializer := account.NewAccountSerializerWithAccount(acc)
+		enc, _ := rlp.EncodeToBytes(serializer)
+		items = append(items, &testKV{key32(i), enc})
+	}
+	reader, root := NewTestSnapshotReader(items)
+	missing := common.BytesToHash(key32(0xffff))
+
+	// The snapshot must be fully generated, otherwise the server returns
+	// before the proof branch and the test would pass for the wrong reason.
+	it, err := reader.Snapshots().StorageIterator(root, missing, common.Hash{})
+	assert.NoError(t, err)
+	it.Release()
+
+	newReq := func() *GetStorageRangesPacket {
+		return &GetStorageRangesPacket{
+			ID:       1,
+			Root:     root,
+			Accounts: []common.Hash{missing},
+			Origin:   common.BytesToHash([]byte{0x01}).Bytes(),
+			Bytes:    softResponseLimit,
+		}
+	}
+
+	slots, proofs := ServiceGetStorageRangesQuery(reader, newReq())
+	assert.Empty(t, slots)
+	assert.Empty(t, proofs)
+
+	msg, err := createMsg(GetStorageRangesMsg, newReq())
+	assert.NoError(t, err)
+	assert.NoError(t, HandleMessage(reader, &testDownloader{}, mockPeer(msg)))
+}
