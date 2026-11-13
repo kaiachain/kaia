@@ -312,7 +312,7 @@ func (srv *BaseServer) reservedSlots() int {
 }
 
 func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
-	if c.isTrustedOrStatic() {
+	if srv.NoPeerTypeCap || c.isTrustedOrStatic() {
 		return false
 	}
 
