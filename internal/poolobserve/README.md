@@ -47,8 +47,9 @@ has not finished and therefore has not entered the duration histogram.
 
 - `admission_write_single`, `admission_write_batch`: wait for the public admission
   pool lock. `admission_hold`: work while holding that lock.
-- `head_reset_wait`: wait for the pool lock on a head update. `reset_body`: reset
-  work; `reset_hold`: the reset lock hold. These overlap; do not add durations.
+- `head_reset_wait`: wait for `pool.mu` on a head update. `reset_body`: reset
+  processing, including inner lock waits; `reset_hold`: time holding `pool.mu`
+  around that processing. These overlap; do not add durations.
 - `pending_wait`: wait for `pool.mu` in `Pending`, excluding the later `txMu` wait.
   `candidate_pending`: the complete candidate call to `Pending`.
 - `remote_enqueue`: delivery into the remote-admission channel;
@@ -87,7 +88,8 @@ a loss rate: their populations and retry behavior differ.
 - `broadcast`: the broadcast operation; on CN this includes dispatch into async
   queues, not completion of each peer write.
 - `peer_send`: the common actual transaction send path, including CN async
-  consumers, EN/PN direct sends, resend, and multichannel implementations.
+  consumers, EN direct sends, retained PN compatibility paths, resend, and
+  multichannel implementations. Current deployment targets are EN and CN.
 - `rebroadcast`: the resend operation.
 - Event counters `broadcast_transactions` and `rebroadcast_transactions` count
   operation input transactions; `peer_send_transactions` counts transaction
@@ -153,12 +155,27 @@ missed by scraping. The new nonce reason counters preserve the corresponding bra
 
 ## Interpretation and limits
 
-Start with rate/increase of cumulative counters and stage duration distributions,
-then inspect inflight work and head gaps. For example:
+Start with completion rates, mean durations and the fraction exceeding a bucket
+boundary, then inspect inflight work and head gaps. These examples retain both
+common source-node labels; use the identifying labels retained by your collector.
+Evaluate duration ratios only where the completion rate is greater than zero.
 
 ```promql
-sum by (stage) (rate(kaia_poolobs_duration_seconds_count[5m]))
-histogram_quantile(0.95, sum by (stage, le) (rate(kaia_poolobs_duration_seconds_bucket[5m])))
+# Completed operations per second, by source node and stage.
+sum by (job, instance, host, stage) (rate(kaia_poolobs_duration_seconds_count[5m]))
+
+# Mean completed duration in seconds.
+sum by (job, instance, host, stage) (rate(kaia_poolobs_duration_seconds_sum[5m]))
+/
+sum by (job, instance, host, stage) (rate(kaia_poolobs_duration_seconds_count[5m]))
+
+# Fraction of completed operations taking more than 100ms.
+1 - (
+  sum by (job, instance, host, stage) (rate(kaia_poolobs_duration_seconds_bucket{le="0.1"}[5m]))
+  /
+  sum by (job, instance, host, stage) (rate(kaia_poolobs_duration_seconds_count[5m]))
+)
+
 increase(kaia_poolobs_events_total{event="peer_send_dropped"}[5m])
 ```
 
@@ -171,8 +188,13 @@ remote connection is responsible. Keep host identity for diagnosis rather than
 summing unrelated nodes. Handle
 process restart/counter reset. Use the observation process-start timestamp as a restart hint, not a globally
 unique identity. Histogram buckets in seconds are
-`0.1, 0.15, 0.25, 1, 5, 10, 20`, plus infinity. Sub-millisecond profiling is outside
-this diagnostic contract. Above 20 seconds, use `_count - _bucket{le="20"}`;
+`0.1, 0.15, 0.25, 1, 5, 10, 20`, plus infinity. Durations at or below 100ms
+share the first bucket, so their distribution cannot be resolved. The sum and
+count still provide their contribution to the overall mean. `histogram_quantile`
+interpolates within buckets: if all observations are in the first bucket, its
+p95 estimate is 95ms even when every operation takes 1ms. Prefer the mean and
+threshold-exceedance fraction above for these stages. Above 20 seconds, use
+`_count - _bucket{le="20"}`;
 a quantile in the overflow bucket is not an observed upper bound.
 
 The metrics can locate aggregate stalls and show local candidate reasons. They
