@@ -46,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -1798,6 +1799,8 @@ func (pm *ProtocolManager) BroadcastBid(bid *auction.Bid) {
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
+	defer poolobserve.Begin(poolobserve.Broadcast)()
+	poolobserve.Count(poolobserve.BroadcastTransactions, len(txs))
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
@@ -1837,6 +1840,10 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
+	// Count nonempty batches with no eligible recipient, including known-tx filtering.
+	if len(txs) > 0 && len(cnPeersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.BroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs2 := range cnPeersWithoutTxs {
@@ -1862,6 +1869,9 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 		txSendCounter.Inc(1)
 	}
 
+	if len(txs) > 0 && len(peersWithoutTxs)+len(cnPeersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.BroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(peersWithoutTxs) + len(cnPeersWithoutTxs)))
 	sendTransactions(cnPeersWithoutTxs)
 	sendTransactions(peersWithoutTxs)
@@ -1876,6 +1886,9 @@ func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
 		txSendCounter.Inc(1)
 	}
 
+	if len(txs) > 0 && len(peersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.BroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(peersWithoutTxs)))
 	sendTransactions(peersWithoutTxs)
 }
@@ -1887,6 +1900,8 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	if pm.nodetype == common.CONSENSUSNODE {
 		return
 	}
+	defer poolobserve.Begin(poolobserve.Rebroadcast)()
+	poolobserve.Count(poolobserve.RebroadcastTransactions, len(txs))
 
 	baseFee := big.NewInt(int64(params.DefaultLowerBoundBaseFee))
 	if pm.blockchain != nil && pm.blockchain.CurrentHeader() != nil && pm.blockchain.CurrentHeader().BaseFee != nil {
@@ -1903,6 +1918,9 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 		txResendCounter.Inc(1)
 	}
 
+	if len(txs) > 0 && len(peersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.RebroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(peersWithoutTxs)))
 	sendTransactions(peersWithoutTxs)
 }
@@ -1997,6 +2015,8 @@ func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
 }
 
 func (pm *ProtocolManager) txBroadcastLoop() {
+	ch := pm.txsCh
+	defer poolobserve.TrackQueue(poolobserve.BroadcastQueue, func() int { return len(ch) }, cap(ch))()
 	for {
 		select {
 		case event := <-pm.txsCh:

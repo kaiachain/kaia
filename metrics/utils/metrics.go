@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/log"
 	prometheusmetrics "github.com/kaiachain/kaia/metrics/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,6 +73,7 @@ func StartMetricCollectionAndExport(ctx *cli.Context) {
 		logger.Info("Enabling metrics collection")
 		if EnabledPrometheusExport {
 			logger.Info("Enabling Prometheus Exporter")
+			poolobserve.Register(prometheus.DefaultRegisterer)
 			pClient := prometheusmetrics.NewPrometheusProvider(metrics.DefaultRegistry, MetricNamespace,
 				"", prometheus.DefaultRegisterer, metricsCollectionInterval)
 			go pClient.UpdatePrometheusMetrics()
