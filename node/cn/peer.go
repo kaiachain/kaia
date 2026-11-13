@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -291,6 +292,12 @@ type Peer interface {
 	ExistSnapExtension() bool
 }
 
+// queuedTransactions carries only a batch timestamp, never per-transaction observation state.
+type queuedTransactions struct {
+	txs      []*types.Transaction
+	queuedAt time.Time
+}
+
 // basePeer is a common data structure used by implementation of Peer.
 type basePeer struct {
 	id string
@@ -310,13 +317,14 @@ type basePeer struct {
 	knownTxsCache         *knownHashSet               // bounded FIFO set of tx hashes known to be known by this peer
 	knownBlocksCache      *knownHashSet               // bounded FIFO set of block hashes known to be known by this peer
 	knownBidsCache        *knownHashSet               // bounded FIFO set of bid hashes known to be known by this peer
-	queuedTxs             chan []*types.Transaction   // Queue of transactions to broadcast to the peer
+	queuedTxs             chan queuedTransactions     // Queue of transactions to broadcast to the peer
 	queuedProps           chan *propEvent             // Queue of blocks to broadcast to the peer
 	queuedAnns            chan *types.Block           // Queue of blocks to announce to the peer
 	queuedBids            chan *auction.Bid           // Queue of bids to broadcast to the peer
 	queuedVRankPreprepare chan *vrank.VRankPreprepare // Queue of VRankPreprepare messages to broadcast to the peer
 	queuedVRankCandidate  chan *vrank.VRankCandidate  // Queue of VRankCandidate messages to broadcast to the peer
-	term                  chan struct{}               // Termination channel to stop the broadcaster
+	txQueueObservation    *poolobserve.PeerQueue
+	term                  chan struct{} // Termination channel to stop the broadcaster
 
 	chainID *big.Int // ChainID to sign a transaction
 
@@ -351,13 +359,14 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 			knownTxsCache:         newKnownTxCache(),
 			knownBlocksCache:      newKnownBlockCache(),
 			knownBidsCache:        newKnownBidCache(),
-			queuedTxs:             make(chan []*types.Transaction, maxQueuedTxs),
+			queuedTxs:             make(chan queuedTransactions, maxQueuedTxs),
 			queuedProps:           make(chan *propEvent, maxQueuedProps),
 			queuedAnns:            make(chan *types.Block, maxQueuedAnns),
 			queuedBids:            make(chan *auction.Bid, maxQueuedBids),
 			queuedVRankPreprepare: make(chan *vrank.VRankPreprepare, maxQueuedVRankPreprepare),
 			queuedVRankCandidate:  make(chan *vrank.VRankCandidate, maxQueuedVRankCandidate),
 			term:                  make(chan struct{}),
+			txQueueObservation:    poolobserve.NewPeerQueue(),
 		},
 	}
 }
@@ -420,13 +429,14 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 			knownTxsCache:         newKnownTxCache(),
 			knownBlocksCache:      newKnownBlockCache(),
 			knownBidsCache:        newKnownBidCache(),
-			queuedTxs:             make(chan []*types.Transaction, maxQueuedTxs),
+			queuedTxs:             make(chan queuedTransactions, maxQueuedTxs),
 			queuedProps:           make(chan *propEvent, maxQueuedProps),
 			queuedAnns:            make(chan *types.Block, maxQueuedAnns),
 			queuedBids:            make(chan *auction.Bid, maxQueuedBids),
 			queuedVRankPreprepare: make(chan *vrank.VRankPreprepare, maxQueuedVRankPreprepare),
 			queuedVRankCandidate:  make(chan *vrank.VRankCandidate, maxQueuedVRankCandidate),
 			term:                  make(chan struct{}),
+			txQueueObservation:    poolobserve.NewPeerQueue(),
 		}
 		return &multiChannelPeer{
 			basePeer: bPeer,
@@ -444,7 +454,9 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 func (p *basePeer) Broadcast() {
 	for {
 		select {
-		case txs := <-p.queuedTxs:
+		case batch := <-p.queuedTxs:
+			p.txQueueObservation.Dequeue(batch.queuedAt)
+			txs := batch.txs
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue
@@ -499,6 +511,7 @@ func (p *basePeer) Broadcast() {
 
 // Close signals the broadcast goroutine to terminate.
 func (p *basePeer) Close() {
+	p.txQueueObservation.Close()
 	close(p.term)
 }
 
@@ -574,12 +587,23 @@ func (p *basePeer) ReSendTransactions(txs types.Transactions) error {
 	})
 }
 
-func sendTransactionBatches(txs types.Transactions, send func(types.Transactions) error) error {
+func sendTransactionBatches(txs types.Transactions, send func(types.Transactions) error) (err error) {
+	// Measure the actual write path, including the CN asynchronous consumer.
+	// A completed write is not an acknowledgement by the receiving pool.
+	end := poolobserve.Begin(poolobserve.PeerSend)
+	defer func() {
+		end()
+		if err != nil {
+			poolobserve.Count(poolobserve.PeerSendErrors, 1)
+		}
+	}()
 	if len(txs) == 0 {
 		return send(txs)
 	}
 	for len(txs) > 0 {
 		count := min(len(txs), maxTxMsgItems)
+		// Count only batches actually attempted, excluding any tail skipped after an error.
+		poolobserve.Count(poolobserve.PeerSendTransactions, count)
 		if err := send(txs[:count]); err != nil {
 			return err
 		}
@@ -589,12 +613,15 @@ func sendTransactionBatches(txs types.Transactions, send func(types.Transactions
 }
 
 func (p *basePeer) AsyncSendTransactions(txs types.Transactions) {
+	queuedAt := p.txQueueObservation.Begin()
 	select {
-	case p.queuedTxs <- txs:
+	case p.queuedTxs <- queuedTransactions{txs: txs, queuedAt: queuedAt}:
 		for _, tx := range txs {
 			p.AddToKnownTxs(tx.Hash())
 		}
 	default:
+		p.txQueueObservation.Cancel(queuedAt)
+		poolobserve.Count(poolobserve.PeerSendDropped, len(txs))
 		p.Log().Trace("Dropping transaction propagation", "count", len(txs))
 	}
 }
@@ -993,7 +1020,9 @@ func (p *multiChannelPeer) RegisterConsensusMsgCode(msgCode uint64) error {
 func (p *multiChannelPeer) Broadcast() {
 	for {
 		select {
-		case txs := <-p.queuedTxs:
+		case batch := <-p.queuedTxs:
+			p.txQueueObservation.Dequeue(batch.queuedAt)
+			txs := batch.txs
 			if err := p.SendTransactions(txs); err != nil {
 				logger.Error("fail to SendTransactions", "peer", p.id, "err", err)
 				continue

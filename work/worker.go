@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
@@ -385,12 +386,15 @@ func (self *worker) commitNewWork() {
 	var err error
 	var nextBaseFee *big.Int
 	// Check any fork transitions needed
+	pendingDone := poolobserve.Begin(poolobserve.CandidatePending)
 	pending, err = self.backend.TxPool().Pending()
+	pendingDone()
 	if err != nil {
 		logger.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 
+	observeCandidateTransactions(poolobserve.CandidatePoolInput, pending)
 	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 		// So above code, TxPool().Pending(), is separated with this and can be refactored later.
@@ -399,8 +403,10 @@ func (self *worker) commitNewWork() {
 		pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 	}
 
+	observeCandidateTransactions(poolobserve.CandidateAfterFee, pending)
 	// Filter txs with txBundlingModules
 	builder.FilterTxs(pending, self.txBundlingModules)
+	observeCandidateTransactions(poolobserve.CandidateAfterModules, pending)
 
 	header := &types.Header{
 		ParentHash: parent.Hash(),
@@ -643,6 +649,9 @@ func (env *Task) CommitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
+	defer poolobserve.Begin(poolobserve.CandidateBuild)()
+	// This is local assembly, not evidence that the candidate became canonical.
+	defer func() { poolobserve.ObserveCandidate(poolobserve.CandidateIncluded, len(env.txs)) }()
 	var (
 		arrayTxs                 = builder.Arrayify(txs)
 		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
@@ -651,6 +660,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 		coalescedLogs            []*types.Log
 	)
 
+	// Count concrete input transactions before bundles add generated entries.
+	poolobserve.ObserveCandidate(poolobserve.CandidateExecutionInput, len(arrayTxs))
 	// Limit the execution time of all transactions in a block
 	var abort int32 = 0                   // To break the below `CommitTransactionLoop` for loop when timed out
 	var isExecutingBundleTxs atomic.Int32 // To wait for abort while the bundle is running
@@ -734,6 +745,7 @@ CommitTransactionLoop:
 			// 1. The previous transaction hash doesn't match the target hash, or
 			// 2. The previous transaction failed (receipt status not successful)
 			if discard, err := env.shouldDiscardBundle(targetBundle); discard {
+				poolobserve.CountCandidateOutcome(poolobserve.CandidateBundleTargetRejected)
 				logger.Warn("Skipping bundle due to invalid target tx", "err", err.Error(), "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
@@ -742,6 +754,7 @@ CommitTransactionLoop:
 
 		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
+			poolobserve.CountCandidateOutcome(poolobserve.CandidateGeneratorFailed)
 			logger.Warn("TxGenerator returned a nil tx", "error", err)
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
@@ -750,12 +763,14 @@ CommitTransactionLoop:
 			// if inclusion of the transaction would put the block size over the
 			// maximum we allow, don't add any more txs to the payload.
 			if !env.txFitsSizeForBundle(nodeAddr, targetBundle) {
+				poolobserve.CountCandidateOutcome(poolobserve.CandidateSizeLimit)
 				break
 			}
 		} else {
 			// if inclusion of the transaction would put the block size over the
 			// maximum we allow, don't add any more txs to the payload.
 			if !env.txFitsSize(tx) {
+				poolobserve.CountCandidateOutcome(poolobserve.CandidateSizeLimit)
 				break
 			}
 		}
@@ -765,6 +780,7 @@ CommitTransactionLoop:
 		// a defined schedule, so we need to verify it's safe to call.
 		if env.config.IsOsakaForkEnabled(env.header.Number) {
 			if hasBlobSpace := env.hasBlobSpace(tx, targetBundle, nodeAddr); !hasBlobSpace {
+				poolobserve.CountCandidateOutcome(poolobserve.CandidateBlobLimit)
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}
@@ -803,12 +819,14 @@ CommitTransactionLoop:
 
 		switch err {
 		case blockchain.ErrNonceTooLow:
+			poolobserve.CountCandidateOutcome(poolobserve.CandidateNonceLow)
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
 			builder.ShiftTxs(&incorporatedTxs, numShift)
 
 		case blockchain.ErrNonceTooHigh:
+			poolobserve.CountCandidateOutcome(poolobserve.CandidateNonceHigh)
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
@@ -820,17 +838,20 @@ CommitTransactionLoop:
 			break CommitTransactionLoop
 
 		case blockchain.ErrTxTypeNotSupported:
+			poolobserve.CountCandidateOutcome(poolobserve.CandidateUnsupportedType)
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case kerrors.ErrRevertedBundleByVmErr:
+			poolobserve.CountCandidateOutcome(poolobserve.CandidateBundleReverted)
 			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
 			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
 			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case kerrors.ErrTxGeneration:
+			poolobserve.CountCandidateOutcome(poolobserve.CandidateGeneratorFailed)
 			// Pop transaction in bundle due to tx generation error without shifting in the next from the account
 			logger.Trace("Skipping transaction in bundle due to tx generation error", "err", err)
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
@@ -1066,3 +1087,15 @@ func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.Sta
 
 func (env *Task) Transactions() []*types.Transaction { return env.txs }
 func (env *Task) Receipts() []*types.Receipt         { return env.receipts }
+
+// observeCandidateTransactions does no account traversal when observation is disabled.
+func observeCandidateTransactions(phase poolobserve.CandidatePhase, pending map[common.Address]types.Transactions) {
+	if !poolobserve.Enabled() {
+		return
+	}
+	n := 0
+	for _, txs := range pending {
+		n += len(txs)
+	}
+	poolobserve.ObserveCandidate(phase, n)
+}

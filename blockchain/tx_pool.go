@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
@@ -346,6 +347,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 // eviction events.
 func (pool *TxPool) loop() {
 	defer pool.wg.Done()
+	defer poolobserve.TrackChainHead(func() uint64 { return pool.chain.CurrentBlock().NumberU64() })()
 
 	// Start the stats reporting and transaction eviction tickers
 	var prevPending, prevQueued, prevStales int
@@ -369,9 +371,13 @@ func (pool *TxPool) loop() {
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
 				pool.saveAndPruneBlobStorage(ev.Block)
+				waitEnd := poolobserve.Begin(poolobserve.HeadResetWait)
 				pool.mu.Lock()
+				waitEnd()
+				holdEnd := poolobserve.Begin(poolobserve.ResetHold)
 				currBlock := pool.chain.CurrentBlock()
 				if ev.Block.Root() != currBlock.Root() {
+					holdEnd()
 					pool.mu.Unlock()
 					logger.Debug("block from ChainHeadEvent is different from the CurrentBlock",
 						"receivedNum", ev.Block.NumberU64(), "receivedHash", ev.Block.Hash().String(),
@@ -380,6 +386,7 @@ func (pool *TxPool) loop() {
 				}
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
+				holdEnd()
 				pool.mu.Unlock()
 			}
 		// Be unsubscribed due to system stopped
@@ -439,8 +446,11 @@ func (pool *TxPool) loop() {
 // lockedReset is a wrapper around reset to allow calling it in a thread safe
 // manner. This method is only ever used in the tester!
 func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
+	waitEnd := poolobserve.Begin(poolobserve.HeadResetWait)
 	pool.mu.Lock()
+	waitEnd()
 	defer pool.mu.Unlock()
+	defer poolobserve.Begin(poolobserve.ResetHold)()
 
 	pool.reset(oldHead, newHead)
 }
@@ -448,6 +458,8 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // reset retrieves the current state of the blockchain and ensures the content
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+	// Constructor reset is included; reset_body alone does not imply lock ownership.
+	defer poolobserve.Begin(poolobserve.ResetBody)()
 	pool.txMu.Lock()
 	var drops []common.Hash
 	for _, module := range pool.modules {
@@ -537,6 +549,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
 	pool.currentBlockNumber = newHead.Number.Uint64()
+	poolobserve.SetPoolStateHead(pool.currentBlockNumber)
 
 	// Inject any transactions discarded due to reorgs
 	logger.Debug("Reinjecting stale transactions", "count", len(reinject))
@@ -602,6 +615,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		for _, module := range pool.modules {
 			module.PostReset(oldHead, newHead, queue, pending)
 		}
+		poolobserve.SetPoolResetHead(newHead.Number.Uint64())
 	}()
 }
 
@@ -708,7 +722,9 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
+	waitEnd := poolobserve.Begin(poolobserve.PendingWait)
 	pool.mu.Lock()
+	waitEnd()
 	defer pool.mu.Unlock()
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
@@ -1175,6 +1191,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		if pool.queue[from] == nil {
 			logger.Trace("Rejecting a new Tx, because TxPool is full and there is no room for the account", "hash", tx.Hash(), "account", from)
 			refusedTxCounter.Inc(1)
+			poolobserve.Count(poolobserve.AdmissionCapacityRejected, 1)
 			return false, fmt.Errorf("txpool is full: %d", uint64(pool.all.Count()))
 		}
 
@@ -1183,6 +1200,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			// (2) discard a new Tx if the new Tx does not have a missing nonce
 			logger.Trace("Rejecting a new Tx, because TxPool is full and a new TX does not have missing nonce", "hash", tx.Hash())
 			refusedTxCounter.Inc(1)
+			poolobserve.Count(poolobserve.AdmissionCapacityRejected, 1)
 			return false, fmt.Errorf("txpool is full and the new tx does not have missing nonce: %d", uint64(pool.all.Count()))
 		}
 
@@ -1232,7 +1250,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		logger.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 
 		// We've directly injected a replacement transaction, notify subsystems
-		pool.txFeedCh <- types.Transactions{tx}
+		pool.enqueueTxFeed(types.Transactions{tx})
 
 		return old != nil, nil
 	}
@@ -1345,7 +1363,10 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
 // to handle them. This is made not to wait from the results from TxPool.AddRemotes.
 func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
+	// Received counts decoded peer input, including input rejected by local policy.
+	poolobserve.Count(poolobserve.RemoteReceived, len(txs))
 	if pool.config.DenyRemoteTx {
+		poolobserve.Count(poolobserve.RemoteDenied, len(txs))
 		return
 	}
 
@@ -1358,20 +1379,25 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 		if poolSize > uint64(spamThrottler.config.ActivateTxPoolSize) {
 			allowTxs, throttleTxs := spamThrottler.classifyTxs(txs)
 
+			transferred := 0
 			for _, tx := range throttleTxs {
 				select {
 				case spamThrottler.throttleCh <- tx:
+					transferred++
 				default:
 					logger.Trace("drop a tx when throttleTxs channel is full", "txHash", tx.Hash())
 					throttlerDropCount.Inc(1)
 				}
 			}
 
+			poolobserve.Count(poolobserve.RemoteThrottled, transferred)
 			txs = allowTxs
 		}
 	}
 
+	end := poolobserve.Begin(poolobserve.RemoteEnqueue)
 	pool.txMsgCh <- txs
+	end()
 }
 
 func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
@@ -1454,11 +1480,15 @@ func (pool *TxPool) StopSpamThrottler() {
 // handleTxMsg calls TxPool.AddRemotes by retrieving transactions from TxPool.txMsgCh.
 func (pool *TxPool) handleTxMsg() {
 	defer pool.wg.Done()
+	ch := pool.txMsgCh
+	defer poolobserve.TrackQueue(poolobserve.RemoteQueue, func() int { return len(ch) }, cap(ch))()
 
 	for {
 		select {
 		case txs := <-pool.txMsgCh:
+			end := poolobserve.Begin(poolobserve.RemoteAdmission)
 			pool.AddRemotes(txs)
+			end()
 		case <-pool.chainHeadSub.Err():
 			return
 		}
@@ -1467,11 +1497,15 @@ func (pool *TxPool) handleTxMsg() {
 
 func (pool *TxPool) handleTxFeed() {
 	defer pool.wg.Done()
+	ch := pool.txFeedCh
+	defer poolobserve.TrackQueue(poolobserve.FeedQueue, func() int { return len(ch) }, cap(ch))()
 
 	for {
 		select {
 		case txs := <-pool.txFeedCh:
+			feedEnd := poolobserve.Begin(poolobserve.FeedSend)
 			pool.txFeed.Send(NewTxsEvent{txs})
+			feedEnd()
 		case <-pool.chainHeadSub.Err():
 			return
 		}
@@ -1481,12 +1515,14 @@ func (pool *TxPool) handleTxFeed() {
 // AddLocal enqueues a single transaction into the pool if it is valid, marking
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
-func (pool *TxPool) AddLocal(tx *types.Transaction) error {
+func (pool *TxPool) AddLocal(tx *types.Transaction) (err error) {
+	defer func() { observeAdmissionResult(err, false) }()
 	if tx.Type().IsChainDataAnchoring() && !pool.config.AllowLocalAnchorTx {
 		return errNotAllowedAnchoringTx
 	}
 
 	if poolSize := uint64(pool.all.Count()); poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+		poolobserve.Count(poolobserve.AdmissionCapacityRejected, 1)
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
 	return pool.addTx(tx, !pool.config.NoLocals)
@@ -1495,21 +1531,24 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 // AddRemote enqueues a single transaction into the pool if it is valid. If the
 // sender is not among the locally tracked ones, full pricing constraints will
 // apply.
-func (pool *TxPool) AddRemote(tx *types.Transaction) error {
+func (pool *TxPool) AddRemote(tx *types.Transaction) (err error) {
+	defer func() { observeAdmissionResult(err, true) }()
 	return pool.addTx(tx, false)
 }
 
 // AddLocals enqueues a batch of transactions into the pool if they are valid,
 // marking the senders as a local ones in the mean time, ensuring they go around
 // the local pricing constraints.
-func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
+func (pool *TxPool) AddLocals(txs []*types.Transaction) (errs []error) {
+	defer func() { observeAdmissionResults(errs, false) }()
 	return pool.checkAndAddTxs(txs, !pool.config.NoLocals)
 }
 
 // AddRemotes enqueues a batch of transactions into the pool if they are valid.
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
-func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
+func (pool *TxPool) AddRemotes(txs []*types.Transaction) (errs []error) {
+	defer func() { observeAdmissionResults(errs, true) }()
 	return pool.checkAndAddTxs(txs, false)
 }
 
@@ -1534,6 +1573,7 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 	errs := pool.addTxs(txs, local)
 
 	if poolCapacity < numTxs {
+		poolobserve.Count(poolobserve.AdmissionCapacityRejected, numTxs-poolCapacity)
 		for i := 0; i < numTxs-poolCapacity; i++ {
 			errs = append(errs, ErrTxPoolOverflow)
 		}
@@ -1546,8 +1586,11 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 	pool.recoverSenders([]*types.Transaction{tx})
 
+	waitEnd := poolobserve.Begin(poolobserve.AdmissionWriteSingle)
 	pool.mu.Lock()
+	waitEnd()
 	defer pool.mu.Unlock()
+	defer poolobserve.Begin(poolobserve.AdmissionHold)()
 
 	// Try to inject the transaction and update any state
 	replace, err := pool.add(tx, local)
@@ -1566,8 +1609,11 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
 	pool.recoverSenders(txs)
 
+	waitEnd := poolobserve.Begin(poolobserve.AdmissionWriteBatch)
 	pool.mu.Lock()
+	waitEnd()
 	defer pool.mu.Unlock()
+	defer poolobserve.Begin(poolobserve.AdmissionHold)()
 
 	return pool.addTxsLocked(txs, local)
 }
@@ -1789,7 +1835,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	}
 	// Notify subsystem for new promoted transactions.
 	if len(promoted) > 0 {
-		pool.txFeedCh <- promoted
+		poolobserve.Count(poolobserve.Promoted, len(promoted))
+		pool.enqueueTxFeed(promoted)
 	}
 	// If the pending limit is overflown, start equalizing allowances. The running
 	// total is maintained incrementally so this is O(1) instead of O(N_senders).
@@ -2332,4 +2379,50 @@ func (pool *TxPool) Clear() {
 	pool.pendingCount = 0
 	pool.queuedCount = 0
 	pool.pendingNonce = make(map[common.Address]uint64)
+}
+
+// enqueueTxFeed measures waiting to publish one event batch, including pending
+// replacements. It runs under the caller's existing lock; no new lock is added.
+func (pool *TxPool) enqueueTxFeed(txs types.Transactions) {
+	end := poolobserve.Begin(poolobserve.FeedEnqueue)
+	pool.txFeedCh <- txs
+	end()
+}
+
+// Public admission results count attempts, not unique transactions. Replacements
+// can succeed repeatedly; internal reorg reinjection is deliberately excluded.
+func observeAdmissionResult(err error, remote bool) {
+	if !poolobserve.Enabled() {
+		return
+	}
+	if err == nil {
+		poolobserve.Count(poolobserve.Admitted, 1)
+		if remote {
+			poolobserve.Count(poolobserve.RemoteAdmitted, 1)
+		}
+	} else {
+		poolobserve.Count(poolobserve.AdmissionRejected, 1)
+		if remote {
+			poolobserve.Count(poolobserve.RemoteRejected, 1)
+		}
+	}
+}
+
+func observeAdmissionResults(errs []error, remote bool) {
+	if !poolobserve.Enabled() {
+		return
+	}
+	accepted := 0
+	for _, err := range errs {
+		if err == nil {
+			accepted++
+		}
+	}
+	rejected := len(errs) - accepted
+	poolobserve.Count(poolobserve.Admitted, accepted)
+	poolobserve.Count(poolobserve.AdmissionRejected, rejected)
+	if remote {
+		poolobserve.Count(poolobserve.RemoteAdmitted, accepted)
+		poolobserve.Count(poolobserve.RemoteRejected, rejected)
+	}
 }
