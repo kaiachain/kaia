@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/work/builder"
@@ -125,6 +126,7 @@ func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *e
 
 	// Create Task for transaction execution with bundle handling and time limits
 	task := NewTask(e.config, e.signer, e.state, e.header)
+	task.candidateObservation = poolobserve.NewCandidateObservation()
 
 	// Execute transactions using CommitTransactions (includes posting pending events)
 	task.CommitTransactions(mux, txs, e.chain, e.nodeAddr, e.txBundlingModules)
@@ -134,7 +136,9 @@ func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *e
 	e.receipts = task.Receipts()
 	e.usedGas = e.header.GasUsed
 
-	return e.buildResult(), nil
+	result := e.buildResult()
+	result.CandidateObservation = task.candidateObservation.Snapshot()
+	return result, nil
 }
 
 // ExecuteTransactions executes the given transactions in the provided order

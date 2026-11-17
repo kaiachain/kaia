@@ -14,12 +14,12 @@ slot, about 3 KiB per peer at capacity 128, plus one observer pointer. Disabled
 mode avoids the observer object, clocks and its lock, but not this envelope storage. Enabling the environment variable without the exporter still incurs the
 recording cost and makes the observations unavailable remotely.
 
-Schema 5 exports **268 fixed sample series per node**, including histogram
+Schema 6 exports **299 fixed sample series per node in 27 families**, including histogram
 buckets and metadata samples. Counts do not grow with transactions,
 accounts, peers, candidate heights, or restarts. Native Prometheus collectors
 are updated directly; they do not wait for the legacy metrics-to-Prometheus
 conversion interval. The collector still has to scrape the endpoint. The central
-pipeline must retain `stage`, `queue`, `event`, `phase`, `reason`, and `le`
+pipeline must retain `stage`, `queue`, `event`, `phase`, `reason`, `result`, and `le`
 labels and the cumulative counters/buckets. Validate that pipeline before rollout.
 
 ## Questions and measurements
@@ -153,6 +153,51 @@ budget and other execution outcomes. Existing `miner/nonce/low/txs` and
 `miner/nonce/high/txs` are per-call gauges, so their short-lived values can be
 missed by scraping. The new nonce reason counters preserve the corresponding branch events even when the legacy gauge has already been overwritten.
 
+### What happened in candidates this node actually proposed and adopted?
+
+The existing `candidate_*` families cover all local preparation and execution
+attempts. The new `kaia_poolobs_adopted_candidate_*` families cover only sealed
+results consumed by the local worker and confirmed to be local-author canonical
+blocks at publication time. An already-imported result is eligible when its hash
+matches the local canonical header at that height.
+
+`adopted_candidate_blocks_total{result=...}` distinguishes three populations:
+
+- `observed`: preparation and execution observations belong to the matched
+  attempt and recorder, with every phase recorded. All detail below uses this
+  population.
+- `unobserved`: the result is local-author canonical, but the matching complete
+  observations are unavailable. Missing data must not look like an empty block.
+- `not_adopted`: a consumed sealed result fails the canonical or local-author
+  conditions, including write errors. Nil and nonproposer results are excluded.
+
+For `observed` results, `adopted_candidate_transactions_total{phase}` sums
+transaction counts at the same five phases defined above, and
+`adopted_candidate_empty_total{phase}` counts zero-transaction phases.
+`adopted_candidate_outcomes_total{reason}` counts the same eight execution branch
+choices. `adopted_candidate_execute_seconds` measures the executor call,
+including its lock wait, transaction selection and application, but excluding
+the preceding ResetWithState call, finalization and sealing. It is not an EVM-only duration or a direct count of
+execution-budget timeouts. Its buckets match the other duration histograms.
+
+These statistics separate adopted local proposals from speculative candidates.
+For example, compare `pool_input`, `after_fee`, and `included` within the adopted
+population to distinguish a small input from filtering or execution exclusion.
+The complete-observation counter is the denominator for per-block averages; do
+not divide these phase totals by all candidate preparations.
+
+The worker may replace a result channel before consuming its result. Such a
+result is absent from these counters even when its block was imported through
+another path. Therefore this is not an exhaustive canonical-block counter, and
+`observed + unobserved` must not be treated as the total number of blocks authored
+by the node. Compare with chain data when checking coverage. As with other
+cumulative metrics, publication is not an atomic multi-family scrape. Use settled
+windows; the metrics do not identify individual block or transaction hashes.
+
+Schema 6 adds five families and 31 sample series: three result counters, five
+phase totals, five empty-phase counters, eight outcome counters, and ten
+histogram samples. Existing family names and populations remain unchanged.
+
 ## Interpretation and limits
 
 Start with completion rates, mean durations and the fraction exceeding a bucket
@@ -203,8 +248,8 @@ to canonical block hashes, or tell what an unobserved proposer received. Do not
 label an external node faulty from the absence of local evidence. Those are
 explicit limits of this metrics-only change, not a reason to add unbounded labels.
 
-At 10-second scraping, 268 series produce 2,315,520 samples per node per day;
-at 30 seconds, 771,840. Text export bytes depend on current numeric values.
+At 10-second scraping, 299 series produce 2,583,360 samples per node per day;
+at 30 seconds, 861,120. Text export bytes depend on current numeric values.
 Measure compressed transport and storage separately. Start with owned nodes and
 preserve histogram/counter semantics through the collector before widening scope.
 
@@ -233,7 +278,7 @@ no coarser than the retained samples; a finer step cannot create missing data.
 Use a sufficiently long window for rate/quantile estimates, or inspect raw
 counter deltas for a short interval. The one-second experimental rate is a
 proposal, not a claim that the deployed central pipeline currently supports it.
-At one second 268 series add 482,400 samples per node for 30 minutes. Start with
+At one second 299 series add 538,200 samples per node for 30 minutes. Start with
 owned nodes, and choose a slower sustained rate based on retention/cost evidence.
 Even one-second sampling cannot establish the order of subsecond events on
 separate nodes or correlate an arbitrary transaction hash.

@@ -25,7 +25,7 @@ func TestExportBudget(t *testing.T) {
 	if b.Len() > 60000 {
 		t.Fatalf("fixed scrape budget exceeded: %d bytes", b.Len())
 	}
-	t.Logf("schema5 idle scrape bytes=%d; includes HELP and TYPE; not compressed network or storage", b.Len())
+	t.Logf("schema6 idle scrape bytes=%d; includes HELP and TYPE; not compressed network or storage", b.Len())
 	if p := os.Getenv("POOLOBS_EXPORT_TEST_PATH"); p != "" {
 		if e := os.WriteFile(p, b.Bytes(), 0o600); e != nil {
 			t.Fatal(e)

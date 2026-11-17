@@ -22,10 +22,13 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 )
 
 // ExecutionResult contains the results of executing a batch of transactions.
 type ExecutionResult struct {
+	// CandidateObservation is a per-Execute snapshot; validator replay leaves it nil.
+	CandidateObservation *poolobserve.CandidateObservation
 	// State is the state database after execution
 	State *state.StateDB
 	// Receipts contains the receipts of all executed transactions

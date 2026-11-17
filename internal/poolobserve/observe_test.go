@@ -91,6 +91,9 @@ func TestRecorderSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(fs) != 27 {
+		t.Fatalf("families=%d want27", len(fs))
+	}
 	series := 0
 	for _, f := range fs {
 		if f.GetHelp() == "" {
@@ -112,7 +115,7 @@ func TestRecorderSchema(t *testing.T) {
 				series++
 			}
 			for _, l := range m.Label {
-				if l.GetName() != "stage" && l.GetName() != "queue" && l.GetName() != "event" && l.GetName() != "phase" && l.GetName() != "reason" {
+				if l.GetName() != "stage" && l.GetName() != "queue" && l.GetName() != "event" && l.GetName() != "phase" && l.GetName() != "reason" && l.GetName() != "result" {
 					t.Fatal("unbounded label")
 				}
 				if strings.Contains(l.GetValue(), "capacity_read") {
@@ -121,14 +124,14 @@ func TestRecorderSchema(t *testing.T) {
 			}
 			switch f.GetName() {
 			case "kaia_poolobs_schema_version":
-				if m.Gauge.GetValue() != 5 {
+				if m.Gauge.GetValue() != 6 {
 					t.Fatal("wrong schema")
 				}
 			}
 		}
 	}
-	if series != 268 {
-		t.Fatalf("series=%d want268", series)
+	if series != 299 {
+		t.Fatalf("series=%d want299", series)
 	}
 }
 

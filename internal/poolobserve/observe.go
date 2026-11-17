@@ -66,6 +66,10 @@ type stageMetrics struct {
 var durationBuckets = []float64{.1, .15, .25, 1, 5, 10, 20}
 
 type recorder struct {
+	adoptedBlocks                        [3]prometheus.Counter
+	adoptedCandidates                    [candidatePhaseCount]candidateMetrics
+	adoptedOutcomes                      [candidateOutcomeCount]prometheus.Counter
+	adoptedExecute                       prometheus.Histogram
 	peerQueued                           prometheus.Gauge
 	peerAbandoned                        prometheus.Counter
 	peerDelay                            prometheus.Histogram
@@ -92,7 +96,7 @@ func init() {
 func newRecorder() *recorder {
 	r := &recorder{registry: prometheus.NewRegistry()}
 	schema := prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_schema_version", Help: "Pool observation schema version."})
-	schema.Set(5)
+	schema.Set(6)
 	r.registry.MustRegister(schema)
 	start := prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_process_start_time_seconds", Help: "Wall clock when the process observation recorder initialized; not a duration clock."})
 	start.Set(float64(time.Now().UnixNano()) / 1e9)
@@ -128,6 +132,7 @@ func newRecorder() *recorder {
 		r.registry.MustRegister(s.started, s.inflight, s.duration)
 	}
 	r.registerFlowMetrics()
+	r.registerAdoptedMetrics()
 	r.registerPeerQueueMetrics()
 	return r
 }

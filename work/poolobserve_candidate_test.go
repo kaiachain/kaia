@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/holiman/uint256"
@@ -12,6 +13,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/internal/poolobserve"
@@ -77,7 +79,14 @@ func TestCandidatePreparationMetrics(t *testing.T) {
 	g := govmock.NewMockGovModule(ctrl)
 	g.EXPECT().GetParamSet(uint64(1)).Return(*gov.GetDefaultGovernanceParamSet())
 	w := &worker{config: &params.ChainConfig{MagmaCompatibleBlock: big.NewInt(1)}, backend: &testBackend{chain: chain, txPool: pool}, chain: chain, govModule: g, txBundlingModules: []builder.TxBundlingModule{candidateFilter{remove: high}}}
+	oldPrep := poolobserve.NewCandidateObservation()
+	oldWork := &Task{candidateObservation: oldPrep}
+	oldChannel := make(chan *consensus.ExecutionResult, 1)
+	w.pendingWork, w.finalizeCh = oldWork, oldChannel
 	w.commitNewWork()
+	if w.pendingWork != oldWork || w.finalizeCh != oldChannel || w.pendingWork.candidateObservation != oldPrep {
+		t.Fatal("failed preparation replaced the previous pending attempt")
+	}
 	for phase, count := range map[string]float64{"pool_input": 2, "after_fee": 1, "after_modules": 0} {
 		if got := candidateCounter(t, reg, "kaia_poolobs_candidate_transactions_total", "phase", phase); got != count {
 			t.Fatalf("%s: got %v want %v", phase, got, count)
@@ -149,7 +158,7 @@ func TestCandidateExecutionMetrics(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			task := &Task{config: &params.ChainConfig{ChainID: chainID}, signer: signer, state: db, header: &types.Header{Number: big.NewInt(1), Time: big.NewInt(1)}}
+			task := &Task{candidateObservation: poolobserve.NewCandidateObservation(), config: &params.ChainConfig{ChainID: chainID}, signer: signer, state: db, header: &types.Header{Number: big.NewInt(1), Time: big.NewInt(1)}}
 			pending := make(map[common.Address]types.Transactions)
 			if len(input) > 0 {
 				pending[crypto.PubkeyToAddress(key.PublicKey)] = input
@@ -160,9 +169,13 @@ func TestCandidateExecutionMetrics(t *testing.T) {
 				modules = []builder.TxBundlingModule{failingGeneratedBundle{}}
 			}
 			task.ApplyTransactions(txs, &candidateMetricsChain{firstError: tc.err}, common.Address{}, modules)
+			prep, _ := adoptedTestSnapshots()
+			poolobserve.ObserveAdopted(prep, task.candidateObservation.Snapshot(), time.Millisecond, true)
 			for phase, want := range map[string]int{"execution_input": tc.input, "included": tc.included} {
-				if got := candidateCounter(t, reg, "kaia_poolobs_candidate_transactions_total", "phase", phase); got != float64(want) {
-					t.Fatalf("%s got %v want %d", phase, got, want)
+				for _, family := range []string{"kaia_poolobs_candidate_transactions_total", "kaia_poolobs_adopted_candidate_transactions_total"} {
+					if got := candidateCounter(t, reg, family, "phase", phase); got != float64(want) {
+						t.Fatalf("%s %s got %v want %d", family, phase, got, want)
+					}
 				}
 			}
 			for reason, executionErr := range map[string]error{"nonce_low": blockchain.ErrNonceTooLow, "nonce_high": blockchain.ErrNonceTooHigh} {
@@ -170,8 +183,10 @@ func TestCandidateExecutionMetrics(t *testing.T) {
 				if tc.err == executionErr {
 					want = 1
 				}
-				if got := candidateCounter(t, reg, "kaia_poolobs_candidate_outcomes_total", "reason", reason); got != want {
-					t.Fatalf("%s got %v want %v", reason, got, want)
+				for _, family := range []string{"kaia_poolobs_candidate_outcomes_total", "kaia_poolobs_adopted_candidate_outcomes_total"} {
+					if got := candidateCounter(t, reg, family, "reason", reason); got != want {
+						t.Fatalf("%s %s got %v want %v", family, reason, got, want)
+					}
 				}
 			}
 			if len(task.txs) != tc.included {
@@ -246,7 +261,7 @@ func TestCandidateOutcomeMetrics(t *testing.T) {
 				config.OsakaCompatibleBlock = big.NewInt(0)
 				config.BlobScheduleConfig = &params.BlobScheduleConfig{Osaka: params.DefaultOsakaBlobConfig}
 			}
-			task := &Task{config: config, signer: signer, state: db, header: &types.Header{Number: big.NewInt(1), Time: big.NewInt(1)}}
+			task := &Task{candidateObservation: poolobserve.NewCandidateObservation(), config: config, signer: signer, state: db, header: &types.Header{Number: big.NewInt(1), Time: big.NewInt(1)}}
 			if tc.name == "blob_capacity" {
 				task.blobs = config.LatestBlobConfigMax(task.header.Number)
 			}
@@ -262,13 +277,17 @@ func TestCandidateOutcomeMetrics(t *testing.T) {
 			txs := types.NewTransactionsByPriceAndNonce(signer, map[common.Address]types.Transactions{crypto.PubkeyToAddress(key.PublicKey): input}, nil)
 			bc := &candidateMetricsChain{firstError: tc.executionErr, firstFailedReceipt: tc.failedReceipt}
 			task.ApplyTransactions(txs, bc, common.Address{}, modules)
+			prep, _ := adoptedTestSnapshots()
+			poolobserve.ObserveAdopted(prep, task.candidateObservation.Snapshot(), time.Millisecond, true)
 			for _, reason := range []string{"bundle_target_rejected", "generator_failed", "size_limit", "blob_space_rejected", "unsupported_type", "bundle_reverted"} {
 				want := float64(0)
 				if reason == tc.reason {
 					want = 1
 				}
-				if got := candidateCounter(t, reg, "kaia_poolobs_candidate_outcomes_total", "reason", reason); got != want {
-					t.Fatalf("%s got %v want %v", reason, got, want)
+				for _, family := range []string{"kaia_poolobs_candidate_outcomes_total", "kaia_poolobs_adopted_candidate_outcomes_total"} {
+					if got := candidateCounter(t, reg, family, "reason", reason); got != want {
+						t.Fatalf("%s %s got %v want %v", family, reason, got, want)
+					}
 				}
 			}
 		})
