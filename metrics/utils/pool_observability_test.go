@@ -20,8 +20,18 @@ func TestPoolObservationExporter(t *testing.T) {
 	mux := newPrometheusMux()
 	r := httptest.NewRecorder()
 	mux.ServeHTTP(r, httptest.NewRequest(http.MethodGet, "/metrics", nil))
-	if r.Code != 200 || !strings.Contains(r.Body.String(), "kaia_poolobs_schema_version 5") || !strings.Contains(r.Body.String(), "stage=\"feed_send\"") {
-		t.Fatal("native schema missing from private exporter")
+	if r.Code != http.StatusOK {
+		t.Fatalf("metrics status = %d, want %d", r.Code, http.StatusOK)
+	}
+	for _, sample := range []string{
+		"kaia_poolobs_schema_version 6",
+		"stage=\"feed_send\"",
+		"kaia_poolobs_adopted_candidate_blocks_total{result=\"observed\"} 0",
+		"kaia_poolobs_adopted_candidate_execute_seconds_count 0",
+	} {
+		if !strings.Contains(r.Body.String(), sample) {
+			t.Errorf("private exporter missing %q", sample)
+		}
 	}
 	for _, path := range []string{"/debug/pprof/", "/debug/pprof/goroutine"} {
 		r := httptest.NewRecorder()
