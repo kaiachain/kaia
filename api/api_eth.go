@@ -321,7 +321,7 @@ func doGetProof(ctx context.Context, b Backend, address common.Address, storageK
 
 	// if we have a storageTrie, (which means the account exists), we can update the storagehash
 	if len(keys) > 0 {
-		storageTrie, err := statedb.NewTrie(contractStorageRoot, state.Database().TrieDB(), nil)
+		storageTrie, err := statedb.NewStorageTrie(contractStorageRootExt, state.Database().TrieDB(), nil)
 		if err != nil {
 			return nil, err
 		}

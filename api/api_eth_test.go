@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1094,6 +1095,59 @@ func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	}
 
 	mockCtrl.Finish()
+}
+
+func TestEthAPI_GetProofStorage(t *testing.T) {
+	addr := common.HexToAddress("0xaaaa")
+	slot := common.HexToHash("0x1")
+	value := common.HexToHash("0x2")
+
+	verify := func(root common.Hash, key []byte, proof []string) []byte {
+		proofDB := database.NewMemoryDBManager()
+		for _, node := range proof {
+			enc := hexutil.MustDecode(node)
+			proofDB.WriteTrieNode(common.BytesToHash(crypto.Keccak256(enc)).ExtendZero(), enc)
+		}
+		got, err, _ := statedb.VerifyProof(root, key, proofDB)
+		require.NoError(t, err)
+		return got
+	}
+
+	for _, pruning := range []bool{false, true} {
+		t.Run(fmt.Sprintf("pruning=%v", pruning), func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			dbm := database.NewMemoryDBManager()
+			if pruning {
+				dbm.WritePruningEnabled()
+			}
+			db := state.NewDatabase(dbm)
+			stateDB, err := state.New(common.Hash{}, db, nil, nil)
+			require.NoError(t, err)
+			stateDB.CreateSmartContractAccount(addr, params.CodeFormatEVM, params.Rules{})
+			stateDB.SetState(addr, slot, value)
+			root, err := stateDB.Commit(false)
+			require.NoError(t, err)
+			require.NoError(t, db.TrieDB().Commit(root, false, 0))
+
+			header := &types.Header{Number: big.NewInt(1), Root: root}
+			mockBackend.EXPECT().StateAndHeaderByNumberOrHash(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(context.Context, rpc.BlockNumberOrHash) (*state.StateDB, *types.Header, error) {
+					s, err := state.New(root, db, nil, nil)
+					return s, header, err
+				})
+
+			res, err := api.GetProof(context.Background(), addr, []string{slot.Hex()}, rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber))
+			require.NoError(t, err)
+			require.Len(t, res.StorageProof, 1)
+			assert.Equal(t, value.Big(), res.StorageProof[0].Value.ToInt())
+
+			wantValue, _ := rlp.EncodeToBytes(common.TrimLeftZeroes(value[:]))
+			assert.Equal(t, wantValue, verify(res.StorageHash, crypto.Keccak256(slot.Bytes()), res.StorageProof[0].Proof))
+			assert.NotNil(t, verify(root, crypto.Keccak256(addr.Bytes()), res.AccountProof))
+		})
+	}
 }
 
 func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, EthAPI) {
