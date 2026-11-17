@@ -216,13 +216,20 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64,
 	if err != nil {
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, err
 	}
+	// Release the parent state unless it is handed to the caller, which releases it.
+	handedOver := false
+	defer func() {
+		if !handedOver && release != nil {
+			release()
+		}
+	}()
 	// If prague hardfork, insert parent block hash in the state as per EIP-2935.
 	if err := cn.blockchain.Processor().InitializeState(block.Header(), statedb); err != nil {
-		release()
 		return nil, vm.BlockContext{}, vm.TxContext{}, nil, nil, err
 	}
 
 	if txIndex == 0 && len(block.Transactions()) == 0 {
+		handedOver = true
 		return nil, vm.BlockContext{}, vm.TxContext{}, statedb, release, nil
 	}
 	// Recompute transactions up to the target index.
@@ -238,6 +245,7 @@ func (cn *CN) stateAtTransaction(block *types.Block, txIndex int, reexec uint64,
 		txContext := blockchain.NewEVMTxContext(msg, block.Header(), cn.chainConfig)
 		blockContext := blockchain.NewEVMBlockContext(block.Header(), cn.blockchain, nil)
 		if idx == txIndex {
+			handedOver = true
 			return msg, blockContext, txContext, statedb, release, nil
 		}
 		// Not yet the searched for transaction, execute on top of the current state
