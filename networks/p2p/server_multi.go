@@ -25,8 +25,10 @@ package p2p
 import (
 	"context"
 	"errors"
+	"maps"
 	"math"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -47,8 +49,9 @@ type MultiChannelServer struct {
 	*BaseServer
 	listeners      []net.Listener                     // Extended TCP listener
 	ListenAddrs    []string                           // Extended TCP listen addresses
-	CandidateConns map[discover.NodeID][]*conn        // Subset of connections towards a premature peer
+	CandidateConns map[discover.NodeID][]*conn        // Accepted connections of a peer whose channels have not all arrived
 	candidateSince map[discover.NodeID]mclock.AbsTime // Open time of each CandidateConns entry
+	pendingDials   map[*conn]struct{}                 // Dialed connections of a peer not yet added
 }
 
 // Stop terminates the server and all active peer connections.
@@ -72,6 +75,7 @@ func (srv *MultiChannelServer) Stop() {
 	}
 
 	// Peers under assembly have no read loop to notice the shutdown.
+	dials := slices.Collect(maps.Keys(srv.pendingDials))
 	var candidates []*conn
 	for id, connSet := range srv.CandidateConns {
 		for _, c := range connSet {
@@ -90,6 +94,10 @@ func (srv *MultiChannelServer) Stop() {
 
 	for _, c := range candidates {
 		c.close(DiscQuitting)
+	}
+	// Raw close: the transport may be in a handshake.
+	for _, c := range dials {
+		c.fd.Close()
 	}
 
 	if srv.dialSched != nil {
@@ -170,6 +178,7 @@ func (srv *MultiChannelServer) initialize() error {
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.SubListenAddr...)
 	srv.CandidateConns = make(map[discover.NodeID][]*conn)
 	srv.candidateSince = make(map[discover.NodeID]mclock.AbsTime)
+	srv.pendingDials = make(map[*conn]struct{})
 	return nil
 }
 
@@ -255,7 +264,7 @@ func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 }
 
 // SetupConn runs the handshakes and attempts to add the connection as a peer.
-// For a multichannel peer, nil can also mean that this channel was accepted and
+// For an accepted channel of a multichannel peer, nil can also mean that the channel
 // is waiting in CandidateConns for the remaining channels.
 func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: PortOrderUndefined}
@@ -285,43 +294,75 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 	return err
 }
 
-func (srv *MultiChannelServer) CleanConn(id discover.NodeID) cleanConnStats {
-	srv.lock.Lock()
-	connSet := srv.CandidateConns[id]
-	var connsToClose []*conn
-	stats := cleanConnStats{expectedChannels: len(srv.ListenAddrs)}
-	if connSet != nil {
-		stats.expectedChannels = len(connSet)
-		remaining := false
-		for portOrder, c := range connSet {
-			if c == nil {
-				continue
-			}
-			if c.Inbound() {
-				stats.remainingInboundChannels++
-				remaining = true
-				continue
-			}
-			connsToClose = append(connsToClose, c)
-			connSet[portOrder] = nil
-		}
-		if !remaining {
-			delete(srv.CandidateConns, id)
-			delete(srv.candidateSince, id)
-		}
+// SetupMultiConn adds one dialed peer from all of its connections, or closes them all.
+func (srv *MultiChannelServer) SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error {
+	dialPubkey, _ := dialDest.ID.Pubkey()
+	conns := make([]*conn, len(fds))
+	for i, fd := range fds {
+		conns[i] = &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: PortOrder(i)}
+		conns[i].transport = srv.newTransport(fd, dialPubkey)
 	}
-	srv.lock.Unlock()
+	err := srv.trackDials(conns)
+	defer srv.untrackDials(conns)
 
-	stats.closedOutboundChannels = len(connsToClose)
-	for _, c := range connsToClose {
-		c.close(errIncompleteMultiChannelDial)
+	started := 0
+	for ; err == nil && started < len(conns); started++ {
+		err = srv.handshake(conns[started], dialDest)
 	}
-	return stats
+	if err == nil {
+		err = srv.handleAddDialedPeer(conns)
+	}
+	if err != nil {
+		for i, c := range conns {
+			// Before its handshake a connection has no session to send a reason on.
+			if i < started {
+				c.close(err)
+			} else {
+				c.fd.Close()
+			}
+		}
+		srv.logger.Trace("close multichannel dial", "id", dialDest.ID, "err", err)
+	}
+	return err
+}
+
+// trackDials lets Stop close conns while their peer is not added yet.
+func (srv *MultiChannelServer) trackDials(conns []*conn) error {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	if !srv.running {
+		return errServerStopped
+	}
+	for _, c := range conns {
+		srv.pendingDials[c] = struct{}{}
+	}
+	return nil
+}
+
+func (srv *MultiChannelServer) untrackDials(conns []*conn) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	for _, c := range conns {
+		delete(srv.pendingDials, c)
+	}
 }
 
 // Overrides BaseServer.setupConn() to preserve multichannel port-order handling
 // while moving the peer admission stages off the event loop.
 func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *discover.Node) error {
+	if err := srv.handshake(c, dialDest); err != nil {
+		return err
+	}
+	if err := srv.handleAddPeerConn(c); err != nil {
+		srv.logger.Trace("Rejected peer", "id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
+		return err
+	}
+	srv.logger.Trace("connection set up", "id", c.id, "addr", c.fd.RemoteAddr(), "conn", c.flags, "inbound", dialDest == nil)
+	return nil
+}
+
+// handshake runs all handshake stages on c without adding it as a peer.
+func (srv *MultiChannelServer) handshake(c *conn, dialDest *discover.Node) error {
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
 	running := srv.running
@@ -382,15 +423,6 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		dialDest.TCPs = tcps
 		return errUpdateDial
 	}
-
-	err = srv.handleAddPeerConn(c)
-	if err != nil {
-		clog.Trace("Rejected peer", "err", err)
-		return err
-	}
-	// If the checks completed successfully, runPeer has now been
-	// launched by handleAddPeerConn.
-	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
 }
 
@@ -413,6 +445,10 @@ func listenPortsToTCPs(listenPorts []uint64, maxChannels int) ([]uint16, error) 
 // Override BaseServer.handleAddPeerConn because multichannel peer admission
 // waits for the full candidate connection set and updates outbound metrics.
 func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
+	if c.multiChannel && c.is(dynDialedConn|staticDialedConn) {
+		return srv.handleAddDialedPeer([]*conn{c})
+	}
+
 	// close writes a disconnect reason under a write deadline, so it must not run under srv.lock.
 	// Registered before the unlock below to run after it.
 	var (
@@ -477,26 +513,84 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 		srv.logger.Error("Fail make a new peer", "err", err)
 		return err
 	}
+	srv.addPeer(p)
+	return nil
+}
 
+// handleAddDialedPeer adds a multichannel peer whose channels this node all dialed.
+func (srv *MultiChannelServer) handleAddDialedPeer(conns []*conn) error {
+	// Closed after the unlock.
+	var expired, superseded []*conn
+	defer func() {
+		for _, ec := range expired {
+			ec.close(DiscUselessPeer)
+		}
+		for _, sc := range superseded {
+			sc.close(DiscAlreadyConnected)
+		}
+	}()
+
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return errServerStopped
+	}
+	expired = srv.expireCandidates(mclock.Now())
+	if len(conns) != len(srv.ListenAddrs) {
+		return errMultiChannelMismatch
+	}
+	c := conns[ConnDefault]
+	for _, mc := range conns {
+		if !mc.multiChannel {
+			return errMultiChannelMismatch
+		}
+		if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, mc.caps) == 0 {
+			return DiscUselessPeer
+		}
+	}
+	if err := srv.encHandshakeChecks(srv.peers, c); err != nil {
+		return err
+	}
+
+	p, err := newPeer(conns, srv.Protocols, srv.Config.RWTimerConfig)
+	if err != nil {
+		srv.logger.Error("Fail make a new peer", "err", err)
+		return err
+	}
+
+	// Channels accepted from the same node can no longer complete a peer.
+	for _, sc := range srv.CandidateConns[c.id] {
+		if sc != nil {
+			superseded = append(superseded, sc)
+		}
+	}
+	delete(srv.CandidateConns, c.id)
+	delete(srv.candidateSince, c.id)
+
+	srv.addPeer(p)
+	return nil
+}
+
+// addPeer registers and starts p. Caller must hold srv.lock.
+func (srv *MultiChannelServer) addPeer(p *Peer) {
 	if srv.EnableMsgEvents {
 		p.events = &srv.peerFeed
 	}
-	srv.peers[c.id] = p
+	srv.peers[p.ID()] = p
 	srv.incrementConnectionCounts(p)
 	srv.reportPeerMetric()
-	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", len(srv.peers))
+	srv.logger.Debug("Adding p2p peer", "name", truncateName(p.Name()), "addr", p.RemoteAddr(), "peers", len(srv.peers))
 	if srv.dialSched != nil {
-		srv.dialSched.OnPeerConnected(c.id, ConvertNodeType(c.conntype), c.Inbound())
+		srv.dialSched.OnPeerConnected(p.ID(), ConvertNodeType(p.ConnType()), p.Inbound())
 	}
 
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
-	return nil
 }
 
 // expireCandidates drops multichannel peers whose remaining channels never arrived and returns
-// their connections for the caller to close. Nothing else does: CandidateConns is cleared only
-// once every channel is present. Caller must hold srv.lock.
+// their connections for the caller to close. Caller must hold srv.lock.
 func (srv *MultiChannelServer) expireCandidates(now mclock.AbsTime) []*conn {
 	var expired []*conn
 	for id, connSet := range srv.CandidateConns {
@@ -562,10 +656,7 @@ func (srv *MultiChannelServer) handleDelPeer(pd peerDrop) {
 
 func (srv *MultiChannelServer) reportPeerMetric() {
 	peerCountGauge.Update(int64(len(srv.peers)))
-	// In multi-channel, one peer may contain both inbound and outbound connections,
-	// if two parties happened to dial each other at the same time. In this case,
-	// it is unclear whether the peer should be counted as inbound or outbound.
-	// Therefore, we do not report the peerIn and peerOut metrics for multi-channel.
+	// The counts are per connection, so peerIn and peerOut are not reported for multi-channel.
 	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
 	connectionInCountGauge.Update(int64(srv.inboundCount))
 	connectionOutCountGauge.Update(int64(srv.outboundCount))
