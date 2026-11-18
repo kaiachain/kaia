@@ -24,7 +24,6 @@
 package rlpx
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
@@ -325,8 +324,9 @@ func (c *Conn) ConnTypeHandshake(myConnType common.ConnType) (common.ConnType, e
 		werr <- err
 	}()
 
-	// receive connType
-	byteVal, receiveErr := bufio.NewReader(c.conn).ReadByte()
+	// Read only the type byte. The encrypted handshake may already be queued.
+	var typeByte [1]byte
+	_, receiveErr := io.ReadFull(c.conn, typeByte[:])
 
 	// ensure sending is done
 	sendErr := <-werr
@@ -339,7 +339,7 @@ func (c *Conn) ConnTypeHandshake(myConnType common.ConnType) (common.ConnType, e
 	}
 
 	// received connType validation
-	conntype := common.ConnType(int(byteVal))
+	conntype := common.ConnType(typeByte[0])
 	if !conntype.Valid() {
 		return common.ConnTypeUndefined, fmt.Errorf("invalid connection type: %v", conntype)
 	}
