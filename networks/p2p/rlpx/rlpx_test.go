@@ -33,13 +33,16 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/ecies"
 	"github.com/kaiachain/kaia/networks/p2p/simulations/pipes"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type message struct {
@@ -52,6 +55,29 @@ func TestHandshake(t *testing.T) {
 	p1, p2 := createPeers(t)
 	p1.Close()
 	p2.Close()
+}
+
+func TestConnTypeHandshakePreservesFollowingBytes(t *testing.T) {
+	local, remote := net.Pipe()
+	defer local.Close()
+	require.NoError(t, local.SetDeadline(time.Now().Add(5*time.Second)))
+
+	following := []byte{0x01, 0x02, 0x03}
+	go func() {
+		defer remote.Close()
+		if _, err := io.CopyN(io.Discard, remote, 1); err != nil {
+			return
+		}
+		// Put the role and the start of the next handshake in the same write.
+		remote.Write(append([]byte{byte(common.PROXYNODE)}, following...))
+	}()
+
+	peerType, err := NewConn(local, nil).ConnTypeHandshake(common.CONSENSUSNODE)
+	require.NoError(t, err)
+	require.Equal(t, common.PROXYNODE, peerType)
+	remaining, err := io.ReadAll(local)
+	require.NoError(t, err)
+	require.Equal(t, following, remaining)
 }
 
 // This test checks that messages can be sent and received through WriteMsg/ReadMsg.
