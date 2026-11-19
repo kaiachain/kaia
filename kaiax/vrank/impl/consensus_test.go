@@ -201,6 +201,15 @@ func TestPrepareHeader(t *testing.T) {
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
+	t.Run("epoch-start candidate lookup error is returned", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		valset.EXPECT().GetCandTesting(params.DefaultVRankEpoch).Return(nil, assert.AnError)
+		v := newCN(t, withValset(valset), withoutStart(), withParentAt(params.DefaultVRankEpoch)).VRankModule
+
+		err := v.PrepareHeader(&types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))})
+		assert.ErrorIs(t, err, assert.AnError)
+	})
+
 	t.Run("non-epoch with no own proposal leaves VRank nil", func(t *testing.T) {
 		v := newCN(t, withoutStart(), withParentAt(11)).VRankModule
 		header := &types.Header{Number: big.NewInt(11)}
@@ -269,6 +278,73 @@ func TestPrepareHeader(t *testing.T) {
 		payload, err := vrank.DecodeVRank(header.VRank)
 		require.NoError(t, err)
 		assert.Empty(t, payload.Report)
+	})
+
+	// setupUnreadableTarget builds a CN whose own proposal at block 10 cannot be evaluated, on top
+	// of `headers`, and counts the candidate lookups for it. A lookup for the older own proposal
+	// at block 8 is an unexpected call.
+	setupUnreadableTarget := func(t *testing.T, valset *mock_valset.MockValsetModule, headers map[uint64]*types.Header) (*VRankModule, *int) {
+		const older, target = uint64(8), uint64(10)
+		lookups := new(int)
+		valset.EXPECT().GetCandTesting(target).DoAndReturn(func(uint64) ([]common.Address, error) {
+			*lookups++
+			return nil, assert.AnError
+		}).AnyTimes()
+		headers[older], headers[target] = makeHeaderWithRound(older, 0), makeHeaderWithRound(target, 0)
+		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(headers))
+		valset.EXPECT().GetProposer(gomock.Any(), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+		for _, n := range []uint64{older, target} {
+			cn.VRankModule.collector.AddPrepreparedTime(
+				vrank.ViewKey{N: n}, time.Now(), types.NewBlockWithHeader(headers[n]).Hash())
+		}
+		return cn.VRankModule, lookups
+	}
+
+	t.Run("candidate evaluation error leaves the report empty", func(t *testing.T) {
+		const (
+			parentNum   = uint64(30)
+			parentRound = byte(2)
+		)
+		keys := make([]*ecdsa.PrivateKey, 4)
+		committee := make([]common.Address, 4)
+		for i := range keys {
+			key, err := crypto.GenerateKey()
+			require.NoError(t, err)
+			keys[i] = key
+			committee[i] = crypto.PubkeyToAddress(key.PublicKey)
+		}
+		parent, parentHash, seals := certifiedParent(t, parentNum, parentRound, keys[:3])
+		require.NoError(t, newTestSealer().WriteCommittedSeals(parent, seals))
+
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		valset.EXPECT().GetCommittee(parentNum, uint64(parentRound)).Return(committee, nil).AnyTimes()
+		v, lookups := setupUnreadableTarget(t, valset, map[uint64]*types.Header{parentNum: parent})
+
+		header := &types.Header{Number: big.NewInt(int64(parentNum + 1)), ParentHash: parentHash}
+		require.NoError(t, v.PrepareHeader(header))
+		assert.Equal(t, 1, *lookups)
+
+		// The certificate still carries the evidence of the parent's failed rounds.
+		payload, err := vrank.DecodeVRank(header.VRank)
+		require.NoError(t, err)
+		assert.Empty(t, payload.Report)
+		assert.Equal(t, parentRound, payload.ParentRound)
+		assert.Equal(t, seals, payload.ParentCommittedSeal)
+		assert.NoError(t, v.VerifyHeader(header, nil))
+
+		// The target stays for a retry; only the older views are dropped.
+		require.NoError(t, v.PrepareHeader(&types.Header{Number: big.NewInt(int64(parentNum + 1)), ParentHash: parentHash}))
+		assert.Equal(t, 2, *lookups)
+		assert.Equal(t, []uint64{10}, v.collector.PendingEvaluations(0))
+	})
+
+	t.Run("candidate evaluation error does not hide a missing parent", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v, lookups := setupUnreadableTarget(t, valset, map[uint64]*types.Header{})
+
+		err := v.PrepareHeader(&types.Header{Number: big.NewInt(31)})
+		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
+		assert.Equal(t, 1, *lookups)
 	})
 }
 
