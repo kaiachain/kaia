@@ -17,7 +17,7 @@ The implementation is split into three layers.
 - `consensus/istanbul/backend`
   - Integration layer between the state machine and the node, blockchain, executor, and p2p stack
 
-The package is normally constructed through [consensus/bft](../bft/README.md), which exposes the generic `consensus.Engine` interface used by the rest of the node.
+The package is normally constructed through [consensus/bft](../bft), which exposes the generic `consensus.Engine` interface used by the rest of the node.
 
 ### View
 
