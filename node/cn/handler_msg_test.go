@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
@@ -48,6 +49,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/work/mocks"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -385,7 +387,23 @@ func TestHandleNewBlockMsg_SmallLocalPeerBlockScore_NoSynchronise(t *testing.T) 
 	assert.NoError(t, handleNewBlockMsg(pm, mockPeer, msg))
 }
 
+func txMessageRegistry(t *testing.T) *prometheus.Registry {
+	t.Helper()
+	t.Cleanup(poolobserve.EnableForTesting())
+	r := prometheus.NewRegistry()
+	poolobserve.Register(r)
+	return r
+}
+
+func assertTxMessageCounts(t *testing.T, r *prometheus.Registry, want map[string]float64) {
+	t.Helper()
+	for _, result := range []string{"disabled", "decode_error", "invalid_blob", "partial", "forwarded"} {
+		require.Equal(t, want[result], propagationMetric(t, r, "kaia_poolobs_tx_messages_total", result), result)
+	}
+}
+
 func TestHandleTxMsg(t *testing.T) {
+	r := txMessageRegistry(t)
 	pm := &ProtocolManager{}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -412,6 +430,7 @@ func TestHandleTxMsg(t *testing.T) {
 		mockPeer.EXPECT().AddToKnownTxs(txs[0].Hash()).Times(1)
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 	}
+	assertTxMessageCounts(t, r, map[string]float64{"disabled": 1, "forwarded": 1})
 }
 
 // makeMixedTxs returns n distinct signed txs rotating through legacy, Kaia typed
@@ -516,7 +535,15 @@ func TestHandleTxMsg_ItemLimit(t *testing.T) {
 				expectTxsDelivered(t, mockCtrl, pm, peer, tc.txs[:tc.kept])
 			}
 
+			r := txMessageRegistry(t)
 			err := handleTxMsg(pm, peer, generateMsg(t, TxMsg, tc.txs))
+			result := "forwarded"
+			if tc.tooMany {
+				result = "decode_error"
+			} else if tc.kept < len(tc.txs) {
+				result = "partial"
+			}
+			assertTxMessageCounts(t, r, map[string]float64{result: 1})
 			if tc.tooMany {
 				require.ErrorContains(t, err, "Too many items")
 			} else {
@@ -653,6 +680,7 @@ func newBlobTx(t *testing.T, nonce uint64, hashes []common.Hash, sidecar *types.
 }
 
 func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
+	r := txMessageRegistry(t)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -663,6 +691,7 @@ func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
 	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errKZGVerificationError.Error())
+	assertTxMessageCounts(t, r, map[string]float64{"invalid_blob": 1})
 }
 
 func TestHandleTxMsg_BlobSidecarVerifiedOnce(t *testing.T) {

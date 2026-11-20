@@ -30,6 +30,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
@@ -208,13 +209,22 @@ func (m *txSortedMap) Ready(start uint64) types.Transactions {
 // happen but better to be self correcting than failing!
 func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, modules []kaiax.TxPoolModule) types.Transactions {
 	// Short circuit if no transactions are available
-	if m.index.Len() == 0 || (*m.index)[0] > start {
+	if m.index.Len() == 0 {
+		return nil
+	}
+	if (*m.index)[0] > start {
+		poolobserve.CountPromotionStop(poolobserve.StopNonceGap)
 		return nil
 	}
 	// Otherwise start accumulating incremental transactions
 	ready := make(types.Transactions, 0, m.index.Len())
-	for next := (*m.index)[0]; m.index.Len() > 0 && (*m.index)[0] == next; next++ {
+	for next := (*m.index)[0]; m.index.Len() > 0; next++ {
+		if (*m.index)[0] != next {
+			poolobserve.CountPromotionStop(poolobserve.StopNonceGap)
+			break
+		}
 		if m.items[next].GasPrice().Cmp(baseFee) < 0 {
+			poolobserve.CountPromotionStop(poolobserve.StopBaseFee)
 			break
 		}
 
@@ -229,6 +239,7 @@ func (m *txSortedMap) ReadyWithGasPrice(start uint64, baseFee *big.Int, modules 
 		}
 		// break if this is rejected because this has to return sequential txs
 		if rejectByModule {
+			poolobserve.CountPromotionStop(poolobserve.StopModule)
 			break
 		}
 

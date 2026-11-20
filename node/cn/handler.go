@@ -46,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/internal/poolobserve"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -1660,12 +1661,14 @@ func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if pm.acceptTxs.Load() == 0 {
+		poolobserve.CountTxMessage(poolobserve.TxMessageDisabled)
 		return nil
 	}
 	// Transactions can be processed, parse them and deliver to the pool
 	var (
-		txs []*types.Transaction
-		err error
+		truncated bool
+		txs       []*types.Transaction
+		err       error
 	)
 	if p.GetVersion() <= kaia67 {
 		// Rolling-upgrade compatibility: v2.2.2 (kaia67 and below) does not split TxMsg,
@@ -1673,7 +1676,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// maxTxMsgItems instead of disconnecting the peer. The discarded txs may be
 		// recovered through resend or subsequent synchronization.
 		// Remove once kaia67 peers are gone.
-		var truncated bool
+
 		txs, truncated, err = decodeListTruncated[*types.Transaction](msg, maxTxMsgItems)
 		if err == nil && truncated {
 			logger.Debug("Truncated oversized TxMsg from legacy peer", "peer", p.GetID(), "version", p.GetVersion(), "kept", len(txs), "size", msg.Size)
@@ -1682,6 +1685,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		txs, err = decodeList[*types.Transaction](msg, maxTxMsgItems)
 	}
 	if err != nil {
+		poolobserve.CountTxMessage(poolobserve.TxMessageDecodeError)
 		return err
 	}
 	// Only valid txs should be pushed into the pool.
@@ -1700,9 +1704,11 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			// Without blob hashes the verification below passes vacuously.
 			hashes := tx.BlobHashes()
 			if len(hashes) == 0 {
+				poolobserve.CountTxMessage(poolobserve.TxMessageInvalidBlob)
 				return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errBloblessBlobTx)
 			}
 			if len(hashes) > params.BlobTxMaxBlobs {
+				poolobserve.CountTxMessage(poolobserve.TxMessageInvalidBlob)
 				return errResp(ErrDecode, "Invalid blob transaction with sidecar: blob limit exceeded: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
 			}
 			sidecar := tx.BlobTxSidecar()
@@ -1714,6 +1720,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 					// defensive measure against potential DoS attacks.
 					if err := sidecar.ValidateWithBlobHashes(hashes); err != nil {
 						logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
+						poolobserve.CountTxMessage(poolobserve.TxMessageInvalidBlob)
 						return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
 					}
 					pm.verifiedBlobTxs.Add(key)
@@ -1725,6 +1732,11 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		txReceiveCounter.Inc(1)
 	}
 	pm.txpool.HandleTxMsg(validTxs)
+	if truncated || len(validTxs) != len(txs) {
+		poolobserve.CountTxMessage(poolobserve.TxMessagePartial)
+	} else {
+		poolobserve.CountTxMessage(poolobserve.TxMessageForwarded)
+	}
 	return lastErr
 }
 
@@ -1798,6 +1810,8 @@ func (pm *ProtocolManager) BroadcastBid(bid *auction.Bid) {
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
+	defer poolobserve.Begin(poolobserve.Broadcast)()
+	poolobserve.Count(poolobserve.BroadcastTransactions, len(txs))
 	// This function calls sendTransaction() to broadcast the transactions for each peer.
 	// In that case, transactions are sorted for each peer in sendTransaction().
 	// Therefore, it prevents sorting transactions by each peer.
@@ -1837,6 +1851,10 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
+	// Count nonempty batches with no eligible recipient, including known-tx filtering.
+	if len(txs) > 0 && len(cnPeersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.BroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs2 := range cnPeersWithoutTxs {
@@ -1862,6 +1880,9 @@ func (pm *ProtocolManager) broadcastTxsFromPN(txs types.Transactions) {
 		txSendCounter.Inc(1)
 	}
 
+	if len(txs) > 0 && len(peersWithoutTxs)+len(cnPeersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.BroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(peersWithoutTxs) + len(cnPeersWithoutTxs)))
 	sendTransactions(cnPeersWithoutTxs)
 	sendTransactions(peersWithoutTxs)
@@ -1876,6 +1897,9 @@ func (pm *ProtocolManager) broadcastTxsFromEN(txs types.Transactions) {
 		txSendCounter.Inc(1)
 	}
 
+	if len(txs) > 0 && len(peersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.BroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(peersWithoutTxs)))
 	sendTransactions(peersWithoutTxs)
 }
@@ -1887,6 +1911,8 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 	if pm.nodetype == common.CONSENSUSNODE {
 		return
 	}
+	defer poolobserve.Begin(poolobserve.Rebroadcast)()
+	poolobserve.Count(poolobserve.RebroadcastTransactions, len(txs))
 
 	baseFee := big.NewInt(int64(params.DefaultLowerBoundBaseFee))
 	if pm.blockchain != nil && pm.blockchain.CurrentHeader() != nil && pm.blockchain.CurrentHeader().BaseFee != nil {
@@ -1903,6 +1929,9 @@ func (pm *ProtocolManager) ReBroadcastTxs(txs types.Transactions) {
 		txResendCounter.Inc(1)
 	}
 
+	if len(txs) > 0 && len(peersWithoutTxs) == 0 {
+		poolobserve.Count(poolobserve.RebroadcastNoRecipients, 1)
+	}
 	propTxPeersGauge.Update(int64(len(peersWithoutTxs)))
 	sendTransactions(peersWithoutTxs)
 }
@@ -1997,6 +2026,8 @@ func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
 }
 
 func (pm *ProtocolManager) txBroadcastLoop() {
+	ch := pm.txsCh
+	defer poolobserve.TrackQueue(poolobserve.BroadcastQueue, func() int { return len(ch) }, cap(ch))()
 	for {
 		select {
 		case event := <-pm.txsCh:
