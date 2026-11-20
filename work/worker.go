@@ -728,7 +728,11 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsGasLimitReached int64 = 0
 
 CommitTransactionLoop:
-	for atomic.LoadInt32(&abort) == 0 {
+	for {
+		if atomic.LoadInt32(&abort) != 0 {
+			env.candidateObservation.RecordTimeLimit(len(incorporatedTxs) > 0)
+			break
+		}
 		// Retrieve the next transaction and abort if all done
 		if len(incorporatedTxs) == 0 {
 			// To indicate that it does not have enough transactions for params.BlockGenerationTimeLimit.
@@ -842,6 +846,7 @@ CommitTransactionLoop:
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case vm.ErrTotalTimeLimitReached:
+			env.candidateObservation.RecordTimeLimit(len(incorporatedTxs) > 0)
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop

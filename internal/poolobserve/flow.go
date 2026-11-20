@@ -69,7 +69,52 @@ type (
 
 func Enabled() bool { return current.Load() != nil }
 
+// TxMessageResult describes a completed incoming transaction message. The
+// receiver may hand the pool zero or more transactions in a single call.
+type TxMessageResult uint8
+
+const (
+	TxMessageDisabled TxMessageResult = iota
+	TxMessageDecodeError
+	TxMessageInvalidBlob
+	TxMessagePartial
+	TxMessageForwarded
+	txMessageResultCount
+)
+
+func CountTxMessage(result TxMessageResult) {
+	if r := current.Load(); r != nil && result < txMessageResultCount {
+		r.txMessages[result].Inc()
+	}
+}
+
+type PromotionStop uint8
+
+const (
+	StopNonceGap PromotionStop = iota
+	StopBaseFee
+	StopModule
+	promotionStopCount
+)
+
+func CountPromotionStop(reason PromotionStop) {
+	if r := current.Load(); r != nil && reason < promotionStopCount {
+		r.promotionStops[reason].Inc()
+	}
+}
+
 func (r *recorder) registerFlowMetrics() {
+	for i, result := range [txMessageResultCount]string{"disabled", "decode_error", "invalid_blob", "partial", "forwarded"} {
+		c := prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_tx_messages_total", Help: "Incoming transaction messages by handler outcome. A full or partial handoff counts once regardless of transaction count or pool acceptance.", ConstLabels: prometheus.Labels{"result": result}})
+		r.registry.MustRegister(c)
+		r.txMessages[i] = c
+	}
+	for i, reason := range [promotionStopCount]string{"nonce_gap", "below_base_fee", "module_not_ready"} {
+		c := prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_promotion_stops_total", Help: "Account readiness scans stopped by the first unmet condition, including repeated scans.", ConstLabels: prometheus.Labels{"reason": reason}})
+		r.registry.MustRegister(c)
+		r.promotionStops[i] = c
+	}
+
 	for i, name := range outcomeNames {
 		c := prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_candidate_outcomes_total", Help: "Local candidate branch decisions, not excluded transaction counts or canonical block outcomes.", ConstLabels: prometheus.Labels{"reason": name}})
 		r.outcomes[i] = c

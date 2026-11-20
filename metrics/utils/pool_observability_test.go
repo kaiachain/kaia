@@ -24,7 +24,11 @@ func TestPoolObservationExporter(t *testing.T) {
 		t.Fatalf("metrics status = %d, want %d", r.Code, http.StatusOK)
 	}
 	for _, sample := range []string{
-		"kaia_poolobs_schema_version 6",
+		"kaia_poolobs_schema_version 9",
+		`kaia_poolobs_tx_messages_total{result="forwarded"} 0`,
+		`kaia_poolobs_promotion_stops_total{reason="below_base_fee"} 0`,
+		`kaia_poolobs_adopted_candidate_outcomes_total{reason="time_limit_with_remaining"} 0`,
+		`kaia_poolobs_adopted_candidate_outcomes_total{reason="time_limit_without_remaining"} 0`,
 		"stage=\"feed_send\"",
 		"kaia_poolobs_adopted_candidate_blocks_total{result=\"observed\"} 0",
 		"kaia_poolobs_adopted_candidate_execute_seconds_count 0",

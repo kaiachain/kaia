@@ -14,7 +14,7 @@ slot, about 3 KiB per peer at capacity 128, plus one observer pointer. Disabled
 mode avoids the observer object, clocks and its lock, but not this envelope storage. Enabling the environment variable without the exporter still incurs the
 recording cost and makes the observations unavailable remotely.
 
-Schema 6 exports **299 fixed sample series per node in 27 families**, including histogram
+Schema 9 exports **228 fixed sample series per node in 29 families**, including histogram
 buckets and metadata samples. Counts do not grow with transactions,
 accounts, peers, candidate heights, or restarts. Native Prometheus collectors
 are updated directly; they do not wait for the legacy metrics-to-Prometheus
@@ -175,10 +175,13 @@ For `observed` results, `adopted_candidate_transactions_total{phase}` sums
 transaction counts at the same five phases defined above, and
 `adopted_candidate_empty_total{phase}` counts zero-transaction phases.
 `adopted_candidate_outcomes_total{reason}` counts the same eight execution branch
-choices. `adopted_candidate_execute_seconds` measures the executor call,
+choices and two mutually exclusive deadline outcomes. When the loop exits on its timer flag or an execution time-limit error, `time_limit_with_remaining` means worklist entries remained and
+`time_limit_without_remaining` means the list was drained. Remaining entries
+can include bundle generators or ineligible transactions. These counters apply
+only to matched adopted executions. Neither identifies an excluded hash. `adopted_candidate_execute_seconds` measures the executor call,
 including its lock wait, transaction selection and application, but excluding
 the preceding ResetWithState call, finalization and sealing. It is not an EVM-only duration or a direct count of
-execution-budget timeouts. Its buckets match the other duration histograms.
+execution-budget timeouts. Its buckets match candidate_build so the two populations can be compared.
 
 These statistics separate adopted local proposals from speculative candidates.
 For example, compare `pool_input`, `after_fee`, and `included` within the adopted
@@ -194,7 +197,57 @@ by the node. Compare with chain data when checking coverage. As with other
 cumulative metrics, publication is not an atomic multi-family scrape. Use settled
 windows; the metrics do not identify individual block or transaction hashes.
 
-Schema 6 adds five families and 31 sample series: three result counters, five
+### Diagnosing low inclusion on mainnet
+
+1. Count transactions on chain and match the actual proposer to the exporting node. Separate a block with zero transactions from one with zero test transactions. Check generator send times when attributing a supply gap. Node counters include other traffic.
+2. Check the observed adopted-block count before interpreting phase deltas. For a settled interval containing exactly one observed adopted block on that node, phase deltas give that candidate's counts. A small pool input points upstream; a drop after fee or module filtering locates the reduction inside preparation. For multiple observed blocks, the same deltas are totals across candidates.
+3. If input reached execution and inclusion was low, check the adopted deadline outcome with remaining work. A slow executor call alone cannot establish that the deadline stopped selection. Conversely, a short call on a sparse candidate makes the pool input and filters especially informative.
+4. For a small candidate input, compare submission-node admission, readiness stops and send pressure with receiving-node handoff and admission. Inflight operations expose a stall before a duration sample exists. Sender and recipient counters can narrow the affected stage across the workload; they cannot pair an individual send with a receipt.
+
+Choose internal duration bounds from the operation being timed. RPC response, header-based inclusion and first receipt observation have different endpoints. A long tail in one of those measurements does not by itself justify the same bucket in every node stage.
+
+Finite duration boundaries are specific to the operation. They are diagnostic thresholds, not deadlines. The default 250ms execution budget applies to candidate execution. Compare matching stages across nodes. For comparisons across stages or schema versions, use shared thresholds; retain the stage label when computing quantiles.
+
+| Measurement | Upper bounds | Diagnostic use |
+|---|---|---|
+| `admission_write_single` | 100ms, 250ms, 1s | Detect lock contention and count waits that consume a quarter or a full block interval. |
+| `admission_write_batch` | 100ms, 1s | Identify batch lock contention on the remote admission path. |
+| `head_reset_wait` | 10ms, 100ms, 1s | Separate delayed lock acquisition from time spent updating the pool. |
+| `pending_wait` | 10ms, 100ms, 1s | Identify pool-lock delay inside the pending snapshot. |
+| `reset_body` | 10ms, 100ms, 1s | Distinguish ordinary refresh work from a reset spanning a block interval. |
+| `reset_hold` | 10ms, 100ms, 1s | Compare lock occupancy with the reset body at the same thresholds. |
+| `feed_enqueue` | 100ms, 1s | Identify blocking while handing a promotion to the notification queue. |
+| `feed_send` | 100ms, 1s | Distinguish subscriber delivery delay from queue submission. |
+| `admission_hold` | 10ms, 100ms, 1s | Separate time holding the shared lock from time waiting for it. |
+| `remote_enqueue` | 100ms, 1s | Identify backpressure before the remote admission consumer. |
+| `remote_admission` | 10ms, 100ms, 1s | Separate slow batch processing from enqueue backpressure. |
+| `broadcast` | 100ms, 1s | Identify a slow dispatch cycle and compare it with writes. |
+| `peer_send` | 100ms, 1s | Compare write delays with async queue residence at both thresholds. |
+| `rebroadcast` | 100ms, 1s | Detect slow resend calls; this timer excludes the wait between retries. |
+| `block_import` | 10ms, 100ms, 250ms, 1s | Separate ordinary imports from increasingly expensive imports and head lag. |
+| `candidate_build` | 10ms, 100ms, 250ms, 1s | Distinguish fast builds, substantial execution, and the default budget boundary. |
+| `candidate_pending` | 10ms, 100ms, 1s | Compare total snapshot latency with its inner lock wait. |
+| `peer_queue_delay` | 100ms, 1s | Identify async batch residence before the peer write. |
+| `adopted_candidate_execute` | 10ms, 100ms, 250ms, 1s | Compare adopted executor calls with candidate builds; use outcome counters for deadline exits. |
+
+Schema 7 added three `promotion_stops_total{reason}` counters and the two
+adopted deadline outcomes. A fee-aware scan that stops early records its first
+unmet condition: a missing next nonce (`nonce_gap`), a price below the base
+fee supplied to that scan (`below_base_fee`), or a pool module withholding
+readiness (`module_not_ready`). Repeated scans of one account count again.
+Empty and fully drained scans record no stop. These counters cover the
+Magma fee-aware readiness path after earlier pool checks. A nonce gap describes the
+queue at scan time, even if an earlier balance check removed the missing entry.
+
+Schema 7 also counts completed incoming transaction messages in
+`tx_messages_total{result}`. Disabled reception, decode errors and invalid
+blobs end before pool handoff. A truncated legacy list or skipped nil item is
+partial when handed off. Forwarded means the full decoded list was handed off,
+including an empty list. A pool policy may still deny every transaction. These
+are per-message counts, unlike the per-copy `remote_received` event. No
+message is counted while its handler is still blocked.
+
+Schema 6 added five families and 31 sample series: three result counters, five
 phase totals, five empty-phase counters, eight outcome counters, and ten
 histogram samples. Existing family names and populations remain unchanged.
 
@@ -232,15 +285,7 @@ node. They locate a source node's transmission pressure but do not identify whic
 remote connection is responsible. Keep host identity for diagnosis rather than
 summing unrelated nodes. Handle
 process restart/counter reset. Use the observation process-start timestamp as a restart hint, not a globally
-unique identity. Histogram buckets in seconds are
-`0.1, 0.15, 0.25, 1, 5, 10, 20`, plus infinity. Durations at or below 100ms
-share the first bucket, so their distribution cannot be resolved. The sum and
-count still provide their contribution to the overall mean. `histogram_quantile`
-interpolates within buckets: if all observations are in the first bucket, its
-p95 estimate is 95ms even when every operation takes 1ms. Prefer the mean and
-threshold-exceedance fraction above for these stages. Above 20 seconds, use
-`_count - _bucket{le="20"}`;
-a quantile in the overflow bucket is not an observed upper bound.
+unique identity. Every histogram includes a +Inf bucket, sum and count. Use the per-stage table above for finite bounds. The mean and the fraction above a measured threshold are directly computable. Quantiles interpolate within buckets; in the overflow bucket there is no observed upper bound.
 
 The metrics can locate aggregate stalls and show local candidate reasons. They
 cannot retrospectively prove the path of a chosen hash, join candidate snapshots
@@ -248,8 +293,8 @@ to canonical block hashes, or tell what an unobserved proposer received. Do not
 label an external node faulty from the absence of local evidence. Those are
 explicit limits of this metrics-only change, not a reason to add unbounded labels.
 
-At 10-second scraping, 299 series produce 2,583,360 samples per node per day;
-at 30 seconds, 861,120. Text export bytes depend on current numeric values.
+At 10-second scraping, 228 series produce 1,969,920 samples per node per day;
+at 30 seconds, 656,640. Text export bytes depend on current numeric values.
 Measure compressed transport and storage separately. Start with owned nodes and
 preserve histogram/counter semantics through the collector before widening scope.
 
@@ -278,7 +323,7 @@ no coarser than the retained samples; a finer step cannot create missing data.
 Use a sufficiently long window for rate/quantile estimates, or inspect raw
 counter deltas for a short interval. The one-second experimental rate is a
 proposal, not a claim that the deployed central pipeline currently supports it.
-At one second 299 series add 538,200 samples per node for 30 minutes. Start with
+At one second 228 series add 410,400 samples per node for 30 minutes. Start with
 owned nodes, and choose a slower sustained rate based on retention/cost evidence.
 Even one-second sampling cannot establish the order of subsecond events on
 separate nodes or correlate an arbitrary transaction hash.

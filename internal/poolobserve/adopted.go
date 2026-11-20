@@ -8,6 +8,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// These reasons apply only to a matched, adopted execution. The remaining
+// entries can include bundle generators and need not be executable transactions.
+const (
+	timeLimitWithRemaining = candidateOutcomeCount + iota
+	timeLimitWithoutRemaining
+	adoptedOutcomeCount
+)
+
 // CandidateObservation belongs to one preparation or execution attempt. It is
 // not concurrency-safe: the owner finishes recording before handing off a
 // snapshot. Fixed arrays retain neither transaction nor block identities.
@@ -15,7 +23,7 @@ type CandidateObservation struct {
 	recorder *recorder
 	phases   [candidatePhaseCount]int
 	seen     [candidatePhaseCount]bool
-	outcomes [candidateOutcomeCount]uint64
+	outcomes [adoptedOutcomeCount]uint64
 }
 
 // NewCandidateObservation returns nil without allocating when disabled.
@@ -35,6 +43,18 @@ func (o *CandidateObservation) SetPhase(phase CandidatePhase, n int) {
 func (o *CandidateObservation) CountOutcome(outcome CandidateOutcome) {
 	if o != nil && outcome < candidateOutcomeCount {
 		o.outcomes[outcome]++
+	}
+}
+
+// RecordTimeLimit records the state of the worklist when the worker observes its deadline.
+func (o *CandidateObservation) RecordTimeLimit(hasRemaining bool) {
+	if o == nil {
+		return
+	}
+	if hasRemaining {
+		o.outcomes[timeLimitWithRemaining]++
+	} else {
+		o.outcomes[timeLimitWithoutRemaining]++
 	}
 }
 
@@ -62,12 +82,12 @@ func (r *recorder) registerAdoptedMetrics() {
 		r.adoptedCandidates[i] = m
 		r.registry.MustRegister(m.transactions, m.empty)
 	}
-	for i, reason := range outcomeNames {
+	for i, reason := range append(outcomeNames[:], "time_limit_with_remaining", "time_limit_without_remaining") {
 		c := prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_adopted_candidate_outcomes_total", Help: "Execution branch decisions of observed local-author canonical candidates consumed by the worker, not excluded transaction counts.", ConstLabels: prometheus.Labels{"reason": reason}})
 		r.adoptedOutcomes[i] = c
 		r.registry.MustRegister(c)
 	}
-	r.adoptedExecute = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_adopted_candidate_execute_seconds", Help: "Executor call duration, including its lock wait, of observed local-author canonical candidates consumed by the worker; excludes finalization and sealing.", Buckets: durationBuckets})
+	r.adoptedExecute = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_adopted_candidate_execute_seconds", Help: "Executor call duration, including its lock wait, of observed local-author canonical candidates consumed by the worker; excludes finalization and sealing.", Buckets: []float64{0.01, 0.1, 0.25, 1}})
 	r.registry.MustRegister(r.adoptedExecute)
 }
 

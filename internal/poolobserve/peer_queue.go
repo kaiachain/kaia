@@ -22,7 +22,7 @@ type PeerQueue struct {
 func (r *recorder) registerPeerQueueMetrics() {
 	r.peerQueued = prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_peer_queue_batches", Help: "Observed async transaction batches awaiting dequeue, including provisional nonblocking enqueue attempts. Not transactions."})
 	r.peerAbandoned = prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_peer_queue_abandoned_batches_total", Help: "Pending async batch observations detached when their peer closes. Not proof of transaction loss."})
-	r.peerDelay = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_peer_queue_delay_seconds", Help: "Monotonic time from async enqueue attempt to dequeue. Excludes actual peer write; closed queue observations are abandoned instead.", Buckets: durationBuckets})
+	r.peerDelay = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_peer_queue_delay_seconds", Help: "Monotonic time from async enqueue attempt to dequeue. Excludes actual peer write; closed queue observations are abandoned instead.", Buckets: []float64{0.1, 1}})
 	r.registry.MustRegister(r.peerQueued, r.peerAbandoned, r.peerDelay)
 }
 

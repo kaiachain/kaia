@@ -91,8 +91,29 @@ func TestRecorderSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(fs) != 27 {
-		t.Fatalf("families=%d want27", len(fs))
+	if len(fs) != 29 {
+		t.Fatalf("families=%d want29", len(fs))
+	}
+	wantBounds := map[string][]float64{
+		"admission_write_single":    {0.1, 0.25, 1},
+		"admission_write_batch":     {0.1, 1},
+		"head_reset_wait":           {0.01, 0.1, 1},
+		"pending_wait":              {0.01, 0.1, 1},
+		"reset_body":                {0.01, 0.1, 1},
+		"reset_hold":                {0.01, 0.1, 1},
+		"feed_enqueue":              {0.1, 1},
+		"feed_send":                 {0.1, 1},
+		"admission_hold":            {0.01, 0.1, 1},
+		"remote_enqueue":            {0.1, 1},
+		"remote_admission":          {0.01, 0.1, 1},
+		"broadcast":                 {0.1, 1},
+		"peer_send":                 {0.1, 1},
+		"rebroadcast":               {0.1, 1},
+		"block_import":              {0.01, 0.1, 0.25, 1},
+		"candidate_build":           {0.01, 0.1, 0.25, 1},
+		"candidate_pending":         {0.01, 0.1, 1},
+		"peer_queue_delay":          {0.1, 1},
+		"adopted_candidate_execute": {0.01, 0.1, 0.25, 1},
 	}
 	series := 0
 	for _, f := range fs {
@@ -102,7 +123,13 @@ func TestRecorderSchema(t *testing.T) {
 		for _, m := range f.Metric {
 			if m.Histogram != nil {
 				series += len(m.Histogram.Bucket) + 3
-				want := []float64{.1, .15, .25, 1, 5, 10, 20}
+				key := strings.TrimSuffix(strings.TrimPrefix(f.GetName(), "kaia_poolobs_"), "_seconds")
+				for _, label := range m.Label {
+					if label.GetName() == "stage" {
+						key = label.GetValue()
+					}
+				}
+				want := wantBounds[key]
 				if len(m.Histogram.Bucket) != len(want) {
 					t.Fatalf("%s bucket count", f.GetName())
 				}
@@ -124,14 +151,14 @@ func TestRecorderSchema(t *testing.T) {
 			}
 			switch f.GetName() {
 			case "kaia_poolobs_schema_version":
-				if m.Gauge.GetValue() != 6 {
+				if m.Gauge.GetValue() != 9 {
 					t.Fatal("wrong schema")
 				}
 			}
 		}
 	}
-	if series != 299 {
-		t.Fatalf("series=%d want299", series)
+	if series != 228 {
+		t.Fatalf("series=%d want228", series)
 	}
 }
 

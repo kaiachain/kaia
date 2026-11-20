@@ -61,14 +61,33 @@ type stageMetrics struct {
 	duration prometheus.Histogram
 }
 
-// Resolve 100-250ms waits, the one-second block interval, and longer propagation stalls.
-// Completed operations already have an exact count in the histogram.
-var durationBuckets = []float64{.1, .15, .25, 1, 5, 10, 20}
+// Match each histogram to the delay it can diagnose. Keep stage when aggregating buckets.
+var stageBuckets = [stageCount][]float64{
+	AdmissionWriteSingle: {0.1, 0.25, 1},
+	AdmissionWriteBatch:  {0.1, 1},
+	HeadResetWait:        {0.01, 0.1, 1},
+	PendingWait:          {0.01, 0.1, 1},
+	ResetBody:            {0.01, 0.1, 1},
+	ResetHold:            {0.01, 0.1, 1},
+	FeedEnqueue:          {0.1, 1},
+	FeedSend:             {0.1, 1},
+	AdmissionHold:        {0.01, 0.1, 1},
+	RemoteEnqueue:        {0.1, 1},
+	RemoteAdmission:      {0.01, 0.1, 1},
+	Broadcast:            {0.1, 1},
+	PeerSend:             {0.1, 1},
+	Rebroadcast:          {0.1, 1},
+	BlockImport:          {0.01, 0.1, 0.25, 1},
+	CandidateBuild:       {0.01, 0.1, 0.25, 1},
+	CandidatePending:     {0.01, 0.1, 1},
+}
 
 type recorder struct {
+	txMessages                           [txMessageResultCount]prometheus.Counter
+	promotionStops                       [promotionStopCount]prometheus.Counter
 	adoptedBlocks                        [3]prometheus.Counter
 	adoptedCandidates                    [candidatePhaseCount]candidateMetrics
-	adoptedOutcomes                      [candidateOutcomeCount]prometheus.Counter
+	adoptedOutcomes                      [adoptedOutcomeCount]prometheus.Counter
 	adoptedExecute                       prometheus.Histogram
 	peerQueued                           prometheus.Gauge
 	peerAbandoned                        prometheus.Counter
@@ -96,7 +115,7 @@ func init() {
 func newRecorder() *recorder {
 	r := &recorder{registry: prometheus.NewRegistry()}
 	schema := prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_schema_version", Help: "Pool observation schema version."})
-	schema.Set(6)
+	schema.Set(9)
 	r.registry.MustRegister(schema)
 	start := prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_process_start_time_seconds", Help: "Wall clock when the process observation recorder initialized; not a duration clock."})
 	start.Set(float64(time.Now().UnixNano()) / 1e9)
@@ -128,7 +147,7 @@ func newRecorder() *recorder {
 		s := &r.stages[i]
 		s.started = prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_operations_started_total", Help: "Local transaction processing stage operations started.", ConstLabels: labels})
 		s.inflight = prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_operations_inflight", Help: "Local transaction processing stage operations not yet completed.", ConstLabels: labels})
-		s.duration = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_duration_seconds", Help: "Completed local transaction processing stage monotonic duration, including unsuccessful operations.", ConstLabels: labels, Buckets: durationBuckets})
+		s.duration = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_duration_seconds", Help: "Completed local transaction processing stage monotonic duration, including unsuccessful operations.", ConstLabels: labels, Buckets: stageBuckets[i]})
 		r.registry.MustRegister(s.started, s.inflight, s.duration)
 	}
 	r.registerFlowMetrics()

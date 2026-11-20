@@ -108,11 +108,15 @@ type candidateMetricsChain struct {
 	BlockChain
 	firstError         error
 	firstFailedReceipt bool
+	firstDelay         time.Duration
 	attempts           int
 }
 
 func (c *candidateMetricsChain) ApplyTransaction(_ *params.ChainConfig, _ *common.Address, _ *state.StateDB, _ *types.Header, _ *types.Transaction, _ *uint64, _ *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error) {
 	c.attempts++
+	if c.attempts == 1 && c.firstDelay > 0 {
+		time.Sleep(c.firstDelay)
+	}
 	if c.attempts == 1 && c.firstError != nil {
 		return nil, nil, c.firstError
 	}
@@ -136,7 +140,7 @@ func TestCandidateExecutionMetrics(t *testing.T) {
 		input    int
 		err      error
 		included int
-	}{{"empty", 0, nil, 0}, {"included", 2, nil, 2}, {"nonce_dependency", 2, blockchain.ErrNonceTooHigh, 0}, {"old_nonce", 2, blockchain.ErrNonceTooLow, 1}, {"generated_entry_not_input", 2, nil, 2}} {
+	}{{"empty", 0, nil, 0}, {"included", 2, nil, 2}, {"nonce_dependency", 2, blockchain.ErrNonceTooHigh, 0}, {"old_nonce", 2, blockchain.ErrNonceTooLow, 1}, {"generated_entry_not_input", 2, nil, 2}, {"deadline_with_remaining", 2, nil, 1}, {"deadline_without_remaining", 1, nil, 1}, {"evm_deadline", 1, vm.ErrTotalTimeLimitReached, 0}} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer poolobserve.EnableForTesting()()
 			reg := prometheus.NewRegistry()
@@ -168,9 +172,22 @@ func TestCandidateExecutionMetrics(t *testing.T) {
 			if tc.name == "generated_entry_not_input" {
 				modules = []builder.TxBundlingModule{failingGeneratedBundle{}}
 			}
-			task.ApplyTransactions(txs, &candidateMetricsChain{firstError: tc.err}, common.Address{}, modules)
+			chain := &candidateMetricsChain{firstError: tc.err}
+			if tc.name == "deadline_with_remaining" || tc.name == "deadline_without_remaining" {
+				chain.firstDelay = params.BlockGenerationTimeLimit + 250*time.Millisecond
+			}
+			task.ApplyTransactions(txs, chain, common.Address{}, modules)
 			prep, _ := adoptedTestSnapshots()
 			poolobserve.ObserveAdopted(prep, task.candidateObservation.Snapshot(), time.Millisecond, true)
+			for _, suffix := range []string{"with_remaining", "without_remaining"} {
+				want := float64(0)
+				if tc.name == "deadline_"+suffix || tc.err == vm.ErrTotalTimeLimitReached && suffix == "with_remaining" {
+					want = 1
+				}
+				if got := candidateCounter(t, reg, "kaia_poolobs_adopted_candidate_outcomes_total", "reason", "time_limit_"+suffix); got != want {
+					t.Fatalf("deadline %s = %v, want %v", suffix, got, want)
+				}
+			}
 			for phase, want := range map[string]int{"execution_input": tc.input, "included": tc.included} {
 				for _, family := range []string{"kaia_poolobs_candidate_transactions_total", "kaia_poolobs_adopted_candidate_transactions_total"} {
 					if got := candidateCounter(t, reg, family, "phase", phase); got != float64(want) {

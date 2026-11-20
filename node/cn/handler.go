@@ -1661,12 +1661,14 @@ func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
 	if pm.acceptTxs.Load() == 0 {
+		poolobserve.CountTxMessage(poolobserve.TxMessageDisabled)
 		return nil
 	}
 	// Transactions can be processed, parse them and deliver to the pool
 	var (
-		txs []*types.Transaction
-		err error
+		truncated bool
+		txs       []*types.Transaction
+		err       error
 	)
 	if p.GetVersion() <= kaia67 {
 		// Rolling-upgrade compatibility: v2.2.2 (kaia67 and below) does not split TxMsg,
@@ -1674,7 +1676,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// maxTxMsgItems instead of disconnecting the peer. The discarded txs may be
 		// recovered through resend or subsequent synchronization.
 		// Remove once kaia67 peers are gone.
-		var truncated bool
+
 		txs, truncated, err = decodeListTruncated[*types.Transaction](msg, maxTxMsgItems)
 		if err == nil && truncated {
 			logger.Debug("Truncated oversized TxMsg from legacy peer", "peer", p.GetID(), "version", p.GetVersion(), "kept", len(txs), "size", msg.Size)
@@ -1683,6 +1685,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		txs, err = decodeList[*types.Transaction](msg, maxTxMsgItems)
 	}
 	if err != nil {
+		poolobserve.CountTxMessage(poolobserve.TxMessageDecodeError)
 		return err
 	}
 	// Only valid txs should be pushed into the pool.
@@ -1701,9 +1704,11 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			// Without blob hashes the verification below passes vacuously.
 			hashes := tx.BlobHashes()
 			if len(hashes) == 0 {
+				poolobserve.CountTxMessage(poolobserve.TxMessageInvalidBlob)
 				return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errBloblessBlobTx)
 			}
 			if len(hashes) > params.BlobTxMaxBlobs {
+				poolobserve.CountTxMessage(poolobserve.TxMessageInvalidBlob)
 				return errResp(ErrDecode, "Invalid blob transaction with sidecar: blob limit exceeded: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
 			}
 			sidecar := tx.BlobTxSidecar()
@@ -1715,6 +1720,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 					// defensive measure against potential DoS attacks.
 					if err := sidecar.ValidateWithBlobHashes(hashes); err != nil {
 						logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
+						poolobserve.CountTxMessage(poolobserve.TxMessageInvalidBlob)
 						return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
 					}
 					pm.verifiedBlobTxs.Add(key)
@@ -1726,6 +1732,11 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		txReceiveCounter.Inc(1)
 	}
 	pm.txpool.HandleTxMsg(validTxs)
+	if truncated || len(validTxs) != len(txs) {
+		poolobserve.CountTxMessage(poolobserve.TxMessagePartial)
+	} else {
+		poolobserve.CountTxMessage(poolobserve.TxMessageForwarded)
+	}
 	return lastErr
 }
 

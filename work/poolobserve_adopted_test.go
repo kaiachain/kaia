@@ -50,6 +50,7 @@ func TestAdoptedCandidateResultClassification(t *testing.T) {
 			h := &types.Header{Number: big.NewInt(5), Time: big.NewInt(5), ParentHash: common.Hash{3}}
 			b := types.NewBlockWithHeader(h)
 			prep, exec := adoptedTestSnapshots()
+			exec.RecordTimeLimit(true)
 			task := &Task{header: h, candidateObservation: prep}
 			result := &consensus.ExecutionResult{Block: b, CandidateObservation: exec, ExecuteTime: 180 * time.Millisecond}
 			w := &worker{chain: chain, nodeAddr: common.Address{7}}
@@ -112,6 +113,13 @@ func TestAdoptedCandidateResultClassification(t *testing.T) {
 			expected := float64(0)
 			if want == "observed" {
 				expected = 4
+			}
+			wantTimeout := float64(0)
+			if want == "observed" {
+				wantTimeout = 1
+			}
+			if got := candidateCounter(t, reg, "kaia_poolobs_adopted_candidate_outcomes_total", "reason", "time_limit_with_remaining"); got != wantTimeout {
+				t.Fatalf("published time limits = %v want %v", got, wantTimeout)
 			}
 			if got := candidateCounter(t, reg, "kaia_poolobs_adopted_candidate_transactions_total", "phase", "pool_input"); got != expected {
 				t.Fatalf("detail=%v, want %v", got, expected)
