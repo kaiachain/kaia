@@ -19,12 +19,21 @@ package main
 import (
 	"encoding/hex"
 	"math/big"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/client"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
@@ -175,6 +184,152 @@ func TestEpochTimeLeft(t *testing.T) {
 		assert.Equal(t, tc.next, next.Int64(), "head %d", tc.head)
 		assert.Equal(t, tc.timeLeft, left, "head %d", tc.head)
 		assert.Equal(t, tc.late, left < minEpochTimeLeft, "head %d", tc.head)
+	}
+}
+
+// fakeNode serves the RPC methods a valops command calls.
+type fakeNode struct {
+	peers, latest, pending uint64
+	bumpPending            bool   // a pending-nonce read after the first returns one more
+	lookup                 string // what the node says about the sent transaction: "pool", "block" or "" (unknown)
+
+	pendingReads int
+	sent         []*types.Transaction
+}
+
+func (n *fakeNode) PeerCount() hexutil.Uint { return hexutil.Uint(n.peers) }
+
+func (n *fakeNode) ChainID() *hexutil.Big { return (*hexutil.Big)(big.NewInt(1001)) }
+
+func (n *fakeNode) GetTransactionCount(_ common.Address, block string) hexutil.Uint64 {
+	if block != "pending" {
+		return hexutil.Uint64(n.latest)
+	}
+	n.pendingReads++
+	if n.bumpPending && n.pendingReads > 1 {
+		return hexutil.Uint64(n.pending + 1)
+	}
+	return hexutil.Uint64(n.pending)
+}
+
+func (n *fakeNode) Call(map[string]interface{}, string) hexutil.Bytes { return nil }
+
+func (n *fakeNode) EstimateGas(map[string]interface{}) hexutil.Uint64 { return 100000 }
+
+func (n *fakeNode) GasPrice() *hexutil.Big { return (*hexutil.Big)(big.NewInt(25e9)) }
+
+func (n *fakeNode) GetBalance(common.Address, string) *hexutil.Big {
+	return (*hexutil.Big)(new(big.Int).SetUint64(params.KAIA))
+}
+
+func (n *fakeNode) SendRawTransaction(raw hexutil.Bytes) (common.Hash, error) {
+	tx := new(types.Transaction)
+	if err := rlp.DecodeBytes(raw, tx); err != nil {
+		return common.Hash{}, err
+	}
+	n.sent = append(n.sent, tx)
+	return tx.Hash(), nil
+}
+
+func (n *fakeNode) GetTransactionReceipt(common.Hash) map[string]interface{} { return nil }
+
+func (n *fakeNode) GetTransactionByHash(hash common.Hash) map[string]interface{} {
+	if len(n.sent) == 0 || hash != n.sent[0].Hash() {
+		return nil
+	}
+	switch n.lookup {
+	case "pool":
+		return api.NewRPCPendingTransaction(n.sent[0], nil)
+	case "block":
+		return api.NewRPCTransaction(nil, n.sent[0], common.HexToHash("0x17"), 23, 0, nil)
+	}
+	return nil
+}
+
+func TestCheckEndpoint(t *testing.T) {
+	from := common.HexToAddress("0x1111111111111111111111111111111111111111")
+	cases := []struct {
+		name  string
+		node  fakeNode
+		noNet bool
+		want  []string // substrings of the refusal; none for no refusal
+	}{
+		{name: "connected, nothing pending", node: fakeNode{peers: 3, latest: 5, pending: 5}},
+		{name: "no peers", node: fakeNode{peers: 0, latest: 5, pending: 5}, want: []string{"has no peers"}},
+		{name: "no peers, net API not served", node: fakeNode{peers: 0, latest: 5, pending: 5}, noNet: true},
+		{name: "pending transaction", node: fakeNode{peers: 3, latest: 5, pending: 7}, want: []string{"already has 2 pending transaction(s)"}},
+		{name: "no peers and pending transaction", node: fakeNode{peers: 0, latest: 5, pending: 6}, want: []string{"has no peers", "already has 1 pending transaction(s)"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := rpc.NewServer()
+			defer server.Stop()
+			require.NoError(t, server.RegisterName("kaia", &tc.node))
+			if !tc.noNet {
+				require.NoError(t, server.RegisterName("net", &tc.node))
+			}
+			ec := client.NewClient(rpc.DialInProc(server))
+			defer ec.Close()
+
+			latest, pending, refusal, err := abv2CheckEndpoint(ec, "node.ipc", from)
+			require.NoError(t, err)
+			assert.Equal(t, tc.node.latest, latest)
+			assert.Equal(t, tc.node.pending, pending)
+			if len(tc.want) == 0 {
+				assert.Empty(t, refusal)
+			}
+			for _, want := range tc.want {
+				assert.Contains(t, refusal, want)
+			}
+		})
+	}
+}
+
+// The endpoint checks as a valops command applies them: what is sent, with which nonce,
+// and what a receipt timeout reports.
+func TestValopsEndpointChecks(t *testing.T) {
+	cases := []struct {
+		name      string
+		node      fakeNode
+		force     bool
+		want      string // substring of the error
+		wantNonce []uint64
+	}{
+		{name: "no peers", node: fakeNode{peers: 0, latest: 5, pending: 5}, want: "has no peers"},
+		{name: "no peers, forced", node: fakeNode{peers: 0, latest: 5, pending: 5, lookup: "pool"}, force: true, want: "still pending", wantNonce: []uint64{5}},
+		{name: "pending transaction", node: fakeNode{peers: 3, latest: 5, pending: 6}, want: "already has 1 pending transaction(s)"},
+		{name: "pending transaction, forced", node: fakeNode{peers: 3, latest: 5, pending: 6, lookup: "pool"}, force: true, want: "behind 1 earlier transaction(s)", wantNonce: []uint64{6}},
+		// Another run sent a transaction after the check: the nonce the check saw is kept.
+		{name: "nonce is pinned", node: fakeNode{peers: 3, latest: 5, pending: 5, bumpPending: true, lookup: "block"}, want: "included in a block", wantNonce: []uint64{5}},
+		{name: "outcome unknown", node: fakeNode{peers: 3, latest: 5, pending: 5}, want: "outcome is unknown", wantNonce: []uint64{5}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := rpc.NewServer()
+			defer server.Stop()
+			require.NoError(t, server.RegisterName("kaia", &tc.node))
+			require.NoError(t, server.RegisterName("net", &tc.node))
+			httpServer := httptest.NewServer(server)
+			defer httpServer.Close()
+
+			key := "0x" + strings.Repeat("11", 32)
+			args := []string{"kcn", "valops", "pause", "--private-key", key, "--endpoint", httpServer.URL, "--timeout", "10ms"}
+			if tc.force {
+				args = append(args, "--force")
+			}
+			app := &cli.App{Name: "kcn", Commands: []*cli.Command{ValOpsCommand}}
+			err := app.Run(args)
+
+			assert.ErrorContains(t, err, tc.want)
+			var nonces []uint64
+			for _, tx := range tc.node.sent {
+				nonces = append(nonces, tx.Nonce())
+			}
+			assert.Equal(t, tc.wantNonce, nonces)
+			if len(tc.wantNonce) == 0 {
+				assert.ErrorContains(t, err, "(no transaction sent)")
+			}
+		})
 	}
 }
 
