@@ -60,6 +60,7 @@ type TxPool interface {
 	// Pending should return pending transactions.
 	// The slice should be modifiable by the caller.
 	Pending() (map[common.Address]types.Transactions, error)
+	PendingWithQueuedCount() (map[common.Address]types.Transactions, uint64, error)
 
 	CachedPendingTxsByCount(count int) types.Transactions
 

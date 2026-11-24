@@ -383,23 +383,21 @@ func (self *worker) commitNewWork() {
 	self.waitForIdealBlockTime(parent)
 	tstart := time.Now()
 
-	var pending map[common.Address]types.Transactions
-	var err error
 	var nextBaseFee *big.Int
 	// Check any fork transitions needed
 	pendingDone := poolobserve.Begin(poolobserve.CandidatePending)
-	pending, err = self.backend.TxPool().Pending()
+	pending, queued, err := self.backend.TxPool().PendingWithQueuedCount()
 	pendingDone()
 	if err != nil {
 		logger.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
 
-	prep := poolobserve.NewCandidateObservation()
+	prep := poolobserve.NewCandidatePreparation(queued)
 	observeCandidateTransactions(poolobserve.CandidatePoolInput, pending, prep)
 	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
-		// So above code, TxPool().Pending(), is separated with this and can be refactored later.
+		// The pool snapshot above is independent of this fee calculation.
 		pset := self.govModule.GetParamSet(nextBlockNum.Uint64())
 		nextBaseFee = pset.ToKip71Config().NextMagmaBlockBaseFee(parent.Number(), parent.Header().BaseFee, parent.GasUsed())
 		pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
@@ -660,13 +658,14 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 		poolobserve.ObserveCandidate(poolobserve.CandidateIncluded, len(env.txs))
 		env.candidateObservation.SetPhase(poolobserve.CandidateIncluded, len(env.txs))
 	}()
-	var (
-		arrayTxs                 = builder.Arrayify(txs)
-		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
-		totalTxs                 = len(incorporatedTxs)
-		totalBundles             = len(bundles)
-		coalescedLogs            []*types.Log
-	)
+	arrayTxs := builder.Arrayify(txs)
+	incorporatedTxs, bundles, incorporationErr := builder.ExtractBundlesAndIncorporateWithError(arrayTxs, txBundlingModules)
+	totalTxs, totalBundles := len(incorporatedTxs), len(bundles)
+	var coalescedLogs []*types.Log
+
+	if incorporationErr != nil {
+		env.observeCandidateOutcome(poolobserve.CandidateBundleIncorporationFailed)
+	}
 
 	// Count concrete input transactions before bundles add generated entries.
 	poolobserve.ObserveCandidate(poolobserve.CandidateExecutionInput, len(arrayTxs))
@@ -879,6 +878,7 @@ CommitTransactionLoop:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
+			env.observeCandidateOutcome(poolobserve.CandidateOtherExecutionError)
 			strangeErrorTxsCounter.Inc(1)
 			builder.ShiftTxs(&incorporatedTxs, numShift)
 		}

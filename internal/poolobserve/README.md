@@ -9,12 +9,14 @@ adds no logs, transaction hashes, account addresses, or peer identities.
 
 Start a node with `KAIA_POOLOBSERVE=1`, `--metrics`, and `--prometheus`.
 Without the environment variable the hooks do not record observations and export no `poolobs`
-series. The async queue envelope still reserves a 24-byte timestamp per batch
-slot, about 3 KiB per peer at capacity 128, plus one observer pointer. Disabled
-mode avoids the observer object, clocks and its lock, but not this envelope storage. Enabling the environment variable without the exporter still incurs the
-recording cost and makes the observations unavailable remotely.
+series. On 64-bit targets the async peer queue reserves 24 bytes per batch slot
+for a timestamp (3 KiB per peer at capacity 128), plus one observer pointer
+per peer. The ordinary remote intake channel reserves a timestamp and recorder
+pointer per slot (32 bytes, 3,200 bytes for its 100 slots per pool). Disabled
+hooks skip the clocks and observations. Enabling the environment variable
+without the exporter still incurs the recording cost.
 
-Schema 9 exports **228 fixed sample series per node in 29 families**, including histogram
+Schema 10 exports **234 fixed sample series per node in 29 families**, including histogram
 buckets and metadata samples. Counts do not grow with transactions,
 accounts, peers, candidate heights, or restarts. Native Prometheus collectors
 are updated directly; they do not wait for the legacy metrics-to-Prometheus
@@ -51,15 +53,19 @@ has not finished and therefore has not entered the duration histogram.
   processing, including inner lock waits; `reset_hold`: time holding `pool.mu`
   around that processing. These overlap; do not add durations.
 - `pending_wait`: wait for `pool.mu` in `Pending`, excluding the later `txMu` wait.
-  `candidate_pending`: the complete candidate call to `Pending`.
+  `candidate_pending`: the complete candidate call to `PendingWithQueuedCount`.
 - `remote_enqueue`: delivery into the remote-admission channel;
   `remote_admission`: consumer processing through `AddRemotes`.
+- `kaia_poolobs_remote_handoff_seconds`: one observation per dequeued batch on the
+  ordinary remote channel, from the producer’s send attempt through dequeue. It
+  includes blocking on a full channel and excludes subsequent pool processing
+  and the separate throttle consumer. The finite boundaries are 100ms and 1s.
 - `feed_enqueue`: enqueue a promotion event batch; `feed_send`: deliver a batch
   to event subscribers. Neither counts individual transactions.
 
-`kaia_poolobs_queue_{observed,slots,capacity}{queue="feed|broadcast|remote"}`
-measures channel slots containing batches, not transactions. A zero observed
-flag means the source is unavailable. Queue gauges can miss brief peaks between
+`kaia_poolobs_queue_{slots,capacity}{queue="feed|broadcast|remote"}`
+measures channel slots containing batches, not transactions. Positive capacity identifies a registered buffered channel. Zero capacity means
+there is no registered source. Treat missing samples as unavailable. Queue gauges can miss brief peaks between
 scrapes; wait histograms and cumulative counts preserve completed short events.
 
 `kaia_poolobs_events_total{event=...}` uses the following units:
@@ -119,9 +125,11 @@ send/receive counters from different nodes are not a delivery-loss equation.
 
 `kaia_poolobs_candidate_{transactions,empty}_total{phase=...}`
 records summed transaction counts and zero-transaction observations.
-`kaia_poolobs_candidate_preparations_total` counts successful pending snapshots
-once for the three preparation phases. The `candidate_build` histogram count
-counts completed execution attempts, including empty attempts:
+`kaia_poolobs_duration_seconds_count{stage="candidate_pending"}` counts
+completed pending reads. The current transaction pool always returns a successful
+snapshot, so use this count as the preparation denominator in a settled window.
+The `candidate_build` histogram count covers completed execution attempts,
+including empty attempts. The phase labels are:
 
 - `pool_input`: copied pending map before fee filtering.
 - `after_fee`: map after fee filtering.
@@ -136,8 +144,10 @@ counts exceed execution input; phase differences are not canonical loss counts.
 Execution input is observed before completion, so averages using the completion
 count require a settled time window; they are not exact instantaneous ratios.
 
-`kaia_poolobs_candidate_outcomes_total{reason=...}` adds eight bounded branch counts:
+`kaia_poolobs_candidate_outcomes_total{reason=...}` records ten bounded branch counts:
 
+- `bundle_incorporation_failed`: bundle assembly returned an error, leaving the execution worklist empty.
+- `other_execution_error`: execution skipped an item through the default error branch.
 - `bundle_target_rejected`: target receipt does not allow the bundle.
 - `generator_failed`: generating a transaction fails.
 - `size_limit`: a transaction or bundle would exceed the block size limit.
@@ -171,10 +181,16 @@ matches the local canonical header at that height.
 - `not_adopted`: a consumed sealed result fails the canonical or local-author
   conditions, including write errors. Nil and nonproposer results are excluded.
 
+`kaia_poolobs_adopted_candidate_queued_transactions_total` sums the queued transaction
+count at the pending snapshot of each observed adopted candidate. Compare its increment
+with the increment of `kaia_poolobs_adopted_candidate_transactions_total{phase="pool_input"}`
+for a single observed candidate. Divide the queued increment by the number of observed
+adopted candidates for a window average. One transaction may appear at multiple snapshots.
+
 For `observed` results, `adopted_candidate_transactions_total{phase}` sums
 transaction counts at the same five phases defined above, and
 `adopted_candidate_empty_total{phase}` counts zero-transaction phases.
-`adopted_candidate_outcomes_total{reason}` counts the same eight execution branch
+`adopted_candidate_outcomes_total{reason}` counts the same ten execution branch
 choices and two mutually exclusive deadline outcomes. When the loop exits on its timer flag or an execution time-limit error, `time_limit_with_remaining` means worklist entries remained and
 `time_limit_without_remaining` means the list was drained. Remaining entries
 can include bundle generators or ineligible transactions. These counters apply
@@ -293,8 +309,8 @@ to canonical block hashes, or tell what an unobserved proposer received. Do not
 label an external node faulty from the absence of local evidence. Those are
 explicit limits of this metrics-only change, not a reason to add unbounded labels.
 
-At 10-second scraping, 228 series produce 1,969,920 samples per node per day;
-at 30 seconds, 656,640. Text export bytes depend on current numeric values.
+At 10-second scraping, 234 series produce 2,021,760 samples per node per day;
+at 30 seconds, 673,920. Text export bytes depend on current numeric values.
 Measure compressed transport and storage separately. Start with owned nodes and
 preserve histogram/counter semantics through the collector before widening scope.
 
@@ -314,8 +330,10 @@ missing samples and inappropriate downsampling can destroy that evidence.
 In-flight, channel-depth and head gauges remain instantaneous and can miss a
 transient event. Started/histogram-count/inflight are also not atomically scraped as
 one snapshot. Peer queue durations now cover completed async buffering delays;
-feed/remote enqueue timers still measure enqueue blocking, not every buffered
-batch's residence time.
+the feed and remote enqueue timers measure producer blocking. The ordinary
+remote handoff histogram also includes the time from enqueue to dequeue. Its
+duration overlaps the enqueue timer, so do not add their values or subtract
+independently computed percentiles.
 
 For a bounded one-block investigation, collect these new families at one-second
 intervals from selected owned nodes and preserve raw samples. Use a query step
@@ -323,7 +341,7 @@ no coarser than the retained samples; a finer step cannot create missing data.
 Use a sufficiently long window for rate/quantile estimates, or inspect raw
 counter deltas for a short interval. The one-second experimental rate is a
 proposal, not a claim that the deployed central pipeline currently supports it.
-At one second 228 series add 410,400 samples per node for 30 minutes. Start with
+At one second 234 series add 421,200 samples per node for 30 minutes. Start with
 owned nodes, and choose a slower sustained rate based on retention/cost evidence.
 Even one-second sampling cannot establish the order of subsecond events on
 separate nodes or correlate an arbitrary transaction hash.

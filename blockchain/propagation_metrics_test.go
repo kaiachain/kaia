@@ -41,8 +41,8 @@ func TestPoolObservabilityRemoteEnqueueBlocked(t *testing.T) {
 	defer poolobserve.EnableForTesting()()
 	r := prometheus.NewRegistry()
 	poolobserve.Register(r)
-	pool := &TxPool{txMsgCh: make(chan types.Transactions, 1)}
-	pool.txMsgCh <- nil
+	pool := &TxPool{txMsgCh: make(chan remoteTxBatch, 1)}
+	pool.txMsgCh <- remoteTxBatch{}
 	done := make(chan struct{})
 	go func() { pool.HandleTxMsg(make([]*types.Transaction, 2)); close(done) }()
 	defer func() {
@@ -77,6 +77,69 @@ func TestPoolObservabilityRemoteEnqueueBlocked(t *testing.T) {
 	}
 	if n := poolObservationValue(t, r, "kaia_poolobs_duration_seconds", "remote_enqueue"); n != 1 {
 		t.Fatalf("completed %g", n)
+	}
+}
+
+// Hold only the first admission. The second batch can enter the channel
+// immediately, but cannot be dequeued while the consumer is still busy.
+func TestPoolObservabilityRemoteHandoff(t *testing.T) {
+	defer poolobserve.EnableForTesting()()
+	pool, key := setupTxPool()
+	defer pool.Stop()
+	r := prometheus.NewRegistry()
+	poolobserve.Register(r)
+	first := types.Transactions{transaction(0, 100000, key)}
+	second := types.Transactions{transaction(1, 100000, key)}
+
+	handoffCounts := func() (total, above100ms uint64) {
+		t.Helper()
+		families, err := r.Gather()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, family := range families {
+			if family.GetName() == "kaia_poolobs_remote_handoff_seconds" {
+				h := family.Metric[0].GetHistogram()
+				if h.Bucket[0].GetUpperBound() != 0.1 {
+					t.Fatalf("missing 100ms handoff boundary: %v", h)
+				}
+				return h.GetSampleCount(), h.GetSampleCount() - h.Bucket[0].GetCumulativeCount()
+			}
+		}
+		t.Fatal("missing remote handoff histogram")
+		return 0, 0
+	}
+	var firstAbove100ms uint64
+	func() {
+		pool.mu.Lock()
+		defer pool.mu.Unlock()
+		pool.HandleTxMsg(first)
+		deadline := time.Now().Add(3 * time.Second)
+		for poolObservationValue(t, r, "kaia_poolobs_operations_inflight", "remote_admission") != 1 {
+			if time.Now().After(deadline) {
+				t.Fatal("consumer did not start the first admission")
+			}
+			time.Sleep(time.Millisecond)
+		}
+		pool.HandleTxMsg(second)
+		total, above100ms := handoffCounts()
+		if total != 1 {
+			t.Fatalf("expected only the first handoff to complete, got %d", total)
+		}
+		firstAbove100ms = above100ms
+		time.Sleep(110 * time.Millisecond) // beyond the first handoff bucket
+	}()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for poolObservationValue(t, r, "kaia_poolobs_duration_seconds", "remote_admission") != 2 {
+		if time.Now().After(deadline) {
+			t.Fatal("consumer did not finish both admissions")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	total, above100ms := handoffCounts()
+	if total != 2 || above100ms != firstAbove100ms+1 {
+		t.Fatalf("expected the second handoff to exceed 100ms: total %d, above 100ms before %d, after %d", total, firstAbove100ms, above100ms)
 	}
 }
 

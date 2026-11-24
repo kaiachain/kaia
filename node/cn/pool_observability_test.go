@@ -39,10 +39,10 @@ func TestPoolObservabilityBroadcastQueueLifecycle(t *testing.T) {
 		return 0
 	}
 	deadline := time.Now().Add(3 * time.Second)
-	for value("kaia_poolobs_queue_observed") != 1 && time.Now().Before(deadline) {
+	for value("kaia_poolobs_queue_capacity") == 0 && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
-	if value("kaia_poolobs_queue_observed") != 1 || value("kaia_poolobs_queue_capacity") != float64(txChanSize) {
+	if value("kaia_poolobs_queue_capacity") != float64(txChanSize) {
 		t.Fatal("broadcast channel not observed")
 	}
 	sub.Unsubscribe()
@@ -51,7 +51,7 @@ func TestPoolObservabilityBroadcastQueueLifecycle(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("broadcast consumer did not stop")
 	}
-	if value("kaia_poolobs_queue_observed") != 0 {
+	if value("kaia_poolobs_queue_capacity") != 0 {
 		t.Fatal("stopped consumer reported healthy queue")
 	}
 }

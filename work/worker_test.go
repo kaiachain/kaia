@@ -59,9 +59,9 @@ func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engin
 	// commitNewWork stops at Pending.
 	takenCh := make(chan struct{}, 1)
 	txPool := mocks.NewMockTxPool(ctrl)
-	txPool.EXPECT().Pending().DoAndReturn(func() (map[common.Address]types.Transactions, error) {
+	txPool.EXPECT().PendingWithQueuedCount().DoAndReturn(func() (map[common.Address]types.Transactions, uint64, error) {
 		takenCh <- struct{}{}
-		return nil, errors.New("no pending txs")
+		return nil, 0, errors.New("no pending txs")
 	}).AnyTimes()
 
 	var txsFeed, headFeed, sideFeed event.Feed
@@ -255,7 +255,7 @@ func TestCommitNewWorkQualifiedOnly(t *testing.T) {
 			chain.EXPECT().Validator().Return(&fakeValidator{valset: mValset}).AnyTimes()
 			txPool := mocks.NewMockTxPool(ctrl)
 			if tc.prepareHeader {
-				txPool.EXPECT().Pending().Return(nil, nil)
+				txPool.EXPECT().PendingWithQueuedCount().Return(nil, uint64(0), nil)
 				chain.EXPECT().PrepareHeader(gomock.Any()).Return(errors.New("stop"))
 			}
 

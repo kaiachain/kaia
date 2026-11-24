@@ -83,11 +83,13 @@ var stageBuckets = [stageCount][]float64{
 }
 
 type recorder struct {
+	remoteHandoff                        prometheus.Histogram
 	txMessages                           [txMessageResultCount]prometheus.Counter
 	promotionStops                       [promotionStopCount]prometheus.Counter
 	adoptedBlocks                        [3]prometheus.Counter
 	adoptedCandidates                    [candidatePhaseCount]candidateMetrics
 	adoptedOutcomes                      [adoptedOutcomeCount]prometheus.Counter
+	adoptedQueued                        prometheus.Counter
 	adoptedExecute                       prometheus.Histogram
 	peerQueued                           prometheus.Gauge
 	peerAbandoned                        prometheus.Counter
@@ -97,7 +99,6 @@ type recorder struct {
 	queues                               [queueCount]atomic.Pointer[queueSource]
 	events                               [eventCount]prometheus.Counter
 	candidates                           [candidatePhaseCount]candidateMetrics
-	preparations                         prometheus.Counter
 	outcomes                             [candidateOutcomeCount]prometheus.Counter
 	chainHead                            atomic.Pointer[headSource]
 	poolState, poolReset                 prometheus.Gauge
@@ -115,7 +116,7 @@ func init() {
 func newRecorder() *recorder {
 	r := &recorder{registry: prometheus.NewRegistry()}
 	schema := prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_schema_version", Help: "Pool observation schema version."})
-	schema.Set(9)
+	schema.Set(10)
 	r.registry.MustRegister(schema)
 	start := prometheus.NewGauge(prometheus.GaugeOpts{Name: "kaia_poolobs_process_start_time_seconds", Help: "Wall clock when the process observation recorder initialized; not a duration clock."})
 	start.Set(float64(time.Now().UnixNano()) / 1e9)
@@ -123,19 +124,13 @@ func newRecorder() *recorder {
 	for i, name := range queueNames {
 		source := &r.queues[i]
 		labels := prometheus.Labels{"queue": name}
-		r.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "kaia_poolobs_queue_observed", Help: "One while the local queue consumer is registered; zero means not observed.", ConstLabels: labels}, func() float64 {
-			if source.Load() != nil {
-				return 1
-			}
-			return 0
-		}))
-		r.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "kaia_poolobs_queue_slots", Help: "Current event-batch slots in the local channel, not transaction count; consult queue_observed.", ConstLabels: labels}, func() float64 {
+		r.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "kaia_poolobs_queue_slots", Help: "Current event-batch slots in the local channel, not transaction count; positive queue_capacity identifies a registered source.", ConstLabels: labels}, func() float64 {
 			if q := source.Load(); q != nil {
 				return float64(q.depth())
 			}
 			return 0
 		}))
-		r.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "kaia_poolobs_queue_capacity", Help: "Capacity in event-batch slots of the observed local channel.", ConstLabels: labels}, func() float64 {
+		r.registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "kaia_poolobs_queue_capacity", Help: "Capacity in batch slots of the registered buffered channel; zero means no source.", ConstLabels: labels}, func() float64 {
 			if q := source.Load(); q != nil {
 				return float64(q.capacity)
 			}
@@ -153,6 +148,7 @@ func newRecorder() *recorder {
 	r.registerFlowMetrics()
 	r.registerAdoptedMetrics()
 	r.registerPeerQueueMetrics()
+	r.registerRemoteHandoff()
 	return r
 }
 
@@ -200,7 +196,7 @@ func EnableForTesting() func() {
 // that acquires pool.mu. Cleanup cannot detach a newer consumer's registration.
 func TrackQueue(queue Queue, depth func() int, capacity int) func() {
 	r := current.Load()
-	if r == nil || queue >= queueCount {
+	if r == nil || queue >= queueCount || capacity <= 0 {
 		return noop
 	}
 	q := &queueSource{depth: depth, capacity: capacity}

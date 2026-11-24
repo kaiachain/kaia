@@ -268,6 +268,13 @@ type TxBundlingModule interface {
 }
 
 func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []TxBundlingModule) ([]*TxOrGen, []*Bundle) {
+	txs, bundles, _ := ExtractBundlesAndIncorporateWithError(arrayTxs, txBundlingModules)
+	return txs, bundles
+}
+
+// ExtractBundlesAndIncorporateWithError also reports when incorporation fails
+// and the candidate is left with an empty worklist.
+func ExtractBundlesAndIncorporateWithError(arrayTxs []*types.Transaction, txBundlingModules []TxBundlingModule) ([]*TxOrGen, []*Bundle, error) {
 	// Detect bundles and add them to bundles
 	bundles := []*Bundle{}
 	flattenedTxs := []*TxOrGen{}
@@ -275,7 +282,7 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 		for _, tx := range arrayTxs {
 			flattenedTxs = append(flattenedTxs, NewTxOrGenFromTx(tx))
 		}
-		return flattenedTxs, nil
+		return flattenedTxs, nil, nil
 	}
 
 	for _, txBundlingModule := range txBundlingModules {
@@ -303,10 +310,10 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
 	if err != nil {
-		return flattenedTxs, nil
+		return flattenedTxs, nil, err
 	}
 
-	return incorporatedTxs, bundles
+	return incorporatedTxs, bundles, nil
 }
 
 func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []TxBundlingModule) {

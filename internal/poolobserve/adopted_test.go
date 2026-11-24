@@ -11,7 +11,7 @@ import (
 )
 
 func completeCandidateObservations() (*CandidateObservation, *CandidateObservation) {
-	prep, exec := NewCandidateObservation(), NewCandidateObservation()
+	prep, exec := NewCandidatePreparation(11), NewCandidateObservation()
 	prep.SetPhase(CandidatePoolInput, 10)
 	prep.SetPhase(CandidateAfterFee, 8)
 	prep.SetPhase(CandidateAfterModules, 7)
@@ -47,6 +47,9 @@ func TestAdoptedCandidatePopulation(t *testing.T) {
 	if metricValue(r.adoptedOutcomes[CandidateNonceHigh]) != 2 || metricValue(r.adoptedOutcomes[CandidateSizeLimit]) != 0 {
 		t.Fatal("wrong branch population")
 	}
+	if got := metricValue(r.adoptedQueued); got != 11 {
+		t.Fatalf("queued snapshot = %v", got)
+	}
 	m := &dto.Metric{}
 	if err := r.adoptedExecute.Write(m); err != nil {
 		t.Fatal(err)
@@ -55,13 +58,13 @@ func TestAdoptedCandidatePopulation(t *testing.T) {
 		t.Fatal("wrong duration population")
 	}
 	// Existing all-candidate metrics must not be incremented by publication.
-	if metricValue(r.preparations) != 0 || metricValue(r.candidates[CandidatePoolInput].transactions) != 0 {
+	if metricValue(r.candidates[CandidatePoolInput].transactions) != 0 {
 		t.Fatal("adopted publication changed all-candidate metrics")
 	}
 }
 
 func TestAdoptedMissingObservation(t *testing.T) {
-	for _, name := range []string{"nil_prep", "nil_exec", "missing_prep", "missing_exec", "mismatch", "negative_duration", "recorder_replaced"} {
+	for _, name := range []string{"nil_prep", "nil_exec", "missing_queued", "missing_prep", "missing_exec", "mismatch", "negative_duration", "recorder_replaced"} {
 		t.Run(name, func(t *testing.T) {
 			defer EnableForTesting()()
 			prep, exec := completeCandidateObservations()
@@ -69,6 +72,8 @@ func TestAdoptedMissingObservation(t *testing.T) {
 			switch name {
 			case "nil_prep":
 				prep = nil
+			case "missing_queued":
+				prep.hasQueued = false
 			case "nil_exec":
 				exec = nil
 			case "missing_prep":
@@ -87,7 +92,7 @@ func TestAdoptedMissingObservation(t *testing.T) {
 			if metricValue(r.adoptedBlocks[1]) != 1 || metricValue(r.adoptedBlocks[0]) != 0 {
 				t.Fatal("unavailable observation counted as complete")
 			}
-			if metricValue(r.adoptedCandidates[CandidateIncluded].empty) != 0 {
+			if metricValue(r.adoptedQueued) != 0 || metricValue(r.adoptedCandidates[CandidateIncluded].empty) != 0 {
 				t.Fatal("missing observation counted as empty candidate")
 			}
 		})
@@ -116,7 +121,7 @@ func TestAdoptedDisabled(t *testing.T) {
 	defer current.Store(previous)
 	if allocs := testing.AllocsPerRun(100, func() {
 		o := NewCandidateObservation()
-		if o != nil {
+		if o != nil || NewCandidatePreparation(12) != nil {
 			t.Fatal("disabled allocated observation")
 		}
 		o.SetPhase(CandidateIncluded, 0)

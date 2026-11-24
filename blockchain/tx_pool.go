@@ -263,7 +263,7 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	txMsgCh  chan types.Transactions // A buffer for async tx intake via AddRemotes
+	txMsgCh  chan remoteTxBatch      // A buffer for async tx intake via AddRemotes
 	txFeedCh chan types.Transactions // A buffer for async tx event emission via txFeed
 
 	missingBlobSidecarsCh chan *MissingBlobSidecar // A buffer for async missing blob sidecars event emission
@@ -299,7 +299,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		chainHeadCh:           make(chan ChainHeadEvent, chainHeadChanSize),
 		gasPrice:              new(big.Int).SetUint64(pset.UnitPrice),
 		blobBaseFee:           new(big.Int).SetUint64(params.ZeroBaseFee),
-		txMsgCh:               make(chan types.Transactions, txMsgChSize),
+		txMsgCh:               make(chan remoteTxBatch, txMsgChSize),
 		txFeedCh:              make(chan types.Transactions, txFeedChSize),
 		missingBlobSidecarsCh: make(chan *MissingBlobSidecar, missingBlobSidecarsChSize),
 		govModule:             govModule,
@@ -722,6 +722,13 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 // account and sorted by nonce. The returned transaction set is a copy and can be
 // freely modified by calling code.
 func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
+	pending, _, err := pool.PendingWithQueuedCount()
+	return pending, err
+}
+
+// PendingWithQueuedCount copies pending transactions and reads the queued
+// population under the same locks, so both describe one candidate snapshot.
+func (pool *TxPool) PendingWithQueuedCount() (map[common.Address]types.Transactions, uint64, error) {
 	waitEnd := poolobserve.Begin(poolobserve.PendingWait)
 	pool.mu.Lock()
 	waitEnd()
@@ -729,7 +736,8 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
-	return pool.pendingUnlocked()
+	pending, err := pool.pendingUnlocked()
+	return pending, pool.queuedCount, err
 }
 
 // pendingUnlocked must be protected by pool.mu AND pool.txMu by the caller.
@@ -1360,6 +1368,11 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 	return true
 }
 
+type remoteTxBatch struct {
+	txs     types.Transactions
+	handoff poolobserve.RemoteHandoff
+}
+
 // HandleTxMsg transfers transactions to a channel where handleTxMsg calls AddRemotes
 // to handle them. This is made not to wait from the results from TxPool.AddRemotes.
 func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
@@ -1396,7 +1409,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 	}
 
 	end := poolobserve.Begin(poolobserve.RemoteEnqueue)
-	pool.txMsgCh <- txs
+	pool.txMsgCh <- remoteTxBatch{txs: txs, handoff: poolobserve.StartRemoteHandoff()}
 	end()
 }
 
@@ -1485,9 +1498,10 @@ func (pool *TxPool) handleTxMsg() {
 
 	for {
 		select {
-		case txs := <-pool.txMsgCh:
+		case batch := <-ch:
+			batch.handoff.ObserveDequeue()
 			end := poolobserve.Begin(poolobserve.RemoteAdmission)
-			pool.AddRemotes(txs)
+			pool.AddRemotes(batch.txs)
 			end()
 		case <-pool.chainHeadSub.Err():
 			return

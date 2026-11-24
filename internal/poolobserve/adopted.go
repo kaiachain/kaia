@@ -20,10 +20,12 @@ const (
 // not concurrency-safe: the owner finishes recording before handing off a
 // snapshot. Fixed arrays retain neither transaction nor block identities.
 type CandidateObservation struct {
-	recorder *recorder
-	phases   [candidatePhaseCount]int
-	seen     [candidatePhaseCount]bool
-	outcomes [adoptedOutcomeCount]uint64
+	queued    uint64
+	hasQueued bool
+	recorder  *recorder
+	phases    [candidatePhaseCount]int
+	seen      [candidatePhaseCount]bool
+	outcomes  [adoptedOutcomeCount]uint64
 }
 
 // NewCandidateObservation returns nil without allocating when disabled.
@@ -32,6 +34,16 @@ func NewCandidateObservation() *CandidateObservation {
 		return &CandidateObservation{recorder: r}
 	}
 	return nil
+}
+
+// NewCandidatePreparation attaches the queued population from the same
+// snapshot as the pending inputs, including a valid zero.
+func NewCandidatePreparation(queued uint64) *CandidateObservation {
+	o := NewCandidateObservation()
+	if o != nil {
+		o.queued, o.hasQueued = queued, true
+	}
+	return o
 }
 
 func (o *CandidateObservation) SetPhase(phase CandidatePhase, n int) {
@@ -88,7 +100,8 @@ func (r *recorder) registerAdoptedMetrics() {
 		r.registry.MustRegister(c)
 	}
 	r.adoptedExecute = prometheus.NewHistogram(prometheus.HistogramOpts{Name: "kaia_poolobs_adopted_candidate_execute_seconds", Help: "Executor call duration, including its lock wait, of observed local-author canonical candidates consumed by the worker; excludes finalization and sealing.", Buckets: []float64{0.01, 0.1, 0.25, 1}})
-	r.registry.MustRegister(r.adoptedExecute)
+	r.adoptedQueued = prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_adopted_candidate_queued_transactions_total", Help: "Sum of queued transaction counts at the pending snapshots of observed local-author canonical candidates consumed by the worker."})
+	r.registry.MustRegister(r.adoptedExecute, r.adoptedQueued)
 }
 
 // ObserveAdopted is called once for a worker-consumed local-author canonical
@@ -102,7 +115,7 @@ func ObserveAdopted(prep, exec *CandidateObservation, duration time.Duration, ma
 	}
 	valid := matched && prep != nil && exec != nil && duration >= 0
 	if valid {
-		valid = prep.recorder == r && exec.recorder == r
+		valid = prep.hasQueued && prep.recorder == r && exec.recorder == r
 		for phase := CandidatePoolInput; phase <= CandidateAfterModules; phase++ {
 			valid = valid && prep.seen[phase]
 		}
@@ -115,6 +128,7 @@ func ObserveAdopted(prep, exec *CandidateObservation, duration time.Duration, ma
 		return
 	}
 	r.adoptedBlocks[0].Inc()
+	r.adoptedQueued.Add(float64(prep.queued))
 	for phase := CandidatePoolInput; phase < candidatePhaseCount; phase++ {
 		n := prep.phases[phase]
 		if phase >= CandidateExecutionInput {

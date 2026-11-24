@@ -72,10 +72,10 @@ func TestCandidatePreparationMetrics(t *testing.T) {
 	chain.EXPECT().PrepareHeader(gomock.Any()).Return(errors.New("stop after preparation"))
 	pool := mocks.NewMockTxPool(ctrl)
 	low, high := common.Address{1}, common.Address{2}
-	pool.EXPECT().Pending().Return(map[common.Address]types.Transactions{
+	pool.EXPECT().PendingWithQueuedCount().Return(map[common.Address]types.Transactions{
 		low:  {types.NewTransaction(0, common.Address{}, big.NewInt(0), 21000, big.NewInt(1), nil)},
 		high: {types.NewTransaction(0, common.Address{}, big.NewInt(0), 21000, big.NewInt(100000000000), nil)},
-	}, nil)
+	}, uint64(0), nil)
 	g := govmock.NewMockGovModule(ctrl)
 	g.EXPECT().GetParamSet(uint64(1)).Return(*gov.GetDefaultGovernanceParamSet())
 	w := &worker{config: &params.ChainConfig{MagmaCompatibleBlock: big.NewInt(1)}, backend: &testBackend{chain: chain, txPool: pool}, chain: chain, govModule: g, txBundlingModules: []builder.TxBundlingModule{candidateFilter{remove: high}}}
@@ -90,9 +90,6 @@ func TestCandidatePreparationMetrics(t *testing.T) {
 	for phase, count := range map[string]float64{"pool_input": 2, "after_fee": 1, "after_modules": 0} {
 		if got := candidateCounter(t, reg, "kaia_poolobs_candidate_transactions_total", "phase", phase); got != count {
 			t.Fatalf("%s: got %v want %v", phase, got, count)
-		}
-		if got := candidateCounter(t, reg, "kaia_poolobs_candidate_preparations_total", "", ""); got != 1 {
-			t.Fatalf("%s observations=%v", phase, got)
 		}
 	}
 	if candidateCounter(t, reg, "kaia_poolobs_candidate_empty_total", "phase", "after_modules") != 1 {
@@ -220,6 +217,9 @@ type outcomeBundle struct{ mode string }
 
 func (outcomeBundle) FilterTxs(map[common.Address]types.Transactions) {}
 func (m outcomeBundle) ExtractTxBundles(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
+	if m.mode == "missing_target" {
+		return []*builder.Bundle{builder.NewBundle(builder.NewTxOrGenList(txs[1]), common.Hash{99}, true)}
+	}
 	if m.mode == "target" {
 		return []*builder.Bundle{builder.NewBundle(builder.NewTxOrGenList(txs[1]), txs[0].Hash(), true)}
 	}
@@ -236,6 +236,8 @@ func TestCandidateOutcomeMetrics(t *testing.T) {
 		failedReceipt, size, blob bool
 		executionErr              error
 	}{
+		{name: "bundle_incorporation", reason: "bundle_incorporation_failed", module: "missing_target"},
+		{name: "unexpected_error", reason: "other_execution_error", executionErr: errors.New("unexpected transaction execution failure")},
 		{name: "target", reason: "bundle_target_rejected", module: "target", failedReceipt: true},
 		{name: "generation_before_execution", reason: "generator_failed", module: "initial_generation"},
 		{name: "generation_in_bundle", reason: "generator_failed", module: "generation"},
@@ -294,9 +296,12 @@ func TestCandidateOutcomeMetrics(t *testing.T) {
 			txs := types.NewTransactionsByPriceAndNonce(signer, map[common.Address]types.Transactions{crypto.PubkeyToAddress(key.PublicKey): input}, nil)
 			bc := &candidateMetricsChain{firstError: tc.executionErr, firstFailedReceipt: tc.failedReceipt}
 			task.ApplyTransactions(txs, bc, common.Address{}, modules)
+			if tc.module == "missing_target" && (bc.attempts != 0 || len(task.txs) != 0) {
+				t.Fatal("bundle incorporation failure must leave the worklist empty")
+			}
 			prep, _ := adoptedTestSnapshots()
 			poolobserve.ObserveAdopted(prep, task.candidateObservation.Snapshot(), time.Millisecond, true)
-			for _, reason := range []string{"bundle_target_rejected", "generator_failed", "size_limit", "blob_space_rejected", "unsupported_type", "bundle_reverted"} {
+			for _, reason := range []string{"bundle_target_rejected", "generator_failed", "size_limit", "blob_space_rejected", "unsupported_type", "bundle_reverted", "bundle_incorporation_failed", "other_execution_error"} {
 				want := float64(0)
 				if reason == tc.reason {
 					want = 1

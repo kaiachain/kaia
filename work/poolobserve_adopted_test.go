@@ -30,7 +30,7 @@ type adoptedTestSealer struct {
 func (s adoptedTestSealer) Author(*types.Header) (common.Address, error) { return s.author, s.err }
 
 func adoptedTestSnapshots() (*poolobserve.CandidateObservation, *poolobserve.CandidateObservation) {
-	p, e := poolobserve.NewCandidateObservation(), poolobserve.NewCandidateObservation()
+	p, e := poolobserve.NewCandidatePreparation(0), poolobserve.NewCandidateObservation()
 	p.SetPhase(poolobserve.CandidatePoolInput, 4)
 	p.SetPhase(poolobserve.CandidateAfterFee, 3)
 	p.SetPhase(poolobserve.CandidateAfterModules, 2)
@@ -238,7 +238,8 @@ func TestAdoptedReplacedResultChannelIsNotConsumed(t *testing.T) {
 	parent := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Time: big.NewInt(0), BlockScore: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(parent).Times(2)
 	chain.EXPECT().Validator().Return(&fakeValidator{}).Times(2)
-	pool.EXPECT().Pending().Return(map[common.Address]types.Transactions{}, nil).Times(2)
+	pool.EXPECT().PendingWithQueuedCount().Return(map[common.Address]types.Transactions{}, uint64(11), nil)
+	pool.EXPECT().PendingWithQueuedCount().Return(map[common.Address]types.Transactions{}, uint64(3), nil)
 	chain.EXPECT().PrepareHeader(gomock.Any()).DoAndReturn(func(h *types.Header) error { h.BlockScore = big.NewInt(1); return nil }).Times(2)
 	chain.EXPECT().StateAt(parent.Root()).Return(db, nil).Times(2)
 	chain.EXPECT().Processor().Return(adoptedTestProcessor{}).Times(2)
@@ -281,6 +282,9 @@ func TestAdoptedReplacedResultChannelIsNotConsumed(t *testing.T) {
 	case <-stopped:
 	case <-time.After(time.Second):
 		t.Fatal("worker did not stop")
+	}
+	if got := candidateCounter(t, reg, "kaia_poolobs_adopted_candidate_queued_transactions_total", "", ""); got != 3 {
+		t.Fatalf("queued count from consumed attempt = %v, want 3", got)
 	}
 	if len(channels[0]) != 1 {
 		t.Fatal("replaced result channel was consumed")

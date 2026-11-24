@@ -37,7 +37,7 @@ func TestFlowCountersAreBoundedAndConcurrent(t *testing.T) {
 	Count(eventCount, 5)
 	ObserveCandidate(candidatePhaseCount, 4)
 	ObserveCandidate(CandidateIncluded, -1)
-	if metricValue(r.events[Admitted]) != 120 || metricValue(r.preparations) != 40 {
+	if metricValue(r.events[Admitted]) != 120 || metricValue(r.candidates[CandidatePoolInput].transactions) != 120 || metricValue(r.candidates[CandidateIncluded].empty) != 40 {
 		t.Fatal("invalid input changed counters")
 	}
 }

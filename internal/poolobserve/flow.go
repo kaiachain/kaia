@@ -57,10 +57,12 @@ const (
 	CandidateBundleReverted
 	CandidateNonceLow
 	CandidateNonceHigh
+	CandidateBundleIncorporationFailed
+	CandidateOtherExecutionError
 	candidateOutcomeCount
 )
 
-var outcomeNames = [candidateOutcomeCount]string{"bundle_target_rejected", "generator_failed", "size_limit", "blob_space_rejected", "unsupported_type", "bundle_reverted", "nonce_low", "nonce_high"}
+var outcomeNames = [candidateOutcomeCount]string{"bundle_target_rejected", "generator_failed", "size_limit", "blob_space_rejected", "unsupported_type", "bundle_reverted", "nonce_low", "nonce_high", "bundle_incorporation_failed", "other_execution_error"}
 
 type (
 	candidateMetrics struct{ transactions, empty prometheus.Counter }
@@ -126,8 +128,6 @@ func (r *recorder) registerFlowMetrics() {
 		r.events[i] = c
 		r.registry.MustRegister(c)
 	}
-	r.preparations = prometheus.NewCounter(prometheus.CounterOpts{Name: "kaia_poolobs_candidate_preparations_total", Help: "Successful pending snapshots starting local candidate preparation. Fee and module phases share this population."})
-	r.registry.MustRegister(r.preparations)
 	for i, name := range phaseNames {
 		labels := prometheus.Labels{"phase": name}
 		m := candidateMetrics{
@@ -167,9 +167,6 @@ func Count(event Event, n int) {
 func ObserveCandidate(phase CandidatePhase, n int) {
 	if r := current.Load(); r != nil && phase < candidatePhaseCount && n >= 0 {
 		m := &r.candidates[phase]
-		if phase == CandidatePoolInput {
-			r.preparations.Inc()
-		}
 		m.transactions.Add(float64(n))
 		if n == 0 {
 			m.empty.Inc()

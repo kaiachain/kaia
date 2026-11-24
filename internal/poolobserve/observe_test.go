@@ -112,6 +112,7 @@ func TestRecorderSchema(t *testing.T) {
 		"block_import":              {0.01, 0.1, 0.25, 1},
 		"candidate_build":           {0.01, 0.1, 0.25, 1},
 		"candidate_pending":         {0.01, 0.1, 1},
+		"remote_handoff":            {0.1, 1},
 		"peer_queue_delay":          {0.1, 1},
 		"adopted_candidate_execute": {0.01, 0.1, 0.25, 1},
 	}
@@ -151,14 +152,28 @@ func TestRecorderSchema(t *testing.T) {
 			}
 			switch f.GetName() {
 			case "kaia_poolobs_schema_version":
-				if m.Gauge.GetValue() != 9 {
+				if m.Gauge.GetValue() != 10 {
 					t.Fatal("wrong schema")
 				}
 			}
 		}
 	}
-	if series != 228 {
-		t.Fatalf("series=%d want228", series)
+	if series != 234 {
+		t.Fatalf("series=%d want234", series)
+	}
+}
+
+func TestRemoteHandoffDisabled(t *testing.T) {
+	previous := current.Swap(nil)
+	defer current.Store(previous)
+	if allocations := testing.AllocsPerRun(100, func() {
+		handoff := StartRemoteHandoff()
+		if handoff.recorder != nil || !handoff.start.IsZero() {
+			t.Fatal("disabled handoff retained a recorder or timestamp")
+		}
+		handoff.ObserveDequeue()
+	}); allocations != 0 {
+		t.Fatalf("disabled handoff allocated %g times per batch", allocations)
 	}
 }
 
@@ -203,8 +218,13 @@ func queueMetric(t *testing.T, r *recorder, family, queue string) float64 {
 func TestQueueLifecycle(t *testing.T) {
 	defer EnableForTesting()()
 	r := current.Load()
-	if queueMetric(t, r, "kaia_poolobs_queue_observed", "feed") != 0 {
+	if queueMetric(t, r, "kaia_poolobs_queue_capacity", "feed") != 0 {
 		t.Fatal("unbound queue looked observed")
+	}
+	detachZero := TrackQueue(FeedQueue, func() int { return 1 }, 0)
+	defer detachZero()
+	if queueMetric(t, r, "kaia_poolobs_queue_slots", "feed") != 0 {
+		t.Fatal("unbuffered queue looked observable")
 	}
 	ch := make(chan int, 2)
 	detach := TrackQueue(FeedQueue, func() int { return len(ch) }, cap(ch))
@@ -215,11 +235,11 @@ func TestQueueLifecycle(t *testing.T) {
 	newer := make(chan int, 3)
 	detachNew := TrackQueue(FeedQueue, func() int { return len(newer) }, cap(newer))
 	detach()
-	if queueMetric(t, r, "kaia_poolobs_queue_observed", "feed") != 1 || queueMetric(t, r, "kaia_poolobs_queue_capacity", "feed") != 3 {
+	if queueMetric(t, r, "kaia_poolobs_queue_capacity", "feed") != 3 {
 		t.Fatal("old cleanup detached replacement")
 	}
 	detachNew()
-	if queueMetric(t, r, "kaia_poolobs_queue_observed", "feed") != 0 {
+	if queueMetric(t, r, "kaia_poolobs_queue_capacity", "feed") != 0 {
 		t.Fatal("stopped queue still observed")
 	}
 }
