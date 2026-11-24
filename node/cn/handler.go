@@ -198,6 +198,7 @@ type ProtocolManager struct {
 
 	nodetype          common.ConnType
 	txResendUseLegacy bool
+	outsideCNMesh     atomic.Bool // the CN peer allowlist does not include this node
 
 	// syncStop is a flag to stop peer sync
 	syncStop int32
@@ -1820,7 +1821,13 @@ func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
 
 func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 	cnPeersWithoutTxs := make(map[Peer]types.Transactions)
+	// EN peers relay for a CN that is outside the CN mesh (e.g. ValInactive) or has no CN peer.
+	relayPeersWithoutTxs := make(map[Peer]types.Transactions)
+	relay := pm.outsideCNMesh.Load() || len(pm.peers.CNPeers()) == 0
 	for _, tx := range txs {
+		if relay {
+			pm.peers.UpdateTypePeersWithoutTxs(tx, common.ENDPOINTNODE, relayPeersWithoutTxs)
+		}
 		peers := pm.peers.CNWithoutTx(tx.Hash())
 		if len(peers) == 0 {
 			logger.Trace("No peer to broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
@@ -1837,10 +1844,13 @@ func (pm *ProtocolManager) broadcastTxsFromCN(txs types.Transactions) {
 		logger.Trace("Broadcast transaction", "hash", tx.Hash(), "recipients", len(peers))
 	}
 
-	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs)))
+	propTxPeersGauge.Update(int64(len(cnPeersWithoutTxs) + len(relayPeersWithoutTxs)))
 	// FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for peer, txs2 := range cnPeersWithoutTxs {
 		// peer.SendTransactions(txs)
+		peer.AsyncSendTransactions(txs2)
+	}
+	for peer, txs2 := range relayPeersWithoutTxs {
 		peer.AsyncSendTransactions(txs2)
 	}
 }
@@ -2085,6 +2095,11 @@ func (pm *ProtocolManager) FindPeers(targets map[common.Address]bool) map[common
 		}
 	}
 	return m
+}
+
+// SetOutsideCNMesh records whether this node is outside the CN mesh (e.g. ValInactive).
+func (pm *ProtocolManager) SetOutsideCNMesh(outside bool) {
+	pm.outsideCNMesh.Store(outside)
 }
 
 func (pm *ProtocolManager) GetCNPeers() map[common.Address]consensus.Peer {

@@ -18,6 +18,7 @@ package cn
 
 import (
 	"math/big"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -124,11 +125,24 @@ func hashCNPeerInput(addrs []common.Address) common.Hash {
 	return crypto.Keccak256Hash(encoded)
 }
 
+// cnMeshSink also reports whether the allowlist leaves this node outside the CN mesh.
+type cnMeshSink struct {
+	cnPeerSink
+	self       common.Address
+	setOutside func(bool)
+}
+
+func (s cnMeshSink) SetCNPeers(addrs []common.Address) {
+	s.cnPeerSink.SetCNPeers(addrs)
+	s.setOutside(addrs != nil && !slices.Contains(addrs, s.self))
+}
+
 func (s *CN) startCNPeerSync(srvr p2p.Server) {
 	if srvr == nil || s.valsetModule == nil || s.blockchain == nil {
 		return
 	}
-	s.cnPeerUpdater = newCNPeerUpdater(s.valsetModule, srvr, s.chainConfig)
+	sink := cnMeshSink{cnPeerSink: srvr, self: s.nodeAddress, setOutside: s.protocolManager.SetOutsideCNMesh}
+	s.cnPeerUpdater = newCNPeerUpdater(s.valsetModule, sink, s.chainConfig)
 
 	ch := make(chan blockchain.ChainHeadEvent, cnPeerHeadChanSize)
 	sub := s.blockchain.SubscribeChainHeadEvent(ch)

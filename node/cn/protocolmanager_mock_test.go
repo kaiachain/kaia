@@ -155,6 +155,18 @@ func (mr *MockBackendProtocolManagerMockRecorder) SetAcceptTxs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAcceptTxs", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetAcceptTxs))
 }
 
+// SetOutsideCNMesh mocks base method.
+func (m *MockBackendProtocolManager) SetOutsideCNMesh(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetOutsideCNMesh", arg0)
+}
+
+// SetOutsideCNMesh indicates an expected call of SetOutsideCNMesh.
+func (mr *MockBackendProtocolManagerMockRecorder) SetOutsideCNMesh(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOutsideCNMesh", reflect.TypeOf((*MockBackendProtocolManager)(nil).SetOutsideCNMesh), arg0)
+}
+
 // SetSyncStop mocks base method.
 func (m *MockBackendProtocolManager) SetSyncStop(arg0 bool) {
 	m.ctrl.T.Helper()
