@@ -332,10 +332,12 @@ func TestPrepareHeader(t *testing.T) {
 		assert.Equal(t, seals, payload.ParentCommittedSeal)
 		assert.NoError(t, v.VerifyHeader(header, nil))
 
-		// The target stays for a retry; only the older views are dropped.
-		require.NoError(t, v.PrepareHeader(&types.Header{Number: big.NewInt(int64(parentNum + 1)), ParentHash: parentHash}))
-		assert.Equal(t, 2, *lookups)
-		assert.Equal(t, []uint64{10}, v.collector.PendingEvaluations(0))
+		// The target is dropped with the older views, so the next build does not try it again.
+		assert.Empty(t, v.collector.PendingEvaluations(0))
+		again := &types.Header{Number: big.NewInt(int64(parentNum + 1)), ParentHash: parentHash}
+		require.NoError(t, v.PrepareHeader(again))
+		assert.Equal(t, 1, *lookups)
+		assert.Equal(t, header.VRank, again.VRank)
 	})
 
 	t.Run("candidate evaluation error does not hide a missing parent", func(t *testing.T) {

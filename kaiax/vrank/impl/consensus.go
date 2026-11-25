@@ -207,11 +207,13 @@ func (v *VRankModule) evaluateCandidateFailures(number uint64) []common.Address 
 		return nil
 	}
 	report, err := v.EvaluateCandidates(targetNum, round)
-	v.collector.PruneReported(targetNum) // drop views older than targetNum; targetNum stays for re-report or a retry
 	if err != nil {
+		// The state the evaluation reads does not come back, so the target goes with the older views.
+		v.collector.PruneReported(targetNum + 1)
 		logger.Warn("Failed to evaluate VRank candidates, reporting none", "err", err, "num", number, "targetNum", targetNum, "round", round)
 		return nil
 	}
+	v.collector.PruneReported(targetNum) // drop views older than targetNum; targetNum stays for re-report
 	return report
 }
 
