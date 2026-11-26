@@ -95,12 +95,16 @@ func Bytes2Hex(d []byte) string {
 }
 
 // Hex2Bytes returns the bytes represented by the hexadecimal string str.
+// It does not accept a 0x prefix. Invalid input returns the bytes decoded before
+// the error; use hex.DecodeString when the decoding error must be checked.
 func Hex2Bytes(str string) []byte {
 	h, _ := hex.DecodeString(str)
 	return h
 }
 
 // Hex2BytesFixed returns bytes of a specified fixed length flen.
+// The decoded value is left-padded with zeroes or truncated from the left.
+// Decoding errors are ignored, as in Hex2Bytes.
 func Hex2BytesFixed(str string, flen int) []byte {
 	h, _ := hex.DecodeString(str)
 	if len(h) == flen {
