@@ -88,6 +88,7 @@ type LesServer interface {
 type Miner interface {
 	Start()
 	Stop()
+	Close()
 	Mining() bool
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
@@ -951,7 +952,7 @@ func (s *CN) Stop() error {
 	s.bloomIndexer.Close()
 	close(s.closeBloomHandler)
 	s.txPool.Stop()
-	s.miner.Stop()
+	s.miner.Close()
 	s.blockchain.Stop()
 	s.chainDB.Close()
 	s.eventMux.Stop()

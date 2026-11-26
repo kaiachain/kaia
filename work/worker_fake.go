@@ -35,6 +35,7 @@ func NewFakeWorker() *FakeWorker {
 
 func (*FakeWorker) Start()                                                     {}
 func (*FakeWorker) Stop()                                                      {}
+func (*FakeWorker) Close()                                                     {}
 func (*FakeWorker) Mining() bool                                               { return false }
 func (*FakeWorker) SetExtra([]byte) error                                      { return nil }
 func (*FakeWorker) Pending() (*types.Block, types.Receipts, *state.StateDB)    { return nil, nil, nil }
