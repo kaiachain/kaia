@@ -452,6 +452,52 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 }
 
+// The main bridge runs as CN with one slot and its sub-bridge also connects as CN.
+func TestServerNoPeerTypeCap(t *testing.T) {
+	newSrv := func(noCap bool) *SingleChannelServer {
+		srv := &SingleChannelServer{
+			BaseServer: &BaseServer{
+				Config: Config{
+					PrivateKey:             newkey(),
+					MaxPhysicalConnections: 1,
+					NoDial:                 true,
+					NoDiscovery:            true,
+					NoPeerTypeCap:          noCap,
+				},
+			},
+		}
+		if err := srv.Start(); err != nil {
+			t.Fatalf("could not start: %v", err)
+		}
+		return srv
+	}
+	newconn := func() *conn {
+		id := randomID()
+		fd, _ := net.Pipe()
+		return &conn{fd: fd, transport: newTestTransport(id, fd, nil, false), flags: inboundConn, conntype: common.CONSENSUSNODE, id: id}
+	}
+
+	capped := newSrv(false)
+	defer capped.Stop()
+	if err := capped.handlePostHandshake(newconn()); err != DiscTooManyPeers {
+		t.Fatalf("per-type cap should reject the CN peer, got %v", err)
+	}
+
+	srv := newSrv(true)
+	defer srv.Stop()
+	c := newconn()
+	if err := srv.handlePostHandshake(c); err != nil {
+		t.Fatalf("CN peer should be accepted: %v", err)
+	}
+	if err := srv.handleAddPeerConn(c); err != nil {
+		t.Fatalf("could not add CN peer: %v", err)
+	}
+	// MaxPhysicalConnections still applies.
+	if err := srv.handlePostHandshake(newconn()); err != DiscTooManyPeers {
+		t.Fatalf("second peer should hit MaxPhysicalConnections, got %v", err)
+	}
+}
+
 // A CN keeps one of its cross-type slots for an EN it dials itself, so inbound
 // EN/PN peers alone cannot make dialTargets[CN][EN] unsatisfiable.
 func TestServerCrossTypeDialReserve(t *testing.T) {

@@ -300,6 +300,8 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	serverConfig.Logger = logger
 	serverConfig.ListenAddr = mb.config.MainBridgePort
 	serverConfig.MaxPhysicalConnections = mb.maxPeers
+	// The bridge is outside the CN/EN mesh; only mb.maxPeers limits it.
+	serverConfig.NoPeerTypeCap = true
 	serverConfig.NoDiscovery = true
 	serverConfig.EnableMultiChannelServer = false
 	serverConfig.NoDial = true

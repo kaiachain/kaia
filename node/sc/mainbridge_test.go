@@ -25,6 +25,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts"
@@ -357,4 +358,51 @@ func TestMainBridge_SendRPCResponseData(t *testing.T) {
 		err := mBridge.SendRPCResponseData(data)
 		assert.Equal(t, nil, err)
 	}
+}
+
+// TestMainBridge_acceptSubBridge tests that the bridge server accepts a sub-bridge, which connects as CN.
+func TestMainBridge_acceptSubBridge(t *testing.T) {
+	nodeCfg := node.DefaultConfig
+	nodeCfg.DataDir = t.TempDir()
+	sCtx := node.NewServiceContext(&nodeCfg, map[reflect.Type]node.Service{}, &event.TypeMux{}, &accounts.Manager{})
+	mBridge, err := NewMainBridge(sCtx, &SCConfig{NetworkId: testNetVersion, MainBridgePort: "127.0.0.1:0", MaxPeer: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bc := testBlockChain(t)
+	defer bc.Stop()
+	mBridge.SetComponents([]interface{}{bc, testTxPool(t, nodeCfg.DataDir, bc)})
+	if err := mBridge.Start(p2p.SingleChannelServer{}); err != nil {
+		t.Fatal(err)
+	}
+	defer mBridge.Stop()
+
+	// Same server config as SubBridge.Start.
+	addr := mBridge.bridgeServer.GetListenAddress()[0]
+	subKey, _ := crypto.GenerateKey()
+	sub := p2p.NewServer(p2p.Config{
+		PrivateKey:             subKey,
+		NoListen:               true,
+		NoDiscovery:            true,
+		MaxPhysicalConnections: 1,
+		StaticNodes:            []*discover.Node{discover.MustParseNode(fmt.Sprintf("kni://%s@%s?discport=0", mBridge.bridgeServer.NodeInfo().ID, addr))},
+	})
+	sub.AddProtocols([]p2p.Protocol{{
+		Name:    mBridge.SCProtocol().Name,
+		Version: mBridge.SCProtocol().Versions[0],
+		Length:  mBridge.SCProtocol().Lengths[0],
+		Run: func(p *p2p.Peer, rw p2p.MsgReadWriter) error {
+			for {
+				if _, err := rw.ReadMsg(); err != nil {
+					return err
+				}
+			}
+		},
+	}})
+	if err := sub.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer sub.Stop()
+
+	assert.Eventually(t, func() bool { return mBridge.bridgeServer.PeerCount() == 1 }, 10*time.Second, 50*time.Millisecond)
 }

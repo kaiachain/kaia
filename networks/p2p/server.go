@@ -76,6 +76,9 @@ type Config struct {
 	// its own-type mesh can't starve the CN<->EN link. 0 = per-node-type default.
 	ReservedCrossTypeSlots int `toml:",omitempty"`
 
+	// NoPeerTypeCap skips the per-type (CN/EN) peer caps, e.g. for the bridge server.
+	NoPeerTypeCap bool `toml:"-"`
+
 	// ConnectionType is a type of connection like Consensus or Normal
 	// described at common.ConnType
 	// When the connection is established, each peer exchange each connection type
