@@ -11,6 +11,7 @@ Thank you for your interest in contributing to Kaia. As an open source project, 
   - You should make sure you fully tested the code via running `make test`.
   - You should make sure the PR targets the `dev` branch.
   - You should make sure the PR is not too large. Your PR may be rejected if the changed LOC is over 1,000. It is recommended to split the PR into smaller ones.
+  - You should make sure the PR is not a cosmetic change. We close PRs that only fix typos, edit comments, fix links, or make trivial refactors.
 4. After submitting the PR, wait for code review and approval. The reviewer may ask you for additional commits or changes.
 5. Once the change has been approved, the PR will be merged by the project moderator.
 6. After merging the PR, we close the pull request. You can then delete the now obsolete branch.
