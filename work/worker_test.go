@@ -19,6 +19,7 @@ import (
 	"errors"
 	"math/big"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -52,15 +53,19 @@ func (b *testBackend) ChainDB() database.DBManager             { return nil }
 func (b *testBackend) ReBroadcastTxs(types.Transactions)       {}
 
 // newTestWorker runs a worker's update loop on finalizeCh and mux. Each new sequence it takes is sent on taken.
-func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engine, finalizeCh <-chan *consensus.ExecutionResult, mux *event.TypeMux) (w *worker, taken <-chan struct{}) {
+// The parent block has parentTime. If gate is not nil, commitNewWork stays in Pending until gate is closed.
+func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engine, finalizeCh <-chan *consensus.ExecutionResult, mux *event.TypeMux, parentTime int64, gate <-chan struct{}) (w *worker, taken <-chan struct{}) {
 	chain := mocks.NewMockBlockChain(ctrl)
-	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Time: big.NewInt(0)})).AnyTimes()
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0), Time: big.NewInt(parentTime)})).AnyTimes()
 	chain.EXPECT().Validator().Return(&fakeValidator{}).AnyTimes()
 	// commitNewWork stops at Pending.
 	takenCh := make(chan struct{}, 1)
 	txPool := mocks.NewMockTxPool(ctrl)
 	txPool.EXPECT().Pending().DoAndReturn(func() (map[common.Address]types.Transactions, error) {
 		takenCh <- struct{}{}
+		if gate != nil {
+			<-gate
+		}
 		return nil, errors.New("no pending txs")
 	}).AnyTimes()
 
@@ -73,13 +78,14 @@ func newTestWorker(t *testing.T, ctrl *gomock.Controller, engine consensus.Engin
 		txsCh:          make(chan blockchain.NewTxsEvent, txChanSize),
 		chainHeadCh:    make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:    make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		exitCh:         make(chan struct{}),
 		finalizeCh:     finalizeCh,
 		newSequenceSub: mux.Subscribe(newSequenceEvent{}),
 	}
 	w.txsSub = txsFeed.Subscribe(w.txsCh)
 	w.chainHeadSub = headFeed.Subscribe(w.chainHeadCh)
 	w.chainSideSub = sideFeed.Subscribe(w.chainSideCh)
-	go w.update()
+	w.wg.Go(w.update)
 	t.Cleanup(w.chainHeadSub.Unsubscribe)
 	return w, takenCh
 }
@@ -111,7 +117,7 @@ func TestWorkerStartStopWithPendingResult(t *testing.T) {
 			engine := consensusmocks.NewMockEngine(ctrl)
 			finalizeCh := make(chan *consensus.ExecutionResult)
 			mux := new(event.TypeMux)
-			w, taken := newTestWorker(t, ctrl, engine, finalizeCh, mux)
+			w, taken := newTestWorker(t, ctrl, engine, finalizeCh, mux, 0, nil)
 
 			// Like the engine: a Seal left from before the stop returns nil, then a new sequence waits for the update loop.
 			tc.expect(engine, func() error {
@@ -133,6 +139,81 @@ func TestWorkerStartStopWithPendingResult(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("update loop didn't take the new sequence")
 			}
+			// The loop outlives a stop, so that the worker can start again.
+			mux.Post(newSequenceEvent{})
+			select {
+			case <-taken:
+			case <-time.After(time.Second):
+				t.Fatalf("update loop ended with the %s", tc.name)
+			}
+		})
+	}
+}
+
+// Tests that close returns only after a running commitNewWork has returned, and that the worker builds no block afterwards.
+func TestWorkerClose(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		newSequence bool  // a new sequence is taken before the close
+		parentTime  int64 // a parent in the future keeps commitNewWork waiting for the block time
+		gated       bool  // commitNewWork is past the wait, held in Pending
+	}{
+		{name: "idle"},
+		{name: "waiting for the block time", newSequence: true, parentTime: time.Now().Add(time.Hour).Unix()},
+		{name: "reading the chain", newSequence: true, gated: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				engine := consensusmocks.NewMockEngine(ctrl)
+				engine.EXPECT().Stop().Return(nil)
+				mux := new(event.TypeMux)
+				var gate chan struct{}
+				if tc.gated {
+					gate = make(chan struct{})
+				}
+				w, taken := newTestWorker(t, ctrl, engine, nil, mux, tc.parentTime, gate)
+
+				if tc.newSequence {
+					mux.Post(newSequenceEvent{})
+					synctest.Wait() // commitNewWork is at the wait, or in Pending
+				}
+				closed := make(chan struct{})
+				go func() {
+					w.close()
+					close(closed)
+				}()
+				synctest.Wait()
+				if tc.gated {
+					select {
+					case <-closed:
+						t.Fatal("close returned while commitNewWork was running")
+					default:
+					}
+					<-taken
+					close(gate)
+					synctest.Wait()
+				}
+				select {
+				case <-closed:
+				default:
+					t.Fatal("close didn't return")
+				}
+				if !w.newSequenceSub.Closed() {
+					t.Fatal("update loop didn't end")
+				}
+
+				// A closed worker takes no new sequence and doesn't start the engine again.
+				mux.Post(newSequenceEvent{})
+				w.start()
+				synctest.Wait()
+				select {
+				case <-taken:
+					t.Fatal("commitNewWork went on after close")
+				default:
+				}
+			})
 		})
 	}
 }

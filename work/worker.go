@@ -158,7 +158,10 @@ type worker struct {
 	chainHeadSub event.Subscription
 	chainSideCh  chan blockchain.ChainSideEvent
 	chainSideSub event.Subscription
-	wg           sync.WaitGroup
+	// exitCh ends the update loop for good; wg waits for the loop.
+	exitCh   chan struct{}
+	exitOnce sync.Once
+	wg       sync.WaitGroup
 
 	backend           Backend
 	chain             BlockChain
@@ -197,6 +200,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 		txsCh:       make(chan blockchain.NewTxsEvent, txChanSize),
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
+		exitCh:      make(chan struct{}),
 		chainDB:     backend.ChainDB(),
 		chain:       backend.BlockChain(),
 		nodetype:    nodetype,
@@ -211,7 +215,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 	worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	worker.newSequenceSub = engine.SubscribeNewSequence()
 
-	go worker.update()
+	worker.wg.Go(worker.update)
 
 	return worker
 }
@@ -243,6 +247,9 @@ func (self *worker) start() {
 	self.startMu.Lock()
 	defer self.startMu.Unlock()
 
+	if self.closed() {
+		return
+	}
 	self.mining.Store(1)
 
 	executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
@@ -250,15 +257,31 @@ func (self *worker) start() {
 	self.engine.Start(self.chain, executor)
 }
 
+// stop stops the engine. The update loop keeps running, so the worker can start again.
 func (self *worker) stop() {
-	self.wg.Wait()
-
 	self.startMu.Lock()
 	defer self.startMu.Unlock()
 
 	self.engine.Stop()
 
 	self.mining.Store(0)
+}
+
+// close stops the worker for good and waits for the update loop to end.
+func (self *worker) close() {
+	// Not under startMu: a start that holds it can be waiting on the update loop.
+	self.exitOnce.Do(func() { close(self.exitCh) })
+	self.stop()
+	self.wg.Wait()
+}
+
+func (self *worker) closed() bool {
+	select {
+	case <-self.exitCh:
+		return true
+	default:
+		return false
+	}
 }
 
 func (self *worker) handleTxsCh(quitByErr chan bool) {
@@ -311,6 +334,9 @@ func (self *worker) update() {
 		case <-self.chainSideCh:
 
 			// System stopped
+		case <-self.exitCh:
+			quitByErr <- true
+			return
 		case <-self.txsSub.Err():
 			quitByErr <- true
 			return
@@ -340,9 +366,13 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 
 // waitForIdealBlockTime sleeps until the ideal block time for the next block.
 // This ensures blocks are produced at consistent intervals.
-func (self *worker) waitForIdealBlockTime(parent *types.Block) {
+// It returns false if the worker is closed, without waiting further.
+func (self *worker) waitForIdealBlockTime(parent *types.Block) bool {
+	if self.closed() {
+		return false
+	}
 	if parent == nil {
-		return
+		return true
 	}
 	parentTimestamp := parent.Time().Int64()
 	ideal := time.Unix(parentTimestamp+params.BlockGenerationInterval, 0)
@@ -351,8 +381,15 @@ func (self *worker) waitForIdealBlockTime(parent *types.Block) {
 	if now.Before(ideal) {
 		wait := ideal.Sub(now)
 		logger.Debug("Waiting for ideal block time", "wait", wait)
-		time.Sleep(wait)
+		timer := time.NewTimer(wait)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-self.exitCh:
+			return false
+		}
 	}
+	return true
 }
 
 func (self *worker) commitNewWork() {
@@ -378,7 +415,9 @@ func (self *worker) commitNewWork() {
 	}
 
 	// Wait for ideal block time to ensure consistent block intervals
-	self.waitForIdealBlockTime(parent)
+	if !self.waitForIdealBlockTime(parent) {
+		return
+	}
 	tstart := time.Now()
 
 	var pending map[common.Address]types.Transactions
@@ -453,6 +492,11 @@ func (self *worker) commitNewWork() {
 
 	// Sort txs and submit to consensus for execution
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, self.current.header.BaseFee)
+
+	// A closed worker submits no work: the engine would execute it after the databases are closed.
+	if self.closed() {
+		return
+	}
 
 	// Store pending work context and submit to consensus
 	self.pendingWork = self.current
@@ -592,6 +636,8 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 	for {
 		select {
 		case <-posted:
+			return
+		case <-self.exitCh:
 			return
 		case <-self.chainHeadCh:
 			if h, ok := self.engine.(consensus.Handler); ok {

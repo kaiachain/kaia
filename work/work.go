@@ -175,6 +175,13 @@ func (self *Miner) Stop() {
 	self.shouldStart.Store(0)
 }
 
+// Close stops mining for good and waits for the worker's update loop to end.
+func (self *Miner) Close() {
+	self.worker.close()
+	self.mining.Store(0)
+	self.shouldStart.Store(0)
+}
+
 func (self *Miner) Mining() bool {
 	return self.mining.Load() > 0
 }
