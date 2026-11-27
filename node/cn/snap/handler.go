@@ -371,8 +371,15 @@ func ServiceGetStorageRangesQuery(chain SnapshotReader, req *GetStorageRangesPac
 			if err != nil {
 				return nil, nil
 			}
+			// The requested account may be absent from this state. The trie
+			// returns an empty value for a missing key, so stop here instead
+			// of handing it to the account decoder.
+			enc := accTrie.Get(accountHash[:])
+			if len(enc) == 0 {
+				return nil, nil
+			}
 			serializer := account.NewAccountSerializer()
-			if err := rlp.DecodeBytes(accTrie.Get(accountHash[:]), serializer); err != nil {
+			if err := rlp.DecodeBytes(enc, serializer); err != nil {
 				return nil, nil
 			}
 			acc := serializer.GetAccount()

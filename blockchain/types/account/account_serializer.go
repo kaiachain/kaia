@@ -86,14 +86,9 @@ func (ser *AccountSerializer) GetAccount() Account {
 
 func (ser *AccountSerializer) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&ser.accType); err != nil {
-		// fallback to decoding a LegacyAccount object.
-		acc := newLegacyAccount()
-		if err := s.Decode(acc); err != nil {
-			return err
-		}
-		ser.accType = LegacyAccountType
-		ser.account = acc
-		return nil
+		// Every stored account starts with a type byte. Input without one is
+		// malformed rather than a legacy account, so report it to the caller.
+		return err
 	}
 
 	var err error
@@ -126,16 +121,9 @@ func (ser *AccountSerializer) UnmarshalJSON(b []byte) error {
 	}
 
 	if len(dec.Account) == 0 {
-		// fallback to unmarshal a LegacyAccount object.
-		acc := newLegacyAccount()
-		if err := json.Unmarshal(b, acc); err != nil {
-			return err
-		}
-		ser.accType = LegacyAccountType
-		ser.account = acc
-
-		return nil
-
+		// JSON without an account body is the legacy layout, which is no
+		// longer supported.
+		return ErrDeprecatedLegacyAccount
 	}
 
 	ser.accType = dec.AccType
