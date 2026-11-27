@@ -464,7 +464,7 @@ func hasRightElement(node node, key []byte) bool {
 //
 // The firstKey is paired with firstProof, not necessarily the same as keys[0]
 // (unless firstProof is an existent proof). Similarly, lastKey and lastProof
-// are paired.
+// are paired. The firstKey should be less than or equal to all keys in the list.
 //
 // Expect the normal case, this function can also be used to verify the following
 // range proofs:
@@ -489,10 +489,15 @@ func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, key
 	if len(keys) != len(values) {
 		return false, fmt.Errorf("inconsistent proof data, keys: %d, values: %d", len(keys), len(values))
 	}
-	// Ensure the received batch is monotonic increasing.
+	// Ensure the received batch is monotonic increasing and contains no deletions
 	for i := 0; i < len(keys)-1; i++ {
 		if bytes.Compare(keys[i], keys[i+1]) >= 0 {
 			return false, errors.New("range is not monotonically increasing")
+		}
+	}
+	for _, value := range values {
+		if len(value) == 0 {
+			return false, errors.New("range contains deletion")
 		}
 	}
 	// Special case, there is no edge proof at all. The given range is expected
@@ -518,6 +523,11 @@ func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, key
 			return false, errors.New("more entries available")
 		}
 		return hasRightElement(root, firstKey), nil
+	}
+	// Short circuit if the key of first element is greater than firstKey.
+	// A nil firstKey slice is equivalent to an empty slice.
+	if bytes.Compare(firstKey, keys[0]) > 0 {
+		return false, errors.New("unexpected key-value pairs preceding the requested range")
 	}
 	// Special case, there is only one element and two edge keys are same.
 	// In this case, we can't construct two edge paths. So handle it here.
@@ -570,7 +580,9 @@ func VerifyRangeProof(rootHash common.Hash, firstKey []byte, lastKey []byte, key
 		tr.root = nil
 	}
 	for index, key := range keys {
-		tr.TryUpdate(key, values[index])
+		if err := tr.TryUpdate(key, values[index]); err != nil {
+			return false, err
+		}
 	}
 	if tr.Hash() != rootHash {
 		return false, fmt.Errorf("invalid proof, want hash %x, got %x", rootHash, tr.Hash())
