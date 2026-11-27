@@ -28,6 +28,7 @@ import (
 	"math/rand"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -428,6 +429,33 @@ func TestNewPeer(t *testing.T) {
 	}
 
 	p.Disconnect(DiscAlreadyConnected) // Should not hang
+}
+
+// TestPeerNameTruncation checks that Name, which is the form that log lines
+// print, abbreviates the name the remote node chose, while Fullname and Info
+// (admin_peers) return it whole.
+// Ported from https://github.com/ethereum/go-ethereum/pull/21698.
+func TestPeerNameTruncation(t *testing.T) {
+	tests := []struct {
+		desc     string
+		fullname string
+		name     string
+	}{
+		{"short", "nodename", "nodename"},
+		{"at the limit", strings.Repeat("a", 20), strings.Repeat("a", 20)},
+		{"one over the limit", strings.Repeat("a", 21), strings.Repeat("a", 20) + "..."},
+		{"client name", "Kaia/v3.0.0/linux-amd64/go1.25.0", "Kaia/v3.0.0/linux-am..."},
+		// The protocol handshake message, which carries the name, can be up to baseProtocolMaxMsgSize.
+		{"handshake message limit", strings.Repeat("a", baseProtocolMaxMsgSize), strings.Repeat("a", 20) + "..."},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			p := NewPeer(randomID(), tc.fullname, nil)
+			assert.Equal(t, tc.name, p.Name())
+			assert.Equal(t, tc.fullname, p.Fullname())
+			assert.Equal(t, tc.fullname, p.Info().Name)
+		})
+	}
 }
 
 type expectedProtoMatch struct {
