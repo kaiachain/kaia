@@ -124,7 +124,8 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	if sb.valsetModule == nil {
 		return errInvalidPeerAddress
 	}
-	num := sb.chain.CurrentHeader().Number.Uint64() + 1
+	// Either head can be ahead of the other: the state ends at the block head, the VRank data at the header head.
+	num := min(sb.chain.CurrentBlock().NumberU64(), sb.chain.CurrentHeader().Number.Uint64()) + 1
 	cnPeers, err := sb.valsetModule.GetCNPeers(num)
 	if err != nil {
 		sb.logger.Trace("Failed to read CN peers for peer type validation", "addr", addr, "num", num, "err", err)

@@ -19,14 +19,18 @@
 package backend
 
 import (
+	"math/big"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
@@ -218,6 +222,47 @@ func TestBackend_ValidatePeerType(t *testing.T) {
 	{
 		err := backend.ValidatePeerType(common.Address{})
 		assert.Equal(t, errInvalidPeerAddress, err)
+	}
+}
+
+// headChain is a chain whose header head and block head are set apart.
+type headChain struct {
+	consensus.ChainReader
+	header *types.Header
+	block  *types.Block
+}
+
+func (c *headChain) CurrentHeader() *types.Header { return c.header }
+func (c *headChain) CurrentBlock() *types.Block   { return c.block }
+
+// Tests that the CN peers are read at the lower of the header head and the block head.
+func TestValidatePeerType_LowerHead(t *testing.T) {
+	member, other := common.HexToAddress("0xa01"), common.HexToAddress("0xa02")
+	for _, tc := range []struct {
+		name          string
+		header, block int64
+		read          uint64
+	}{
+		{"header ahead, after an unclean stop", 9, 5, 6},
+		{"block ahead, during an insert", 4, 5, 5},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mValset := valset_mock.NewMockValsetModule(ctrl)
+			mValset.EXPECT().GetCNPeers(tc.read).Return([]common.Address{member}, nil).Times(2)
+
+			b := newTestBackend()
+			b.valsetModule = mValset
+			b.SetChain(&headChain{
+				header: &types.Header{Number: big.NewInt(tc.header)},
+				block:  types.NewBlockWithHeader(&types.Header{Number: big.NewInt(tc.block)}),
+			})
+			b.SignalPeerRegistrable()
+
+			assert.Nil(t, b.ValidatePeerType(member))
+			assert.Equal(t, errInvalidPeerAddress, b.ValidatePeerType(other))
+		})
 	}
 }
 
