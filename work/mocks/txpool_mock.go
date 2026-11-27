@@ -181,6 +181,22 @@ func (mr *MockTxPoolMockRecorder) Pending() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockTxPool)(nil).Pending))
 }
 
+// PendingWithQueuedCount mocks base method.
+func (m *MockTxPool) PendingWithQueuedCount() (map[common.Address]types.Transactions, uint64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PendingWithQueuedCount")
+	ret0, _ := ret[0].(map[common.Address]types.Transactions)
+	ret1, _ := ret[1].(uint64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// PendingWithQueuedCount indicates an expected call of PendingWithQueuedCount.
+func (mr *MockTxPoolMockRecorder) PendingWithQueuedCount() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingWithQueuedCount", reflect.TypeOf((*MockTxPool)(nil).PendingWithQueuedCount))
+}
+
 // RegisterTxPoolModule mocks base method.
 func (m *MockTxPool) RegisterTxPoolModule(arg0 ...kaiax.TxPoolModule) {
 	m.ctrl.T.Helper()

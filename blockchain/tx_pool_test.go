@@ -377,7 +377,7 @@ func TestHandleTxMsgDefersSenderRecovery(t *testing.T) {
 	senderCacher = blocked
 	defer func() { senderCacher = original }()
 
-	pool := &TxPool{txMsgCh: make(chan types.Transactions, 1)}
+	pool := &TxPool{txMsgCh: make(chan remoteTxBatch, 1)}
 	done := make(chan struct{})
 	go func() {
 		pool.HandleTxMsg(types.Transactions{nil})
@@ -806,6 +806,10 @@ func TestTransactionQueue(t *testing.T) {
 	}
 	if pool.queue[from].Len() != 2 {
 		t.Error("expected len(queue) == 2, got", pool.queue[from].Len())
+	}
+	pending, queued, err := pool.PendingWithQueuedCount()
+	if err != nil || len(pending[from]) != 1 || pending[from][0].Hash() != tx1.Hash() || queued != 2 {
+		t.Fatalf("snapshot pending %v, queued %d, error %v", pending, queued, err)
 	}
 }
 
