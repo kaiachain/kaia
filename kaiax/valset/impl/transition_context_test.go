@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -200,11 +201,12 @@ func TestApplyEpochTransition_StateTransitions(t *testing.T) {
 // with sufficient stake.
 func TestApplyEpochTransition_BelowMinStakeDemoted(t *testing.T) {
 	vrIdle := testBlockTime.Add(5 * time.Hour) // ValReady's already-accumulating idle deadline
+	pauseDeadline := testBlockTime.Add(3 * time.Hour)
 	m := NodeMap{
-		addr1: {State: ValActive, StakingAmount: aboveMinStake},                     // above-min: stays VA
-		addr2: {State: ValActive, StakingAmount: belowMinStake},                     // T3b → VI (fresh idle)
-		addr3: {State: ValReady, StakingAmount: belowMinStake, IdleTimeout: vrIdle}, // T3b → VI (idle preserved)
-		addr4: {State: ValPaused, StakingAmount: belowMinStake},                     // T3b → VI (fresh idle)
+		addr1: {State: ValActive, StakingAmount: aboveMinStake},                               // above-min: stays VA
+		addr2: {State: ValActive, StakingAmount: belowMinStake},                               // T3b → VI (fresh idle)
+		addr3: {State: ValReady, StakingAmount: belowMinStake, IdleTimeout: vrIdle},           // T3b → VI (idle preserved)
+		addr4: {State: ValPaused, StakingAmount: belowMinStake, PausedTimeout: pauseDeadline}, // T3b → VI (fresh idle, pause deadline dropped)
 	}
 	ctx := epochCtx(t, nil, testMaxValCount)
 	out := ctx.applyEpochTransition(m)
@@ -216,15 +218,18 @@ func TestApplyEpochTransition_BelowMinStakeDemoted(t *testing.T) {
 	assert.False(t, out[addr2].IdleTimeout.IsZero())
 	assert.Equal(t, vrIdle, out[addr3].IdleTimeout) // VR carries its idle timer through the demotion
 	assert.False(t, out[addr4].IdleTimeout.IsZero())
+	assert.True(t, out[addr4].PausedTimeout.IsZero())
 }
 
 func TestApplyEpochTransition_MaxValActivePausedCount(t *testing.T) {
 	vrIdle := testBlockTime.Add(2 * time.Hour) // ValReady competitor's already-accumulating idle deadline
+	pauseDeadline := testBlockTime.Add(3 * time.Hour)
 	m := NodeMap{
 		addr1: {State: ValActive, StakingAmount: highStake},
 		addr2: {State: ValActive, StakingAmount: midStake},
 		addr3: {State: ValActive, StakingAmount: lowStake},
-		addr4: {State: ValReady, StakingAmount: testMinStake + 1, IdleTimeout: vrIdle}, // competitor, ranks last → loses top-N
+		addr4: {State: ValReady, StakingAmount: testMinStake + 1, IdleTimeout: vrIdle},           // competitor, ranks last → loses top-N
+		addr5: {State: ValPaused, StakingAmount: testMinStake + 2, PausedTimeout: pauseDeadline}, // paused competitor loses top-N
 	}
 	ctx := epochCtx(t, nil, 2)
 	out := ctx.applyEpochTransition(m)
@@ -234,6 +239,9 @@ func TestApplyEpochTransition_MaxValActivePausedCount(t *testing.T) {
 	assert.False(t, out[addr3].IdleTimeout.IsZero())
 	assert.Equal(t, ValInactive, out[addr4].State)
 	assert.Equal(t, vrIdle, out[addr4].IdleTimeout) // VR that loses top-N keeps its idle timer
+	assert.Equal(t, ValInactive, out[addr5].State)
+	assert.False(t, out[addr5].IdleTimeout.IsZero())
+	assert.True(t, out[addr5].PausedTimeout.IsZero()) // the pause deadline does not outlive ValPaused
 }
 
 func TestApplyEpochTransition_TieBreakingByAddress(t *testing.T) {
@@ -964,6 +972,38 @@ func TestApplyAllTransitions_PFSMinorPauseKeepsDeadline(t *testing.T) {
 
 	assert.Equal(t, ValPaused, result.Nodes[addr1].State)
 	assert.Equal(t, testBlockTime.Add(testPauseTimeout), result.Nodes[addr1].PausedTimeout)
+}
+
+// A ValPaused validator demoted at an epoch is written as ValInactive with its idle deadline only.
+func TestApplyAllTransitions_DemotedPausedWrite(t *testing.T) {
+	pauseDeadline := testBlockTime.Add(3 * time.Hour)
+	idleDeadline := testBlockTime.Add(testIdleTimeout)
+	m := NodeMap{
+		addr1: {State: ValActive, StakingAmount: highStake},
+		addr2: {State: ValPaused, StakingAmount: belowMinStake, PausedTimeout: pauseDeadline},    // below MinStake → VI
+		addr3: {State: ValPaused, StakingAmount: testMinStake + 1, PausedTimeout: pauseDeadline}, // loses top-N → VI
+		addr4: {State: ValPaused, StakingAmount: midStake, PausedTimeout: pauseDeadline},         // within top-N: stays VP
+	}
+	ctx := epochCtx(t, nil, 2)
+	ctx.IsEpoch = true
+
+	result := ctx.ApplyAllTransitions(m)
+	diff := diffNodeStates(m, result.Nodes)
+
+	demoted := []common.Address{addr2, addr3}
+	require.Equal(t, demoted, diff.Addresses())
+	for _, addr := range demoted {
+		assert.Equal(t, ValInactive, diff[addr].State)
+		assert.Equal(t, idleDeadline, diff[addr].IdleTimeout)
+		assert.True(t, diff[addr].PausedTimeout.IsZero())
+	}
+
+	_, msg, err := system.EncodeProcessSystemTransition(params.TestChainConfig.Rules(common.Big1), diff, result.epochVACountForWrite)
+	require.NoError(t, err)
+	inactive, idleAt := ValInactive.ToUint8(), big.NewInt(idleDeadline.Unix())
+	want, err := system.AddressBookV2ABI.Pack("processSystemTransition", demoted, []uint8{inactive, inactive}, []*big.Int{idleAt, idleAt}, common.Big1)
+	require.NoError(t, err)
+	assert.Equal(t, want, msg.Data())
 }
 
 // The violation and timeout passes run after the epoch one, so a set retained by the

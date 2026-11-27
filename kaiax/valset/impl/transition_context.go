@@ -192,6 +192,7 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 			if val.State != valset.ValReady {
 				val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
 			}
+			val.PausedTimeout = time.Time{}
 			val.State = valset.ValInactive // T3b
 		}
 	}
@@ -234,6 +235,7 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 			if potentialActiveVal.State != valset.ValReady {
 				potentialActiveVal.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
 			}
+			potentialActiveVal.PausedTimeout = time.Time{}
 			potentialActiveVal.State = valset.ValInactive // T3b
 		}
 	}
