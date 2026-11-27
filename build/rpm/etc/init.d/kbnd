@@ -149,8 +149,8 @@ start_node() {
         if [[ ! -z $LOG_MAXSIZE ]]; then
           OPTIONS="$OPTIONS --log.maxsize $LOG_MAXSIZE"
         fi
-        if [[ ! -z $LOG_MAXBACKUP ]]; then
-          OPTIONS="$OPTIONS --log.maxbackup $LOG_MAXBACKUP"
+        if [[ ! -z $LOG_MAXBACKUPS ]]; then
+          OPTIONS="$OPTIONS --log.maxbackups $LOG_MAXBACKUPS"
         fi
         if [[ ! -z $LOG_MAXAGE ]]; then
           OPTIONS="$OPTIONS --log.maxage $LOG_MAXAGE"
