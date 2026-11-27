@@ -26,6 +26,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
+	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -198,6 +200,74 @@ func TestCNPeerUpdaterFailureKeepsLastAllowlist(t *testing.T) {
 
 			require.Len(t, cn.sink.calls, 1)
 			assert.Equal(t, cnTestAddrs(1), cn.sink.calls[0])
+		})
+	}
+}
+
+// The p2p server holds CN dynamic dials until the first push, so a node without the fork must still push nil.
+func TestCNPeerUpdaterFirstSyncHeadPushesNilWithoutFork(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		chainConfig *params.ChainConfig
+	}{
+		{"no permissionless block", &params.ChainConfig{}},
+		{"no chain config", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := &fakeCNPeerReader{}
+			sink := &recordCNPeerSink{}
+			u := newCNPeerUpdater(reader, sink, tc.chainConfig)
+
+			u.syncHead(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)}))
+
+			assert.Empty(t, reader.calls)
+			require.Len(t, sink.calls, 1)
+			assert.Nil(t, sink.calls[0])
+		})
+	}
+}
+
+type cnPeerTestServer struct {
+	p2p.Server
+	sink recordCNPeerSink
+}
+
+func (s *cnPeerTestServer) SetCNPeers(addrs []common.Address) { s.sink.SetCNPeers(addrs) }
+
+// startCNPeerSync must push once before returning on every path.
+func TestStartCNPeerSyncPushesOnce(t *testing.T) {
+	head := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	for _, tc := range []struct {
+		name        string
+		chainConfig *params.ChainConfig
+		withValset  bool
+		want        []common.Address
+	}{
+		{"pre-fork", &params.ChainConfig{}, true, nil},
+		{"post-fork", &params.ChainConfig{PermissionlessCompatibleBlock: big.NewInt(1)}, true, cnTestAddrs(1)},
+		{"no valset module", &params.ChainConfig{PermissionlessCompatibleBlock: big.NewInt(1)}, false, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			chain := mocks.NewMockBlockChain(ctrl)
+			chain.EXPECT().CurrentBlock().Return(head).AnyTimes()
+			chain.EXPECT().SubscribeChainHeadEvent(gomock.Any()).Return(
+				event.NewSubscription(func(quit <-chan struct{}) error { <-quit; return nil })).AnyTimes()
+			s := &CN{blockchain: chain, chainConfig: tc.chainConfig}
+			if tc.withValset {
+				mValset := valset_mock.NewMockValsetModule(ctrl)
+				mValset.EXPECT().GetCNPeers(uint64(11)).Return(cnTestAddrs(1), nil).AnyTimes()
+				s.valsetModule = mValset
+			}
+			srv := &cnPeerTestServer{}
+
+			s.startCNPeerSync(srv)
+			defer s.stopCNPeerSync()
+
+			require.Len(t, srv.sink.calls, 1)
+			assert.Equal(t, tc.want, srv.sink.calls[0])
 		})
 	}
 }

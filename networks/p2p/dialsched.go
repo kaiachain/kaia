@@ -143,6 +143,7 @@ type DialSched struct {
 	connectedOutbound typedNodeSet            // Outbound connected peers only.
 	connFails         map[discover.NodeID]int // For static nodes, count the consecutive connection failures to limit retries.
 	cnPeerAddrs       map[common.Address]struct{}
+	cnPeersSet        bool // A CN holds dynamic CN dials until the first SetCNPeers.
 
 	// Coordination
 	started  atomic.Bool
@@ -229,8 +230,10 @@ func (ds *DialSched) RemoveStatic(id discover.NodeID) {
 
 // SetCNPeers replaces the CN dynamic dial allowlist.
 // nil disables filtering; an empty list rejects all dynamic CN candidates.
+// Until the first call, a CN dials no dynamic CN candidates.
 func (ds *DialSched) SetCNPeers(addrs []common.Address) {
 	ds.mu.Lock()
+	ds.cnPeersSet = true
 	if addrs == nil {
 		ds.cnPeerAddrs = nil
 	} else {
@@ -354,9 +357,12 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 	}
 
 	// 5. Pull dynamic candidates from the per-type queues, refilling from discovery when needed.
-	// CN-to-CN dynamic dialing is additionally constrained by the configured CN peer allowlist.
+	// CN-to-CN dynamic dialing is additionally constrained by the configured CN peer allowlist, and waits for its first push.
 	for targetType, need := range needs {
 		if need <= 0 {
+			continue
+		}
+		if ds.selfType == discover.NodeTypeCN && targetType == discover.NodeTypeCN && !ds.cnPeersSet {
 			continue
 		}
 

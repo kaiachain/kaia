@@ -389,6 +389,51 @@ func TestDialSched_GetCandidates_CNPeerAllowlistNilAndEmpty(t *testing.T) {
 	assert.True(t, needRefresh)
 }
 
+// A CN dials no dynamic CN candidate before its first allowlist push, e.g. node DB seeds on restart.
+func TestDialSched_GetCandidates_CNPeerAllowlistUnsetHoldsCNDials(t *testing.T) {
+	member, memberAddr := testNodeWithAddress("10.0.0.201", discover.NodeTypeCN)
+	nonMember, _ := testNodeWithAddress("10.0.0.202", discover.NodeTypeCN)
+	newTab := func() *mockTable {
+		return &mockTable{
+			nodesByType: map[discover.NodeType][]*discover.Node{
+				discover.NodeTypeCN: {member, nonMember},
+			},
+		}
+	}
+	newSched := func(selfType discover.NodeType, tab *mockTable) *DialSched {
+		return NewDialSched(DialConfig{
+			selfType: selfType,
+			connTarget: map[discover.NodeType]int{
+				discover.NodeTypeCN: 2,
+			},
+		}, tab, nil)
+	}
+
+	tab := newTab()
+	ds := newSched(discover.NodeTypeCN, tab)
+	cands, needRefresh := ds.getCandidates()
+	assert.False(t, hasNodeID(cands, member.ID), "CN must not dial dynamic CNs before the first allowlist push")
+	assert.False(t, hasNodeID(cands, nonMember.ID), "CN must not dial dynamic CNs before the first allowlist push")
+	assert.False(t, needRefresh, "holding CN dials should not request discovery refresh")
+
+	ds.SetCNPeers([]common.Address{memberAddr})
+	cands, _ = ds.getCandidates()
+	assert.True(t, hasNodeID(cands, member.ID), "CN peer in allowlist should be dialed after the first push")
+	assert.False(t, hasNodeID(cands, nonMember.ID), "CN peer outside allowlist should stay filtered")
+
+	// Pre-fork the first push is nil and opens CN dialing.
+	preFork := newSched(discover.NodeTypeCN, newTab())
+	preFork.SetCNPeers(nil)
+	cands, _ = preFork.getCandidates()
+	assert.True(t, hasNodeID(cands, member.ID), "nil allowlist should disable CN filtering")
+	assert.True(t, hasNodeID(cands, nonMember.ID), "nil allowlist should disable CN filtering")
+
+	en := newSched(discover.NodeTypeEN, newTab())
+	cands, _ = en.getCandidates()
+	assert.True(t, hasNodeID(cands, member.ID), "EN dynamic CN dials should not wait for the CN allowlist")
+	assert.True(t, hasNodeID(cands, nonMember.ID), "EN dynamic CN dials should not wait for the CN allowlist")
+}
+
 func TestDialSched_GetCandidates_CNPeerAllowlistStaticBypass(t *testing.T) {
 	staticCN, _ := testNodeWithAddress("10.0.0.201", discover.NodeTypeCN)
 	ds := NewDialSched(DialConfig{

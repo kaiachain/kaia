@@ -125,7 +125,11 @@ func hashCNPeerInput(addrs []common.Address) common.Hash {
 }
 
 func (s *CN) startCNPeerSync(srvr p2p.Server) {
-	if srvr == nil || s.valsetModule == nil || s.blockchain == nil {
+	if srvr == nil {
+		return
+	}
+	if s.valsetModule == nil || s.blockchain == nil {
+		srvr.SetCNPeers(nil) // The p2p server holds CN dials until the first push.
 		return
 	}
 	s.cnPeerUpdater = newCNPeerUpdater(s.valsetModule, srvr, s.chainConfig)
