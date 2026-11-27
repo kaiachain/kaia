@@ -32,6 +32,7 @@ import (
 	"github.com/kaiachain/kaia/networks/grpc"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
+	"github.com/kaiachain/kaia/params"
 )
 
 // Node is a container on which services can be registered.
@@ -95,6 +96,7 @@ func (n *Node) Start() error {
 	// Finish initializing the startup
 	n.stop = make(chan struct{})
 
+	node.RegisterBuildInfo(params.Version)
 	return nil
 }
 
