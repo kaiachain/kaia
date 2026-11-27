@@ -361,9 +361,7 @@ func (srv *BaseServer) admissiblePeerType(c *conn) bool {
 // countInboundPeers returns how many peers are connected via an inbound
 // connection. A multichannel peer holds several sockets but counts once, so
 // inbound capacity is measured in peers (per KIP-311), not physical sockets.
-// Direction is taken from the peer's default channel (Peer.Inbound); a peer
-// whose channels are of mixed direction (a rare simultaneous-dial race) is
-// classified by that channel.
+// All channels of a peer share one direction (Peer.Inbound).
 func countInboundPeers(peers map[discover.NodeID]*Peer) int {
 	n := 0
 	for _, p := range peers {
@@ -550,10 +548,13 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 	return err
 }
 
-// CleanConn is a no-op for the single-channel server because it has no pending
-// multichannel candidate bookkeeping.
-func (srv *BaseServer) CleanConn(id discover.NodeID) cleanConnStats {
-	return cleanConnStats{}
+// SetupMultiConn keeps the first connection: a single-channel peer has one.
+func (srv *BaseServer) SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error {
+	if len(fds) == 0 {
+		return errMultiChannelMismatch
+	}
+	closeConns(fds[1:])
+	return srv.SetupConn(fds[0], flags, dialDest)
 }
 
 func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Node) error {

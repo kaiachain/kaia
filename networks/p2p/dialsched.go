@@ -45,13 +45,8 @@ var (
 // DialBackend is the minimal server-side API dialsched needs for outbound dial execution.
 type DialBackend interface {
 	SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error
-	CleanConn(id discover.NodeID) cleanConnStats
-}
-
-type cleanConnStats struct {
-	expectedChannels         int
-	closedOutboundChannels   int
-	remainingInboundChannels int
+	// SetupMultiConn adds one peer from the connections of one dial and closes the ones it does not keep.
+	SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error
 }
 
 // discovery is the minimal table API dialsched needs.
@@ -437,9 +432,6 @@ func (ds *DialSched) dialOnce(n *discover.Node, flags connFlag) {
 	logger.Debug("Dialed node", "id", n.ID, "type", n.NType, "addresses", n.TCPs, "err", err)
 
 	if err != nil {
-		if err == errIncompleteMultiChannelDial {
-			return
-		}
 		ds.markDialFailure(n.ID)
 	}
 	// We don't call markPeerConnected() here. If dial()-SetupConn() succeeds, the Server will call OnPeerConnected()-markPeerConnected().
@@ -460,28 +452,11 @@ func (ds *DialSched) dialMulti(dest *discover.Node, flags connFlag) error {
 		return err
 	}
 
-	for portOrder, fd := range fds {
-		mfd := newMeteredConn(fd, false)
-		destByPort := cloneNode(dest)
-		destByPort.PortOrder = uint16(portOrder)
-		if err := ds.backend.SetupConn(mfd, flags, destByPort); err != nil {
-			closeConns(fds[portOrder+1:])
-			ds.backend.CleanConn(dest.ID)
-			return err
-		}
+	mfds := make([]net.Conn, len(fds))
+	for i, fd := range fds {
+		mfds[i] = newMeteredConn(fd, false)
 	}
-	ds.mu.RLock()
-	connected := ds.connectedAll.contains(dest.ID)
-	ds.mu.RUnlock()
-	if !connected {
-		stats := ds.backend.CleanConn(dest.ID)
-		logger.Warn("Incomplete multichannel dial", "id", dest.ID, "type", dest.NType,
-			"addresses", dest.TCPs, "expectedChannels", stats.expectedChannels,
-			"dialedChannels", len(fds), "closedOutboundChannels", stats.closedOutboundChannels,
-			"remainingInboundChannels", stats.remainingInboundChannels)
-		return errIncompleteMultiChannelDial
-	}
-	return nil
+	return ds.backend.SetupMultiConn(mfds, flags, dest)
 }
 
 func closeConns(conns []net.Conn) {

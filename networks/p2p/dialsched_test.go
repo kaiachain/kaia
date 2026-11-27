@@ -626,127 +626,58 @@ func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 
 	ds.dialOnce(node, dynDialedConn)
 
-	require.Len(t, mb.calls, 3, "should retry with DialMulti after errUpdateDial")
+	require.Len(t, mb.calls, 2, "should retry with DialMulti after errUpdateDial")
 
 	// First SetupConn resulted in errUpdateDial.
 	assert.Equal(t, node.ID, mb.calls[0].id)
 	assert.Equal(t, dynDialedConn, mb.calls[0].flags)
 
-	// Second and third SetupConns with the updated ports.
+	// Then one SetupMultiConn with the updated ports.
 	assert.Equal(t, node.ID, mb.calls[1].id)
-	assert.Equal(t, node.ID, mb.calls[2].id)
 	assert.Equal(t, dynDialedConn, mb.calls[1].flags)
-	assert.Equal(t, dynDialedConn, mb.calls[2].flags)
-	assert.Equal(t, uint16(0), mb.calls[1].port)
-	assert.Equal(t, uint16(1), mb.calls[2].port)
+	assert.Equal(t, len(mb.ports), mb.calls[1].channels)
 
 	// Eventually connected.
 	assert.True(t, ds.connectedAll.contains(node.ID))
 	assert.True(t, ds.connectedOutbound.contains(node.ID))
 }
 
-// Correctly dials multi-channel peers.
+// All channels of one dial reach the backend in one call.
 func TestDialSched_DialMulti(t *testing.T) {
 	var (
 		multiNode = discover.NewNode(testNodeID(401), net.ParseIP("10.0.0.41"), 30303, 30303, []uint16{30304, 30305}, discover.NodeTypeEN)
 		md        = &mockDialer{dialErr: make(map[discover.NodeID]error)}
-		mb        = &multiDialLifecycleBackend{}
+		mb        = &mockSetupBackend{setupErr: make(map[discover.NodeID]error)}
 		ds        = NewDialSched(DialConfig{}, nil, mb)
 	)
-	t.Cleanup(mb.Close)
 	mb.dialsched = ds
-	mb.connectOnPort = uint16(len(multiNode.TCPs) - 1)
 	ds.dialer = md
 
 	ds.dialOnce(multiNode, dynDialedConn)
 
-	require.Len(t, mb.calls, len(multiNode.TCPs), "SetupConn should be called for each dialed connection")
-	for i := range mb.calls {
-		assert.Equal(t, multiNode.ID, mb.calls[i].id)
-		assert.Equal(t, dynDialedConn, mb.calls[i].flags)
-		assert.Equal(t, uint16(i), mb.calls[i].port, "PortOrder should increment per connection")
-	}
+	require.Len(t, mb.calls, 1, "SetupMultiConn should be called once per peer")
+	assert.Equal(t, multiNode.ID, mb.calls[0].id)
+	assert.Equal(t, dynDialedConn, mb.calls[0].flags)
+	assert.Equal(t, len(multiNode.TCPs), mb.calls[0].channels)
+	assert.True(t, ds.connectedOutbound.contains(multiNode.ID))
 }
 
-func TestDialSched_DialMultiRollbackOnSetupFailure(t *testing.T) {
+// A failed multi-channel dial counts as one failure.
+func TestDialSched_DialMultiFailureCountsOnce(t *testing.T) {
 	multiNode := discover.NewNode(testNodeID(402), net.ParseIP("10.0.0.42"), 30303, 30303, []uint16{30304, 30305}, discover.NodeTypeEN)
-	setupErr := errors.New("setup failed")
-	mb := &multiDialLifecycleBackend{
-		setupErrByPort: map[uint16]error{1: setupErr},
-	}
-	t.Cleanup(mb.Close)
-
-	conns := make([]*closeTrackingConn, len(multiNode.TCPs))
-	dialConns := make([]net.Conn, len(multiNode.TCPs))
-	for i := range conns {
-		local, remote := net.Pipe()
-		conns[i] = &closeTrackingConn{Conn: local}
-		dialConns[i] = conns[i]
-		t.Cleanup(func() {
-			_ = local.Close()
-			_ = remote.Close()
-		})
-	}
-	ds := NewDialSched(DialConfig{}, nil, mb)
-	ds.dialer = &fixedMultiDialer{conns: dialConns}
-
-	err := ds.dialMulti(multiNode, dynDialedConn)
-
-	require.ErrorIs(t, err, setupErr)
-	require.Len(t, mb.calls, 2, "SetupConn should stop after the first failure")
-	require.Len(t, mb.cleanups, 1)
-	assert.Equal(t, multiNode.ID, mb.cleanups[0])
-	for i, conn := range conns {
-		assert.True(t, conn.Closed(), "connection %d should be closed", i)
-	}
-}
-
-func TestDialSched_DialMultiCleansIncompleteDial(t *testing.T) {
-	multiNode := discover.NewNode(testNodeID(403), net.ParseIP("10.0.0.43"), 30303, 30303, []uint16{30304, 30305}, discover.NodeTypeEN)
-	mb := &multiDialLifecycleBackend{}
-	t.Cleanup(mb.Close)
-
-	conns := make([]*closeTrackingConn, len(multiNode.TCPs))
-	dialConns := make([]net.Conn, len(multiNode.TCPs))
-	for i := range conns {
-		local, remote := net.Pipe()
-		conns[i] = &closeTrackingConn{Conn: local}
-		dialConns[i] = conns[i]
-		t.Cleanup(func() {
-			_ = local.Close()
-			_ = remote.Close()
-		})
-	}
-	ds := NewDialSched(DialConfig{}, nil, mb)
-	ds.dialer = &fixedMultiDialer{conns: dialConns}
-
-	err := ds.dialMulti(multiNode, dynDialedConn)
-
-	require.ErrorIs(t, err, errIncompleteMultiChannelDial)
-	require.Len(t, mb.calls, len(multiNode.TCPs))
-	require.Len(t, mb.cleanups, 1)
-	assert.Equal(t, multiNode.ID, mb.cleanups[0])
-	for i, conn := range conns {
-		assert.True(t, conn.Closed(), "connection %d should be closed", i)
-	}
-}
-
-func TestDialSched_IncompleteMultiDialDoesNotRemoveStaticPeer(t *testing.T) {
-	multiNode := discover.NewNode(testNodeID(404), net.ParseIP("10.0.0.44"), 30303, 30303, []uint16{30304, 30305}, discover.NodeTypeEN)
-	mb := &multiDialLifecycleBackend{}
-	t.Cleanup(mb.Close)
-
+	mb := &mockSetupBackend{setupErr: map[discover.NodeID]error{multiNode.ID: errors.New("setup failed")}}
 	ds := NewDialSched(DialConfig{
 		staticNodes: []*discover.Node{multiNode},
 		dialer:      &mockDialer{dialErr: make(map[discover.NodeID]error)},
 	}, nil, mb)
+	mb.dialsched = ds
 
-	for i := 0; i < dialMaxRetries+1; i++ {
-		ds.dialOnce(multiNode, staticDialedConn)
-	}
+	ds.dialOnce(multiNode, staticDialedConn)
 
-	assert.NotNil(t, ds.static.get(multiNode.ID), "incomplete multichannel dials must not remove static peers")
-	assert.Empty(t, ds.connFails, "incomplete multichannel dials must not count toward static dial failures")
+	require.Len(t, mb.calls, 1)
+	assert.NotNil(t, ds.static.get(multiNode.ID))
+	assert.Equal(t, 1, ds.connFails[multiNode.ID])
+	assert.False(t, ds.connectedAll.contains(multiNode.ID))
 }
 
 func mustParseNetlist(t *testing.T, s string) *netutil.Netlist {
@@ -852,37 +783,6 @@ type mockDialer struct {
 	dialErr map[discover.NodeID]error // injected errors, discriminated by NodeID.
 }
 
-type fixedMultiDialer struct {
-	conns []net.Conn
-}
-
-func (d *fixedMultiDialer) Dial(*discover.Node) (net.Conn, error) {
-	return nil, errors.New("unexpected single-channel dial")
-}
-
-func (d *fixedMultiDialer) DialMulti(*discover.Node) ([]net.Conn, error) {
-	return append([]net.Conn(nil), d.conns...), nil
-}
-
-type closeTrackingConn struct {
-	net.Conn
-	mu     sync.Mutex
-	closed bool
-}
-
-func (c *closeTrackingConn) Close() error {
-	c.mu.Lock()
-	c.closed = true
-	c.mu.Unlock()
-	return c.Conn.Close()
-}
-
-func (c *closeTrackingConn) Closed() bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.closed
-}
-
 func (m *mockDialer) Dial(dest *discover.Node) (net.Conn, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -937,66 +837,10 @@ func (m *blockingDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
 //// Backend (SetupConn) mocks.
 
 type setupConnArg struct {
-	id    discover.NodeID
-	flags connFlag
-	port  uint16
-}
-
-type multiDialLifecycleBackend struct {
-	mu             sync.Mutex
-	dialsched      *DialSched
-	setupErrByPort map[uint16]error
-	connectOnPort  uint16
-	calls          []setupConnArg
-	cleanups       []discover.NodeID
-	accepted       []net.Conn
-}
-
-func (m *multiDialLifecycleBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	m.mu.Lock()
-	call := setupConnArg{flags: flags}
-	if dialDest != nil {
-		call.id = dialDest.ID
-		call.port = dialDest.PortOrder
-	}
-	m.calls = append(m.calls, call)
-	err := m.setupErrByPort[call.port]
-	if err == nil && fd != nil {
-		m.accepted = append(m.accepted, fd)
-	}
-	if err == nil && m.dialsched != nil && dialDest != nil && call.port == m.connectOnPort {
-		m.dialsched.markPeerConnected(call.id, dialDest.NType, false)
-	}
-	m.mu.Unlock()
-
-	if err != nil && fd != nil {
-		_ = fd.Close()
-	}
-	return err
-}
-
-func (m *multiDialLifecycleBackend) CleanConn(id discover.NodeID) cleanConnStats {
-	m.mu.Lock()
-	m.cleanups = append(m.cleanups, id)
-	accepted := m.accepted
-	m.accepted = nil
-	m.mu.Unlock()
-
-	for _, fd := range accepted {
-		_ = fd.Close()
-	}
-	return cleanConnStats{closedOutboundChannels: len(accepted)}
-}
-
-func (m *multiDialLifecycleBackend) Close() {
-	m.mu.Lock()
-	accepted := m.accepted
-	m.accepted = nil
-	m.mu.Unlock()
-
-	for _, fd := range accepted {
-		_ = fd.Close()
-	}
+	id       discover.NodeID
+	flags    connFlag
+	port     uint16
+	channels int // connections handed to SetupMultiConn; 0 for SetupConn
 }
 
 type mockSetupBackend struct {
@@ -1013,7 +857,18 @@ func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *disc
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	call := setupConnArg{flags: flags}
+	return m.setup(setupConnArg{flags: flags}, dialDest)
+}
+
+func (m *mockSetupBackend) SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error {
+	closeConns(fds)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.setup(setupConnArg{flags: flags, channels: len(fds)}, dialDest)
+}
+
+func (m *mockSetupBackend) setup(call setupConnArg, dialDest *discover.Node) error {
 	if dialDest != nil {
 		call.id = dialDest.ID
 		call.port = dialDest.PortOrder
@@ -1027,10 +882,6 @@ func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *disc
 	return nil
 }
 
-func (m *mockSetupBackend) CleanConn(id discover.NodeID) cleanConnStats {
-	return cleanConnStats{}
-}
-
 // rejectBackend always returns an error from SetupConn. Used when the test only
 // cares about the dialing side, not the connection setup side.
 type rejectBackend struct{}
@@ -1042,8 +893,9 @@ func (m *rejectBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discove
 	return errors.New("rejectBackend: connection rejected")
 }
 
-func (m *rejectBackend) CleanConn(id discover.NodeID) cleanConnStats {
-	return cleanConnStats{}
+func (m *rejectBackend) SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error {
+	closeConns(fds)
+	return errors.New("rejectBackend: connection rejected")
 }
 
 // blockingBackend blocks inside SetupConn() until unblockCh is closed.
@@ -1065,12 +917,12 @@ func (m *blockingBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *disco
 	return errors.New("SetupConn unblocked")
 }
 
-func (m *blockingBackend) CleanConn(id discover.NodeID) cleanConnStats {
-	return cleanConnStats{}
+func (m *blockingBackend) SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error {
+	closeConns(fds)
+	return m.SetupConn(nil, flags, dialDest)
 }
 
-// A SetupConn backend that returns errUpdateDial, telling me (the dialsched) to use different ports.
-// Returns errUpdateDial at first call, then succeeds afterwards.
+// Requests a multichannel retry, then succeeds through SetupMultiConn.
 type updateToMultiBackend struct {
 	mu         sync.Mutex
 	dialsched  *DialSched
@@ -1086,26 +938,22 @@ func (m *updateToMultiBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	call := setupConnArg{flags: flags}
-	if dialDest != nil {
-		call.id = dialDest.ID
-		call.port = dialDest.PortOrder
-	}
-	m.calls = append(m.calls, call)
+	m.calls = append(m.calls, setupConnArg{id: dialDest.ID, flags: flags})
 
 	if !m.calledOnce {
 		m.calledOnce = true
-		if dialDest != nil {
-			dialDest.TCPs = append([]uint16(nil), m.ports...)
-		}
+		dialDest.TCPs = append([]uint16(nil), m.ports...)
 		return errUpdateDial
 	}
-	if int(dialDest.PortOrder) == len(m.ports)-1 {
-		m.dialsched.markPeerConnected(dialDest.ID, dialDest.NType, false)
-	}
-	return nil
+	return errors.New("unexpected single-channel dial after the update")
 }
 
-func (m *updateToMultiBackend) CleanConn(id discover.NodeID) cleanConnStats {
-	return cleanConnStats{}
+func (m *updateToMultiBackend) SetupMultiConn(fds []net.Conn, flags connFlag, dialDest *discover.Node) error {
+	closeConns(fds)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.calls = append(m.calls, setupConnArg{id: dialDest.ID, flags: flags, channels: len(fds)})
+	m.dialsched.markPeerConnected(dialDest.ID, dialDest.NType, false)
+	return nil
 }

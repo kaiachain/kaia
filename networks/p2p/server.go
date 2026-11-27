@@ -57,9 +57,9 @@ const (
 )
 
 var (
-	errServerStopped              = errors.New("server stopped")
-	errUpdateDial                 = errors.New("updated to be multichannel peer")
-	errIncompleteMultiChannelDial = errors.New("incomplete multichannel dial")
+	errServerStopped        = errors.New("server stopped")
+	errUpdateDial           = errors.New("updated to be multichannel peer")
+	errMultiChannelMismatch = errors.New("dialed connections do not form a multichannel peer")
 )
 
 // Config holds Server options.
