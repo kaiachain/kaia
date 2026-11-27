@@ -187,7 +187,9 @@ func (ec *KaiaClient) TransactionByHash(ctx context.Context, hash common.Hash) (
 	if json.From != nil && json.BlockHash != nil {
 		setSenderFromServer(json.tx, *json.From, *json.BlockHash)
 	}
-	return json.tx, json.BlockNumber == nil, nil
+	// The kaia namespace reports a pool transaction with a zero block hash, not a missing block number.
+	isPending = json.BlockNumber == nil || json.BlockHash == nil || *json.BlockHash == (common.Hash{})
+	return json.tx, isPending, nil
 }
 
 // TransactionSender returns the sender address of the given transaction. The transaction
@@ -316,6 +318,13 @@ func (ec *KaiaClient) AuctionSubscribeNewHead(ctx context.Context, ch chan<- *ty
 }
 
 // State Access
+
+// PeerCount returns the number of p2p peers of the node.
+func (ec *KaiaClient) PeerCount(ctx context.Context) (uint64, error) {
+	var result hexutil.Uint64
+	err := ec.c.CallContext(ctx, &result, "net_peerCount")
+	return uint64(result), err
+}
 
 // NetworkID returns the network ID (also known as the chain ID) for this chain.
 func (ec *KaiaClient) NetworkID(ctx context.Context) (*big.Int, error) {

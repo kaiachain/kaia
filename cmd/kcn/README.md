@@ -18,6 +18,7 @@ These apply to every command except the offline `generate-keys` and `sign-create
 | `--endpoint` | `<datadir>/klay.ipc` | RPC endpoint (HTTP/WS/IPC) |
 | `--private-key` | | Hex-encoded private key, used instead of the node key file |
 | `--timeout` | `2m` | How long to wait for the transaction receipt |
+| `--force` | | Send even if the endpoint node has no peers or the sender already has a pending transaction there |
 
 Unless `--private-key` is set, the key is loaded from the file the node uses: `<datadir>/nodekey` if it exists, else `<datadir>/klay/nodekey`. Prefer the node key file: a key given with `--private-key` stays in the shell history and is visible in process listings while the command runs.
 
@@ -61,6 +62,11 @@ The node-id is derived from the key.
 - (`ready-validator` only) the node's idle timeout comes before the epoch block at which the transition would take effect. The node then becomes Registered, not ValActive, and must go through `ready-candidate` again.
 
 The node key address pays the gas, so it needs a small KAIA balance.
+
+The command sends nothing in two cases, unless `--force` is given:
+
+- The endpoint node reports zero peers, so the transaction would not leave it. Send through a connected node by adding `--endpoint <its RPC URL>` (for example an EN); the private key is still read locally. The check is skipped if the endpoint does not serve `net_peerCount`. Use `--force` on a node that produces blocks without peers, such as a single-validator network.
+- The sender already has a pending transaction at the endpoint. Wait for it to be included. A rerun through another node with `--endpoint` signs the nonce of the pending transaction again, so only one of the two is included: use it only if the pending transaction is this same command. Use `--force` to queue a new transaction behind the pending one.
 
 ### Registration signature (offline)
 
@@ -181,6 +187,11 @@ On failure:
 ```
 pre-flight check reverted: <revert reason> (no transaction sent)
 sender 0x9a3f... needs <amount> KAIA for gas but holds <balance> KAIA; send KAIA to this address (no transaction sent)
+the node at <endpoint> has no peers, so the transaction would not leave it. Send through a connected node instead: add --endpoint <its RPC URL>, e.g. of an EN (the private key stays local). If this node produces blocks on its own, add --force (no transaction sent)
+sender 0x9a3f... already has 1 pending transaction(s) at <endpoint> (nonce 12 and up). Wait for inclusion. A rerun with --endpoint <RPC URL of another node> signs nonce 12 again: use it only if the pending transaction is this same command. To queue a new transaction behind the pending one, add --force (no transaction sent)
 transaction failed: <revert reason>
+no receipt for 0xabc123... after 2m0s; it is still pending at <endpoint> and may be included later. If it is not, rerun the same command with --endpoint <RPC URL of another node>; the rerun signs the same nonce again, so only one of the two is included
+no receipt for 0xabc123... after 2m0s; it is pending at <endpoint> behind 1 earlier transaction(s) of the sender and can be included only after them
+no receipt for 0xabc123... after 2m0s, but <endpoint> reports it as included in a block. Check its receipt before sending again
 no receipt for 0xabc123... after 2m0s; the outcome is unknown. Check the transaction hash before sending again
 ```

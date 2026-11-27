@@ -21,6 +21,7 @@ package cn
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -589,6 +590,52 @@ func TestBroadcastTxsFromCN_CN_Exists(t *testing.T) {
 	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
 	pnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
 	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(0)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFromCN_NoCNPeers(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = common.CONSENSUSNODE
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	_, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+	delete(peers.cnpeers, addrs[0])
+	delete(peers.peers, hex.EncodeToString(nodeids[0][:8]))
+
+	// Without a CN peer, the EN peer relays.
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
+
+	pm.BroadcastTxs(txs)
+}
+
+func TestBroadcastTxsFromCN_OutsideCNMesh(t *testing.T) {
+	pm := &ProtocolManager{}
+	pm.nodetype = common.CONSENSUSNODE
+	pm.SetOutsideCNMesh(true)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	peers := newPeerSet()
+	pm.peers = peers
+	cnPeer, pnPeer, enPeer := createAndRegisterPeers(mockCtrl, peers)
+
+	// A remaining CN peer (trusted or static) may be outside the mesh too, so the EN peer relays as well.
+	cnPeer.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+	cnPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
+	cnPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
+	pnPeer.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+	pnPeer.EXPECT().AsyncSendTransactions(gomock.Any()).Times(0)
+	enPeer.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+	enPeer.EXPECT().KnowsTx(tx1.Hash()).Return(false).Times(1)
+	enPeer.EXPECT().AsyncSendTransactions(gomock.Eq(txs)).Times(1)
 
 	pm.BroadcastTxs(txs)
 }

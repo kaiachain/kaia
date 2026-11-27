@@ -202,6 +202,32 @@ func TestCNPeerUpdaterFailureKeepsLastAllowlist(t *testing.T) {
 	}
 }
 
+func TestCNMeshSink(t *testing.T) {
+	self := cnTestAddrs(1)[0]
+	cases := []struct {
+		name    string
+		addrs   []common.Address
+		outside bool
+	}{
+		{"filter disabled", nil, false},
+		{"in the allowlist", cnTestAddrs(1, 2), false},
+		{"not in the allowlist", cnTestAddrs(2, 3), true},
+		{"empty allowlist", []common.Address{}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			record := &recordCNPeerSink{}
+			outside := !tc.outside
+			sink := cnMeshSink{cnPeerSink: record, self: self, setOutside: func(o bool) { outside = o }}
+
+			sink.SetCNPeers(tc.addrs)
+
+			assert.Equal(t, tc.outside, outside)
+			assert.Equal(t, [][]common.Address{tc.addrs}, record.calls, "the allowlist is passed on unchanged")
+		})
+	}
+}
+
 // ChainHeadEvents are posted outside the chain lock, so one can arrive after a newer
 // one. The loop must read the canonical head rather than the block in the event.
 func TestCNPeerSyncLoopReadsCanonicalHead(t *testing.T) {

@@ -48,6 +48,9 @@ import (
 
 const defaultTimeout = 2 * time.Minute
 
+// lookupTimeout bounds the transaction lookup made after the receipt wait timed out.
+const lookupTimeout = 5 * time.Second
+
 // minEpochTimeLeft is the time before the next epoch block below which a ready
 // transition prints a warning. The onboarding portal uses the same value.
 const minEpochTimeLeft = 5 * time.Minute
@@ -95,6 +98,10 @@ var (
 		Name:  "timeout",
 		Usage: "How long to wait for the transaction receipt",
 		Value: defaultTimeout,
+	}
+	abv2ForceFlag = &cli.BoolFlag{
+		Name:  "force",
+		Usage: "Send even if the endpoint node has no peers or the sender already has a pending transaction there",
 	}
 )
 
@@ -169,11 +176,11 @@ var ValOpsCommand = &cli.Command{
 }
 
 func abv2Flags() []cli.Flag {
-	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2DatadirFlag, abv2TimeoutFlag}
+	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2DatadirFlag, abv2TimeoutFlag, abv2ForceFlag}
 }
 
 func abv2SuspenderFlags() []cli.Flag {
-	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2DatadirFlag, abv2TimeoutFlag, abv2NodeIdFlag}
+	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2DatadirFlag, abv2TimeoutFlag, abv2ForceFlag, abv2NodeIdFlag}
 }
 
 // nodeFilePath returns the path the node uses for a key file under datadir.
@@ -262,6 +269,19 @@ func abv2Run(ctx *cli.Context, method string, nodeIdFn func(*bind.TransactOpts) 
 	fmt.Printf("sender:   %s\n", opts.From.Hex())
 	fmt.Printf("node ID:  %s\n", nodeId.Hex())
 
+	latest, pending, refusal, err := abv2CheckEndpoint(ec, endpoint, opts.From)
+	switch {
+	case err != nil:
+		return err
+	case refusal == "":
+	case ctx.Bool("force"):
+		fmt.Println("WARNING: " + refusal)
+	default:
+		return fmt.Errorf("%s (no transaction sent)", refusal)
+	}
+	// Pinned, so that a concurrent run cannot take the next nonce unnoticed.
+	opts.Nonce = new(big.Int).SetUint64(max(latest, pending))
+
 	caller, err := addressbookv2.NewAddressBookV2Caller(system.AddressBookAddr, ec)
 	if err != nil {
 		return err
@@ -284,10 +304,35 @@ func abv2Run(ctx *cli.Context, method string, nodeIdFn func(*bind.TransactOpts) 
 	if err != nil {
 		return err
 	}
-	if err := printAndWait(ec, tx, opts.From, ctx.Duration("timeout")); err != nil {
+	if err := printAndWait(ec, endpoint, tx, opts.From, tx.Nonce()-latest, ctx.Duration("timeout")); err != nil {
 		return err
 	}
 	return abv2PrintNodeState(caller, nodeId)
+}
+
+// abv2CheckEndpoint returns the sender's latest and pending nonce at the endpoint and, if a
+// transaction sent there would stay there, the reasons: the node has no peers, or the sender
+// already has a pending transaction on it.
+func abv2CheckEndpoint(ec *client.KaiaClient, endpoint string, from common.Address) (latest, pending uint64, refusal string, err error) {
+	if latest, err = ec.NonceAt(context.Background(), from, nil); err != nil {
+		return 0, 0, "", fmt.Errorf("get nonce of %s: %w", from.Hex(), err)
+	}
+	if pending, err = ec.PendingNonceAt(context.Background(), from); err != nil {
+		return 0, 0, "", fmt.Errorf("get pending nonce of %s: %w", from.Hex(), err)
+	}
+	var reasons []string
+	// Skipped if the endpoint does not serve net_peerCount.
+	if peers, err := ec.PeerCount(context.Background()); err == nil && peers == 0 {
+		reasons = append(reasons, fmt.Sprintf("the node at %s has no peers, so the transaction would not leave it. "+
+			"Send through a connected node instead: add --endpoint <its RPC URL>, e.g. of an EN (the private key stays local). "+
+			"If this node produces blocks on its own, add --force", endpoint))
+	}
+	if pending > latest {
+		reasons = append(reasons, fmt.Sprintf("sender %s already has %d pending transaction(s) at %s (nonce %d and up). Wait for inclusion. "+
+			"A rerun with --endpoint <RPC URL of another node> signs nonce %d again: use it only if the pending transaction is this same command. "+
+			"To queue a new transaction behind the pending one, add --force", from.Hex(), pending-latest, endpoint, latest, latest))
+	}
+	return latest, pending, strings.Join(reasons, ". Also, "), nil
 }
 
 // abv2PrintEpochWarnings prints the time left before the next epoch block and a
@@ -528,14 +573,30 @@ func dialABv2(endpoint string) (*client.KaiaClient, *addressbookv2.AddressBookV2
 	return ec, t, nil
 }
 
-func printAndWait(ec *client.KaiaClient, tx *types.Transaction, from common.Address, timeout time.Duration) error {
+// printAndWait waits for the receipt of tx, which was sent behind `ahead` pending transactions of the sender.
+func printAndWait(ec *client.KaiaClient, endpoint string, tx *types.Transaction, from common.Address, ahead uint64, timeout time.Duration) error {
 	fmt.Printf("tx: %s\n", tx.Hash().Hex())
 	fmt.Println("waiting for receipt...")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	receipt, err := bind.WaitMined(ctx, ec, tx)
 	if errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("no receipt for %s after %s; the outcome is unknown. Check the transaction hash before sending again", tx.Hash().Hex(), timeout)
+		lookupCtx, cancel := context.WithTimeout(context.Background(), lookupTimeout)
+		defer cancel()
+		_, isPending, err := ec.TransactionByHash(lookupCtx, tx.Hash())
+		switch {
+		case err != nil:
+			return fmt.Errorf("no receipt for %s after %s; the outcome is unknown. Check the transaction hash before sending again", tx.Hash().Hex(), timeout)
+		case isPending && ahead > 0:
+			return fmt.Errorf("no receipt for %s after %s; it is pending at %s behind %d earlier transaction(s) of the sender and can be included only after them",
+				tx.Hash().Hex(), timeout, endpoint, ahead)
+		case isPending:
+			return fmt.Errorf("no receipt for %s after %s; it is still pending at %s and may be included later. "+
+				"If it is not, rerun the same command with --endpoint <RPC URL of another node>; the rerun signs the same nonce again, so only one of the two is included",
+				tx.Hash().Hex(), timeout, endpoint)
+		default:
+			return fmt.Errorf("no receipt for %s after %s, but %s reports it as included in a block. Check its receipt before sending again", tx.Hash().Hex(), timeout, endpoint)
+		}
 	}
 	if err != nil {
 		return fmt.Errorf("wait for receipt: %w", err)

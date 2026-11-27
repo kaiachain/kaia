@@ -106,6 +106,7 @@ type BackendProtocolManager interface {
 	ProtocolVersion() int
 	ReBroadcastTxs(transactions types.Transactions)
 	SetAcceptTxs()
+	SetOutsideCNMesh(outside bool)
 	NodeType() common.ConnType
 	Start(maxPeers int)
 	Stop()
