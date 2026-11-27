@@ -112,7 +112,7 @@ func (v *VRankModule) EvaluateCandidates(blockNum, round uint64) ([]common.Addre
 	}
 	candidates, err := v.Valset.GetCandTesting(blockNum)
 	if err != nil {
-		logger.Error("GetCandTesting failed", "blockNum", blockNum, "err", err)
+		logger.Warn("GetCandTesting failed", "blockNum", blockNum, "err", err)
 		return nil, vrank.ErrGetCandidateFailed
 	}
 	if len(candidates) == 0 {

@@ -135,8 +135,8 @@ func (v *VRankModule) hasParentCertificate(num uint64) bool {
 //
 //   - At epoch-start blocks: Report is CandTesting(N).
 //   - Otherwise: Report is a cfReport about this proposer's own most recent prior proposal in
-//     the current epoch, or empty when there is no such block, it was already reported, or no
-//     candidate failed.
+//     the current epoch, or empty when there is no such block, it was already reported, it cannot
+//     be evaluated, or no candidate failed.
 //   - ParentRound and its seals are copied from this node's own stored parent header.
 func (v *VRankModule) PrepareHeader(header *types.Header) error {
 	number := header.Number.Uint64()
@@ -154,11 +154,7 @@ func (v *VRankModule) PrepareHeader(header *types.Header) error {
 		}
 		payload.Report = candidates
 	} else {
-		report, err := v.evaluateCandidateFailures(number)
-		if err != nil {
-			return err
-		}
-		payload.Report = report
+		payload.Report = v.evaluateCandidateFailures(number)
 	}
 
 	round, seals, err := v.parentRoundCertificate(number)
@@ -202,20 +198,23 @@ func (v *VRankModule) parentRoundCertificate(number uint64) (uint8, [][]byte, er
 }
 
 // evaluateCandidateFailures reports on this proposer's own most recent prior proposal this epoch.
-func (v *VRankModule) evaluateCandidateFailures(number uint64) ([]common.Address, error) {
+// A target that cannot be evaluated yields an empty report, so it never blocks a proposal.
+func (v *VRankModule) evaluateCandidateFailures(number uint64) []common.Address {
 	targetNum, round, ok := v.selectReportTarget(number)
 	if !ok {
 		// No reportable target: none this epoch, or it was already reported.
 		// Empty report — fail-safe.
-		return nil, nil
+		return nil
 	}
 	report, err := v.EvaluateCandidates(targetNum, round)
 	if err != nil {
-		logger.Error("Failed to evaluate VRank candidates", "err", err, "targetNum", targetNum, "round", round)
-		return nil, err
+		// The state the evaluation reads does not come back, so the target goes with the older views.
+		v.collector.PruneReported(targetNum + 1)
+		logger.Warn("Failed to evaluate VRank candidates, reporting none", "err", err, "num", number, "targetNum", targetNum, "round", round)
+		return nil
 	}
 	v.collector.PruneReported(targetNum) // drop views older than targetNum; targetNum stays for re-report
-	return report, nil
+	return report
 }
 
 func validateNonEpochVRank(report, candidates []common.Address) error {
