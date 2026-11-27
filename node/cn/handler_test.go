@@ -51,6 +51,7 @@ import (
 	"github.com/kaiachain/kaia/storage/statedb"
 	workmocks "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const blockNum1 = 20190902
@@ -489,6 +490,46 @@ func TestBroadcastBlock_ParentExists(t *testing.T) {
 	pm.BroadcastBlock(block)
 }
 
+// A CN pushes blocks to CN peers and announces the hash to PN and EN peers alike.
+func TestBroadcastBlock_CNServesPNAsEN(t *testing.T) {
+	head := newBlock(blockNum1 - 1)
+	block := newBlock(blockNum1)
+	td := big.NewInt(100)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
+	mockBlockChain.EXPECT().GetBlock(block.ParentHash(), block.NumberU64()-1).Return(head).Times(1)
+	mockBlockChain.EXPECT().GetTd(block.ParentHash(), block.NumberU64()-1).Return(td).Times(1)
+	mockBlockChain.EXPECT().HasBlock(block.Hash(), block.NumberU64()).Return(true).Times(1)
+
+	pm := &ProtocolManager{nodetype: common.CONSENSUSNODE, blockchain: mockBlockChain, peers: newPeerSet()}
+
+	cnPeer := NewMockPeer(mockCtrl)
+	pnPeer := NewMockPeer(mockCtrl)
+	enPeer := NewMockPeer(mockCtrl)
+	setMockPeersConnType(cnPeer, pnPeer, enPeer)
+	setMockPeers([]*MockPeer{cnPeer, pnPeer, enPeer})
+
+	expect := func(p *MockPeer, pushes, announces int) {
+		known := false
+		p.EXPECT().KnowsBlock(block.Hash()).DoAndReturn(func(common.Hash) bool { return known }).AnyTimes()
+		p.EXPECT().AsyncSendNewBlock(block, new(big.Int).Add(block.BlockScore(), td)).
+			Do(func(*types.Block, *big.Int) { known = true }).Times(pushes)
+		p.EXPECT().AsyncSendNewBlockHash(block).Times(announces)
+	}
+	expect(cnPeer, 1, 0)
+	expect(pnPeer, 0, 1)
+	expect(enPeer, 0, 1)
+
+	for _, p := range []*MockPeer{cnPeer, pnPeer, enPeer} {
+		assert.NoError(t, pm.peers.Register(p, nil))
+	}
+
+	pm.BroadcastBlock(block)
+	pm.BroadcastBlockHash(block)
+}
+
 func TestBroadcastBlockHash(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -519,6 +560,91 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 		pm.BroadcastBlockHash(block)
 	}
+}
+
+func newTestChainWithGenesisScore(t *testing.T, genesisScore int64, synced, total int) (*blockchain.BlockChain, []*types.Block) {
+	db := database.NewMemoryDBManager()
+	config := params.TestChainConfig
+	engine := faker.NewFaker()
+	genesis := (&blockchain.Genesis{Config: config, BlockScore: big.NewInt(genesisScore)}).MustCommit(db)
+
+	chain, err := blockchain.NewBlockChain(db, nil, config, engine, vm.Config{})
+	require.NoError(t, err)
+	t.Cleanup(chain.Stop)
+
+	blocks, _ := blockchain.GenerateChain(config, genesis, engine, db, total, nil)
+	_, err = chain.InsertChain(blocks[:synced])
+	require.NoError(t, err)
+	return chain, blocks
+}
+
+// A node fed only hash announcements leaves the next block to the fetcher and
+// syncs once it hears of a block past a missed one, whatever the genesis blockscore.
+func TestSyncOnBlockHashAnnouncement(t *testing.T) {
+	const synced = 10
+	for _, genesisScore := range []int64{1, 5} {
+		for _, tc := range []struct {
+			name      string
+			announced int
+			wantSync  bool
+		}{
+			{"next block", synced + 1, false},
+			{"block past a missed one", synced + 2, true},
+		} {
+			t.Run(fmt.Sprintf("genesis blockscore %d/%s", genesisScore, tc.name), func(t *testing.T) {
+				chain, remote := newTestChainWithGenesisScore(t, genesisScore, synced, synced+2)
+				head := chain.CurrentBlock()
+				localTd := chain.GetTd(head.Hash(), head.NumberU64())
+				require.Equal(t, big.NewInt(genesisScore+synced), localTd)
+				announced := remote[tc.announced-1]
+
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+
+				// The peer starts at the head its status handshake reported.
+				peerHead, peerTd := head.Hash(), localTd
+				peer := NewMockPeer(mockCtrl)
+				peer.EXPECT().GetID().Return("cn").AnyTimes()
+				peer.EXPECT().AddToKnownBlocks(announced.Hash()).Times(1)
+				peer.EXPECT().Head().DoAndReturn(func() (common.Hash, *big.Int) { return peerHead, peerTd }).AnyTimes()
+				peer.EXPECT().SetHead(gomock.Any(), gomock.Any()).Do(func(h common.Hash, td *big.Int) { peerHead, peerTd = h, td }).AnyTimes()
+
+				fetcher := mocks.NewMockProtocolManagerFetcher(mockCtrl)
+				fetcher.EXPECT().Notify("cn", announced.Hash(), announced.NumberU64(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+
+				dl := mocks.NewMockProtocolManagerDownloader(mockCtrl)
+				if tc.wantSync {
+					parentTd := new(big.Int).Add(localTd, big.NewInt(int64(tc.announced-1-synced)))
+					dl.EXPECT().Synchronise("cn", announced.Hash(), parentTd, downloader.FullSync).Return(errors.New("stop after the sync starts")).Times(1)
+				}
+
+				pm := &ProtocolManager{blockchain: chain, fetcher: fetcher, downloader: dl}
+				msg := generateMsg(t, NewBlockHashesMsg, newBlockHashesData{{Hash: announced.Hash(), Number: announced.NumberU64()}})
+				require.NoError(t, handleNewBlockHashesMsg(pm, peer, msg))
+				pm.synchronise(peer)
+			})
+		}
+	}
+}
+
+func TestBlockHashAnnouncementPastInt64KeepsPeerHead(t *testing.T) {
+	chain, _ := newTestChainWithGenesisScore(t, 1, 10, 10)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	hash := common.HexToHash("0x01")
+	peer := NewMockPeer(mockCtrl)
+	peer.EXPECT().GetID().Return("cn").AnyTimes()
+	peer.EXPECT().AddToKnownBlocks(hash).Times(1)
+	peer.EXPECT().SetHead(gomock.Any(), gomock.Any()).Times(0)
+
+	fetcher := mocks.NewMockProtocolManagerFetcher(mockCtrl)
+	fetcher.EXPECT().Notify(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+	pm := &ProtocolManager{blockchain: chain, fetcher: fetcher}
+	msg := generateMsg(t, NewBlockHashesMsg, newBlockHashesData{{Hash: hash, Number: 1 << 63}})
+	require.NoError(t, handleNewBlockHashesMsg(pm, peer, msg))
 }
 
 func TestProtocolManager_txBroadcastLoop_FromCN_CN_NotExists(t *testing.T) {
