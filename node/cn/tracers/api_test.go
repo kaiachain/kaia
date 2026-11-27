@@ -262,7 +262,7 @@ func TestTraceChain(t *testing.T) {
 
 		from, _ := api.blockByNumber(context.Background(), rpc.BlockNumber(c.start))
 		to, _ := api.blockByNumber(context.Background(), rpc.BlockNumber(c.end))
-		ret, err := api.traceChain(from, to, c.config, nil, nil)
+		ret, err := api.traceChain(context.Background(), from, to, c.config, nil, nil)
 		assert.NoError(t, err)
 
 		for _, trace := range ret {
@@ -274,6 +274,74 @@ func TestTraceChain(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestTraceBlockByNumberRangeCancelled checks that range tracing stops and
+// reports an error once the request context is done.
+func TestTraceBlockByNumberRangeCancelled(t *testing.T) {
+	accounts := newAccounts(2)
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+	}}
+	api := NewUnsafeAPI(newTestBackend(t, 10, genesis, func(i int, b *blockchain.BlockGen) {}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := api.TraceBlockByNumberRange(ctx, 1, 10, nil)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+// TestTraceBlockByNumberRangeCancelledMidway checks that every referenced state
+// is released when range tracing is cancelled while blocks are being fed.
+func TestTraceBlockByNumberRangeCancelledMidway(t *testing.T) {
+	accounts := newAccounts(2)
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+	}}
+	backend := newTestBackend(t, 20, genesis, func(i int, b *blockchain.BlockGen) {})
+	api := NewUnsafeAPI(backend)
+
+	for range 30 {
+		var ref, rel uint32
+		ctx, cancel := context.WithCancel(context.Background())
+		backend.refHook = func() {
+			if atomic.AddUint32(&ref, 1) == 5 {
+				cancel()
+			}
+		}
+		backend.relHook = func() { atomic.AddUint32(&rel, 1) }
+
+		_, err := api.TraceBlockByNumberRange(ctx, 1, 20, nil)
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.Equal(t, atomic.LoadUint32(&ref), atomic.LoadUint32(&rel))
+		cancel()
+	}
+}
+
+// TestTraceBlockByNumberRangeCancelledKeepsTxTimeout checks that a transaction
+// being traced when the request is cancelled still stops at its trace timeout.
+func TestTraceBlockByNumberRangeCancelledKeepsTxTimeout(t *testing.T) {
+	accounts := newAccounts(1)
+	loop := common.HexToAddress("0x000000000000000000000000000000000000c333")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		accounts[0].addr: {Balance: big.NewInt(params.KAIA)},
+		loop:             {Balance: big.NewInt(0), Code: common.FromHex("0x5b600056")}, // JUMPDEST PUSH1 0 JUMP
+	}}
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+	api := NewUnsafeAPI(newTestBackend(t, 4, genesis, func(i int, b *blockchain.BlockGen) {
+		tx, _ := types.SignTx(types.NewTransaction(uint64(i), loop, big.NewInt(0), 50_000_000, big.NewInt(0), nil), signer, accounts[0].key)
+		b.AddTx(tx)
+	}))
+
+	tracer := `{n: 0, step: function() { for (var i = 0; i < 100; i++) { this.n++ } }, fault: function() {}, result: function() { return this.n }}`
+	timeout := "100ms"
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(50*time.Millisecond, cancel)
+
+	start := time.Now()
+	_, err := api.TraceBlockByNumberRange(ctx, 1, 4, &TraceConfig{Tracer: &tracer, Timeout: &timeout})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Less(t, time.Since(start), 2*time.Second)
 }
 
 func TestTraceCall(t *testing.T) {
