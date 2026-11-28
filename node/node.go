@@ -281,7 +281,12 @@ func (n *Node) Start() error {
 	n.server = p2pServer
 	n.stop = make(chan struct{})
 
-	// Register a labeled metric containing version and build information
+	RegisterBuildInfo(n.config.Version)
+	return nil
+}
+
+// RegisterBuildInfo registers the node's version and build information with Prometheus.
+func RegisterBuildInfo(version string) {
 	// e.g.) klaytn_build_info{version="v1.8.4+b3ab199674" cpu_arch="darwin-arm64" go_version="go1.18.2"} 1
 	if metricutils.Enabled {
 		buildInfo := prometheus.NewGauge(prometheus.GaugeOpts{
@@ -289,12 +294,11 @@ func (n *Node) Start() error {
 			Subsystem:   "",
 			Name:        "build_info",
 			Help:        "A metric with a constant '1' value labeled by version",
-			ConstLabels: prometheus.Labels{"version": n.config.Version, "cpu_arch": runtime.GOARCH, "go_version": runtime.Version()},
+			ConstLabels: prometheus.Labels{"version": version, "cpu_arch": runtime.GOARCH, "go_version": runtime.Version()},
 		})
 		buildInfo.Set(1.0) // dummy value
 		prometheus.DefaultRegisterer.MustRegister(buildInfo)
 	}
-	return nil
 }
 
 func (n *Node) initService(serviceFunc []ServiceConstructor, services map[reflect.Type]Service) error {
